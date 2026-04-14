@@ -1,3 +1,46 @@
 {
-  "versions": []
+  "versions": [
+    {
+      "id": "v1",
+      "name": "V1",
+      "status": "planned",
+      "summary": "Exit-Readiness als erstes marktreifes Template auf template-faehigem Fundament. Enthaelt Knowledge Unit / Capture Session / Validation Layer Datenmodell, Questionnaire-Mode mit Block-Submit-Pattern, Exception-Mode, Lightweight Single-Pass KI-Verdichtung via AWS Bedrock, portierte OS-Ebene-1 (block_sessions + debrief_items + Worker + Import-Endpoint) und Debrief-/Meeting-UI fuer strategaize_admin. Basis: Discovery 2026-04-14, DEC-001 bis DEC-006.",
+      "order": 1
+    },
+    {
+      "id": "v2",
+      "name": "V2",
+      "status": "planned",
+      "summary": "3-Agenten-Loop (Analyst + Challenger + Orchestrator) mit Iterations-Break-Kriterien, SOP-Generation (Ebene 2), automatische Rueckfrage-Rueckspielung ins Questionnaire bei Luecken, Evidence-Mode mit KI-Auto-Mapping, zweites Template mit Switcher-UI.",
+      "order": 2
+    },
+    {
+      "id": "v3",
+      "name": "V3",
+      "status": "planned",
+      "summary": "Dialogue-Mode (2-Personen-Interview mit LLM-Extraktion). Abhaengig von Meeting-Infrastruktur (Jitsi + Jibri + Whisper), shared mit Business System V4.1.",
+      "order": 3
+    },
+    {
+      "id": "v4",
+      "name": "V4",
+      "status": "planned",
+      "summary": "Walkthrough-Mode (Screen-Capture + Think-Aloud). Benoetigt vorher Technologie-Entscheidungs-Spike (Browser-Extension vs. Electron vs. Native).",
+      "order": 4
+    },
+    {
+      "id": "v5",
+      "name": "V5",
+      "status": "planned",
+      "summary": "Diary-Mode (zeitlich verteilte In-Situ-Aufnahmen, Mobile/PWA).",
+      "order": 5
+    },
+    {
+      "id": "v6",
+      "name": "V6+",
+      "status": "planned",
+      "summary": "Queroptionen: Process-Mining-Connector, kollaborative Annotation, Anomalie-Flagging, Prozess-Simulation.",
+      "order": 6
+    }
+  ]
 }
