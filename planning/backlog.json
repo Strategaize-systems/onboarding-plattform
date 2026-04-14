@@ -1,3 +1,64 @@
 {
-  "items": []
+  "items": [
+    {
+      "id": "BL-001",
+      "title": "Foundation Data Model & RBAC",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V1",
+      "description": "Generisches Datenmodell (capture_session, knowledge_unit, validation_layer, template, block_checkpoint) plus Rollen/RLS. Basis fuer alle weiteren V1-Features. Siehe FEAT-001.",
+      "createdAt": "2026-04-14"
+    },
+    {
+      "id": "BL-002",
+      "title": "Exit-Readiness Template Content",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V1",
+      "description": "Template-Eintrag plus Bloecke/Questions aus Blueprint V3.4 portiert. Erste aktive Template-Instanz. Siehe FEAT-002.",
+      "createdAt": "2026-04-14"
+    },
+    {
+      "id": "BL-003",
+      "title": "Questionnaire Mode with Block-Submit",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V1",
+      "description": "Haupt-Interaktionsmodus fuer Kunden. Block-Navigation, KI-Chat (Bedrock), Block-Submit mit versioniertem Checkpoint. Siehe FEAT-003.",
+      "createdAt": "2026-04-14"
+    },
+    {
+      "id": "BL-004",
+      "title": "Exception Mode Prompt Layer",
+      "type": "feature",
+      "priority": "medium",
+      "status": "open",
+      "version": "V1",
+      "description": "Freitext-Eintraege pro Block, in Verdichtung einbezogen. Siehe FEAT-004.",
+      "createdAt": "2026-04-14"
+    },
+    {
+      "id": "BL-005",
+      "title": "Single-Pass AI Condensation (OS portiert, Bedrock)",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V1",
+      "description": "OS-Ebene-1 portiert, Worker auf Bedrock umgestellt, Knowledge-Unit-Erzeugung pro Block-Submit. Siehe FEAT-005.",
+      "createdAt": "2026-04-14"
+    },
+    {
+      "id": "BL-006",
+      "title": "Debrief Meeting Interface",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V1",
+      "description": "UI fuer strategaize_admin: Knowledge-Unit-Review, Editor, Meeting-Snapshot als versionierter finaler Stand. Siehe FEAT-006.",
+      "createdAt": "2026-04-14"
+    }
+  ]
 }
