@@ -4,7 +4,7 @@
 
 | ID | Slice | Feature | Status | Priority | Created |
 |----|-------|---------|--------|----------|---------|
-| SLC-001 | [Schema-Fundament](SLC-001-schema-fundament.md) | FEAT-001 | planned | Blocker | 2026-04-14 |
+| SLC-001 | [Schema-Fundament](SLC-001-schema-fundament.md) | FEAT-001 | in_progress | Blocker | 2026-04-14 |
 | SLC-002 | [Rollen-Umbenennung tenant_owner → tenant_admin](SLC-002-rollen-umbenennung.md) | FEAT-001 | planned | Blocker | 2026-04-14 |
 | SLC-003 | [Template + Exit-Readiness-Content](SLC-003-template-exit-readiness.md) | FEAT-002 | planned | High | 2026-04-14 |
 | SLC-004 | [Capture-Session-Start + Block-Listing](SLC-004-capture-session-start.md) | FEAT-003 | planned | High | 2026-04-14 |

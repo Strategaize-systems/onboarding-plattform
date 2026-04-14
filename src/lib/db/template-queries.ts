@@ -1,0 +1,69 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { z } from "zod";
+
+export const TemplateBlockSchema = z.object({
+  id: z.string(),
+  key: z.string(),
+  title: z.string(),
+  description: z.string().optional().nullable(),
+  order: z.number().int(),
+  required: z.boolean().optional().default(false),
+  questions: z.array(z.unknown()).default([]),
+});
+
+export type TemplateBlock = z.infer<typeof TemplateBlockSchema>;
+
+export const TemplateRowSchema = z.object({
+  id: z.string().uuid(),
+  slug: z.string(),
+  name: z.string(),
+  version: z.string(),
+  description: z.string().nullable(),
+  blocks: z.array(TemplateBlockSchema),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
+export type TemplateRow = z.infer<typeof TemplateRowSchema>;
+
+export async function getTemplateBySlug(
+  client: SupabaseClient,
+  slug: string
+): Promise<TemplateRow | null> {
+  const { data, error } = await client
+    .from("template")
+    .select("*")
+    .eq("slug", slug)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) return null;
+  return TemplateRowSchema.parse(data);
+}
+
+export async function getTemplateById(
+  client: SupabaseClient,
+  id: string
+): Promise<TemplateRow | null> {
+  const { data, error } = await client
+    .from("template")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) return null;
+  return TemplateRowSchema.parse(data);
+}
+
+export async function listTemplates(
+  client: SupabaseClient
+): Promise<TemplateRow[]> {
+  const { data, error } = await client
+    .from("template")
+    .select("*")
+    .order("created_at", { ascending: true });
+
+  if (error) throw error;
+  return (data ?? []).map((row) => TemplateRowSchema.parse(row));
+}
