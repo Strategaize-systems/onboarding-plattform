@@ -1,0 +1,8 @@
+<h2>Ihre Einladung zur StrategAIze Plattform</h2>
+<p>Sie wurden eingeladen, ein Konto auf der StrategAIze Plattform zu erstellen.</p>
+<p>Klicken Sie auf den folgenden Link, um die Einladung anzunehmen:</p>
+<p><a href="{{ .SiteURL }}/auth/v1/verify?token={{ .TokenHash }}&type=invite&redirect_to={{ .RedirectTo }}">Einladung annehmen</a></p>
+<p>Falls der Link nicht funktioniert, kopieren Sie diese URL in Ihren Browser:</p>
+<p>{{ .SiteURL }}/auth/v1/verify?token={{ .TokenHash }}&type=invite&redirect_to={{ .RedirectTo }}</p>
+<br>
+<p>Mit freundlichen Grüßen,<br>Ihr StrategAIze Team</p>

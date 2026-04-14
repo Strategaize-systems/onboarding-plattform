@@ -1,0 +1,11 @@
+FROM kong:2.8.1
+
+# Copy kong.yml as template (env vars get substituted at container startup via sed)
+COPY kong.yml /var/lib/kong/kong.yml.template
+COPY docker-entrypoint.sh /custom-entrypoint.sh
+
+USER root
+RUN chmod +x /custom-entrypoint.sh
+USER kong
+
+ENTRYPOINT ["/custom-entrypoint.sh"]

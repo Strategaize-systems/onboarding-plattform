@@ -1,0 +1,7 @@
+FROM supabase/postgres:15.6.1.100
+COPY 00_roles.sh /docker-entrypoint-initdb.d/00_roles.sh
+COPY schema.sql /docker-entrypoint-initdb.d/01_schema.sql
+COPY rls.sql /docker-entrypoint-initdb.d/02_rls.sql
+COPY functions.sql /docker-entrypoint-initdb.d/03_functions.sql
+RUN chmod +x /docker-entrypoint-initdb.d/00_roles.sh \
+    && sed -i 's/\r$//' /docker-entrypoint-initdb.d/00_roles.sh
