@@ -110,7 +110,7 @@ Konkrete Bausteine für /requirements:
 2. Questionnaire-Mode: auf neues Schema heben, Block-Submit-Pattern aus Blueprint übernehmen
 3. Exception-Mode: dünner zusätzlicher Prompt-Layer
 4. OS-Portierung: blueprint_block_sessions + blueprint_debrief_items + Worker + Import-Endpoint anpassen, Auth umstellen, Naming generalisieren
-5. Lightweight KI-Verdichtung: Single-Pass via Bedrock/Claude (Grundprinzip: möglichst skalierbare KI-Nutzung) oder Ollama (Zero-Cost, Fallback)
+5. Lightweight KI-Verdichtung: Single-Pass via AWS Bedrock (Claude Sonnet, Frankfurt). Siehe DEC-006. Kein Ollama.
 6. Debrief-/Meeting-UI für strategaize_admin: Block-Status, Knowledge-Unit-Liste, Meeting-Stand-Snapshot
 7. Rollen & RLS: Blueprint-Rollenmodell übernehmen, erweitern auf Knowledge-Unit-Scope
 
@@ -164,7 +164,7 @@ Wichtige Befunde für /requirements und /architecture:
 - Foreign Keys und Naming (run_id, project_id → Onboarding-spezifisch)
 - RPC-Namen: rpc_list_blueprint_block_sessions → rpc_list_capture_sessions
 - Prompt-Templates müssen für KU-Struktur angepasst werden
-- LLM-Provider-Entscheidung: heute Ollama, Option Bedrock/Claude einziehen
+- LLM-Provider: AWS Bedrock (Claude) — siehe DEC-006, Ollama-Client aus OS wird nicht portiert
 
 ### Wegzuwerfen / Neubau
 - OS-eigene Auth-Layer → Onboarding-Plattform-Auth

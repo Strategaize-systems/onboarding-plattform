@@ -24,3 +24,8 @@
 - Status: accepted
 - Reason: Das strategaize-operating-system-Repo hat eine weitgehend fertige Ebene-1-Verdichtung (block_sessions, debrief_items, Worker, Import-Endpoint, Query-Layer), die zu 80–100% portierbar ist. Neu-Bau waere Zeitverschwendung.
 - Consequence: V1-Implementierung uebernimmt die OS-Strukturen und passt sie an das neue Knowledge-Unit-Schema und die Onboarding-Plattform-Auth an. Der 3-Agenten-Loop (Analyst+Challenger+Orchestrator) bleibt V2, weil er im OS heute nur Idee ist. Single-Pass-Verdichtung reicht fuer V1, weil der Berater im Meeting die Qualitaets-Luecke schliesst.
+
+## DEC-006 — LLM-Provider ist AWS Bedrock (Claude), kein Ollama
+- Status: accepted
+- Reason: Ollama lokal haette geringe Qualitaet fuer Verdichtung und wuerde spaeter den 3-Agenten-Loop limitieren. Claude ueber AWS Bedrock (Frankfurt) ist im Blueprint/Business-System-Stack bereits eingefuehrt und liefert die fuer KI-first Wissensextraktion erforderliche Qualitaet. Kosten sind kontrollierbar ueber on-click KI-Features und Volume-Management (siehe feedback_bedrock_cost_control).
+- Consequence: Die aus dem OS portierten Worker (heute Ollama-basiert) werden auf Bedrock-SDK umgestellt. Keine duale Provider-Strategie in V1. Die `ollama-client.ts` aus dem OS wird nicht portiert, stattdessen wird der bestehende Bedrock-Client aus Blueprint V3.4 uebernommen. Prompt-Templates werden fuer Claude Sonnet optimiert.
