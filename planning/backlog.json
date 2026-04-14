@@ -5,9 +5,9 @@
       "title": "Foundation Data Model & RBAC",
       "type": "feature",
       "priority": "high",
-      "status": "open",
+      "status": "in_progress",
       "version": "V1",
-      "description": "Generisches Datenmodell (capture_session, knowledge_unit, validation_layer, template, block_checkpoint) plus Rollen/RLS. Basis fuer alle weiteren V1-Features. Siehe FEAT-001.",
+      "description": "Generisches Datenmodell (capture_session, knowledge_unit, validation_layer, template, block_checkpoint) plus Rollen/RLS. Basis fuer alle weiteren V1-Features. Siehe FEAT-001. Aufgeteilt in SLC-001 (Schema) + SLC-002 (Rollen-Umbenennung).",
       "createdAt": "2026-04-14"
     },
     {
@@ -15,9 +15,9 @@
       "title": "Exit-Readiness Template Content",
       "type": "feature",
       "priority": "high",
-      "status": "open",
+      "status": "in_progress",
       "version": "V1",
-      "description": "Template-Eintrag plus Bloecke/Questions aus Blueprint V3.4 portiert. Erste aktive Template-Instanz. Siehe FEAT-002.",
+      "description": "Template-Eintrag plus Bloecke/Questions aus Blueprint V3.4 portiert. Erste aktive Template-Instanz. Siehe FEAT-002. Implementierung: SLC-003.",
       "createdAt": "2026-04-14"
     },
     {
@@ -25,9 +25,9 @@
       "title": "Questionnaire Mode with Block-Submit",
       "type": "feature",
       "priority": "high",
-      "status": "open",
+      "status": "in_progress",
       "version": "V1",
-      "description": "Haupt-Interaktionsmodus fuer Kunden. Block-Navigation, KI-Chat (Bedrock), Block-Submit mit versioniertem Checkpoint. Siehe FEAT-003.",
+      "description": "Haupt-Interaktionsmodus fuer Kunden. Block-Navigation, KI-Chat (Bedrock), Block-Submit mit versioniertem Checkpoint. Siehe FEAT-003. Implementierung: SLC-004 (Session-Start) + SLC-005 (Questionnaire-UI) + SLC-006 (Submit).",
       "createdAt": "2026-04-14"
     },
     {
@@ -35,9 +35,9 @@
       "title": "Exception Mode Prompt Layer",
       "type": "feature",
       "priority": "medium",
-      "status": "open",
+      "status": "in_progress",
       "version": "V1",
-      "description": "Freitext-Eintraege pro Block, in Verdichtung einbezogen. Siehe FEAT-004.",
+      "description": "Freitext-Eintraege pro Block, in Verdichtung einbezogen. Siehe FEAT-004. Implementierung: SLC-007.",
       "createdAt": "2026-04-14"
     },
     {
@@ -45,9 +45,9 @@
       "title": "Single-Pass AI Condensation (OS portiert, Bedrock)",
       "type": "feature",
       "priority": "high",
-      "status": "open",
+      "status": "in_progress",
       "version": "V1",
-      "description": "OS-Ebene-1 portiert, Worker auf Bedrock umgestellt, Knowledge-Unit-Erzeugung pro Block-Submit. Siehe FEAT-005.",
+      "description": "OS-Ebene-1 portiert, Worker auf Bedrock umgestellt, Knowledge-Unit-Erzeugung pro Block-Submit. Siehe FEAT-005. Implementierung: SLC-008 (Worker-Container + Verdichtung).",
       "createdAt": "2026-04-14"
     },
     {
@@ -55,9 +55,109 @@
       "title": "Debrief Meeting Interface",
       "type": "feature",
       "priority": "high",
+      "status": "in_progress",
+      "version": "V1",
+      "description": "UI fuer strategaize_admin: Knowledge-Unit-Review, Editor, Meeting-Snapshot als versionierter finaler Stand. Siehe FEAT-006. Implementierung: SLC-009 (Debrief-UI) + SLC-010 (Meeting-Snapshot + Export).",
+      "createdAt": "2026-04-14"
+    },
+    {
+      "id": "BL-007",
+      "title": "SLC-001 Schema-Fundament",
+      "type": "feature",
+      "priority": "high",
       "status": "open",
       "version": "V1",
-      "description": "UI fuer strategaize_admin: Knowledge-Unit-Review, Editor, Meeting-Snapshot als versionierter finaler Stand. Siehe FEAT-006.",
+      "description": "5 neue Kerntabellen + RLS + Migrations 021-025. Siehe /slices/SLC-001-schema-fundament.md.",
+      "createdAt": "2026-04-14"
+    },
+    {
+      "id": "BL-008",
+      "title": "SLC-002 Rollen-Umbenennung",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V1",
+      "description": "tenant_owner → tenant_admin per Migration 026 + Code-Rename. Siehe /slices/SLC-002-rollen-umbenennung.md.",
+      "createdAt": "2026-04-14"
+    },
+    {
+      "id": "BL-009",
+      "title": "SLC-003 Template + Exit-Readiness-Content",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V1",
+      "description": "Content-Portierung aus Blueprint V3.4. Siehe /slices/SLC-003-template-exit-readiness.md.",
+      "createdAt": "2026-04-14"
+    },
+    {
+      "id": "BL-010",
+      "title": "SLC-004 Capture-Session-Start + Block-Listing",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V1",
+      "description": "Kunde kann Session starten und sieht Bloecke. Siehe /slices/SLC-004-capture-session-start.md.",
+      "createdAt": "2026-04-14"
+    },
+    {
+      "id": "BL-011",
+      "title": "SLC-005 Questionnaire-UI-Portierung",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V1",
+      "description": "Blueprint-Questionnaire auf neues Schema, Bedrock-Chat. Siehe /slices/SLC-005-questionnaire-ui.md.",
+      "createdAt": "2026-04-14"
+    },
+    {
+      "id": "BL-012",
+      "title": "SLC-006 Block-Submit + Checkpoint",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V1",
+      "description": "Server Action + RPCs + Job-Enqueue. Siehe /slices/SLC-006-block-submit-checkpoint.md.",
+      "createdAt": "2026-04-14"
+    },
+    {
+      "id": "BL-013",
+      "title": "SLC-007 Exception-Mode-Layer",
+      "type": "feature",
+      "priority": "medium",
+      "status": "open",
+      "version": "V1",
+      "description": "Freitext-Layer + Prompt-Integration. Siehe /slices/SLC-007-exception-mode.md.",
+      "createdAt": "2026-04-14"
+    },
+    {
+      "id": "BL-014",
+      "title": "SLC-008 Worker-Container + Verdichtung",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V1",
+      "description": "Separater Docker-Service, Bedrock-Umbau, Queue-RPCs. Siehe /slices/SLC-008-worker-container.md.",
+      "createdAt": "2026-04-14"
+    },
+    {
+      "id": "BL-015",
+      "title": "SLC-009 Debrief-UI + KU-Editor",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V1",
+      "description": "strategaize_admin Review-UI + Validation-Layer-Writes. Siehe /slices/SLC-009-debrief-ui.md.",
+      "createdAt": "2026-04-14"
+    },
+    {
+      "id": "BL-016",
+      "title": "SLC-010 Meeting-Snapshot + JSON-Export",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V1",
+      "description": "Finaler Checkpoint + Export-API + E2E-Smoketest. Siehe /slices/SLC-010-meeting-snapshot-export.md.",
       "createdAt": "2026-04-14"
     }
   ]
