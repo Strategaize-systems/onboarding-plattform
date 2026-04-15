@@ -9,19 +9,20 @@
 Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdichtung. Ermoeglicht mehrere Capture-Modi (Fragebogen, Meeting, Voice, etc.) und Template-basierte Produktvarianten (z.B. Exit-Readiness, Immobilien-Onboarding).
 
 ## Current State
-- High-Level State: qa
-- Current Focus: QA auf SLC-001 abgeschlossen (RPT-006, 2026-04-15). Ergebnis Mixed: Code + Schema + Deploy sind gruen; Test-Coverage 0 % (ISSUE-002, ISSUE-004) — MT-5 RLS-Isolationstest nicht durchgefuehrt. Bereitschaft fuer SLC-002 gegeben, vor SLC-005 muss Test-Infra stehen.
-- Current Phase: V1 Implementation (SLC-001 QA durch, Test-Infra-Schulden dokumentiert)
+- High-Level State: slice-planning
+- Current Focus: Slice-Planning-Iteration 2026-04-15 abgeschlossen. 3 neue Slices eingefuegt (SLC-002a Test-Infra, SLC-002b Admin+Demo-Tenant Seed, SLC-002c App-Branding). SLC-001 auf `done` gehoben (Test-Gap bewusst an SLC-002a delegiert). Naechster Implementierungs-Schritt: SLC-002 Rollen-Umbenennung.
+- Current Phase: V1 Implementation (SLC-001 done, SLC-002 als naechster aktiver Slice)
 
 ## Immediate Next Steps
-1. User-Entscheidung: SLC-002 direkt starten oder erst Test-Infra aufsetzen (neuer Slice SLC-002a empfohlen)
-2. Wenn SLC-002 direkt: Rollen-Umbenennung `tenant_owner` → `tenant_admin` + Code-Rename
-3. Spaetestens vor SLC-005 (Questionnaire-UI): Test-Infra-Setup (Vitest + Supabase-local) + MT-5-RLS-Isolationstest nachholen
-4. Optional: manueller Smoke-Test Login-Flow auf https://onboarding.strategaizetransition.com
+1. SLC-002 starten: Rollen-Umbenennung `tenant_owner` → `tenant_admin` + Code-Rename (via `/backend`)
+2. Nach SLC-002: SLC-002a Test-Infrastruktur + RLS-Isolationstest (Blocker-Entschuldung)
+3. Nach SLC-002a: SLC-002b Admin + Demo-Tenant Seed (ermoeglicht realen Login-Smoke-Test)
+4. SLC-002c App-Branding (Medium, kann parallel oder nach 002b)
+5. Ab SLC-003: Feature-Slices (Template-Content, Capture-Session, Questionnaire-UI, ...)
 
 ## Active Scope
-V1 (siehe /docs/PRD.md, 6 Features), Implementierungs-Plan (siehe /slices/INDEX.md):
-- FEAT-001 Foundation Data Model & RBAC → SLC-001 (implementiert + deployed, QA offen), SLC-002 (planned)
+V1 (siehe /docs/PRD.md, 6 Features), Implementierungs-Plan (siehe /slices/INDEX.md, 13 Slices):
+- FEAT-001 Foundation Data Model & RBAC → SLC-001 (done), SLC-002 (planned), SLC-002a (planned), SLC-002b (planned), SLC-002c (planned)
 - FEAT-002 Exit-Readiness Template → SLC-003 (planned)
 - FEAT-003 Questionnaire Mode with Block-Submit → SLC-004, SLC-005, SLC-006 (planned)
 - FEAT-004 Exception Mode Prompt Layer → SLC-007 (planned)
@@ -32,8 +33,10 @@ V1 (siehe /docs/PRD.md, 6 Features), Implementierungs-Plan (siehe /slices/INDEX.
 - aktuell keine (SSH-Problem geloest 2026-04-15, Deploy durch, Business-DB aufgeraeumt)
 
 ## Known Issues (reference)
-- ISSUE-002 Test-Infrastruktur fehlt — betrifft SLC-001 MT-5 (RLS-Integrationstest), ist aber nicht mehr Deploy-Blocker
+- ISSUE-002 Test-Infrastruktur fehlt — wird in SLC-002a behoben
 - ISSUE-003 node_modules lokal nicht installiert — nur Dev-Convenience, Build auf Server laeuft
+- ISSUE-004 2-Tenant-RLS-Isolation unverifiziert — wird in SLC-002a MT-4 nachgeholt
+- ISSUE-005 App-Title Blueprint-Branding — wird in SLC-002c behoben
 
 ## Last Stable Version
 - V1-preview @ commit 6601cbe — deployed 2026-04-15, DB-Baseline + Capture-Schema + App bereit unter https://onboarding.strategaizetransition.com

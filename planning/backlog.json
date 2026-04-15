@@ -65,9 +65,9 @@
       "title": "SLC-001 Schema-Fundament",
       "type": "feature",
       "priority": "high",
-      "status": "in_progress",
+      "status": "done",
       "version": "V1",
-      "description": "5 neue Kerntabellen + RLS + Migrations 021-023. MT-1..4 + MT-6 done (Code + Deploy 2026-04-15), MT-5 RLS-Integrationstest blockiert durch Test-Infra (ISSUE-002). QA offen. Siehe /slices/SLC-001-schema-fundament.md.",
+      "description": "5 neue Kerntabellen + RLS + Migrations 021-023. Code + Deploy + QA durch (RPT-006 Mixed, Test-Gap delegiert an SLC-002a). Siehe /slices/SLC-001-schema-fundament.md.",
       "createdAt": "2026-04-14"
     },
     {
@@ -79,6 +79,36 @@
       "version": "V1",
       "description": "tenant_owner → tenant_admin per Migration 026 + Code-Rename. Siehe /slices/SLC-002-rollen-umbenennung.md.",
       "createdAt": "2026-04-14"
+    },
+    {
+      "id": "BL-017",
+      "title": "SLC-002a Test-Infrastruktur + RLS-Isolationstest",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V1",
+      "description": "Vitest + pg-Test-Helper + 2-Tenant-RLS-Isolationstest (MT-5 aus SLC-001 nachholen). SaaS-TDD-Mandat erfuellen. Schliesst ISSUE-002 + ISSUE-004. Siehe /slices/SLC-002a-test-infrastruktur.md.",
+      "createdAt": "2026-04-15"
+    },
+    {
+      "id": "BL-018",
+      "title": "SLC-002b strategaize_admin + Demo-Tenant Seed",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V1",
+      "description": "Seed-Migration 027 mit Admin-User + Demo-Tenant + Demo-tenant_admin. ENV-basierte Credentials, idempotent. Ermoeglicht realen Login-Smoke-Test. Siehe /slices/SLC-002b-admin-seed.md.",
+      "createdAt": "2026-04-15"
+    },
+    {
+      "id": "BL-019",
+      "title": "SLC-002c App-Branding Onboarding-Plattform",
+      "type": "improvement",
+      "priority": "medium",
+      "status": "open",
+      "version": "V1",
+      "description": "Blueprint-Branding (App-Title, Meta, Login-Copy, Favicon) durch Onboarding-eigene Strings ersetzen. Schliesst ISSUE-005. Siehe /slices/SLC-002c-app-branding.md.",
+      "createdAt": "2026-04-15"
     },
     {
       "id": "BL-009",

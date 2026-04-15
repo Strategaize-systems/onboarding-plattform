@@ -43,7 +43,7 @@
 - Area: Frontend / Branding
 - Summary: Die Login-Seite rendert mit `<title>StrategAIze Kundenplattform</title>`. Artefakt aus dem Blueprint-Fork.
 - Impact: Rein kosmetisch. Onboarding-Plattform sollte eigene Branding haben.
-- Next Action: In einem spaeteren UI-Slice korrigieren.
+- Next Action: Wird in SLC-002c "App-Branding Onboarding-Plattform" behoben.
 
 ### ISSUE-006 — Legacy-Blueprint-Migrations im sql/migrations/ Ordner
 - Status: open
