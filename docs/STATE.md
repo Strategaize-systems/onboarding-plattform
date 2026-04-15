@@ -9,16 +9,15 @@
 Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdichtung. Ermoeglicht mehrere Capture-Modi (Fragebogen, Meeting, Voice, etc.) und Template-basierte Produktvarianten (z.B. Exit-Readiness, Immobilien-Onboarding).
 
 ## Current State
-- High-Level State: implementing
-- Current Focus: SLC-002 /backend 2026-04-15 abgeschlossen. Migration 026 auf Hetzner ausgefuehrt + verifiziert (UPDATE 0 auf leerer DB, CHECK neu, 6 RLS-Policies ohne tenant_owner neu angelegt). schema.sql Init-Script-Parity hergestellt. MT-4 Tests blockiert durch fehlende Test-Infra (SLC-002a). QA steht aus.
-- Current Phase: V1 Implementation (SLC-002 in QA-Wartestellung, SLC-002a als naechster Slice geplant)
+- High-Level State: qa
+- Current Focus: SLC-002 durch (RPT-008 Pass, 2026-04-15). Migration 026 live, Code-Grep sauber, 0 Policies mit `tenant_owner`. MT-4 Test-Automation formal offen, an SLC-002a delegiert (bewusst, beim Slice-Kickoff so abgestimmt). Naechster Implementierungs-Schritt: SLC-002a Test-Infrastruktur.
+- Current Phase: V1 Implementation (SLC-002 done, SLC-002a als naechster aktiver Slice)
 
 ## Immediate Next Steps
-1. `/qa` fuer SLC-002 ausfuehren (Verifikation Migration, Code-Grep, Build/Type-Check so weit moeglich)
-2. Nach SLC-002 QA: SLC-002a Test-Infrastruktur + RLS-Isolationstest (schliesst auch MT-4)
-3. Nach SLC-002a: SLC-002b Admin + Demo-Tenant Seed (ermoeglicht realen Login-Smoke-Test)
-4. SLC-002c App-Branding (Medium, kann parallel oder nach 002b)
-5. Ab SLC-003: Feature-Slices (Template-Content, Capture-Session, Questionnaire-UI, ...)
+1. SLC-002a starten: Test-Infrastruktur (Vitest + pg-Test-Helper + 2-Tenant-RLS-Test, schliesst ISSUE-002/004)
+2. Nach SLC-002a: SLC-002b Admin + Demo-Tenant Seed (realer Login-Smoke-Test moeglich)
+3. SLC-002c App-Branding (Medium, parallel oder nach 002b)
+4. Ab SLC-003: Feature-Slices (Template-Content, Capture-Session, Questionnaire-UI, ...)
 
 ## Active Scope
 V1 (siehe /docs/PRD.md, 6 Features), Implementierungs-Plan (siehe /slices/INDEX.md, 13 Slices):
