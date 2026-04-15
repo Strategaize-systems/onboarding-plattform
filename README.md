@@ -43,6 +43,63 @@ npm run dev
 
 Dev-Server laeuft auf `localhost:3000`.
 
+## Running Tests
+
+Die Test-Infra (Vitest + pg-Client) laeuft gegen eine echte Postgres-Instanz mit geladenem Onboarding-Schema. Jeder Test startet eine Transaktion, fuehrt Assertions aus und rollt zurueck — der DB-Zustand wird nie geaendert.
+
+### Voraussetzung
+
+Eine erreichbare Postgres-DB mit dem Onboarding-Schema. Optionen:
+
+**a) Hetzner-DB via SSH-Tunnel (empfohlen fuer Dev)**
+
+```bash
+ssh -L 5433:127.0.0.1:5432 root@159.69.207.29 \
+  -o 'ExitOnForwardFailure=yes' \
+  docker exec -i supabase-db-bwkg80w04wgccos48gcws8cs-083715570318 \
+  socat TCP-LISTEN:5432,reuseaddr,fork TCP:127.0.0.1:5432
+```
+
+Alternativ: Coolify-Port fuer den Supabase-DB-Container temporaer exposen und dann einen einfachen `ssh -L 5433:localhost:<port> root@159.69.207.29` nutzen.
+
+**b) Tests direkt auf dem Hetzner-Server ausfuehren**
+
+```bash
+ssh root@159.69.207.29
+cd /path/to/onboarding
+npm install
+TEST_DATABASE_URL=postgresql://postgres:<password>@localhost:5432/postgres npm run test
+```
+
+### ENV-Konfiguration
+
+Lege `.env.test` im Repo-Root an (nicht committen, liegt in `.gitignore`):
+
+```
+TEST_DATABASE_URL=postgresql://postgres:<password>@localhost:5433/postgres
+```
+
+### Test-Kommandos
+
+```bash
+npm run test            # einmaliger Lauf
+npm run test:watch      # Watch-Mode
+npm run test:coverage   # Coverage-Report (text + html)
+```
+
+Coverage-HTML-Report liegt danach unter `coverage/index.html`.
+
+### Was die Tests abdecken
+
+- **RLS-Isolation** (`src/lib/db/__tests__/rls-isolation.test.ts`): 2-Tenant-Szenarien fuer `capture_session`, `knowledge_unit`, `validation_layer`. Verifiziert, dass `tenant_admin` von Tenant A niemals Rows von Tenant B sieht und auch nicht Cross-Tenant schreiben kann.
+
+### Test-Konventionen
+
+- Tests leben co-located in `__tests__/`-Ordnern neben dem getesteten Code.
+- Shared Helpers unter `src/test/` (DB-Connection, JWT-Claim-Context, Fixtures).
+- Jeder Test startet in einer Transaktion (`withTestDb`) — ROLLBACK ist Pflicht.
+- JWT-Claim-Simulation via `SET LOCAL request.jwt.claims` + `SET LOCAL ROLE authenticated` (`withJwtContext`).
+
 ## Dokumentation
 
 - `docs/STATE.md` — Aktueller Projektstand
