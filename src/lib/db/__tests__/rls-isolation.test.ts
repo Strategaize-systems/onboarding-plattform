@@ -136,14 +136,24 @@ describe("RLS Isolation — Cross-Tenant Leseverbot", () => {
         await seedTestTenants(client);
 
       await withJwtContext(client, userA, async () => {
-        await expect(
-          client.query(
+        // SAVEPOINT, damit ein RLS-Fehler die aeussere Transaktion nicht
+        // in Abort-Status bringt und der finally-Block weiter queriert kann.
+        await client.query(`SAVEPOINT try_cross_tenant_insert`);
+        let errorMessage: string | null = null;
+        try {
+          await client.query(
             `INSERT INTO public.capture_session
                (tenant_id, template_id, template_version, owner_user_id, status)
              VALUES ($1, $2, $3, $4, 'open')`,
             [tenantB, templateId, templateVersion, userA]
-          )
-        ).rejects.toThrowError(/row-level security|violates/i);
+          );
+        } catch (e) {
+          errorMessage = (e as Error).message;
+        }
+        await client.query(`ROLLBACK TO SAVEPOINT try_cross_tenant_insert`);
+
+        expect(errorMessage).not.toBeNull();
+        expect(errorMessage!).toMatch(/row-level security|violates/i);
       });
     });
   });
