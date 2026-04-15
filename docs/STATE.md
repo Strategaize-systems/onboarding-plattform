@@ -9,15 +9,15 @@
 Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdichtung. Ermoeglicht mehrere Capture-Modi (Fragebogen, Meeting, Voice, etc.) und Template-basierte Produktvarianten (z.B. Exit-Readiness, Immobilien-Onboarding).
 
 ## Current State
-- High-Level State: implementing
-- Current Focus: SLC-001 erfolgreich auf Hetzner deployed (2026-04-15). 7 Tabellen (tenants, profiles + 5 Capture-Tabellen), 16 RLS-Policies, 4 Helper-Funktionen produktiv. App rendert unter https://onboarding.strategaizetransition.com/login mit HTTP 200. Naechster Schritt: QA auf SLC-001, danach SLC-002.
-- Current Phase: V1 Implementation (SLC-001 implementiert + deployed, QA offen)
+- High-Level State: qa
+- Current Focus: QA auf SLC-001 abgeschlossen (RPT-006, 2026-04-15). Ergebnis Mixed: Code + Schema + Deploy sind gruen; Test-Coverage 0 % (ISSUE-002, ISSUE-004) — MT-5 RLS-Isolationstest nicht durchgefuehrt. Bereitschaft fuer SLC-002 gegeben, vor SLC-005 muss Test-Infra stehen.
+- Current Phase: V1 Implementation (SLC-001 QA durch, Test-Infra-Schulden dokumentiert)
 
 ## Immediate Next Steps
-1. /qa auf SLC-001 (Schema-Integritaet, RLS-Verhalten, Queries aus template-/capture-session-/knowledge-unit-queries.ts)
-2. SLC-002 starten (User-Management / RBAC-UI gemaess Slice-Plan)
-3. Test-Infrastruktur einrichten (ISSUE-002): Vitest + Supabase-local oder docker-compose.test.yml — fuer zukuenftige Integrationstests
-4. Login-Flow manuell testen: strategaize_admin-User seeden, Browser-Login, RLS-Policies im UI pruefen
+1. User-Entscheidung: SLC-002 direkt starten oder erst Test-Infra aufsetzen (neuer Slice SLC-002a empfohlen)
+2. Wenn SLC-002 direkt: Rollen-Umbenennung `tenant_owner` → `tenant_admin` + Code-Rename
+3. Spaetestens vor SLC-005 (Questionnaire-UI): Test-Infra-Setup (Vitest + Supabase-local) + MT-5-RLS-Isolationstest nachholen
+4. Optional: manueller Smoke-Test Login-Flow auf https://onboarding.strategaizetransition.com
 
 ## Active Scope
 V1 (siehe /docs/PRD.md, 6 Features), Implementierungs-Plan (siehe /slices/INDEX.md):
