@@ -6,23 +6,17 @@ import { seedTestTenants } from "@/test/fixtures/tenants";
 describe("RLS Isolation — Cross-Tenant Leseverbot", () => {
   it("tenant_admin von Tenant A sieht capture_session nur von Tenant A", async () => {
     await withTestDb(async (client) => {
-      const { tenantA, tenantB, userA, userB } = await seedTestTenants(client);
+      const { tenantA, tenantB, userA, userB, templateId, templateVersion } =
+        await seedTestTenants(client);
 
       // Je eine capture_session pro Tenant als Superuser anlegen (ohne RLS).
-      const sessionA = await client.query<{ id: string }>(
-        `INSERT INTO public.capture_session (tenant_id, owner_user_id, status)
-         VALUES ($1, $2, 'draft')
-         RETURNING id`,
-        [tenantA, userA]
+      await client.query(
+        `INSERT INTO public.capture_session
+           (tenant_id, template_id, template_version, owner_user_id, status)
+         VALUES ($1, $2, $3, $4, 'open'),
+                ($5, $2, $3, $6, 'open')`,
+        [tenantA, templateId, templateVersion, userA, tenantB, userB]
       );
-      const sessionB = await client.query<{ id: string }>(
-        `INSERT INTO public.capture_session (tenant_id, owner_user_id, status)
-         VALUES ($1, $2, 'draft')
-         RETURNING id`,
-        [tenantB, userB]
-      );
-      expect(sessionA.rows[0].id).toBeDefined();
-      expect(sessionB.rows[0].id).toBeDefined();
 
       // Lese als tenant_admin von A.
       await withJwtContext(client, userA, async () => {
@@ -46,57 +40,70 @@ describe("RLS Isolation — Cross-Tenant Leseverbot", () => {
 
   it("tenant_admin von A sieht knowledge_unit und validation_layer nur von A", async () => {
     await withTestDb(async (client) => {
-      const { tenantA, tenantB, userA, userB } = await seedTestTenants(client);
+      const { tenantA, tenantB, userA, userB, templateId, templateVersion } =
+        await seedTestTenants(client);
 
-      // Capture-Sessions fuer beide Tenants anlegen.
+      // Capture-Sessions
       const sessionA = await client.query<{ id: string }>(
-        `INSERT INTO public.capture_session (tenant_id, owner_user_id, status)
-         VALUES ($1, $2, 'draft') RETURNING id`,
-        [tenantA, userA]
+        `INSERT INTO public.capture_session
+           (tenant_id, template_id, template_version, owner_user_id, status)
+         VALUES ($1, $2, $3, $4, 'open') RETURNING id`,
+        [tenantA, templateId, templateVersion, userA]
       );
       const sessionB = await client.query<{ id: string }>(
-        `INSERT INTO public.capture_session (tenant_id, owner_user_id, status)
-         VALUES ($1, $2, 'draft') RETURNING id`,
-        [tenantB, userB]
+        `INSERT INTO public.capture_session
+           (tenant_id, template_id, template_version, owner_user_id, status)
+         VALUES ($1, $2, $3, $4, 'open') RETURNING id`,
+        [tenantB, templateId, templateVersion, userB]
       );
 
-      // Block-Checkpoints anlegen — Voraussetzung fuer knowledge_unit.
+      // Block-Checkpoints
       const cpA = await client.query<{ id: string }>(
-        `INSERT INTO public.block_checkpoint (tenant_id, capture_session_id, block_key, checkpoint_type, payload)
-         VALUES ($1, $2, 'block_1', 'block_submit', '{}'::jsonb)
+        `INSERT INTO public.block_checkpoint
+           (tenant_id, capture_session_id, block_key, checkpoint_type,
+            content, content_hash, created_by)
+         VALUES ($1, $2, 'block_1', 'questionnaire_submit',
+                 '{}'::jsonb, 'hash-a', $3)
          RETURNING id`,
-        [tenantA, sessionA.rows[0].id]
+        [tenantA, sessionA.rows[0].id, userA]
       );
       const cpB = await client.query<{ id: string }>(
-        `INSERT INTO public.block_checkpoint (tenant_id, capture_session_id, block_key, checkpoint_type, payload)
-         VALUES ($1, $2, 'block_1', 'block_submit', '{}'::jsonb)
+        `INSERT INTO public.block_checkpoint
+           (tenant_id, capture_session_id, block_key, checkpoint_type,
+            content, content_hash, created_by)
+         VALUES ($1, $2, 'block_1', 'questionnaire_submit',
+                 '{}'::jsonb, 'hash-b', $3)
          RETURNING id`,
-        [tenantB, sessionB.rows[0].id]
+        [tenantB, sessionB.rows[0].id, userB]
       );
 
-      // Knowledge-Units pro Tenant.
+      // Knowledge-Units
       const kuA = await client.query<{ id: string }>(
         `INSERT INTO public.knowledge_unit
-           (tenant_id, block_checkpoint_id, capture_session_id, block_key,
-            unit_type, source, content, confidence)
-         VALUES ($1, $2, $3, 'block_1', 'fact', 'questionnaire', 'content-A', 'high')
+           (tenant_id, capture_session_id, block_checkpoint_id, block_key,
+            unit_type, source, title, body, confidence)
+         VALUES ($1, $2, $3, 'block_1',
+                 'observation', 'questionnaire', 'title-A', 'body-A', 'high')
          RETURNING id`,
-        [tenantA, cpA.rows[0].id, sessionA.rows[0].id]
+        [tenantA, sessionA.rows[0].id, cpA.rows[0].id]
       );
       const kuB = await client.query<{ id: string }>(
         `INSERT INTO public.knowledge_unit
-           (tenant_id, block_checkpoint_id, capture_session_id, block_key,
-            unit_type, source, content, confidence)
-         VALUES ($1, $2, $3, 'block_1', 'fact', 'questionnaire', 'content-B', 'high')
+           (tenant_id, capture_session_id, block_checkpoint_id, block_key,
+            unit_type, source, title, body, confidence)
+         VALUES ($1, $2, $3, 'block_1',
+                 'observation', 'questionnaire', 'title-B', 'body-B', 'high')
          RETURNING id`,
-        [tenantB, cpB.rows[0].id, sessionB.rows[0].id]
+        [tenantB, sessionB.rows[0].id, cpB.rows[0].id]
       );
 
-      // Validation-Layer-Audit pro KU.
+      // Validation-Layer-Audit pro KU
       await client.query(
-        `INSERT INTO public.validation_layer (tenant_id, knowledge_unit_id, action, payload)
-         VALUES ($1, $2, 'created', '{}'::jsonb), ($3, $4, 'created', '{}'::jsonb)`,
-        [tenantA, kuA.rows[0].id, tenantB, kuB.rows[0].id]
+        `INSERT INTO public.validation_layer
+           (tenant_id, knowledge_unit_id, reviewer_user_id, reviewer_role, action)
+         VALUES ($1, $2, $3, 'tenant_admin', 'comment'),
+                ($4, $5, $6, 'tenant_admin', 'comment')`,
+        [tenantA, kuA.rows[0].id, userA, tenantB, kuB.rows[0].id, userB]
       );
 
       await withJwtContext(client, userA, async () => {
@@ -125,14 +132,16 @@ describe("RLS Isolation — Cross-Tenant Leseverbot", () => {
 
   it("tenant_admin von A kann keine capture_session fuer Tenant B anlegen (WITH CHECK)", async () => {
     await withTestDb(async (client) => {
-      const { tenantB, userA } = await seedTestTenants(client);
+      const { tenantB, userA, templateId, templateVersion } =
+        await seedTestTenants(client);
 
       await withJwtContext(client, userA, async () => {
         await expect(
           client.query(
-            `INSERT INTO public.capture_session (tenant_id, owner_user_id, status)
-             VALUES ($1, $2, 'draft')`,
-            [tenantB, userA]
+            `INSERT INTO public.capture_session
+               (tenant_id, template_id, template_version, owner_user_id, status)
+             VALUES ($1, $2, $3, $4, 'open')`,
+            [tenantB, templateId, templateVersion, userA]
           )
         ).rejects.toThrowError(/row-level security|violates/i);
       });
