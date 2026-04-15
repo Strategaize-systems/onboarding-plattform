@@ -9,13 +9,13 @@
 Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdichtung. Ermoeglicht mehrere Capture-Modi (Fragebogen, Meeting, Voice, etc.) und Template-basierte Produktvarianten (z.B. Exit-Readiness, Immobilien-Onboarding).
 
 ## Current State
-- High-Level State: qa
-- Current Focus: SLC-002 durch (RPT-008 Pass, 2026-04-15). Migration 026 live, Code-Grep sauber, 0 Policies mit `tenant_owner`. MT-4 Test-Automation formal offen, an SLC-002a delegiert (bewusst, beim Slice-Kickoff so abgestimmt). Naechster Implementierungs-Schritt: SLC-002a Test-Infrastruktur.
-- Current Phase: V1 Implementation (SLC-002 done, SLC-002a als naechster aktiver Slice)
+- High-Level State: implementing
+- Current Focus: SLC-002a done. Vitest-Infra + 3 RLS-Isolationstests 3/3 gruen auf Hetzner verifiziert (2026-04-15). ISSUE-002 + ISSUE-004 resolved. SaaS-TDD-Mandat erfuellt. Naechster Implementierungs-Schritt: SLC-002b Admin + Demo-Tenant Seed.
+- Current Phase: V1 Implementation (SLC-002 + SLC-002a done, SLC-002b als naechster aktiver Slice)
 
 ## Immediate Next Steps
-1. SLC-002a starten: Test-Infrastruktur (Vitest + pg-Test-Helper + 2-Tenant-RLS-Test, schliesst ISSUE-002/004)
-2. Nach SLC-002a: SLC-002b Admin + Demo-Tenant Seed (realer Login-Smoke-Test moeglich)
+1. `/qa` fuer SLC-002a (Mandatory nach /backend)
+2. Nach SLC-002a QA: SLC-002b Admin + Demo-Tenant Seed (realer Login-Smoke-Test moeglich)
 3. SLC-002c App-Branding (Medium, parallel oder nach 002b)
 4. Ab SLC-003: Feature-Slices (Template-Content, Capture-Session, Questionnaire-UI, ...)
 
@@ -32,9 +32,9 @@ V1 (siehe /docs/PRD.md, 6 Features), Implementierungs-Plan (siehe /slices/INDEX.
 - aktuell keine (SSH-Problem geloest 2026-04-15, Deploy durch, Business-DB aufgeraeumt)
 
 ## Known Issues (reference)
-- ISSUE-002 Test-Infrastruktur fehlt — wird in SLC-002a behoben
+- ISSUE-002 Test-Infrastruktur fehlt — resolved (SLC-002a, 2026-04-15)
 - ISSUE-003 node_modules lokal nicht installiert — nur Dev-Convenience, Build auf Server laeuft
-- ISSUE-004 2-Tenant-RLS-Isolation unverifiziert — wird in SLC-002a MT-4 nachgeholt
+- ISSUE-004 2-Tenant-RLS-Isolation unverifiziert — resolved (SLC-002a MT-4, 2026-04-15)
 - ISSUE-005 App-Title Blueprint-Branding — wird in SLC-002c behoben
 - ISSUE-007 JWT-Refresh-Randbedingung nach Rollen-Umbenennung — aktuell kein Handlungsbedarf
 - ISSUE-008 Legacy-Route /api/tenant/runs/[runId]/feedback — mit ISSUE-006 im Cleanup-Slice bereinigen

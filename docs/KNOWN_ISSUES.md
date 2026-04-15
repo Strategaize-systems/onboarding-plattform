@@ -11,13 +11,13 @@
 - Resolution: .gitignore um `secrets-*.txt`, `*.secrets`, `secrets/` erweitert. secrets-onboarding.txt wird jetzt garantiert ignoriert, auch bei versehentlichem `git add .`.
 
 ### ISSUE-002 — Test-Infrastruktur fehlt im Repo
-- Status: open
+- Status: resolved
+- Resolution Date: 2026-04-15
 - Severity: High
 - Area: QA / Build-Toolchain
-- Summary: `package.json` hat kein `test`-Script und keine Test-Framework-Abhaengigkeit (kein Vitest, kein Jest, kein Playwright). SaaS-Delivery-Mode verlangt laut `.claude/rules/tdd.md` mandatorisches TDD pro Slice.
-- Impact: SLC-001 MT-4 Query-Layer ist OHNE Unit-Tests committet. SLC-001 MT-5 (2-Tenant-RLS-Integrationstest) kann nicht ausgefuehrt werden, bis ein Test-Framework gewaehlt und eingerichtet ist. Gilt analog fuer alle folgenden Slices.
-- Workaround: Query-Layer manuell auf der Hetzner-DB verifizieren (nach Deploy); RLS-Isolation per psql-Script pruefen.
-- Next Action: Rule-4-Entscheidung durch User: Vitest (empfohlen — de-facto Standard fuer Next.js 16 + TypeScript + Zod) oder Alternative. Nach Entscheidung: separater Setup-Slice oder In-Place-Aufnahme in SLC-002.
+- Summary: `package.json` hatte kein `test`-Script und keine Test-Framework-Abhaengigkeit.
+- Impact: SLC-001 MT-4 und MT-5 blieben ohne Automatisierung.
+- Resolution: SLC-002a. Vitest 2.1 + @vitest/coverage-v8 + pg 8.13 + dotenv installiert. Scripts `test`, `test:watch`, `test:coverage` in package.json. Test-Harness unter `src/test/` (db.ts, auth-context.ts, fixtures/tenants.ts). README-Abschnitt "Running Tests" mit SSH-Tunnel- und server-side Variante dokumentiert. Erste Test-Datei `src/lib/db/__tests__/rls-isolation.test.ts` 3/3 gruen (verifiziert auf Hetzner via node:20-Container im Coolify-Netzwerk).
 
 ### ISSUE-003 — node_modules nicht installiert
 - Status: open
@@ -29,13 +29,13 @@
 - Next Action: Einmalig `npm install` lokal ausfuehren, damit Type-Check + Lint in kommenden Slices verfuegbar sind.
 
 ### ISSUE-004 — SLC-001 MT-5 nicht durchgefuehrt (2-Tenant-RLS-Isolationstest)
-- Status: open
+- Status: resolved
+- Resolution Date: 2026-04-15
 - Severity: High
 - Area: QA / RLS-Verifikation
-- Summary: SLC-001 Acceptance Criterion 3 verlangt einen automatisierten Test, der prueft ob `tenant_admin` von Tenant A keine Rows von Tenant B sieht. Dieser Test ist nicht umgesetzt (keine Test-Dateien, keine Test-Infra).
-- Impact: Das Kernprinzip der Multi-Tenancy ist nicht automatisiert abgesichert. Die RLS-Policies sind syntaktisch korrekt und folgen dem Blueprint-Muster, aber eine Kreuzpruefung mit echten JWT-Claims fehlt.
-- Workaround: Manueller Smoke-Test via `SET LOCAL "request.jwt.claims" = '{...}'` auf der Hetzner-DB mit 2 seeded Tenants. Noch nicht durchgefuehrt.
-- Next Action: Mit ISSUE-002 zusammen auf (a) Test-Infra-Setup (Vitest + Supabase-local) oder (b) psql-basierten Integrationstest. Ziel: Test in kommendem Slice SLC-002a "Test-Infrastruktur" umgesetzt.
+- Summary: SLC-001 Acceptance Criterion 3 verlangte einen automatisierten Test.
+- Impact: Multi-Tenancy-Isolation war nicht automatisiert abgesichert.
+- Resolution: SLC-002a MT-4. Drei Vitest-Tests in `src/lib/db/__tests__/rls-isolation.test.ts` decken ab: (a) capture_session cross-tenant read-isolation fuer Tenant A und B, (b) knowledge_unit + validation_layer cross-tenant read-isolation, (c) WITH CHECK Cross-Tenant-INSERT-Verbot. 3/3 gruen auf Hetzner-DB verifiziert.
 
 ### ISSUE-005 — App-Title "StrategAIze Kundenplattform" (Blueprint-Branding)
 - Status: open
