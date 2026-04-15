@@ -189,6 +189,16 @@
       "version": "V1",
       "description": "Finaler Checkpoint + Export-API + E2E-Smoketest. Siehe /slices/SLC-010-meeting-snapshot-export.md.",
       "createdAt": "2026-04-14"
+    },
+    {
+      "id": "BL-020",
+      "title": "Evidence-Bulk-Import (Archive, E-Mail-Postfaecher, Dokumentenbestaende)",
+      "type": "feature",
+      "priority": "medium",
+      "status": "open",
+      "version": "V2",
+      "description": "Erweiterung des Evidence-Modus um Bulk-Variante. Ermoeglicht Import ganzer Archive: E-Mail-Dumps (IMAP/PST/mbox), Angebots-/Projekt-Historien, Dokumentenbestaende. Pre-Processing: Privat-/Geschaeftlich-Filter, Relevanz-Klassifikation, Deduplizierung. Danach identische Verdichtungs-Pipeline wie Evidence-Single. Synergie-Pruefung: IMAP-Adapter aus Business System V4 wiederverwenden. Herkunft: Plattform-Idee 2 aus IS-Re-Discovery-Runde 2026-04-15.",
+      "createdAt": "2026-04-15"
     }
   ]
 }
