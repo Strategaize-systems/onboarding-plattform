@@ -9,15 +9,14 @@
 Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdichtung. Ermoeglicht mehrere Capture-Modi (Fragebogen, Meeting, Voice, etc.) und Template-basierte Produktvarianten (z.B. Exit-Readiness, Immobilien-Onboarding).
 
 ## Current State
-- High-Level State: implementing
-- Current Focus: SLC-002a done. Vitest-Infra + 3 RLS-Isolationstests 3/3 gruen auf Hetzner verifiziert (2026-04-15). ISSUE-002 + ISSUE-004 resolved. SaaS-TDD-Mandat erfuellt. Naechster Implementierungs-Schritt: SLC-002b Admin + Demo-Tenant Seed.
+- High-Level State: qa
+- Current Focus: SLC-002a QA Pass (RPT-010, 2026-04-15). Tests 2x gruen, 0 Residual-Rows, 0 TypeScript-Fehler, Coverage-Baseline dokumentiert. Test-Infra als SaaS-TDD-Baseline einsetzbar. Naechster Implementierungs-Schritt: SLC-002b Admin + Demo-Tenant Seed.
 - Current Phase: V1 Implementation (SLC-002 + SLC-002a done, SLC-002b als naechster aktiver Slice)
 
 ## Immediate Next Steps
-1. `/qa` fuer SLC-002a (Mandatory nach /backend)
-2. Nach SLC-002a QA: SLC-002b Admin + Demo-Tenant Seed (realer Login-Smoke-Test moeglich)
-3. SLC-002c App-Branding (Medium, parallel oder nach 002b)
-4. Ab SLC-003: Feature-Slices (Template-Content, Capture-Session, Questionnaire-UI, ...)
+1. SLC-002b starten: Admin + Demo-Tenant Seed (Migration 027, ermoeglicht realen Login-Smoke-Test)
+2. SLC-002c App-Branding (Medium, parallel oder nach 002b)
+3. Ab SLC-003: Feature-Slices (Template-Content, Capture-Session, Questionnaire-UI, ...)
 
 ## Active Scope
 V1 (siehe /docs/PRD.md, 6 Features), Implementierungs-Plan (siehe /slices/INDEX.md, 13 Slices):
