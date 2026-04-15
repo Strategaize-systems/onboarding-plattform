@@ -75,9 +75,9 @@
       "title": "SLC-002 Rollen-Umbenennung",
       "type": "feature",
       "priority": "high",
-      "status": "open",
+      "status": "in_progress",
       "version": "V1",
-      "description": "tenant_owner → tenant_admin per Migration 026 + Code-Rename. Siehe /slices/SLC-002-rollen-umbenennung.md.",
+      "description": "tenant_owner → tenant_admin per Migration 026 + Code-Rename. Migration 026 auf Hetzner ausgefuehrt 2026-04-15, MT-4 (Tests) blockiert durch fehlende Test-Infra (SLC-002a). QA offen. Siehe /slices/SLC-002-rollen-umbenennung.md.",
       "createdAt": "2026-04-14"
     },
     {

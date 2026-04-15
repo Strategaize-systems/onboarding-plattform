@@ -26,7 +26,7 @@ export async function GET(
   const { profile, supabase } = auth;
   const { runId } = await params;
 
-  // Role check: only tenant_admin (tenant_owner was migrated to tenant_admin in 004)
+  // Role check: only tenant_admin
   if (profile.role !== "tenant_admin") {
     return errorResponse("FORBIDDEN", "Only tenant admins can access feedback", 403);
   }

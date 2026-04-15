@@ -9,13 +9,13 @@
 Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdichtung. Ermoeglicht mehrere Capture-Modi (Fragebogen, Meeting, Voice, etc.) und Template-basierte Produktvarianten (z.B. Exit-Readiness, Immobilien-Onboarding).
 
 ## Current State
-- High-Level State: slice-planning
-- Current Focus: Slice-Planning-Iteration 2026-04-15 abgeschlossen. 3 neue Slices eingefuegt (SLC-002a Test-Infra, SLC-002b Admin+Demo-Tenant Seed, SLC-002c App-Branding). SLC-001 auf `done` gehoben (Test-Gap bewusst an SLC-002a delegiert). Naechster Implementierungs-Schritt: SLC-002 Rollen-Umbenennung.
-- Current Phase: V1 Implementation (SLC-001 done, SLC-002 als naechster aktiver Slice)
+- High-Level State: implementing
+- Current Focus: SLC-002 /backend 2026-04-15 abgeschlossen. Migration 026 auf Hetzner ausgefuehrt + verifiziert (UPDATE 0 auf leerer DB, CHECK neu, 6 RLS-Policies ohne tenant_owner neu angelegt). schema.sql Init-Script-Parity hergestellt. MT-4 Tests blockiert durch fehlende Test-Infra (SLC-002a). QA steht aus.
+- Current Phase: V1 Implementation (SLC-002 in QA-Wartestellung, SLC-002a als naechster Slice geplant)
 
 ## Immediate Next Steps
-1. SLC-002 starten: Rollen-Umbenennung `tenant_owner` → `tenant_admin` + Code-Rename (via `/backend`)
-2. Nach SLC-002: SLC-002a Test-Infrastruktur + RLS-Isolationstest (Blocker-Entschuldung)
+1. `/qa` fuer SLC-002 ausfuehren (Verifikation Migration, Code-Grep, Build/Type-Check so weit moeglich)
+2. Nach SLC-002 QA: SLC-002a Test-Infrastruktur + RLS-Isolationstest (schliesst auch MT-4)
 3. Nach SLC-002a: SLC-002b Admin + Demo-Tenant Seed (ermoeglicht realen Login-Smoke-Test)
 4. SLC-002c App-Branding (Medium, kann parallel oder nach 002b)
 5. Ab SLC-003: Feature-Slices (Template-Content, Capture-Session, Questionnaire-UI, ...)
@@ -37,6 +37,8 @@ V1 (siehe /docs/PRD.md, 6 Features), Implementierungs-Plan (siehe /slices/INDEX.
 - ISSUE-003 node_modules lokal nicht installiert — nur Dev-Convenience, Build auf Server laeuft
 - ISSUE-004 2-Tenant-RLS-Isolation unverifiziert — wird in SLC-002a MT-4 nachgeholt
 - ISSUE-005 App-Title Blueprint-Branding — wird in SLC-002c behoben
+- ISSUE-007 JWT-Refresh-Randbedingung nach Rollen-Umbenennung — aktuell kein Handlungsbedarf
+- ISSUE-008 Legacy-Route /api/tenant/runs/[runId]/feedback — mit ISSUE-006 im Cleanup-Slice bereinigen
 
 ## Last Stable Version
 - V1-preview @ commit 6601cbe — deployed 2026-04-15, DB-Baseline + Capture-Schema + App bereit unter https://onboarding.strategaizetransition.com
