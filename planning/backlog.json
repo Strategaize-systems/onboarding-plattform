@@ -67,7 +67,7 @@
       "priority": "high",
       "status": "in_progress",
       "version": "V1",
-      "description": "5 neue Kerntabellen + RLS + Migrations 021-023. MT-1..3 + MT-4 done (Code), MT-5 blockiert durch Test-Infra (ISSUE-002), MT-6 Hetzner-Deploy pending. Siehe /slices/SLC-001-schema-fundament.md.",
+      "description": "5 neue Kerntabellen + RLS + Migrations 021-023. MT-1..4 + MT-6 done (Code + Deploy 2026-04-15), MT-5 RLS-Integrationstest blockiert durch Test-Infra (ISSUE-002). QA offen. Siehe /slices/SLC-001-schema-fundament.md.",
       "createdAt": "2026-04-14"
     },
     {
