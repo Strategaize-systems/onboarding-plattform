@@ -63,19 +63,27 @@
 - Next Action: Beim ersten echten Kundenlaunch dokumentieren; aktuell keine Aktion noetig.
 
 ### ISSUE-008 — Legacy-Blueprint-API-Route /api/tenant/runs/[runId]/feedback
-- Status: open
+- Status: resolved
+- Resolution Date: 2026-04-16
 - Severity: Low
 - Area: Backend / API
 - Summary: Die Route `src/app/api/tenant/runs/[runId]/feedback/route.ts` greift auf Blueprint-Tabellen `runs` und `run_feedback` zu, die im Onboarding-Schema nicht existieren. Jeder Aufruf wuerde HTTP 500 liefern. Die Route ist toter Code aus dem Blueprint-Fork.
 - Impact: Kein Produktions-Risiko (tote Route, niemand ruft sie auf), aber Verwirrungspotenzial und Build-Ballast. Analog zu ISSUE-006 (Legacy-Migrations).
-- Workaround: Keine.
-- Next Action: In SLC-002d Blueprint-Legacy-UI-Cleanup entfernen (zusammen mit ISSUE-009 und ISSUE-006 in einem Wisch).
+- Resolution: SLC-002d MT-2b. Route komplett entfernt, zusaetzlich `src/components/workspace/feedback-panel.tsx` + Feedback-Tab-Render + Import in `run-workspace-client.tsx` + `"feedback"` aus `WorkspaceTab`-Type + i18n-Keys `workspace.tabs.feedback*` + `workspace.feedback.*`. Commit 7a80504.
 
 ### ISSUE-009 — Blueprint-Profile-Flow Silent Failure (owner_profiles-Tabelle fehlt)
-- Status: open
+- Status: resolved
+- Resolution Date: 2026-04-16
 - Severity: Medium
 - Area: Frontend / Backend Legacy
-- Summary: Der Blueprint-geerbte `/profile`-Flow (src/app/profile/page.tsx + profile-form-client.tsx) laedt ueber `PUT /api/tenant/profile` ein owner_profiles-Upsert. Die Tabelle `owner_profiles` existiert in der Onboarding-DB nicht (per MIG-003 entfernt). `handleSave` in profile-form-client.tsx prueft nur `res.ok === true` und zeigt bei Fehlern keinen Feedback — User klickt "Profil speichern", API antwortet HTTP 500, UI zeigt nichts. Beim SLC-002b-Smoketest am 2026-04-16 entdeckt.
-- Impact: User wird nach Login eventuell auf /profile geroutet (Blueprint-Legacy-Redirect) und kann dort nicht weiter navigieren, weil Save fehlschlaegt und kein Cancel-Button sichtbar ist (`{ownerProfile && <Cancel>}` — neue User haben kein ownerProfile, also kein Cancel). Blockiert realen Testflow der Plattform, bis Legacy entfernt ist.
-- Workaround: User kann manuell `/dashboard` in der URL aufrufen und sich damit an der Profile-UI vorbeinavigieren. Nicht benutzerfreundlich.
-- Next Action: SLC-002d Blueprint-Legacy-UI-Cleanup. Komplette Profile-Flow (src/app/profile/, src/app/api/tenant/profile/, src/components/profile/, i18n-Keys unter `profile.*`, sowie alle Redirects auf /profile) entfernen. Owner-Profile kehrt spaeter evtl. als Template-spezifische Erhebung zurueck (Scope V2+).
+- Summary: Der Blueprint-geerbte `/profile`-Flow (src/app/profile/page.tsx + profile-form-client.tsx) laedt ueber `PUT /api/tenant/profile` ein owner_profiles-Upsert. `handleSave` in profile-form-client.tsx prueft nur `res.ok === true` und zeigt bei Fehlern keinen Feedback — User klickt "Profil speichern", API antwortet HTTP 500, UI zeigt nichts. Beim SLC-002b-Smoketest am 2026-04-16 entdeckt.
+- Annahme-Korrektur (2026-04-16): Die urspruengliche Begruendung "owner_profiles wurde per MIG-003 entfernt" war falsch — MIG-003 ist `003_block_checkpoints.sql` (unrelated). Realer Grund: die Tabelle wurde beim Onboarding-DB-Aufbau (SLC-001) nie angelegt, weil Migrations 012+014 aus dem Blueprint-Fork nicht im Onboarding-Migrations-Runner aufgenommen waren. `\d owner_profiles` am 2026-04-16 auf Hetzner-DB: "Did not find any relation named 'owner_profiles'".
+- Impact: User wird nach Login eventuell auf /profile geroutet (Blueprint-Legacy-Redirect) und kann dort nicht weiter navigieren, weil Save fehlschlaegt und kein Cancel-Button sichtbar ist. Blockiert realen Testflow der Plattform, bis Legacy entfernt ist.
+- Resolution: SLC-002d MT-2a..2d. Komplette Profile-Flow entfernt:
+  - UI: `src/app/profile/`, `src/components/profile/`, `src/app/api/tenant/profile/route.ts`
+  - Dashboard: Owner-Profile-Check + Redirect auf `/profile` raus
+  - Sidebar: `/profile`-Link raus, `/mirror/profile`-Link bleibt (nur fuer mirror_respondent-Rolle)
+  - owner_profiles-Lookups: alle 6 Call-Sites in `src/lib/llm.ts` (Aufrufe) + 4 runs-APIs (chat, freeform/chat, generate-answer, evidence) entfernt. `buildOwnerContext` + `OwnerProfileData` bleiben als Dead Code in `llm.ts` fuer V2+ Wiederverwendung bei template-spezifischer Owner-Erhebung.
+  - i18n: `profile.*` Block aus de.json + en.json + nl.json entfernt.
+  - DB: Migration 028_drop_owner_profiles.sql (idempotent, `DROP TABLE IF EXISTS CASCADE`). Ausgefuehrt auf Hetzner 2026-04-16 — No-Op, da Tabelle nicht existierte. Legacy-Migrations 012 + 014 als DEPRECATED markiert.
+  - Commit 7a80504. Redeploy + Smoketest beide Seed-User PASS am 2026-04-16.

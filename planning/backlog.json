@@ -115,9 +115,9 @@
       "title": "SLC-002d Blueprint-Legacy-UI-Cleanup",
       "type": "improvement",
       "priority": "medium",
-      "status": "open",
+      "status": "done",
       "version": "V1",
-      "description": "Blueprint-Owner-Profile-Flow entfernen (Page, API, Client, components/profile/*, i18n-Keys, post-login-Redirect auf /profile), plus ISSUE-008 /api/tenant/runs/[runId]/feedback-Route. Schliesst ISSUE-009 (Silent Failure weil owner_profiles-Tabelle nicht existiert, per MIG-003). Siehe /slices/SLC-002d-legacy-ui-cleanup.md.",
+      "description": "Blueprint-Owner-Profile-Flow entfernt (Page, API, Client, components/profile/*, i18n-Keys, Sidebar-Link + Dashboard-Redirect + alle 6 owner_profiles-Lookups in llm.ts/runs-APIs + FeedbackPanel + Feedback-Tab). Migration 028_drop_owner_profiles.sql idempotent auf Hetzner ausgefuehrt. Schliesst ISSUE-008 + ISSUE-009. Commit 7a80504, Deploy 2026-04-16. Siehe /slices/SLC-002d-legacy-ui-cleanup.md.",
       "createdAt": "2026-04-16"
     },
     {
