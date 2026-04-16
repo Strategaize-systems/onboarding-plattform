@@ -95,9 +95,9 @@
       "title": "SLC-002b strategaize_admin + Demo-Tenant Seed",
       "type": "feature",
       "priority": "high",
-      "status": "open",
+      "status": "done",
       "version": "V1",
-      "description": "Seed-Migration 027 mit Admin-User + Demo-Tenant + Demo-tenant_admin. ENV-basierte Credentials, idempotent. Ermoeglicht realen Login-Smoke-Test. Siehe /slices/SLC-002b-admin-seed.md.",
+      "description": "Seed-Migration 027 (nur Demo-Tenant) + scripts/seed-admin.mjs (native fetch, Supabase Admin API, idempotent). Deployed 2026-04-16, beide Login-Credentials funktionieren. DEC-011 begruendet Abkehr von direkter auth.users-INSERT. Siehe /slices/SLC-002b-admin-seed.md.",
       "createdAt": "2026-04-15"
     },
     {
@@ -109,6 +109,16 @@
       "version": "V1",
       "description": "Blueprint-Branding (App-Title, Meta, Login-Copy, Favicon) durch Onboarding-eigene Strings ersetzen. Schliesst ISSUE-005. Siehe /slices/SLC-002c-app-branding.md.",
       "createdAt": "2026-04-15"
+    },
+    {
+      "id": "BL-021",
+      "title": "SLC-002d Blueprint-Legacy-UI-Cleanup",
+      "type": "improvement",
+      "priority": "medium",
+      "status": "open",
+      "version": "V1",
+      "description": "Blueprint-Owner-Profile-Flow entfernen (Page, API, Client, components/profile/*, i18n-Keys, post-login-Redirect auf /profile), plus ISSUE-008 /api/tenant/runs/[runId]/feedback-Route. Schliesst ISSUE-009 (Silent Failure weil owner_profiles-Tabelle nicht existiert, per MIG-003). Siehe /slices/SLC-002d-legacy-ui-cleanup.md.",
+      "createdAt": "2026-04-16"
     },
     {
       "id": "BL-009",

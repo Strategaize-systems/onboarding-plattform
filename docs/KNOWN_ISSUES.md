@@ -69,4 +69,13 @@
 - Summary: Die Route `src/app/api/tenant/runs/[runId]/feedback/route.ts` greift auf Blueprint-Tabellen `runs` und `run_feedback` zu, die im Onboarding-Schema nicht existieren. Jeder Aufruf wuerde HTTP 500 liefern. Die Route ist toter Code aus dem Blueprint-Fork.
 - Impact: Kein Produktions-Risiko (tote Route, niemand ruft sie auf), aber Verwirrungspotenzial und Build-Ballast. Analog zu ISSUE-006 (Legacy-Migrations).
 - Workaround: Keine.
-- Next Action: In einem Maintenance-Slice (zusammen mit ISSUE-006 Legacy-Cleanup) entfernen. Scope ausserhalb SLC-002.
+- Next Action: In SLC-002d Blueprint-Legacy-UI-Cleanup entfernen (zusammen mit ISSUE-009 und ISSUE-006 in einem Wisch).
+
+### ISSUE-009 — Blueprint-Profile-Flow Silent Failure (owner_profiles-Tabelle fehlt)
+- Status: open
+- Severity: Medium
+- Area: Frontend / Backend Legacy
+- Summary: Der Blueprint-geerbte `/profile`-Flow (src/app/profile/page.tsx + profile-form-client.tsx) laedt ueber `PUT /api/tenant/profile` ein owner_profiles-Upsert. Die Tabelle `owner_profiles` existiert in der Onboarding-DB nicht (per MIG-003 entfernt). `handleSave` in profile-form-client.tsx prueft nur `res.ok === true` und zeigt bei Fehlern keinen Feedback — User klickt "Profil speichern", API antwortet HTTP 500, UI zeigt nichts. Beim SLC-002b-Smoketest am 2026-04-16 entdeckt.
+- Impact: User wird nach Login eventuell auf /profile geroutet (Blueprint-Legacy-Redirect) und kann dort nicht weiter navigieren, weil Save fehlschlaegt und kein Cancel-Button sichtbar ist (`{ownerProfile && <Cancel>}` — neue User haben kein ownerProfile, also kein Cancel). Blockiert realen Testflow der Plattform, bis Legacy entfernt ist.
+- Workaround: User kann manuell `/dashboard` in der URL aufrufen und sich damit an der Profile-UI vorbeinavigieren. Nicht benutzerfreundlich.
+- Next Action: SLC-002d Blueprint-Legacy-UI-Cleanup. Komplette Profile-Flow (src/app/profile/, src/app/api/tenant/profile/, src/components/profile/, i18n-Keys unter `profile.*`, sowie alle Redirects auf /profile) entfernen. Owner-Profile kehrt spaeter evtl. als Template-spezifische Erhebung zurueck (Scope V2+).
