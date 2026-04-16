@@ -51,8 +51,10 @@ COPY --from=builder /app/node_modules/pdf-parse/ ./node_modules/pdf-parse/
 COPY --from=builder /app/node_modules/mammoth/ ./node_modules/mammoth/
 
 # Seed-Scripts (SLC-002b): one-shot Node-Tools, laufen via `node scripts/<name>.mjs`.
-# @supabase/supabase-js ist bereits im standalone-node_modules (Server-Code-Import).
+# @supabase/supabase-js wird von next standalone-trace NICHT erfasst (nur @supabase/ssr
+# wird gebundled). Daher explizit kopieren — analog pdf-parse/mammoth weiter oben.
 COPY scripts/ ./scripts/
+COPY --from=builder /app/node_modules/@supabase/ ./node_modules/@supabase/
 
 USER nextjs
 
