@@ -31,11 +31,15 @@ Deploy nicht zwingend noetig, wenn der Container per `docker exec` mit `-e` gest
 
 ```bash
 # Container-Namen ermitteln (Coolify vergibt dynamische Namen)
-docker ps --format "{{.Names}}" | grep onboarding | grep -v supabase
+docker ps --format "{{.Names}}" | grep ^app- | grep -v supabase
 
-# Script ausfuehren
+# Script ausfuehren — zwei aequivalente Wege:
+docker exec <onboarding-app-container> node scripts/seed-admin.mjs
+# oder
 docker exec <onboarding-app-container> npm run seed:admin
 ```
+
+Der direkte `node`-Aufruf ist robuster, wenn das standalone-package.json die Script-Liste beim Build getrimmt haben sollte.
 
 Erwartete Ausgabe (Auszug):
 

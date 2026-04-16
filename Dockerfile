@@ -50,6 +50,10 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/node_modules/pdf-parse/ ./node_modules/pdf-parse/
 COPY --from=builder /app/node_modules/mammoth/ ./node_modules/mammoth/
 
+# Seed-Scripts (SLC-002b): one-shot Node-Tools, laufen via `node scripts/<name>.mjs`.
+# @supabase/supabase-js ist bereits im standalone-node_modules (Server-Code-Import).
+COPY scripts/ ./scripts/
+
 USER nextjs
 
 EXPOSE 3000
