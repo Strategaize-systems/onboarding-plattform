@@ -38,12 +38,13 @@
 - Resolution: SLC-002a MT-4. Drei Vitest-Tests in `src/lib/db/__tests__/rls-isolation.test.ts` decken ab: (a) capture_session cross-tenant read-isolation fuer Tenant A und B, (b) knowledge_unit + validation_layer cross-tenant read-isolation, (c) WITH CHECK Cross-Tenant-INSERT-Verbot. 3/3 gruen auf Hetzner-DB verifiziert.
 
 ### ISSUE-005 — App-Title "StrategAIze Kundenplattform" (Blueprint-Branding)
-- Status: open
+- Status: resolved
+- Resolution Date: 2026-04-16
 - Severity: Low
 - Area: Frontend / Branding
 - Summary: Die Login-Seite rendert mit `<title>StrategAIze Kundenplattform</title>`. Artefakt aus dem Blueprint-Fork.
 - Impact: Rein kosmetisch. Onboarding-Plattform sollte eigene Branding haben.
-- Next Action: Wird in SLC-002c "App-Branding Onboarding-Plattform" behoben.
+- Resolution: SLC-002c. Root-Metadata in `src/app/layout.tsx` + `src/messages/{de,en,nl}.json` auf `StrategAIze Onboarding` + Onboarding-spezifische Descriptions umgestellt. Sidebar-Blocks in `dashboard-sidebar.tsx` + `run-workspace-client.tsx` von hardcoded `"Blueprint Assessment"` auf i18n-Key `sidebar.title = "Assessment"` umgestellt (neutral bis Template-Infra in SLC-003 kommt). `package.json` name `ai-coding-starter-kit` → `strategaize-onboarding-plattform`. `src/i18n/config.ts` Header-Kommentar aktualisiert. Commit 77aa974. Live verifiziert per Smoketest: `<title>StrategAIze Onboarding</title>` + korrekte `<meta description>` + i18n-Payload enthält `sidebar.title: "Assessment"`.
 
 ### ISSUE-006 — Legacy-Blueprint-Migrations im sql/migrations/ Ordner
 - Status: open

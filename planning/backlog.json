@@ -105,9 +105,9 @@
       "title": "SLC-002c App-Branding Onboarding-Plattform",
       "type": "improvement",
       "priority": "medium",
-      "status": "open",
+      "status": "done",
       "version": "V1",
-      "description": "Blueprint-Branding (App-Title, Meta, Login-Copy, Favicon) durch Onboarding-eigene Strings ersetzen. Schliesst ISSUE-005. Siehe /slices/SLC-002c-app-branding.md.",
+      "description": "Blueprint-Branding (App-Title, Meta, Sidebar-Block) durch Onboarding-eigene Strings ersetzt. Root-Meta -> 'StrategAIze Onboarding', Sidebar-Block -> i18n-Key sidebar.title = 'Assessment', package.json-name -> strategaize-onboarding-plattform. Kein Favicon noetig (existiert nicht). Schliesst ISSUE-005. Commit 77aa974, Deploy 2026-04-16. Siehe /slices/SLC-002c-app-branding.md.",
       "createdAt": "2026-04-15"
     },
     {
