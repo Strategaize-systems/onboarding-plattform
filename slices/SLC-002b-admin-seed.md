@@ -4,24 +4,23 @@
 - Status: planned
 - Priority: High
 - Created: 2026-04-15
+- Updated: 2026-04-16 (Strategieentscheidung auf Weg 2 gesetzt, siehe DEC-011)
 - Delivery Mode: SaaS (TDD mandatory)
 - Worktree: ja
 
 ## Goal
 Einen strategaize_admin-User anlegen, damit Admin-Flaechen ueberhaupt benutzbar sind, und einen Demo-Tenant + Demo-tenant_admin-User, damit ein echter Login-Flow-Smoke-Test durchgefuehrt werden kann. Ohne diesen Seed laeuft die live-DB leer und jede UI-Verifikation bleibt theoretisch.
 
-## In Scope
-- Seed-Migration `027_seed_admin_and_demo_tenant.sql`
-- strategaize_admin:
-  - 1 Zeile in `auth.users` mit fester UUID (env-ueberschreibbar), E-Mail via ENV
-  - `handle_new_user`-Trigger legt automatisch `profiles`-Eintrag mit `role = 'strategaize_admin'` und `tenant_id = NULL` an
-- Demo-Tenant:
-  - 1 Zeile in `tenants` (slug `demo`, name "Demo Onboarding GmbH")
-  - 1 Zeile in `auth.users` fuer tenant_admin, automatisch verbunden mit Tenant via `raw_user_meta_data.tenant_id`
-  - `handle_new_user` legt `profiles`-Eintrag mit `role = 'tenant_admin'` und `tenant_id = <demo>` an
-- Idempotent (`ON CONFLICT DO NOTHING`) — Re-Deploy bricht nicht
-- Passwoerter als ENV-Variablen `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD`, `SEED_DEMO_TENANT_ADMIN_EMAIL`, `SEED_DEMO_TENANT_ADMIN_PASSWORD`
-- Dokumentation in `docs/RUNBOOK.md` oder README, wie Credentials gesetzt/rotiert werden
+## In Scope (aktualisiert — Weg 2 gewaehlt, DEC-011)
+- SQL-Migration `sql/migrations/027_seed_demo_tenant.sql` — NUR die Demo-Tenant-Row (public-Schema, fixe UUID `00000000-0000-0000-0000-0000000000de`, `ON CONFLICT (id) DO NOTHING`)
+- Seed-Script `scripts/seed-admin.mjs` — One-Shot-Node-Script via Supabase Admin API:
+  - strategaize_admin: `supabase.auth.admin.createUser` mit `email_confirm: true` + `user_metadata.role = 'strategaize_admin'`. `handle_new_user`-Trigger legt `profiles`-Row mit `tenant_id = NULL` an. Script patcht anschliessend Rolle/Tenant als Reconcile-Schritt.
+  - Demo-tenant_admin: dito mit `user_metadata = { role: 'tenant_admin', tenant_id: '<demo-uuid>' }`.
+- Idempotent: `listUsers` + skip-if-exists. Profile-Row wird bei jedem Lauf auf Soll-Stand gepatcht.
+- Fail-Fast-ENV-Checks im Script (`SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD`, `SEED_DEMO_TENANT_ADMIN_EMAIL`, `SEED_DEMO_TENANT_ADMIN_PASSWORD`, `SUPABASE_URL`/`NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`).
+- `package.json`-Script `npm run seed:admin`.
+- `.env.deploy.example` + `.env.local.example` um SEED_* erweitert.
+- `docs/RUNBOOK.md` (neu) — Seed-Befehl, Credential-Rotation, Disaster-Recovery.
 
 ## Out of Scope
 - UI zum Seed/Invite (kommt spaeter)
@@ -42,16 +41,27 @@ Einen strategaize_admin-User anlegen, damit Admin-Flaechen ueberhaupt benutzbar 
 - SLC-001 (Schema + Trigger handle_new_user)
 
 ## Risks
-- Seed-Passwoerter in ENV: Coolify-Secrets muessen gesetzt sein, sonst scheitert Migration oder setzt leere Passwoerter — Migration muss explizit abbrechen wenn ENV fehlt.
-- Auth.users ist sensitives Supabase-Schema — direkter INSERT umgeht normalerweise Supabase-Auth-API. Das funktioniert, aber Password-Hash muss korrekt mit bcrypt erzeugt werden. Alternativ: Supabase-Admin-REST-API via Service-Role aus Post-Deploy-Skript statt SQL-Migration.
-- Wenn der Trigger `handle_new_user` nicht greift (weil wir direkt in auth.users INSERTen), muss der Seed explizit auch in `profiles` schreiben.
+- Seed-Passwoerter in ENV: Coolify-Secrets muessen gesetzt sein, sonst bricht `scripts/seed-admin.mjs` mit Exit-Code 1 ab (Fail-Fast).
+- `supabase.auth.admin.listUsers` ist paginiert. Fuer V1 (< 10 User) reicht die erste Seite mit `perPage: 100`. Wenn der User-Bestand waechst (V2+), muss das Script paginieren.
+- Der `handle_new_user`-Trigger setzt Rolle + tenant_id aus `raw_user_meta_data`. Sollte sich das Trigger-Verhalten in einer kuenftigen Schema-Version aendern, rettet der explizite Profile-UPDATE im Script den Zustand.
+- Demo-Tenant-UUID ist hardcoded (`00000000-0000-0000-0000-0000000000de`). Bewusste Konvention — kein Konflikt zu echten Tenants (gen_random_uuid liefert niemals Zero-Prefix).
 
-## Strategieentscheidung in diesem Slice
-Zwei Wege pruefen und fuer einen entscheiden:
-1. **SQL-Migration mit direktem INSERT in auth.users** — funktioniert, braucht korrektes bcrypt-Hashing + manuelles profile-INSERT falls Trigger nicht feuert.
-2. **Post-Deploy-Script via Supabase-Admin-API** — sauberer aber mehr Infrastruktur (Node-Script im Dockerfile oder Coolify-Hook).
+## Strategieentscheidung in diesem Slice (getroffen 2026-04-16 — DEC-011)
 
-Standard ist Weg 1, solange bcrypt in pgcrypto verfuegbar ist (Supabase-Default).
+**Gewaehlt: Weg 2 — Supabase-Admin-API via One-Shot-Seed-Script.** SQL-Migration wird reduziert auf die Tenant-Row (public-Schema = "unser Land").
+
+Gruende gegen direkten INSERT in `auth.users`:
+- Supabase-internes Schema (Felder `aud`, `instance_id`, `confirmation_token`, zugehoerige `auth.identities`-Row) bricht bei jedem Supabase-Upgrade.
+- Bcrypt-Round-Count-Mismatch zwischen pgcrypto `gen_salt('bf')` und Supabase-Auth ist eine Klassische Support-Falle.
+- Postgres-Custom-Config `-c onboarding.seed_...` fuer ENV-Pass ist bei Coolify-managed Supabase aufwendig und leakt Credentials in `pg_stat_activity`.
+
+Gruende fuer Admin-API:
+- `supabase.auth.admin.createUser` ist der stabile Supabase-Vertrag (handled bcrypt, `auth.identities`, `email_confirm`, Metadaten).
+- ENV-Handling sauberer: normale Next.js-ENV + Service-Role-Key.
+- Idempotenz einfach: `listUsers` + Lookup, dann Create-if-missing.
+- Passt zum manuellen Coolify-Deploy-Rhythmus: `docker exec <app> npm run seed:admin` einmalig nach erstem Deploy.
+
+Akzeptierter Tradeoff: Seed-User sind nicht als versionierte Migration getrackt, sondern operativer Zustand via RUNBOOK. Das ist konsistent mit der Semantik (Seed-User = Betriebskonfiguration, nicht Schema-Evolution).
 
 ## Micro-Tasks
 
