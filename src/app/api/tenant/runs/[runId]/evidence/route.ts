@@ -251,16 +251,8 @@ export async function POST(
 
       (async () => {
         try {
-          const { chatWithLLM, getSystemPrompts, buildOwnerContext } = await import("@/lib/llm");
+          const { chatWithLLM, getSystemPrompts } = await import("@/lib/llm");
           const prompts = getSystemPrompts(tenantLocale);
-
-          // Load owner profile for document analysis context (V2.2)
-          const { data: ownerProfileData } = await adminClient
-            .from("owner_profiles")
-            .select("*")
-            .eq("tenant_id", profile!.tenant_id)
-            .single();
-          const ownerContext = buildOwnerContext(ownerProfileData, tenantLocale);
 
           // Get question context
           const { data: question } = await adminClient
@@ -284,7 +276,7 @@ export async function POST(
             const analysis = await chatWithLLM([
               {
                 role: "system",
-                content: `${prompts.dokumentAnalyse}${ownerContext ? `\n\n${ownerContext}` : ""}\n\n${questionLabel}: "${question.fragetext}"\nBlock: ${question.block} / ${question.unterbereich}\n${typeLabel}: ${question.ebene}`,
+                content: `${prompts.dokumentAnalyse}\n\n${questionLabel}: "${question.fragetext}"\nBlock: ${question.block} / ${question.unterbereich}\n${typeLabel}: ${question.ebene}`,
               },
               {
                 role: "user",

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireTenant, errorResponse, getTenantLocale } from "@/lib/api-utils";
-import { chatWithLLM, getSystemPrompts, buildOwnerContext, buildMirrorContext, buildMemoryContext, updateRunMemory, type OwnerProfileData, type MirrorProfileData } from "@/lib/llm";
+import { chatWithLLM, getSystemPrompts, buildMirrorContext, buildMemoryContext, updateRunMemory, type MirrorProfileData } from "@/lib/llm";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 // POST /api/tenant/runs/[runId]/questions/[questionId]/chat
@@ -41,7 +41,7 @@ export async function POST(
   const locale = await getTenantLocale(supabase, profile!.tenant_id);
   const prompts = getSystemPrompts(locale);
 
-  // Load profile for personalized context (V2.2 owner / V3.1 mirror)
+  // Load profile for personalized context (V3.1 mirror respondents only)
   let profileContext = "";
   if (profile!.role === "mirror_respondent") {
     const adminClient2 = createAdminClient();
@@ -51,13 +51,6 @@ export async function POST(
       .eq("profile_id", profile!.id)
       .single();
     profileContext = buildMirrorContext(mirrorProfileData as MirrorProfileData | null, locale);
-  } else {
-    const { data: ownerProfileData } = await supabase
-      .from("owner_profiles")
-      .select("*")
-      .eq("tenant_id", profile!.tenant_id)
-      .single();
-    profileContext = buildOwnerContext(ownerProfileData as OwnerProfileData | null, locale);
   }
 
   // Load run memory for session continuity (V2.2)

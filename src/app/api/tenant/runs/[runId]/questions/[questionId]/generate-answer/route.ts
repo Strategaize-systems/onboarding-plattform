@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireTenant, errorResponse, getTenantLocale } from "@/lib/api-utils";
-import { chatWithLLM, getSystemPrompts, buildOwnerContext, buildMemoryContext, type OwnerProfileData } from "@/lib/llm";
+import { chatWithLLM, getSystemPrompts, buildMemoryContext } from "@/lib/llm";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 // POST /api/tenant/runs/[runId]/questions/[questionId]/generate-answer
@@ -38,14 +38,6 @@ export async function POST(
   // Load tenant language for localized prompts
   const locale = await getTenantLocale(supabase, profile!.tenant_id);
   const prompts = getSystemPrompts(locale);
-
-  // Load owner profile for personalized context (V2.2)
-  const { data: ownerProfileData } = await supabase
-    .from("owner_profiles")
-    .select("*")
-    .eq("tenant_id", profile!.tenant_id)
-    .single();
-  const ownerContext = buildOwnerContext(ownerProfileData as OwnerProfileData | null, locale);
 
   // Load run memory for session continuity (V2.2)
   const adminClient = createAdminClient();
@@ -85,7 +77,7 @@ export async function POST(
   const messages = [
     {
       role: "system" as const,
-      content: `${prompts.zusammenfassung}${ownerContext ? `\n\n${ownerContext}` : ""}${memoryContext ? `\n\n${memoryContext}` : ""}\n\n${locale === "de" ? "Originalfrage" : locale === "nl" ? "Oorspronkelijke vraag" : "Original question"}: ${question.fragetext}\nBlock: ${question.block} / ${question.unterbereich}\n${locale === "de" ? "Typ" : "Type"}: ${question.ebene}${evidenceContext}`,
+      content: `${prompts.zusammenfassung}${memoryContext ? `\n\n${memoryContext}` : ""}\n\n${locale === "de" ? "Originalfrage" : locale === "nl" ? "Oorspronkelijke vraag" : "Original question"}: ${question.fragetext}\nBlock: ${question.block} / ${question.unterbereich}\n${locale === "de" ? "Typ" : "Type"}: ${question.ebene}${evidenceContext}`,
     },
     ...((chatMessages ?? []).map((m) => ({
       role: (m.role === "user" ? "user" : "assistant") as "user" | "assistant",

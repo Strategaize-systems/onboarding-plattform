@@ -58,18 +58,5 @@ export default async function DashboardPage() {
     return <DashboardClient profile={profile} />;
   }
 
-  // Check if owner profile exists — redirect to profile form if not
-  // Uses adminClient because authenticated role may lack table-level GRANT
-  const adminClient = createAdminClient();
-  const { data: ownerProfile } = await adminClient
-    .from("owner_profiles")
-    .select("id")
-    .eq("tenant_id", profile.tenant_id)
-    .single();
-
-  if (!ownerProfile) {
-    redirect("/profile");
-  }
-
   return <DashboardClient profile={profile} />;
 }

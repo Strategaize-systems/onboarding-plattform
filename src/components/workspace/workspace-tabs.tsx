@@ -1,9 +1,9 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { MessageCircle, ClipboardList, MessageSquareHeart, Lock } from "lucide-react";
+import { MessageCircle, ClipboardList, Lock } from "lucide-react";
 
-export type WorkspaceTab = "offen" | "questionnaire" | "feedback";
+export type WorkspaceTab = "offen" | "questionnaire";
 
 interface WorkspaceTabsProps {
   activeTab: WorkspaceTab;
@@ -14,7 +14,6 @@ interface WorkspaceTabsProps {
 const TAB_CONFIG: { id: WorkspaceTab; icon: typeof MessageCircle; labelKey: string }[] = [
   { id: "offen", icon: MessageCircle, labelKey: "workspace.tabs.offen" },
   { id: "questionnaire", icon: ClipboardList, labelKey: "workspace.tabs.questionnaire" },
-  { id: "feedback", icon: MessageSquareHeart, labelKey: "workspace.tabs.feedback" },
 ];
 
 export function WorkspaceTabs({ activeTab, onChange, disabledTabs = [] }: WorkspaceTabsProps) {

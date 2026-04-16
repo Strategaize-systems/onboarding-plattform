@@ -6,12 +6,10 @@ import {
   FREIFORM_PROMPTS,
   SOFT_LIMIT_INJECTION,
   buildCompactCatalog,
-  buildOwnerContext,
   buildMirrorContext,
   buildMemoryContext,
   updateRunMemory,
   type LLMLocale,
-  type OwnerProfileData,
   type MirrorProfileData,
 } from "@/lib/llm";
 import {
@@ -91,7 +89,7 @@ export async function POST(
     role: profile!.role,
   });
 
-  // Load profile context (owner vs mirror)
+  // Load profile context (mirror respondents only)
   const adminClient = createAdminClient();
   let profileContext = "";
   if (profile!.role === "mirror_respondent") {
@@ -101,13 +99,6 @@ export async function POST(
       .eq("profile_id", profile!.id)
       .single();
     profileContext = buildMirrorContext(mirrorProfileData as MirrorProfileData | null, locale);
-  } else {
-    const { data: ownerProfileData } = await supabase
-      .from("owner_profiles")
-      .select("*")
-      .eq("tenant_id", profile!.tenant_id)
-      .single();
-    profileContext = buildOwnerContext(ownerProfileData as OwnerProfileData | null, locale);
   }
 
   // Load run memory

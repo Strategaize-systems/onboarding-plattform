@@ -80,21 +80,13 @@ export function DashboardSidebar({ profile, activePage }: DashboardSidebarProps)
         <div className="mb-2 truncate px-2 text-xs text-slate-500" title={profile.email}>
           {profile.email}
         </div>
-        {isMirror ? (
+        {isMirror && (
           <Link
             href="/mirror/profile"
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-primary/10 to-brand-primary-dark/10 px-3 py-2.5 text-sm font-medium text-slate-400 transition-all hover:from-brand-primary/20 hover:to-brand-primary-dark/20 hover:text-white mb-2"
           >
             <User className="h-4 w-4" />
             {t("mirror.profileTitle")}
-          </Link>
-        ) : (
-          <Link
-            href="/profile"
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-primary/10 to-brand-primary-dark/10 px-3 py-2.5 text-sm font-medium text-slate-400 transition-all hover:from-brand-primary/20 hover:to-brand-primary-dark/20 hover:text-white mb-2"
-          >
-            <User className="h-4 w-4" />
-            {t("profile.editProfile")}
           </Link>
         )}
         <button

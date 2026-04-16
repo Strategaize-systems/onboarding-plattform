@@ -1,3 +1,8 @@
+-- DEPRECATED by Migration 028_drop_owner_profiles.sql (2026-04-16, SLC-002d)
+-- Die Tabelle owner_profiles wurde durch SLC-002d entfernt — die
+-- Owner-Profil-Erhebung kommt in V2+ template-spezifisch zurueck.
+-- Diese Migration bleibt nur als Historie.
+--
 -- Migration 012: Owner-Profil Tabelle (V2.2 Personalized LLM)
 -- Datum: 2026-04-02
 -- Feature: FEAT-026 — Owner-Profil ("Frage Null")

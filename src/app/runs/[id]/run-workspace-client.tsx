@@ -51,7 +51,6 @@ import { RunMemoryView } from "@/components/learning-center/run-memory-view";
 import { FreeformChat } from "@/components/freeform/freeform-chat";
 import { MappingReview } from "@/components/freeform/mapping-review";
 import { WorkspaceTabs, type WorkspaceTab } from "@/components/workspace/workspace-tabs";
-import { FeedbackPanel } from "@/components/workspace/feedback-panel";
 
 const EVIDENCE_LABEL_KEYS = ["policy", "process", "template", "contract", "financial", "legal", "system", "org", "kpi", "other"] as const;
 
@@ -659,10 +658,7 @@ export function RunWorkspaceClient({
   const answered = run.questions.filter((q) => q.latest_answer).length;
   const total = run.questions.length;
   const isLocked = run.status === "locked";
-  const isSubmittedOrLocked = run.status === "submitted" || run.status === "locked";
-  const feedbackEnabled = !isMirrorRespondent && isSubmittedOrLocked;
   const disabledTabs: WorkspaceTab[] = [];
-  if (!feedbackEnabled) disabledTabs.push("feedback");
   if (isLocked) disabledTabs.push("offen");
   const activeQ = run.questions.find((q) => q.id === activeQuestion);
 
@@ -1100,23 +1096,6 @@ export function RunWorkspaceClient({
             onConversationCreated={(id) => setFreeformConversationId(id)}
             onEndChat={() => setFreeformPhase("mapping")}
           />
-        </div>
-
-        {/* ─── Tab: Feedback (V3.4) ─── */}
-        <div className={`flex-1 overflow-hidden ${activeTab === "feedback" && !isAdmin ? "flex flex-col" : "hidden"}`}>
-          {feedbackEnabled ? (
-            <FeedbackPanel runId={runId} />
-          ) : (
-            <div className="flex-1 flex items-center justify-center">
-              <div className="text-center px-4">
-                <div className="mx-auto mb-4 h-16 w-16 rounded-2xl bg-slate-100 flex items-center justify-center">
-                  <Lock className="h-8 w-8 text-slate-300" />
-                </div>
-                <p className="text-lg font-bold text-slate-400 mb-2">{t("workspace.tabs.feedback")}</p>
-                <p className="text-sm text-slate-400">{t("workspace.tabs.feedbackLocked")}</p>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* ─── Tab: Frage für Frage (Questionnaire) ─── */}
