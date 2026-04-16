@@ -697,9 +697,9 @@ export function RunWorkspaceClient({
           <img src="/brand/logo-full.png" alt="StrategAIze" className="h-12 w-auto" />
         </div>
       </div>
-      {/* Blueprint Assessment block */}
+      {/* Assessment title block */}
       <div className="mx-3 mt-2 rounded-xl bg-gradient-to-b from-slate-800/80 to-slate-900/50 border border-white/[0.06] px-5 py-4 text-center">
-        <div className="text-sm font-bold text-white">Blueprint Assessment</div>
+        <div className="text-sm font-bold text-white">{t("sidebar.title")}</div>
         <div className="text-[11px] text-slate-500 mt-0.5">{t("sidebar.subtitle")}</div>
       </div>
       <div className="h-3" />

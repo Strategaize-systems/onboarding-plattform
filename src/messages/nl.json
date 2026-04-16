@@ -19,10 +19,11 @@
     "runNotFound": "Run niet gevonden."
   },
   "metadata": {
-    "title": "StrategAIze Klantenplatform",
-    "description": "Exit Ready Blueprint — Gestructureerde Dataverzameling"
+    "title": "StrategAIze Onboarding",
+    "description": "Gestructureerde kennisverzameling met AI-gedreven verdichting"
   },
   "sidebar": {
+    "title": "Assessment",
     "subtitle": "Strategische Bedrijfsanalyse",
     "analysis": "Analyse",
     "runs": "Runs",

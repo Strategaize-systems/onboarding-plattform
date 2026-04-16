@@ -19,10 +19,11 @@
     "runNotFound": "Run nicht gefunden."
   },
   "metadata": {
-    "title": "StrategAIze Kundenplattform",
-    "description": "Exit Ready Blueprint — Strukturierte Datenerfassung"
+    "title": "StrategAIze Onboarding",
+    "description": "Strukturierte Wissenserhebung mit KI-gestützter Verdichtung"
   },
   "sidebar": {
+    "title": "Assessment",
     "subtitle": "Strategische Unternehmensanalyse",
     "analysis": "Analyse",
     "runs": "Runs",

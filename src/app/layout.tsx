@@ -4,8 +4,8 @@ import { getLocale, getMessages } from "next-intl/server";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "StrategAIze Kundenplattform",
-  description: "Exit Ready Blueprint — Strukturierte Datenerfassung",
+  title: "StrategAIze Onboarding",
+  description: "Strukturierte Wissenserhebung mit KI-gestützter Verdichtung",
 };
 
 export default async function RootLayout({

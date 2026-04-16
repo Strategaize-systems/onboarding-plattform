@@ -1,7 +1,7 @@
 {
-  "name": "ai-coding-starter-kit",
+  "name": "strategaize-onboarding-plattform",
   "version": "1.0.0",
-  "description": "AI Coding Starter Kit with AI Agent Team System for Claude Code",
+  "description": "Strategaize Onboarding-Plattform — unified knowledge capture with AI condensation",
   "private": true,
   "scripts": {
     "dev": "next dev",
