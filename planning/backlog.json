@@ -210,6 +210,16 @@
       "version": "V2",
       "description": "Erweiterung des Evidence-Modus um Bulk-Variante. Ermoeglicht Import ganzer Archive: E-Mail-Dumps (IMAP/PST/mbox), Angebots-/Projekt-Historien, Dokumentenbestaende. Pre-Processing: Privat-/Geschaeftlich-Filter, Relevanz-Klassifikation, Deduplizierung. Danach identische Verdichtungs-Pipeline wie Evidence-Single. Synergie-Pruefung: IMAP-Adapter aus Business System V4 wiederverwenden. Herkunft: Plattform-Idee 2 aus IS-Re-Discovery-Runde 2026-04-15.",
       "createdAt": "2026-04-15"
+    },
+    {
+      "id": "BL-021",
+      "title": "Free-Form Capture-Mode (offenes Gespraech → KI-Mapping auf Template-Fragen)",
+      "type": "later",
+      "priority": "low",
+      "status": "open",
+      "version": "V2",
+      "description": "Blueprint V3.2 Free-Form-Chat als eigenen Capture-Mode portieren. Kunde erzaehlt frei, KI mappt Gespraechsinhalte auf Template-Fragen (Neutralisierung + Confidence). Code existiert (freeform.ts, FreeformChat, MappingReview), arbeitet aber gegen altes runs/question_catalog_snapshots-Datenmodell. Muss auf capture_session-Schema umgebaut werden. Abwaegen gegen V3 Dialogue-Mode (Jitsi+Whisper), der den frei-erzaehlen-Use-Case moeglicherweise besser abdeckt. In V1 bewusst deaktiviert (SLC-005, 2026-04-17).",
+      "createdAt": "2026-04-17"
     }
   ]
 }

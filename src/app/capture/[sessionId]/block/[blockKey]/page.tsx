@@ -1,4 +1,5 @@
 import { redirect, notFound } from "next/navigation";
+import { getLocale } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { getCaptureSession } from "@/lib/db/capture-session-queries";
 import { getTemplateById } from "@/lib/db/template-queries";
@@ -54,9 +55,11 @@ export default async function BlockDetailPage({
   }
 
   // Build block title from locale-aware title field
+  const locale = await getLocale();
   const blockTitle =
     typeof block.title === "object"
-      ? (block.title as Record<string, string>)["de"] ??
+      ? (block.title as Record<string, string>)[locale] ??
+        (block.title as Record<string, string>)["de"] ??
         Object.values(block.title as Record<string, string>)[0] ??
         block.key
       : block.key;
