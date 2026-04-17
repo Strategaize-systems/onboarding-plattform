@@ -35,7 +35,7 @@
       "title": "Exception Mode Prompt Layer",
       "type": "feature",
       "priority": "medium",
-      "status": "in_progress",
+      "status": "done",
       "version": "V1",
       "description": "Freitext-Eintraege pro Block, in Verdichtung einbezogen. Siehe FEAT-004. Implementierung: SLC-007.",
       "createdAt": "2026-04-14"
@@ -165,7 +165,7 @@
       "title": "SLC-007 Exception-Mode-Layer",
       "type": "feature",
       "priority": "medium",
-      "status": "open",
+      "status": "done",
       "version": "V1",
       "description": "Freitext-Layer + Prompt-Integration. Siehe /slices/SLC-007-exception-mode.md.",
       "createdAt": "2026-04-14"

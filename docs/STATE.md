@@ -10,13 +10,13 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: SLC-006 done (2026-04-17, commit c3297f3). Block-Submit + Checkpoint mit Idempotenz, ai_jobs-Tabelle, RPC rpc_create_block_checkpoint, SHA-256 Dedup, AlertDialog-Confirmation. FEAT-003 done (3/3 Slices). QA offen. Redeploy offen (Coolify manuell).
-- Current Phase: V1 Implementation (10/13 Slices done: SLC-001..006. FEAT-001 + FEAT-002 + FEAT-003 done. FEAT-004..006 planned.)
+- Current Focus: SLC-007 done (2026-04-17, commit e610f20). Exception-Mode-Layer — Freitext-Feld pro Block mit Autosave + Checkpoint-Integration. FEAT-004 done (1/1 Slice). Naechster Schritt: SLC-008 Worker-Container + Multi-Agent-Loop (Blocker, groesster Slice).
+- Current Phase: V1 Implementation (11/13 Slices done: SLC-001..007. FEAT-001..004 done. FEAT-005+006 planned.)
 
 ## Immediate Next Steps
-1. Redeploy App auf Hetzner via Coolify (SLC-006 Code)
-2. /qa fuer SLC-006
-3. SLC-007 Exception-Mode-Layer (FEAT-004)
+1. /qa fuer SLC-007
+2. SLC-008 Worker-Container + Multi-Agent-Loop (FEAT-005, Blocker)
+3. Redeploy App auf Hetzner via Coolify (SLC-006+007 Code)
 
 ## Active Scope
 V1 (siehe /docs/PRD.md, 6 Features), Implementierungs-Plan (siehe /slices/INDEX.md, 13 Slices):
@@ -40,7 +40,7 @@ V1 (siehe /docs/PRD.md, 6 Features), Implementierungs-Plan (siehe /slices/INDEX.
 - ISSUE-009 Blueprint-Profile-Flow Silent Failure — resolved (SLC-002d, 2026-04-16)
 
 ## Last Stable Version
-- V1-preview @ commit c3297f3 — 2026-04-17 (App-Redeploy pending via Coolify). 10/13 Slices done. DB hat ai_jobs + rpc_create_block_checkpoint. Migrations 030-032 deployed.
+- V1-preview @ commit e610f20 — 2026-04-17 (App-Redeploy pending via Coolify). 11/13 Slices done. DB hat ai_jobs + rpc_create_block_checkpoint. Migrations 030-032 deployed. Exception-Feld ist Code-seitig fertig, benoetigt Redeploy.
 
 ## Notes
 Code-Basis uebernommen aus strategaize-blueprint-plattform V3.4 (Stand 2026-04-14). Blueprint-Stack laeuft unveraendert parallel auf blueprint.strategaizetransition.com (selber Hetzner-Server, separate Coolify-Resource).
