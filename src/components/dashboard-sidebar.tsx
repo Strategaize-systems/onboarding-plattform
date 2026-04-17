@@ -3,14 +3,14 @@
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { logout } from "@/app/login/actions";
-import { Play, ShieldCheck, User, LogOut } from "lucide-react";
+import { Play, PlusCircle, ShieldCheck, User, LogOut } from "lucide-react";
 
 interface DashboardSidebarProps {
   profile: {
     email: string;
     role: string;
   };
-  activePage: "runs" | "nominations";
+  activePage: "runs" | "capture" | "nominations";
 }
 
 export function DashboardSidebar({ profile, activePage }: DashboardSidebarProps) {
@@ -55,6 +55,24 @@ export function DashboardSidebar({ profile, activePage }: DashboardSidebarProps)
             </div>
           </div>
         </Link>
+        {profile.role === "tenant_admin" && (
+          <Link
+            href="/capture/new"
+            className={`flex w-full items-center gap-3 rounded-xl px-4 py-3.5 text-left transition-all duration-200 ${
+              activePage === "capture"
+                ? "bg-gradient-to-r from-brand-primary to-brand-primary-dark text-white shadow-[0_8px_16px_-4px_rgba(68,84,184,0.35)]"
+                : "text-slate-300 hover:bg-white/[0.06]"
+            }`}
+          >
+            <PlusCircle className="h-4 w-4" />
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-bold leading-snug">Neue Erhebung</div>
+              <div className={`text-[10px] uppercase tracking-wider font-semibold mt-0.5 ${activePage === "capture" ? "text-white/50" : "text-slate-500"}`}>
+                Session starten
+              </div>
+            </div>
+          </Link>
+        )}
         {profile.role === "tenant_admin" && (
           <Link
             href="/mirror/nominations"
