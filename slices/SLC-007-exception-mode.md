@@ -1,7 +1,7 @@
 # SLC-007 — Exception-Mode-Layer
 
 - Feature: FEAT-004
-- Status: planned
+- Status: done
 - Priority: Medium
 - Created: 2026-04-14
 - Delivery Mode: SaaS (TDD mandatory)

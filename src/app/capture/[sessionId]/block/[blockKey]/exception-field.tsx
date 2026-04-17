@@ -77,7 +77,7 @@ export function ExceptionField({
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-amber-500 flex items-center justify-center shadow-md">
             <AlertTriangle className="h-4 w-4 text-white" />
           </div>
-          Ausnahmen & Ergaenzungen
+          Ausnahmen & Ergänzungen
           <span className="ml-auto flex items-center gap-2">
             {saving && (
               <span className="flex items-center gap-1 text-xs text-slate-400">
@@ -95,14 +95,14 @@ export function ExceptionField({
         </h3>
         <p className="text-xs text-slate-500 mt-1">
           Notieren Sie hier Beobachtungen, Besonderheiten oder Ausnahmen, die nicht in die Fragen passen.
-          Diese Informationen fliessen in die KI-Verdichtung ein.
+          Diese Informationen fließen in die KI-Verdichtung ein.
         </p>
       </div>
       <div className="p-5">
         <textarea
           value={text}
           onChange={(e) => handleChange(e.target.value)}
-          placeholder="Zusaetzliche Beobachtungen, die nicht in die Fragen passen..."
+          placeholder="Zusätzliche Beobachtungen, die nicht in die Fragen passen..."
           rows={4}
           className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm leading-relaxed focus:border-amber-400 focus:ring-2 focus:ring-amber-100 focus:outline-none transition-all resize-y min-h-[100px]"
         />
