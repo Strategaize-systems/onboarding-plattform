@@ -10,13 +10,13 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: SLC-005 in_progress (2026-04-17). Questionnaire-UI-Portierung: Block-Detail-Route, QuestionnaireForm mit Autosave, KI-Chat-Endpoint auf Bedrock, ChatPanel-Komponente, Answer-Persistenz-Tests, DEC-013 JSONB-Answers. FEAT-003 in_progress (2/3 Slices: SLC-004 done, SLC-005 in_progress, SLC-006 planned).
-- Current Phase: V1 Implementation (8/13 Slices done + 1 in_progress: SLC-001..002d + SLC-003 + SLC-004 done. SLC-005 in_progress. FEAT-001 + FEAT-002 done. FEAT-003 in_progress.)
+- Current Focus: SLC-005 done + QA PASS (2026-04-17, RPT-021). Questionnaire-UI komplett: Autosave, KI-Chat, Answer-Persistenz. 2 Medium-Findings (hardcoded DE-Strings, unused currentAnswer prop). Migration 030 + Redeploy offen. FEAT-003 in_progress (2/3 Slices: SLC-004+005 done, SLC-006 planned).
+- Current Phase: V1 Implementation (9/13 Slices done: SLC-001..002d + SLC-003 + SLC-004 + SLC-005. FEAT-001 + FEAT-002 done. FEAT-003 in_progress.)
 
 ## Immediate Next Steps
-1. /qa fuer SLC-005 (mandatory nach /frontend+/backend)
-2. Migration 030 auf Hetzner deployen (answers-Spalte)
-3. Redeploy App auf Hetzner (SLC-005 neue Routes + Autosave + Chat)
+1. Migration 030 auf Hetzner deployen (answers-Spalte)
+2. Redeploy App auf Hetzner (SLC-005 neue Routes + Autosave + Chat)
+3. Live-Smoke-Test (Block oeffnen → Frage beantworten → Reload → Chat testen)
 4. SLC-006 Block-Submit + Checkpoint (FEAT-003, Teil 3/3)
 
 ## Active Scope

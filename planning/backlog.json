@@ -146,9 +146,9 @@
       "title": "SLC-005 Questionnaire-UI-Portierung",
       "type": "feature",
       "priority": "high",
-      "status": "open",
+      "status": "done",
       "version": "V1",
-      "description": "Blueprint-Questionnaire auf neues Schema, Bedrock-Chat. Siehe /slices/SLC-005-questionnaire-ui.md.",
+      "description": "Blueprint-Questionnaire auf neues Schema, Bedrock-Chat. DEC-013 JSONB-Answers, Autosave 500ms, ChatPanel, 3 Tests. QA PASS (RPT-021). Siehe /slices/SLC-005-questionnaire-ui.md.",
       "createdAt": "2026-04-14"
     },
     {
