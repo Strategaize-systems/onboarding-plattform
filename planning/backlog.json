@@ -25,8 +25,7 @@
       "title": "Questionnaire Mode with Block-Submit",
       "type": "feature",
       "priority": "high",
-      "status": "in_progress",
-      "note": "SLC-004 done, SLC-005+006 pending",
+      "status": "done",
       "version": "V1",
       "description": "Haupt-Interaktionsmodus fuer Kunden. Block-Navigation, KI-Chat (Bedrock), Block-Submit mit versioniertem Checkpoint. Siehe FEAT-003. Implementierung: SLC-004 (Session-Start) + SLC-005 (Questionnaire-UI) + SLC-006 (Submit).",
       "createdAt": "2026-04-14"
@@ -156,7 +155,7 @@
       "title": "SLC-006 Block-Submit + Checkpoint",
       "type": "feature",
       "priority": "high",
-      "status": "open",
+      "status": "done",
       "version": "V1",
       "description": "Server Action + RPCs + Job-Enqueue. Siehe /slices/SLC-006-block-submit-checkpoint.md.",
       "createdAt": "2026-04-14"
