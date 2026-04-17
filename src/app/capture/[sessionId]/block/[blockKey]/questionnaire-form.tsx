@@ -3,6 +3,17 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Separator } from "@/components/ui/separator";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { WorkspaceTabs, type WorkspaceTab } from "@/components/workspace/workspace-tabs";
 import {
   ChevronDown,
   ChevronRight,
@@ -13,9 +24,19 @@ import {
   Sparkles,
   Loader2,
   Check,
+  Mic,
+  Square,
+  Image,
 } from "lucide-react";
 import type { TemplateBlock, TemplateQuestion } from "@/lib/db/template-queries";
 import { saveAnswer } from "./actions";
+
+const EVIDENCE_LABEL_KEYS = ["policy", "process", "template", "contract", "financial", "legal", "system", "org", "kpi", "other"] as const;
+const EVIDENCE_LABELS: Record<string, string> = {
+  policy: "Richtlinie", process: "Prozess", template: "Vorlage", contract: "Vertrag",
+  financial: "Finanzen", legal: "Recht", system: "System", org: "Organisation",
+  kpi: "Kennzahl", other: "Sonstiges",
+};
 
 interface Props {
   sessionId: string;
@@ -74,6 +95,9 @@ export function QuestionnaireWorkspace({
     type: "success" | "error";
   } | null>(null);
 
+  // Tab state
+  const [activeTab, setActiveTab] = useState<WorkspaceTab>("questionnaire");
+
   // Chat state
   const [chatMessages, setChatMessages] = useState<
     { role: "user" | "assistant"; text: string }[]
@@ -82,6 +106,21 @@ export function QuestionnaireWorkspace({
   const [chatLoading, setChatLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // Voice recording state
+  const whisperEnabled = process.env.NEXT_PUBLIC_WHISPER_ENABLED === "true";
+  const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Evidence state (visual structure — upload wiring in future slice)
+  const [uploadLabel, setUploadLabel] = useState("");
+  const [noteText, setNoteText] = useState("");
+  const [noteLabel, setNoteLabel] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Debounce timer
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
@@ -208,6 +247,63 @@ export function QuestionnaireWorkspace({
         chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
       }, 50);
     }
+  }
+
+  // ─── Voice recording ─────────────────────────────────────────────
+  async function startRecording() {
+    if (!navigator.mediaDevices?.getUserMedia) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      let mimeType = "audio/webm";
+      if (typeof MediaRecorder !== "undefined") {
+        if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) mimeType = "audio/webm;codecs=opus";
+        else if (MediaRecorder.isTypeSupported("audio/mp4")) mimeType = "audio/mp4";
+      }
+      const mediaRecorder = new MediaRecorder(stream, { mimeType });
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+      mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
+      mediaRecorder.onstop = () => {
+        stream.getTracks().forEach((track) => track.stop());
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+        transcribeRecording(audioBlob);
+      };
+      mediaRecorder.start();
+      setIsRecording(true);
+      setRecordingDuration(0);
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingDuration((prev) => {
+          if (prev + 1 >= 300) { stopRecording(); return prev; }
+          return prev + 1;
+        });
+      }, 1000);
+    } catch { /* mic not available */ }
+  }
+
+  function stopRecording() {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") mediaRecorderRef.current.stop();
+    setIsRecording(false);
+    if (recordingTimerRef.current) { clearInterval(recordingTimerRef.current); recordingTimerRef.current = null; }
+  }
+
+  async function transcribeRecording(audioBlob: Blob) {
+    if (!activeQ) return;
+    setIsTranscribing(true);
+    try {
+      const formData = new FormData();
+      formData.append("audio", audioBlob, "recording.webm");
+      // Whisper transcription endpoint — will be wired in a later slice
+      // For now, the button is visible but transcription requires the API endpoint
+      setIsTranscribing(false);
+    } catch {
+      setIsTranscribing(false);
+    }
+  }
+
+  function formatDuration(seconds: number) {
+    const m = Math.floor(seconds / 60).toString().padStart(2, "0");
+    const s = (seconds % 60).toString().padStart(2, "0");
+    return `${m}:${s}`;
   }
 
   // ─── Group questions by unterbereich (for sidebar) ──────────────
@@ -530,15 +626,29 @@ export function QuestionnaireWorkspace({
               </div>
             </div>
 
-            {/* RIGHT: Status */}
+            {/* RIGHT: Status + Block Submit */}
             <div className="flex items-center gap-3 flex-shrink-0">
               <div className="px-4 py-2.5 rounded-lg bg-gradient-to-r from-amber-400 to-amber-500 text-white shadow-md text-xs font-bold uppercase tracking-wider flex items-center gap-2">
                 <span className="h-2 w-2 rounded-full bg-white/80 animate-pulse" />
                 In Bearbeitung
               </div>
+              <button
+                disabled
+                className="px-4 py-2.5 rounded-lg bg-gradient-to-r from-brand-success-dark to-brand-success text-white shadow-md text-xs font-bold uppercase tracking-wider disabled:opacity-50 hover:shadow-lg transition-all flex items-center gap-2"
+                title="Block-Submit kommt in SLC-006"
+              >
+                Block {activeBlockKey} einreichen
+              </button>
             </div>
           </div>
         </header>
+
+        {/* Tab Navigation */}
+        <WorkspaceTabs
+          activeTab={activeTab}
+          onChange={setActiveTab}
+          disabledTabs={["offen"]}
+        />
 
         {/* Message bar */}
         {message && (
@@ -675,6 +785,20 @@ export function QuestionnaireWorkspace({
 
                   {/* Input area */}
                   <div className="flex-shrink-0 px-5 py-3 border-t border-slate-200 bg-white">
+                    {/* Recording indicator */}
+                    {isRecording && (
+                      <div className="flex items-center gap-2 mb-2 px-2 py-1.5 rounded-lg bg-red-50 border border-red-200">
+                        <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+                        <span className="text-xs font-medium text-red-600">Aufnahme läuft</span>
+                        <span className="text-xs font-mono text-red-500 ml-auto">{formatDuration(recordingDuration)}</span>
+                      </div>
+                    )}
+                    {isTranscribing && (
+                      <div className="flex items-center gap-2 mb-2 px-2 py-1.5 rounded-lg bg-brand-primary/5 border border-brand-primary/20">
+                        <Loader2 className="h-3 w-3 animate-spin text-brand-primary" />
+                        <span className="text-xs font-medium text-brand-primary">Transkription läuft...</span>
+                      </div>
+                    )}
                     <div className="flex items-end gap-2">
                       <textarea
                         value={chatInput}
@@ -685,11 +809,26 @@ export function QuestionnaireWorkspace({
                             sendChatMessage();
                           }
                         }}
-                        placeholder="Frage an den KI-Assistenten stellen..."
+                        placeholder="Ihre Nachricht oder Antwort eingeben..."
                         rows={4}
                         className="flex-1 px-3 py-2 rounded-lg border border-slate-200 text-sm leading-relaxed focus:border-brand-primary focus:outline-none transition-colors resize-none"
                       />
+                      {/* Mic + Send stacked vertically */}
                       <div className="flex flex-col gap-1.5 flex-shrink-0 self-end">
+                        {whisperEnabled && (
+                          <button
+                            onClick={isRecording ? stopRecording : startRecording}
+                            disabled={isTranscribing}
+                            title={isRecording ? "Aufnahme stoppen" : "Aufnahme starten"}
+                            className={`p-2.5 rounded-lg transition-all disabled:opacity-50 ${
+                              isRecording
+                                ? "bg-red-500 text-white hover:bg-red-600 animate-pulse"
+                                : "bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200"
+                            }`}
+                          >
+                            {isTranscribing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : isRecording ? <Square className="h-3.5 w-3.5" /> : <Mic className="h-3.5 w-3.5" />}
+                          </button>
+                        )}
                         <button
                           onClick={sendChatMessage}
                           disabled={!chatInput.trim() || chatLoading}
@@ -772,6 +911,101 @@ export function QuestionnaireWorkspace({
                       rows={4}
                       className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm leading-relaxed focus:border-brand-primary focus:outline-none transition-colors resize-none"
                     />
+                  </div>
+                </div>
+              </div>
+
+              {/* ── Evidence + Checkpoints Grid (Blueprint V3.4 Style) ── */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* LEFT: Evidence / Nachweise */}
+                <div className="bg-white rounded-2xl border-2 border-slate-200 shadow-lg overflow-hidden">
+                  <div className="px-6 py-4 border-b border-slate-200 bg-slate-50/50">
+                    <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-primary-dark to-brand-primary flex items-center justify-center shadow-md">
+                        <FileText className="h-4 w-4 text-white" />
+                      </div>
+                      Hochgeladene Nachweise
+                      <span className="ml-auto text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-200 text-slate-600">
+                        0
+                      </span>
+                    </h3>
+                  </div>
+                  <div className="p-5 space-y-3">
+                    <p className="text-sm text-slate-400 py-3 text-center">Noch keine Nachweise hochgeladen.</p>
+
+                    <Separator className="my-3" />
+                    <div className="space-y-2">
+                      <div className="grid grid-cols-1 gap-2">
+                        <Input
+                          ref={fileInputRef}
+                          type="file"
+                          accept=".pdf,.docx,.xlsx,.xls,.png,.jpg,.jpeg"
+                        />
+                        <Select value={uploadLabel} onValueChange={setUploadLabel}>
+                          <SelectTrigger><SelectValue placeholder="Kategorie" /></SelectTrigger>
+                          <SelectContent>
+                            {EVIDENCE_LABEL_KEYS.map((key) => (
+                              <SelectItem key={key} value={key}>{EVIDENCE_LABELS[key]}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Button
+                        disabled={!uploadLabel || !fileInputRef.current?.files?.length}
+                        size="sm"
+                        className="w-full bg-gradient-to-r from-brand-success-dark to-brand-success text-white"
+                      >
+                        Datei hochladen
+                      </Button>
+                    </div>
+                    <Separator className="my-3" />
+                    <div className="space-y-2">
+                      <textarea
+                        value={noteText}
+                        onChange={(e) => setNoteText(e.target.value)}
+                        placeholder="Textnotiz eingeben..."
+                        rows={2}
+                        className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:border-brand-primary focus:outline-none transition-colors resize-none"
+                      />
+                      <div className="flex gap-2">
+                        <Select value={noteLabel} onValueChange={setNoteLabel}>
+                          <SelectTrigger><SelectValue placeholder="Kategorie" /></SelectTrigger>
+                          <SelectContent>
+                            {EVIDENCE_LABEL_KEYS.map((key) => (
+                              <SelectItem key={key} value={key}>{EVIDENCE_LABELS[key]}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          disabled={!noteText.trim() || !noteLabel}
+                          size="sm"
+                          variant="outline"
+                        >
+                          Notiz speichern
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* RIGHT: Eingereichte Checkpoints */}
+                <div className="bg-white rounded-2xl border-2 border-slate-200 shadow-lg overflow-hidden">
+                  <div className="px-6 py-4 border-b border-slate-200 bg-slate-50/50">
+                    <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-success-dark to-brand-success flex items-center justify-center shadow-md">
+                        <FileText className="h-4 w-4 text-white" />
+                      </div>
+                      Eingereichte Checkpoints
+                      <span className="ml-auto text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-200 text-slate-600">
+                        0
+                      </span>
+                    </h3>
+                  </div>
+                  <div className="p-5 space-y-3">
+                    <div className="py-6 text-center">
+                      <p className="text-sm text-slate-400">Noch keine Checkpoints</p>
+                      <p className="text-xs text-slate-400 mt-1">Nach dem Einreichen eines Blocks erscheinen hier die Versionen.</p>
+                    </div>
                   </div>
                 </div>
               </div>
