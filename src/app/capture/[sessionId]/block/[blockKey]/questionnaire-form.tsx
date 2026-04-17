@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -13,6 +14,17 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { WorkspaceTabs, type WorkspaceTab } from "@/components/workspace/workspace-tabs";
 import {
   ChevronDown,
@@ -27,9 +39,11 @@ import {
   Mic,
   Square,
   Image,
+  CheckCircle2,
 } from "lucide-react";
 import type { TemplateBlock, TemplateQuestion } from "@/lib/db/template-queries";
 import { saveAnswer } from "./actions";
+import { submitBlock } from "./submit-action";
 
 const EVIDENCE_LABEL_KEYS = ["policy", "process", "template", "contract", "financial", "legal", "system", "org", "kpi", "other"] as const;
 const EVIDENCE_LABELS: Record<string, string> = {
@@ -38,6 +52,13 @@ const EVIDENCE_LABELS: Record<string, string> = {
   kpi: "Kennzahl", other: "Sonstiges",
 };
 
+interface CheckpointInfo {
+  id: string;
+  checkpoint_type: string;
+  content_hash: string;
+  created_at: string;
+}
+
 interface Props {
   sessionId: string;
   activeBlockKey: string;
@@ -45,6 +66,7 @@ interface Props {
   blocks: TemplateBlock[];
   savedAnswers: Record<string, string>;
   locale: string;
+  existingCheckpoints: CheckpointInfo[];
 }
 
 export function QuestionnaireWorkspace({
@@ -54,7 +76,9 @@ export function QuestionnaireWorkspace({
   blocks,
   savedAnswers,
   locale,
+  existingCheckpoints,
 }: Props) {
+  const router = useRouter();
   // All questions from all blocks — flattened for counting
   const allQuestions = blocks.flatMap((b) =>
     b.questions.map((q) => ({ ...q, blockKey: b.key }))
@@ -121,6 +145,10 @@ export function QuestionnaireWorkspace({
   const [noteText, setNoteText] = useState("");
   const [noteLabel, setNoteLabel] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Block submit state
+  const [submitting, setSubmitting] = useState(false);
+  const [blockSubmitted, setBlockSubmitted] = useState(existingCheckpoints.length > 0);
 
   // Debounce timer
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
@@ -202,6 +230,37 @@ export function QuestionnaireWorkspace({
       else next.add(blockKey);
       return next;
     });
+  }
+
+  // ─── Block Submit ───────────────────────────────────────────────
+  async function handleBlockSubmit() {
+    if (submitting || blockSubmitted) return;
+    setSubmitting(true);
+    setMessage(null);
+
+    try {
+      const result = await submitBlock(sessionId, activeBlockKey, chatMessages);
+
+      if (result.error) {
+        setMessage({ text: result.error, type: "error" });
+        return;
+      }
+
+      if (result.deduplicated) {
+        setMessage({ text: "Block wurde bereits eingereicht.", type: "success" });
+      }
+
+      setBlockSubmitted(true);
+      // Redirect to session overview (block list) after short delay
+      setTimeout(() => {
+        router.push(`/capture/${sessionId}`);
+        router.refresh();
+      }, 800);
+    } catch {
+      setMessage({ text: "Unerwarteter Fehler bei der Einreichung.", type: "error" });
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   // ─── Chat ───────────────────────────────────────────────────────
@@ -628,17 +687,54 @@ export function QuestionnaireWorkspace({
 
             {/* RIGHT: Status + Block Submit */}
             <div className="flex items-center gap-3 flex-shrink-0">
-              <div className="px-4 py-2.5 rounded-lg bg-gradient-to-r from-amber-400 to-amber-500 text-white shadow-md text-xs font-bold uppercase tracking-wider flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-white/80 animate-pulse" />
-                In Bearbeitung
-              </div>
-              <button
-                disabled
-                className="px-4 py-2.5 rounded-lg bg-gradient-to-r from-brand-success-dark to-brand-success text-white shadow-md text-xs font-bold uppercase tracking-wider disabled:opacity-50 hover:shadow-lg transition-all flex items-center gap-2"
-                title="Block-Submit kommt in SLC-006"
-              >
-                Block {activeBlockKey} einreichen
-              </button>
+              {blockSubmitted ? (
+                <div className="px-4 py-2.5 rounded-lg bg-gradient-to-r from-brand-success-dark to-brand-success text-white shadow-md text-xs font-bold uppercase tracking-wider flex items-center gap-2">
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  Eingereicht
+                </div>
+              ) : (
+                <>
+                  <div className="px-4 py-2.5 rounded-lg bg-gradient-to-r from-amber-400 to-amber-500 text-white shadow-md text-xs font-bold uppercase tracking-wider flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-white/80 animate-pulse" />
+                    In Bearbeitung
+                  </div>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <button
+                        disabled={submitting || blockAnswered === 0}
+                        className="px-4 py-2.5 rounded-lg bg-gradient-to-r from-brand-success-dark to-brand-success text-white shadow-md text-xs font-bold uppercase tracking-wider disabled:opacity-50 hover:shadow-lg transition-all flex items-center gap-2"
+                      >
+                        {submitting ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Check className="h-3.5 w-3.5" />
+                        )}
+                        Block {activeBlockKey} einreichen
+                      </button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Block {activeBlockKey} einreichen?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Die aktuellen Antworten ({blockAnswered}/{blockTotal} beantwortet) werden
+                          als Checkpoint gespeichert und die KI-Verdichtung wird gestartet.
+                          {blockAnswered < blockTotal && (
+                            <span className="block mt-2 font-medium text-amber-600">
+                              Hinweis: Es sind noch nicht alle Fragen beantwortet.
+                            </span>
+                          )}
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleBlockSubmit}>
+                          Einreichen
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </>
+              )}
             </div>
           </div>
         </header>
@@ -997,15 +1093,37 @@ export function QuestionnaireWorkspace({
                       </div>
                       Eingereichte Checkpoints
                       <span className="ml-auto text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-200 text-slate-600">
-                        0
+                        {existingCheckpoints.length}
                       </span>
                     </h3>
                   </div>
                   <div className="p-5 space-y-3">
-                    <div className="py-6 text-center">
-                      <p className="text-sm text-slate-400">Noch keine Checkpoints</p>
-                      <p className="text-xs text-slate-400 mt-1">Nach dem Einreichen eines Blocks erscheinen hier die Versionen.</p>
-                    </div>
+                    {existingCheckpoints.length === 0 ? (
+                      <div className="py-6 text-center">
+                        <p className="text-sm text-slate-400">Noch keine Checkpoints</p>
+                        <p className="text-xs text-slate-400 mt-1">Nach dem Einreichen eines Blocks erscheinen hier die Versionen.</p>
+                      </div>
+                    ) : (
+                      existingCheckpoints.map((cp, i) => (
+                        <div key={cp.id} className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-slate-50 border border-slate-200">
+                          <div className="flex items-center justify-center w-7 h-7 rounded-full bg-brand-success/10 text-brand-success text-xs font-bold">
+                            {existingCheckpoints.length - i}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium text-slate-700 truncate">
+                              {cp.checkpoint_type === "questionnaire_submit" ? "Fragebogen" : "Meeting Final"}
+                            </p>
+                            <p className="text-[10px] text-slate-400">
+                              {new Date(cp.created_at).toLocaleString("de-DE", {
+                                day: "2-digit", month: "2-digit", year: "numeric",
+                                hour: "2-digit", minute: "2-digit",
+                              })}
+                            </p>
+                          </div>
+                          <CheckCircle2 className="h-4 w-4 text-brand-success flex-shrink-0" />
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
               </div>

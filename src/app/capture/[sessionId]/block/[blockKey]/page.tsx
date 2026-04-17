@@ -55,6 +55,14 @@ export default async function BlockDetailPage({
 
   const locale = await getLocale();
 
+  // Load existing checkpoints for this block (for status display + submit guard)
+  const { data: blockCheckpoints } = await supabase
+    .from("block_checkpoint")
+    .select("id, checkpoint_type, content_hash, created_at")
+    .eq("capture_session_id", sessionId)
+    .eq("block_key", blockKey)
+    .order("created_at", { ascending: false });
+
   return (
     <QuestionnaireWorkspace
       sessionId={sessionId}
@@ -63,6 +71,7 @@ export default async function BlockDetailPage({
       blocks={template.blocks}
       savedAnswers={session.answers}
       locale={locale}
+      existingCheckpoints={blockCheckpoints ?? []}
     />
   );
 }
