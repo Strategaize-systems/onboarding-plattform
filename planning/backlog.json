@@ -5,7 +5,7 @@
       "title": "Foundation Data Model & RBAC",
       "type": "feature",
       "priority": "high",
-      "status": "in_progress",
+      "status": "done",
       "version": "V1",
       "description": "Generisches Datenmodell (capture_session, knowledge_unit, validation_layer, template, block_checkpoint) plus Rollen/RLS. Basis fuer alle weiteren V1-Features. Siehe FEAT-001. Aufgeteilt in SLC-001 (Schema) + SLC-002 (Rollen-Umbenennung).",
       "createdAt": "2026-04-14"
@@ -15,7 +15,7 @@
       "title": "Exit-Readiness Template Content",
       "type": "feature",
       "priority": "high",
-      "status": "in_progress",
+      "status": "done",
       "version": "V1",
       "description": "Template-Eintrag plus Bloecke/Questions aus Blueprint V3.4 portiert. Erste aktive Template-Instanz. Siehe FEAT-002. Implementierung: SLC-003.",
       "createdAt": "2026-04-14"
@@ -125,7 +125,7 @@
       "title": "SLC-003 Template + Exit-Readiness-Content",
       "type": "feature",
       "priority": "high",
-      "status": "open",
+      "status": "done",
       "version": "V1",
       "description": "Content-Portierung aus Blueprint V3.4. Siehe /slices/SLC-003-template-exit-readiness.md.",
       "createdAt": "2026-04-14"

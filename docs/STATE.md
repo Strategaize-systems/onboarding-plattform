@@ -10,13 +10,13 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: SLC-002c done (2026-04-16). Blueprint-Branding durch Onboarding-Labels ersetzt (Root-Meta "StrategAIze Onboarding" + Onboarding-Descriptions in 3 Sprachen, Sidebar-Block via i18n-Key sidebar.title = "Assessment", package.json-name strategaize-onboarding-plattform). Smoketest auf Live-URL: <title> + <meta description> + i18n-Payload korrekt. ISSUE-005 auf resolved. Commit 77aa974. Foundation-Tracks (SLC-001 bis SLC-002d) damit abgeschlossen, naechster Schritt ist SLC-003 (Template + Exit-Readiness-Content).
-- Current Phase: V1 Implementation (SLC-001, SLC-002, SLC-002a, SLC-002b, SLC-002c, SLC-002d done. FEAT-001 Foundation abgeschlossen. Naechster Track: FEAT-002 ab SLC-003)
+- Current Focus: SLC-003 done (2026-04-17). Exit-Readiness Template v1.0.0 in DB geseedet: 9 Bloecke (A-I), 73 Fragen aus Blueprint V3.4. LLM-Prompts von "Blueprint" auf generische Referenzen umgestellt (7 Stellen). Migration 029 auf Hetzner deployed und verifiziert. FEAT-002 abgeschlossen.
+- Current Phase: V1 Implementation (7/13 Slices done: SLC-001..002d + SLC-003. FEAT-001 + FEAT-002 abgeschlossen. Naechster Track: FEAT-003 ab SLC-004)
 
 ## Immediate Next Steps
-1. /qa fuer SLC-002c (direkt nach diesem Completion-Report)
-2. SLC-003 Template + Exit-Readiness-Content — erste Feature-Slice, High Priority
-3. Ab SLC-004: Capture-Session-Start, Questionnaire-UI, Block-Submit, ...
+1. /qa fuer SLC-003 (mandatory nach /backend)
+2. SLC-004 Capture-Session-Start + Block-Listing — naechste Feature-Slice (FEAT-003)
+3. Ab SLC-005: Questionnaire-UI, Block-Submit, Exception-Mode, ...
 
 ## Active Scope
 V1 (siehe /docs/PRD.md, 6 Features), Implementierungs-Plan (siehe /slices/INDEX.md, 13 Slices):
@@ -40,7 +40,7 @@ V1 (siehe /docs/PRD.md, 6 Features), Implementierungs-Plan (siehe /slices/INDEX.
 - ISSUE-009 Blueprint-Profile-Flow Silent Failure — resolved (SLC-002d, 2026-04-16)
 
 ## Last Stable Version
-- V1-preview @ commit 77aa974 — deployed 2026-04-16, SLC-002c App-Branding durch. Browser-Tab zeigt "StrategAIze Onboarding", Sidebar-Blocks rendern "Assessment" via i18n, Repo-Name korrekt. ISSUE-005 resolved.
+- V1-preview @ commit ae2cdc2 — deployed 2026-04-17 (Migration 029 nur, kein App-Redeploy). Exit-Readiness Template v1.0.0 in Prod-DB (9 Bloecke, 73 Fragen).
 
 ## Notes
 Code-Basis uebernommen aus strategaize-blueprint-plattform V3.4 (Stand 2026-04-14). Blueprint-Stack laeuft unveraendert parallel auf blueprint.strategaizetransition.com (selber Hetzner-Server, separate Coolify-Resource).
