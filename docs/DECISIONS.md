@@ -21,9 +21,10 @@
 - Consequence: Weder V1 noch spaetere Versionen sehen eine Rolle vor, in der ein Strategaize-Mitarbeiter neben dem Kunden sitzt und beim Beantworten hilft. Die Wissenserhebung ist immer Kunde+KI allein. Der Berater kommt erst nach Block-Submit + KI-Verdichtung in einem Meeting zum Einsatz, um den verdichteten Stand durchzugehen und zu finalisieren.
 
 ## DEC-005 — Operating-System-Code wird portiert, nicht neu gebaut
-- Status: accepted
+- Status: superseded
+- Superseded by: DEC-014
 - Reason: Das strategaize-operating-system-Repo hat eine weitgehend fertige Ebene-1-Verdichtung (block_sessions, debrief_items, Worker, Import-Endpoint, Query-Layer), die zu 80–100% portierbar ist. Neu-Bau waere Zeitverschwendung.
-- Consequence: V1-Implementierung uebernimmt die OS-Strukturen und passt sie an das neue Knowledge-Unit-Schema und die Onboarding-Plattform-Auth an. Der 3-Agenten-Loop (Analyst+Challenger+Orchestrator) bleibt V2, weil er im OS heute nur Idee ist. Single-Pass-Verdichtung reicht fuer V1, weil der Berater im Meeting die Qualitaets-Luecke schliesst.
+- Consequence: (Urspruenglich: Single-Pass-Verdichtung fuer V1. Revidiert durch DEC-014 — der 3-Agenten-Loop kommt in V1, nicht erst V2.)
 
 ## DEC-006 — LLM-Provider ist AWS Bedrock (Claude), kein Ollama
 - Status: accepted
@@ -64,3 +65,9 @@
 - Status: accepted
 - Reason: Autosave (Debounce 500ms) erzeugt haeufige Schreibvorgaenge. Eine separate `capture_answer`-Tabelle wuerde N UPSERTs pro Save-Vorgang bedeuten und RLS-Policies fuer eine zweite Tabelle erfordern. JSONB auf Session-Ebene ist ein einziger UPDATE-Merge pro Save. V1 hat keine Multi-User-Gleichzeitigkeit pro Session (nur owner_user_id arbeitet), daher kein Row-Level-Locking-Problem. Der Key-Pattern `"${blockKey}.${questionId}"` erlaubt spaetere Migration in eine separate Tabelle, falls V2+ Multi-User-Capture oder granulare RLS benoetigt.
 - Consequence: Migration 030 fuegt `answers jsonb NOT NULL DEFAULT '{}'::jsonb` auf `capture_session` hinzu. Autosave merged per `jsonb_concat` (jsonb || jsonb). Lesen: ein SELECT auf capture_session liefert alle Antworten. Kein neues RLS-Policy-Set noetig — die bestehende capture_session-RLS schuetzt automatisch.
+
+## DEC-014 — Multi-Agent-Loop (Analyst+Challenger) statt Single-Pass in V1
+- Status: accepted
+- Supersedes: DEC-005 (Verdichtungs-Teil)
+- Reason: DEC-005 stufte den 3-Agenten-Loop als "nur Idee im OS" ein. Tatsaechlich existieren alle drei Skills vollstaendig spezifiziert im Operating System (blueprint-analyze 301 Zeilen, blueprint-challenge 274 Zeilen, blueprint-loop 455 Zeilen). OS DEC-002 verwarf den Single-Pass-Ansatz explizit als unzureichend fuer Exit-Readiness-Beratung. Die Praemisse von DEC-005 war faktisch falsch. Single-Pass-Verdichtung produziert unkontrollierte KI-Ergebnisse, die dem KI-first-Qualitaetsanspruch (DEC-004) widersprechen. Der Worker (SLC-008) ist noch nicht gebaut — Umstellung verursacht null Rework.
+- Consequence: FEAT-005 wird umbenannt von "Single-Pass AI Condensation" zu "Multi-Agent AI Condensation (Analyst+Challenger Loop)". SLC-008 implementiert den Analyst→Challenger→Convergence-Loop (2-8 Iterationen) im Worker-Container. Prompts werden aus den OS-Skills portiert und auf Bedrock-Format umgestellt. Kosten-Schaetzung: $0.10-$0.40 pro Block, $0.90-$3.60 pro Session — fuer B2B-SaaS akzeptabel. DB-Schema (ai_jobs, block_checkpoint, knowledge_unit) bleibt unveraendert.
