@@ -3,7 +3,7 @@ import { getLocale } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { getCaptureSession } from "@/lib/db/capture-session-queries";
 import { getTemplateById } from "@/lib/db/template-queries";
-import { QuestionnaireForm } from "./questionnaire-form";
+import { QuestionnaireWorkspace } from "./questionnaire-form";
 
 export default async function BlockDetailPage({
   params,
@@ -37,7 +37,6 @@ export default async function BlockDetailPage({
     notFound();
   }
 
-  // Defense-in-depth: RLS handles cross-tenant isolation
   if (session.tenant_id !== profile.tenant_id) {
     notFound();
   }
@@ -54,25 +53,16 @@ export default async function BlockDetailPage({
     notFound();
   }
 
-  // Build block title from locale-aware title field
   const locale = await getLocale();
-  const blockTitle =
-    typeof block.title === "object"
-      ? (block.title as Record<string, string>)[locale] ??
-        (block.title as Record<string, string>)["de"] ??
-        Object.values(block.title as Record<string, string>)[0] ??
-        block.key
-      : block.key;
 
   return (
-    <QuestionnaireForm
+    <QuestionnaireWorkspace
       sessionId={sessionId}
-      blockKey={blockKey}
-      blockTitle={blockTitle}
+      activeBlockKey={blockKey}
       templateName={template.name}
-      questions={block.questions}
+      blocks={template.blocks}
       savedAnswers={session.answers}
-      totalBlocks={template.blocks.length}
+      locale={locale}
     />
   );
 }

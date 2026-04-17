@@ -39,22 +39,7 @@ export function DashboardSidebar({ profile, activePage }: DashboardSidebarProps)
 
       {/* Navigation */}
       <div className="flex-1 overflow-y-auto px-3 py-1 space-y-1.5">
-        <Link
-          href="/dashboard"
-          className={`flex w-full items-center gap-3 rounded-xl px-4 py-3.5 text-left transition-all duration-200 ${
-            activePage === "runs"
-              ? "bg-gradient-to-r from-brand-primary to-brand-primary-dark text-white shadow-[0_8px_16px_-4px_rgba(68,84,184,0.35)]"
-              : "text-slate-300 hover:bg-white/[0.06]"
-          }`}
-        >
-          <Play className="h-4 w-4" />
-          <div className="min-w-0 flex-1">
-            <div className="text-sm font-bold leading-snug">{t("sidebar.runs")}</div>
-            <div className={`text-[10px] uppercase tracking-wider font-semibold mt-0.5 ${activePage === "runs" ? "text-white/50" : "text-slate-500"}`}>
-              {t("sidebar.runsDescription")}
-            </div>
-          </div>
-        </Link>
+        {/* Neue Erhebung — primary action for V1 */}
         {profile.role === "tenant_admin" && (
           <Link
             href="/capture/new"
@@ -73,24 +58,8 @@ export function DashboardSidebar({ profile, activePage }: DashboardSidebarProps)
             </div>
           </Link>
         )}
-        {profile.role === "tenant_admin" && (
-          <Link
-            href="/mirror/nominations"
-            className={`flex w-full items-center gap-3 rounded-xl px-4 py-3.5 text-left transition-all duration-200 ${
-              activePage === "nominations"
-                ? "bg-gradient-to-r from-brand-primary to-brand-primary-dark text-white shadow-[0_8px_16px_-4px_rgba(68,84,184,0.35)]"
-                : "text-slate-300 hover:bg-white/[0.06]"
-            }`}
-          >
-            <ShieldCheck className="h-4 w-4" />
-            <div className="min-w-0 flex-1">
-              <div className="text-sm font-bold leading-snug">{t("sidebar.mirrorNominations")}</div>
-              <div className={`text-[10px] uppercase tracking-wider font-semibold mt-0.5 ${activePage === "nominations" ? "text-white/50" : "text-slate-500"}`}>
-                {t("sidebar.mirrorNominationsDescription")}
-              </div>
-            </div>
-          </Link>
-        )}
+        {/* Legacy Blueprint Runs — hidden for V1, will be replaced by capture session list */}
+        {/* Legacy Mirror-Teilnehmer — hidden for V1, concept preserved for V2+ */}
       </div>
 
       {/* User + Profile + Logout */}
