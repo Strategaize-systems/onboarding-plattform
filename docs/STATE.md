@@ -10,13 +10,13 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: SLC-003 done (2026-04-17). Exit-Readiness Template v1.0.0 in DB geseedet: 9 Bloecke (A-I), 73 Fragen aus Blueprint V3.4. LLM-Prompts von "Blueprint" auf generische Referenzen umgestellt (7 Stellen). Migration 029 auf Hetzner deployed und verifiziert. FEAT-002 abgeschlossen.
-- Current Phase: V1 Implementation (7/13 Slices done: SLC-001..002d + SLC-003. FEAT-001 + FEAT-002 abgeschlossen. Naechster Track: FEAT-003 ab SLC-004)
+- Current Focus: SLC-004 done (2026-04-17). Capture-Session-Start + Block-Listing implementiert: Server Action startCaptureSession, /capture/new Start-UI, /capture/[sessionId] Block-Liste mit Status-Badges, deriveBlockStatus Helper (6 Unit-Tests gruen), Cross-Tenant-Test. FEAT-003 in_progress (1/3 Slices done).
+- Current Phase: V1 Implementation (8/13 Slices done: SLC-001..002d + SLC-003 + SLC-004. FEAT-001 + FEAT-002 done. FEAT-003 in_progress. Naechste: SLC-005 Questionnaire-UI)
 
 ## Immediate Next Steps
-1. /qa fuer SLC-003 (mandatory nach /backend)
-2. SLC-004 Capture-Session-Start + Block-Listing — naechste Feature-Slice (FEAT-003)
-3. Ab SLC-005: Questionnaire-UI, Block-Submit, Exception-Mode, ...
+1. /qa fuer SLC-004 (mandatory nach /backend)
+2. Redeploy auf Hetzner (SLC-003 Zod-Fix + SLC-004 neue Routes)
+3. SLC-005 Questionnaire-UI-Portierung (FEAT-003, Teil 2/3)
 
 ## Active Scope
 V1 (siehe /docs/PRD.md, 6 Features), Implementierungs-Plan (siehe /slices/INDEX.md, 13 Slices):
@@ -40,7 +40,7 @@ V1 (siehe /docs/PRD.md, 6 Features), Implementierungs-Plan (siehe /slices/INDEX.
 - ISSUE-009 Blueprint-Profile-Flow Silent Failure — resolved (SLC-002d, 2026-04-16)
 
 ## Last Stable Version
-- V1-preview @ commit ae2cdc2 — deployed 2026-04-17 (Migration 029 nur, kein App-Redeploy). Exit-Readiness Template v1.0.0 in Prod-DB (9 Bloecke, 73 Fragen).
+- V1-preview @ commit f5cbdf7 — 2026-04-17 (App-Redeploy pending). SLC-004 Capture-Session-Start + Block-Listing implementiert. DB hat Template v1.0.0.
 
 ## Notes
 Code-Basis uebernommen aus strategaize-blueprint-plattform V3.4 (Stand 2026-04-14). Blueprint-Stack laeuft unveraendert parallel auf blueprint.strategaizetransition.com (selber Hetzner-Server, separate Coolify-Resource).

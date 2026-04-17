@@ -26,6 +26,7 @@
       "type": "feature",
       "priority": "high",
       "status": "in_progress",
+      "note": "SLC-004 done, SLC-005+006 pending",
       "version": "V1",
       "description": "Haupt-Interaktionsmodus fuer Kunden. Block-Navigation, KI-Chat (Bedrock), Block-Submit mit versioniertem Checkpoint. Siehe FEAT-003. Implementierung: SLC-004 (Session-Start) + SLC-005 (Questionnaire-UI) + SLC-006 (Submit).",
       "createdAt": "2026-04-14"
@@ -135,7 +136,7 @@
       "title": "SLC-004 Capture-Session-Start + Block-Listing",
       "type": "feature",
       "priority": "high",
-      "status": "open",
+      "status": "done",
       "version": "V1",
       "description": "Kunde kann Session starten und sieht Bloecke. Siehe /slices/SLC-004-capture-session-start.md.",
       "createdAt": "2026-04-14"
