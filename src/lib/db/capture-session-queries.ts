@@ -11,12 +11,15 @@ export const CaptureSessionStatusSchema = z.enum([
 
 export type CaptureSessionStatus = z.infer<typeof CaptureSessionStatusSchema>;
 
+// Note: z.string() instead of z.string().uuid() — Zod 4 strict UUID validation
+// rejects the demo tenant UUID (00000000-0000-0000-0000-0000000000de) because
+// the version nibble is 0, not 1-8. DB enforces uuid type already.
 export const CaptureSessionRowSchema = z.object({
-  id: z.string().uuid(),
-  tenant_id: z.string().uuid(),
-  template_id: z.string().uuid(),
+  id: z.string(),
+  tenant_id: z.string(),
+  template_id: z.string(),
   template_version: z.string(),
-  owner_user_id: z.string().uuid(),
+  owner_user_id: z.string(),
   status: CaptureSessionStatusSchema,
   started_at: z.string(),
   updated_at: z.string(),

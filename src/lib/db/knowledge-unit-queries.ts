@@ -31,10 +31,10 @@ export const KnowledgeUnitStatusSchema = z.enum([
 export type KnowledgeUnitStatus = z.infer<typeof KnowledgeUnitStatusSchema>;
 
 export const KnowledgeUnitRowSchema = z.object({
-  id: z.string().uuid(),
-  tenant_id: z.string().uuid(),
-  capture_session_id: z.string().uuid(),
-  block_checkpoint_id: z.string().uuid(),
+  id: z.string(),
+  tenant_id: z.string(),
+  capture_session_id: z.string(),
+  block_checkpoint_id: z.string(),
   block_key: z.string(),
   unit_type: KnowledgeUnitTypeSchema,
   source: KnowledgeUnitSourceSchema,
@@ -45,7 +45,7 @@ export const KnowledgeUnitRowSchema = z.object({
   status: KnowledgeUnitStatusSchema,
   created_at: z.string(),
   updated_at: z.string(),
-  updated_by: z.string().uuid().nullable(),
+  updated_by: z.string().nullable(),
 });
 
 export type KnowledgeUnitRow = z.infer<typeof KnowledgeUnitRowSchema>;

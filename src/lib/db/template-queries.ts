@@ -15,7 +15,7 @@ export const TemplateBlockSchema = z.object({
 export type TemplateBlock = z.infer<typeof TemplateBlockSchema>;
 
 export const TemplateRowSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   slug: z.string(),
   name: z.string(),
   version: z.string(),
