@@ -1,6 +1,22 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
+export const TemplateQuestionSchema = z.object({
+  id: z.string(),
+  frage_id: z.string(),
+  text: z.string(),
+  ebene: z.string(),
+  unterbereich: z.string(),
+  position: z.number().int(),
+  owner_dependency: z.boolean().optional().default(false),
+  deal_blocker: z.boolean().optional().default(false),
+  sop_trigger: z.boolean().optional().default(false),
+  ko_hart: z.boolean().optional().default(false),
+  ko_soft: z.boolean().optional().default(false),
+});
+
+export type TemplateQuestion = z.infer<typeof TemplateQuestionSchema>;
+
 export const TemplateBlockSchema = z.object({
   id: z.string(),
   key: z.string(),
@@ -9,7 +25,7 @@ export const TemplateBlockSchema = z.object({
   order: z.number().int(),
   required: z.boolean().optional().default(false),
   weight: z.number().optional().default(1.0),
-  questions: z.array(z.unknown()).default([]),
+  questions: z.array(TemplateQuestionSchema).default([]),
 });
 
 export type TemplateBlock = z.infer<typeof TemplateBlockSchema>;

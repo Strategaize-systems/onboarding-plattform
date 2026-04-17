@@ -10,13 +10,14 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: SLC-004 done (2026-04-17). Capture-Session-Start + Block-Listing implementiert: Server Action startCaptureSession, /capture/new Start-UI, /capture/[sessionId] Block-Liste mit Status-Badges, deriveBlockStatus Helper (6 Unit-Tests gruen), Cross-Tenant-Test. FEAT-003 in_progress (1/3 Slices done).
-- Current Phase: V1 Implementation (8/13 Slices done: SLC-001..002d + SLC-003 + SLC-004. FEAT-001 + FEAT-002 done. FEAT-003 in_progress. Naechste: SLC-005 Questionnaire-UI)
+- Current Focus: SLC-005 in_progress (2026-04-17). Questionnaire-UI-Portierung: Block-Detail-Route, QuestionnaireForm mit Autosave, KI-Chat-Endpoint auf Bedrock, ChatPanel-Komponente, Answer-Persistenz-Tests, DEC-013 JSONB-Answers. FEAT-003 in_progress (2/3 Slices: SLC-004 done, SLC-005 in_progress, SLC-006 planned).
+- Current Phase: V1 Implementation (8/13 Slices done + 1 in_progress: SLC-001..002d + SLC-003 + SLC-004 done. SLC-005 in_progress. FEAT-001 + FEAT-002 done. FEAT-003 in_progress.)
 
 ## Immediate Next Steps
-1. /qa fuer SLC-004 (mandatory nach /backend)
-2. Redeploy auf Hetzner (SLC-003 Zod-Fix + SLC-004 neue Routes)
-3. SLC-005 Questionnaire-UI-Portierung (FEAT-003, Teil 2/3)
+1. /qa fuer SLC-005 (mandatory nach /frontend+/backend)
+2. Migration 030 auf Hetzner deployen (answers-Spalte)
+3. Redeploy App auf Hetzner (SLC-005 neue Routes + Autosave + Chat)
+4. SLC-006 Block-Submit + Checkpoint (FEAT-003, Teil 3/3)
 
 ## Active Scope
 V1 (siehe /docs/PRD.md, 6 Features), Implementierungs-Plan (siehe /slices/INDEX.md, 13 Slices):
@@ -40,7 +41,7 @@ V1 (siehe /docs/PRD.md, 6 Features), Implementierungs-Plan (siehe /slices/INDEX.
 - ISSUE-009 Blueprint-Profile-Flow Silent Failure — resolved (SLC-002d, 2026-04-16)
 
 ## Last Stable Version
-- V1-preview @ commit f5cbdf7 — 2026-04-17 (App-Redeploy pending). SLC-004 Capture-Session-Start + Block-Listing implementiert. DB hat Template v1.0.0.
+- V1-preview @ commit f5cbdf7 — 2026-04-17 (App-Redeploy pending). SLC-004 done. DB hat Template v1.0.0. Migration 030 (answers-Spalte) noch nicht deployed.
 
 ## Notes
 Code-Basis uebernommen aus strategaize-blueprint-plattform V3.4 (Stand 2026-04-14). Blueprint-Stack laeuft unveraendert parallel auf blueprint.strategaizetransition.com (selber Hetzner-Server, separate Coolify-Resource).

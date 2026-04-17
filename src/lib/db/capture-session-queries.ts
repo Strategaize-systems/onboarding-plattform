@@ -21,6 +21,7 @@ export const CaptureSessionRowSchema = z.object({
   template_version: z.string(),
   owner_user_id: z.string(),
   status: CaptureSessionStatusSchema,
+  answers: z.record(z.string(), z.string()).default({}),
   started_at: z.string(),
   updated_at: z.string(),
 });

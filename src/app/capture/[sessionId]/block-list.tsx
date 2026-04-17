@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   Card,
   CardContent,
@@ -13,6 +14,7 @@ import {
 } from "@/lib/capture/derive-block-status";
 import type { TemplateBlock } from "@/lib/db/template-queries";
 import { useLocale } from "next-intl";
+import { ChevronRight } from "lucide-react";
 
 interface Props {
   blocks: TemplateBlock[];
@@ -71,28 +73,37 @@ export function BlockList({
             : block.title;
 
         return (
-          <Card key={block.id} className="hover:border-primary/30 transition-colors">
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base">
-                  <span className="text-muted-foreground mr-2">
-                    Block {block.key}
-                  </span>
-                  {title}
-                </CardTitle>
-                <span
-                  className={`text-xs font-medium px-2.5 py-0.5 rounded-full ${config.bg} ${config.color}`}
-                >
-                  {config.label}
-                </span>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <p className="text-sm text-muted-foreground">
-                {block.questions.length} Fragen
-              </p>
-            </CardContent>
-          </Card>
+          <Link
+            key={block.id}
+            href={`/capture/${sessionId}/block/${block.key}`}
+            className="block"
+          >
+            <Card className="hover:border-primary/30 hover:shadow-md transition-all cursor-pointer">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base">
+                    <span className="text-muted-foreground mr-2">
+                      Block {block.key}
+                    </span>
+                    {title}
+                  </CardTitle>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`text-xs font-medium px-2.5 py-0.5 rounded-full ${config.bg} ${config.color}`}
+                    >
+                      {config.label}
+                    </span>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <p className="text-sm text-muted-foreground">
+                  {block.questions.length} Fragen
+                </p>
+              </CardContent>
+            </Card>
+          </Link>
         );
       })}
     </div>
