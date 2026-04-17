@@ -4,10 +4,11 @@ import { z } from "zod";
 export const TemplateBlockSchema = z.object({
   id: z.string(),
   key: z.string(),
-  title: z.string(),
+  title: z.record(z.string(), z.string()),
   description: z.string().optional().nullable(),
   order: z.number().int(),
   required: z.boolean().optional().default(false),
+  weight: z.number().optional().default(1.0),
   questions: z.array(z.unknown()).default([]),
 });
 
