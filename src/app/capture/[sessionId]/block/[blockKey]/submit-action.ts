@@ -77,14 +77,9 @@ export async function submitBlock(
     }
   }
 
-  // 4b. Extract exception text for this block (SLC-007)
-  const exceptionKey = `__exception__.${blockKey}`;
-  const exceptionText = allAnswers[exceptionKey]?.trim() || null;
-
   // 5. Build checkpoint content
   const content = {
     answers: blockAnswers,
-    exception: exceptionText,
     chat_context: chatMessages.length > 0 ? chatMessages : null,
     block_key: blockKey,
     template_version: session.template_version,

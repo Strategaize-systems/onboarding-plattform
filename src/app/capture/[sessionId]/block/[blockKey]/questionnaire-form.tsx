@@ -44,7 +44,6 @@ import {
 import type { TemplateBlock, TemplateQuestion } from "@/lib/db/template-queries";
 import { saveAnswer } from "./actions";
 import { submitBlock } from "./submit-action";
-import { ExceptionField } from "./exception-field";
 
 const EVIDENCE_LABEL_KEYS = ["policy", "process", "template", "contract", "financial", "legal", "system", "org", "kpi", "other"] as const;
 const EVIDENCE_LABELS: Record<string, string> = {
@@ -999,25 +998,8 @@ export function QuestionnaireWorkspace({
                     )}
                   </div>
 
-                  {/* Direct answer input (alternative to chat) */}
-                  <div className="flex-shrink-0 px-4 py-3 border-t border-slate-200">
-                    <textarea
-                      value={answerText}
-                      onChange={(e) => handleAnswerChange(e.target.value)}
-                      placeholder="Direkte Antwort eingeben..."
-                      rows={4}
-                      className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm leading-relaxed focus:border-brand-primary focus:outline-none transition-colors resize-none"
-                    />
-                  </div>
                 </div>
               </div>
-
-              {/* ── Exception Field ── */}
-              <ExceptionField
-                sessionId={sessionId}
-                blockKey={activeBlockKey}
-                initialValue={savedAnswers[`__exception__.${activeBlockKey}`] ?? ""}
-              />
 
               {/* ── Evidence + Checkpoints Grid (Blueprint V3.4 Style) ── */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

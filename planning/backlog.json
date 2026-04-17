@@ -35,9 +35,9 @@
       "title": "Exception Mode Prompt Layer",
       "type": "feature",
       "priority": "medium",
-      "status": "done",
+      "status": "deferred",
       "version": "V1",
-      "description": "Freitext-Eintraege pro Block, in Verdichtung einbezogen. Siehe FEAT-004. Implementierung: SLC-007.",
+      "description": "Freitext-Eintraege pro Block — REVERTED 2026-04-17. Kein Use-Case: kein Berater neben Teilnehmer im Onboarding-Modell. SLC-007 Code entfernt. FEAT-004 reverted.",
       "createdAt": "2026-04-14"
     },
     {
@@ -165,19 +165,19 @@
       "title": "SLC-007 Exception-Mode-Layer",
       "type": "feature",
       "priority": "medium",
-      "status": "done",
+      "status": "deferred",
       "version": "V1",
-      "description": "Freitext-Layer + Prompt-Integration. Siehe /slices/SLC-007-exception-mode.md.",
+      "description": "REVERTED 2026-04-17. Exception-Feld + Tests + submit-action-Integration entfernt. Kein Berater neben Teilnehmer — Feature hat keinen Use-Case.",
       "createdAt": "2026-04-14"
     },
     {
       "id": "BL-014",
-      "title": "SLC-008 Worker-Container + Verdichtung",
+      "title": "SLC-008 Worker-Container + Verdichtung + Blueprint Chat-Flow",
       "type": "feature",
       "priority": "high",
       "status": "open",
       "version": "V1",
-      "description": "Separater Docker-Service, Bedrock-Umbau, Queue-RPCs. Siehe /slices/SLC-008-worker-container.md.",
+      "description": "Erweitert 2026-04-17: Teil A Blueprint-Chat-Flow (Zusammenfassung, Memory, Event-History, UI-Umbau) + Teil B Worker (Bedrock, Multi-Agent-Loop, Queue-RPCs). Siehe /slices/SLC-008-worker-container.md.",
       "createdAt": "2026-04-14"
     },
     {
