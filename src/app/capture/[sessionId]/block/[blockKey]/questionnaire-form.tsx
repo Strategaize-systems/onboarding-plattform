@@ -44,6 +44,7 @@ import {
 import type { TemplateBlock, TemplateQuestion } from "@/lib/db/template-queries";
 import { saveAnswer } from "./actions";
 import { submitBlock } from "./submit-action";
+import { ExceptionField } from "./exception-field";
 
 const EVIDENCE_LABEL_KEYS = ["policy", "process", "template", "contract", "financial", "legal", "system", "org", "kpi", "other"] as const;
 const EVIDENCE_LABELS: Record<string, string> = {
@@ -1010,6 +1011,13 @@ export function QuestionnaireWorkspace({
                   </div>
                 </div>
               </div>
+
+              {/* ── Exception Field ── */}
+              <ExceptionField
+                sessionId={sessionId}
+                blockKey={activeBlockKey}
+                initialValue={savedAnswers[`__exception__.${activeBlockKey}`] ?? ""}
+              />
 
               {/* ── Evidence + Checkpoints Grid (Blueprint V3.4 Style) ── */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
