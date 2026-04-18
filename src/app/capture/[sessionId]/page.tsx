@@ -1,4 +1,5 @@
 import { redirect, notFound } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getCaptureSession } from "@/lib/db/capture-session-queries";
 import { getTemplateById } from "@/lib/db/template-queries";
@@ -77,6 +78,12 @@ export default async function CaptureSessionPage({
   return (
     <div className="container mx-auto max-w-4xl py-8 px-4">
       <div className="mb-8">
+        <Link
+          href="/dashboard"
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
+        >
+          ← Zurück zum Dashboard
+        </Link>
         <h1 className="text-2xl font-bold">{template.name}</h1>
         <p className="text-muted-foreground mt-1">
           Version {session.template_version} · {template.blocks.length} Blöcke
