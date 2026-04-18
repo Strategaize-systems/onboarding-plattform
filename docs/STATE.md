@@ -9,14 +9,14 @@
 Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdichtung. Ermoeglicht mehrere Capture-Modi (Fragebogen, Meeting, Voice, etc.) und Template-basierte Produktvarianten (z.B. Exit-Readiness, Immobilien-Onboarding).
 
 ## Current State
-- High-Level State: final-check
-- Current Focus: Gesamt-QA V1 PASS (RPT-029). Naechster Schritt /final-check.
-- Current Phase: V1 QA abgeschlossen — Pre-Release-Phase (13/13 Slices done, 5/6 Features done, Gesamt-QA PASS mit 0 Blocker, 4 Medium, 6 Low)
+- High-Level State: go-live
+- Current Focus: Final-Check PASS (RPT-030, conditionally ready → npm audit fix erledigt). Naechster Schritt /go-live.
+- Current Phase: V1 Pre-Release abgeschlossen — Go-Live-Phase (npm audit fix committed, 0 Prod-Vulnerabilities)
 
 ## Immediate Next Steps
-1. /final-check — Hygiene, Dependencies, Security, Deployment-Readiness
+1. /go-live — Deploy-Readiness-Assessment
 2. Coolify-Redeploy (Reload Compose File → Redeploy) — baut App + Worker-Container
-3. /go-live → /deploy
+3. /deploy
 4. E2E-Smoke-Test gemaess /docs/E2E_SMOKE_TEST_V1.md
 
 ## Active Scope
