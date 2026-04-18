@@ -9,14 +9,14 @@
 Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdichtung. Ermoeglicht mehrere Capture-Modi (Fragebogen, Meeting, Voice, etc.) und Template-basierte Produktvarianten (z.B. Exit-Readiness, Immobilien-Onboarding).
 
 ## Current State
-- High-Level State: requirements
-- Current Focus: V1.1 Maintenance Release — Requirements definiert. 3 Features (FEAT-007..009), 4 Backlog-Items (BL-022..025).
-- Current Phase: V1.1 Requirements
+- High-Level State: architecture
+- Current Focus: V1.1 Maintenance Release — Architecture definiert. 2 Slices empfohlen (SLC-011 Legacy-Cleanup, SLC-012 Dashboard+error_log).
+- Current Phase: V1.1 Architecture
 
 ## Immediate Next Steps
-1. /architecture fuer V1.1 (minimal — kein neues Schema-Design noetig, nur Cleanup + Dashboard-Datenquelle + 1 Migration)
-2. /slice-planning fuer V1.1
-3. Implementation (voraussichtlich 2-3 Slices)
+1. /slice-planning fuer V1.1 (2 Slices)
+2. /backend SLC-011 (Legacy-Cleanup)
+3. /frontend SLC-012 (Dashboard + error_log Migration)
 
 ## Active Scope
 V1.1 Maintenance Release (3 Features):

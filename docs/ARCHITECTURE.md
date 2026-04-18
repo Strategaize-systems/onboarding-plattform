@@ -334,3 +334,129 @@ Jeder Slice sollte mit Tests fuer seine RLS-Erwartungen abgeschlossen werden (Sa
 ## Naechster Schritt
 
 `/slice-planning` mit Scope "V1 alle 10 Slices".
+
+---
+
+## V1.1 Architecture Addendum — Maintenance Release
+
+### Status
+V1.1-Architektur ergaenzt am 2026-04-18. Keine strukturellen Aenderungen am V1-Stack — rein subtraktive Arbeit (Legacy-Loeschung) plus zwei kleine Ergaenzungen (Dashboard-Datenquelle, error_log-Tabelle).
+
+### Architektur-Aenderungen V1.1
+
+**Keine.** V1.1 aendert nichts an der Architektur. Kein neuer Service, kein neues Schema-Konzept, keine neue Abhaengigkeit. Die Aenderungen sind:
+
+1. **Subtraktiv:** ~42 tote Dateien + 16 Legacy-Migrations loeschen
+2. **Korrektur:** Dashboard-Datenquelle von `/api/tenant/runs` (nicht-existent) auf `capture_session`-Query umstellen
+3. **Ergaenzung:** `error_log`-Tabelle erstellen (fehlte seit V1-Deploy)
+
+### FEAT-007: Blueprint-Legacy-Cleanup — Technische Spezifikation
+
+#### Zu loeschende Verzeichnisse (komplett)
+
+| Verzeichnis | Dateien | Referenziert |
+|-------------|---------|-------------|
+| `src/app/api/tenant/runs/` | 15 Route-Dateien | runs, questions, evidence_items, run_memory |
+| `src/app/api/admin/runs/` | 6 Route-Dateien | runs |
+| `src/app/api/admin/catalog/` | 2 Route-Dateien | question_catalog_snapshots |
+| `src/app/api/tenant/mirror/` | 5 Route-Dateien | mirror_profiles, mirror_policy_confirmations, mirror_nominations |
+| `src/app/admin/runs/` | 6 Dateien (Pages + Clients) | runs |
+| `src/app/admin/catalog/` | 2 Dateien (Page + Client) | question_catalog_snapshots |
+| `src/app/mirror/profile/` | 2 Dateien (Page + Client) | mirror_profiles |
+| `src/app/mirror/nominations/` | 2 Dateien (Page + Client) | mirror_nominations |
+| `src/app/mirror/policy/` | 1 Datei (Page) | mirror_policy_confirmations |
+| `src/app/runs/` | 2 Dateien (Page + Client) | runs |
+
+#### Zu loeschende Einzel-Dateien
+- `src/components/status-badge.tsx` — nur von Legacy-Runs verwendet (nach Dashboard-Umbau pruefen)
+- `src/components/progress-indicator.tsx` — nur von Legacy-Runs verwendet (nach Dashboard-Umbau pruefen)
+
+#### Zu aktualisierende Dateien
+- `src/app/api/admin/tenants/route.ts` — Legacy-Run-Counting entfernen, auf capture_session-Count umstellen
+- `src/components/dashboard-sidebar.tsx` — ggf. Legacy-Links entfernen (bereits in V1 Smoke-Test teilweise bereinigt)
+- `src/components/admin-sidebar.tsx` — Legacy-Links pruefen
+
+#### Legacy-Migrations zu loeschen (sql/migrations/)
+Migrations 003-020 (16 Dateien). Diese wurden nie auf der Onboarding-DB ausgefuehrt und existieren nur als Datei-Artefakte.
+
+**Ausnahme:** Migration 005 (`005_error_logging.sql`) wird NICHT geloescht, sondern als Referenz fuer die neue error_log-Migration verwendet, dann aber ebenfalls entfernt.
+
+#### Bewusst beibehaltene Legacy-Artefakte
+- `src/lib/llm.ts` — `buildOwnerContext` + `OwnerProfileData` bleiben per DEC-012 fuer V2+ Template-spezifische Owner-Erhebung
+- `src/lib/freeform.ts` — Wird von V2 Free-Form Capture-Mode benoetigt (BL-021)
+
+#### Validierungs-Strategie
+1. **Vor Loeschung:** `grep -r` auf jeden Verzeichnisnamen, um unerwartete Imports zu finden
+2. **Nach Loeschung:** `npm run build` muss erfolgreich sein
+3. **Nach Loeschung:** `npm run test` muss erfolgreich sein (soweit lokal verfuegbar)
+
+### FEAT-008: Dashboard Capture-Sessions — Technische Spezifikation
+
+#### Ist-Zustand
+`dashboard-client.tsx` fetcht von `/api/tenant/runs` → HTTP 500 → Empty-State.
+
+#### Soll-Zustand
+Dashboard zeigt aktive Capture-Sessions des eingeloggten Users. Datenquelle: `capture_session`-Tabelle via Supabase-Client (RLS-geschuetzt, kein separater API-Endpoint noetig).
+
+#### Query
+```typescript
+const { data: sessions } = await supabase
+  .from('capture_session')
+  .select('id, status, started_at, updated_at, template:template_id(name, slug)')
+  .order('updated_at', { ascending: false });
+```
+
+#### UI-Aenderungen
+- `Run`-Interface ersetzen durch `CaptureSession`-Interface
+- Statt `title`, `description`, `question_count`, `answered_count`, `evidence_count` → `template.name`, `status`, `started_at`, `updated_at`
+- Link-Ziel: `/capture/{sessionId}` statt `/runs/{id}`
+- Fortschrittsanzeige: Block-Completion statt Frage-Completion (Anzahl finalisierter Bloecke / Gesamt-Bloecke aus Template)
+- Empty-State bleibt bestehen, Text anpassen
+
+#### Kein neuer API-Endpoint
+Die Query laeuft direkt im Client via Supabase-Client. RLS garantiert Tenant-Isolation. Das entspricht dem V1-Pattern (capture_session-Reads laufen immer ueber Supabase-Client, nicht ueber API-Routes).
+
+### FEAT-009: Error-Logging — Technische Spezifikation
+
+#### Migration 039_error_log.sql
+
+```sql
+CREATE TABLE IF NOT EXISTS error_log (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  level text NOT NULL DEFAULT 'error',
+  source text NOT NULL DEFAULT 'unknown',
+  message text NOT NULL,
+  stack text,
+  metadata jsonb DEFAULT '{}',
+  user_id uuid,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- RLS: nur strategaize_admin darf lesen, Service-Role schreibt
+ALTER TABLE error_log ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY error_log_admin_read ON error_log
+  FOR SELECT USING (auth.user_role() = 'strategaize_admin');
+
+-- Service-Role-Key umgeht RLS automatisch (INSERT kommt von logger.ts via supabaseAdmin)
+
+-- Index fuer Abfrage nach Datum
+CREATE INDEX idx_error_log_created_at ON error_log(created_at DESC);
+```
+
+#### Keine Code-Aenderung an logger.ts
+`logger.ts` schreibt bereits korrekt in `error_log`. Die Tabelle fehlte nur in der DB. Nach Migration funktioniert der Logger automatisch.
+
+#### Keine Code-Aenderung an /api/admin/errors
+Die Route `/api/admin/errors/route.ts` liest bereits aus `error_log`. Nach Migration funktioniert sie automatisch.
+
+### Empfohlene Slice-Reihenfolge V1.1
+
+1. **SLC-011: Legacy-Cleanup** — Loeschung aller Legacy-Dateien + Migrations + Build-Verifikation (FEAT-007)
+2. **SLC-012: Dashboard + error_log** — Dashboard-Umbau + Migration 039 (FEAT-008 + FEAT-009)
+
+Zwei Slices reichen. SLC-011 ist rein subtraktiv (Loeschen + Verifizieren). SLC-012 ist ein kleiner Frontend-Umbau + eine Migration.
+
+### Naechster Schritt V1.1
+
+`/slice-planning` mit 2 Slices.
