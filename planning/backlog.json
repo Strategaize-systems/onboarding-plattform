@@ -55,7 +55,7 @@
       "title": "Debrief Meeting Interface",
       "type": "feature",
       "priority": "high",
-      "status": "open",
+      "status": "in_progress",
       "version": "V1",
       "description": "UI fuer strategaize_admin: Knowledge-Unit-Review, Editor, Meeting-Snapshot als versionierter finaler Stand. Siehe FEAT-006. Implementierung: SLC-009 (Debrief-UI) + SLC-010 (Meeting-Snapshot + Export).",
       "createdAt": "2026-04-14"
@@ -185,7 +185,7 @@
       "title": "SLC-009 Debrief-UI + KU-Editor",
       "type": "feature",
       "priority": "high",
-      "status": "open",
+      "status": "done",
       "version": "V1",
       "description": "strategaize_admin Review-UI + Validation-Layer-Writes. Siehe /slices/SLC-009-debrief-ui.md.",
       "createdAt": "2026-04-14"

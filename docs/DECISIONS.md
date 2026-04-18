@@ -76,3 +76,8 @@
 - Status: accepted
 - Reason: Live-Test 2026-04-17 zeigte: (1) Exception-Feld ("Ausnahmen & Ergaenzungen") hat keinen Use-Case — im Onboarding-Modell arbeitet der Teilnehmer allein mit KI, kein Berater sitzt daneben. (2) Die Questionnaire-UI divergierte massiv vom Blueprint-Flow: falsches Direkt-Textarea rechts, fehlende Summary/Memory-Features. User hat explizit klargemacht: Blueprint-UI 1:1 replizieren, nichts Neues erfinden.
 - Consequence: SLC-007 komplett reverted (exception-field.tsx, Tests, submit-action-Integration, Direkt-Textarea entfernt). FEAT-004 Status reverted. SLC-008 erweitert um Teil A (Blueprint-Chat-Flow: Bedrock-Client, Chat-API mit Memory, Zusammenfassung, UI-Umbau auf Blueprint-Referenz) zusaetzlich zu Teil B (Worker + Verdichtung). Micro-Tasks MT-A1..A6 hinzugefuegt.
+
+## DEC-016 — Manuell hinzugefuegte Knowledge Units erhalten source='manual'
+- Status: accepted
+- Reason: Im Debrief-Meeting kann der strategaize_admin eigene Beobachtungen, Erkenntnisse oder Massnahmen ergaenzen, die nicht aus dem Fragebogen oder der KI-Verdichtung stammen. Diese brauchen eine eigene Source-Kennzeichnung, um im Audit-Trail und in der UI klar von KI-generierten oder Fragebogen-basierten KUs unterscheidbar zu sein. Der Wert 'manual' existiert bereits im CHECK-Constraint von knowledge_unit.source (Migration 021).
+- Consequence: RPC `rpc_add_knowledge_unit` (Migration 037) setzt `source = 'manual'` fuer alle vom Admin manuell erstellten KUs. Confidence wird auf 'medium' gesetzt (Admin-Input, nicht KI-validiert). Die UI zeigt 'Manuell' als Source-Badge. Validation-Layer erhaelt einen initialen 'comment'-Eintrag bei Erstellung.

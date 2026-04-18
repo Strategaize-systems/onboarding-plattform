@@ -121,3 +121,15 @@ Der uebernommene Blueprint-Stand ist noch nicht auf einer Onboarding-Plattform-I
 - Affected Areas: Capture-Session-Workflow, KI-Chat-API, Questionnaire-UI
 - Risk: Gering — neue Tabellen, keine Aenderung an bestehenden.
 - Rollback Notes: `DROP TABLE session_memory; DROP TABLE capture_events;`
+
+### MIG-011 — SLC-009 Debrief-RPCs (Migration 037)
+- Date: 2026-04-18
+- Scope:
+  - `037_rpc_debrief_knowledge_unit.sql` — 2 neue RPCs:
+    - `rpc_update_knowledge_unit_with_audit(uuid, jsonb, text, text)` — Atomic KU-Update (title/body/status) + validation_layer-Audit-Row. SECURITY DEFINER, prueft strategaize_admin-Rolle.
+    - `rpc_add_knowledge_unit(uuid, text, text, text, text, text)` — Manuelles Hinzufuegen einer KU mit source='manual' (DEC-016). Sucht neuesten Checkpoint fuer Block. SECURITY DEFINER, prueft strategaize_admin-Rolle.
+  - Beide RPCs GRANT EXECUTE TO authenticated (Rollencheck intern).
+- Reason: SLC-009 Debrief-UI braucht atomare KU-Mutation mit Audit-Trail. Direkte INSERTs/UPDATEs ueber RLS waeren unsicher — alle Schreiboperationen laufen ueber RPCs mit expliziter Rollenvalidierung.
+- Affected Areas: Debrief-Workflow, Knowledge-Unit-Editor, Validation-Layer-Audit
+- Risk: Gering — neue Funktionen, keine Aenderung an bestehenden Tabellen oder RPCs.
+- Rollback Notes: `DROP FUNCTION rpc_update_knowledge_unit_with_audit; DROP FUNCTION rpc_add_knowledge_unit;`
