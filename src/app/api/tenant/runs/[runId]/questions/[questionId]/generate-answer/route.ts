@@ -4,7 +4,7 @@ import { chatWithLLM, getSystemPrompts, buildMemoryContext } from "@/lib/llm";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 // POST /api/tenant/runs/[runId]/questions/[questionId]/generate-answer
-// Takes chat history, generates a summary via local LLM (Ollama/Qwen)
+// Takes chat history, generates a summary via AWS Bedrock (Claude Sonnet)
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ runId: string; questionId: string }> }

@@ -54,6 +54,37 @@ services:
       retries: 3
 
   # ============================================================
+  # WORKER — Knowledge Unit Condensation (Analyst+Challenger Loop)
+  # ============================================================
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      # Supabase (internal URL — worker talks to Kong directly)
+      SUPABASE_URL: http://supabase-kong:8000
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
+      # AWS Bedrock (eu-central-1 Frankfurt — DSGVO-konform)
+      AWS_REGION: ${AWS_REGION:-eu-central-1}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      LLM_MODEL: ${LLM_MODEL:-eu.anthropic.claude-sonnet-4-20250514-v1:0}
+      # Worker config
+      AI_WORKER_POLL_MS: ${AI_WORKER_POLL_MS:-2000}
+      AI_MIN_ITERATIONS: ${AI_MIN_ITERATIONS:-2}
+      AI_MAX_ITERATIONS: ${AI_MAX_ITERATIONS:-8}
+    depends_on:
+      supabase-db:
+        condition: service_healthy
+      supabase-kong:
+        condition: service_started
+    networks:
+      - strategaize-net
+
+  # ============================================================
   # SUPABASE STACK
   # ============================================================
 

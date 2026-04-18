@@ -1,0 +1,70 @@
+// Worker Entry Point — Knowledge Unit Condensation
+// Runs as a standalone Node.js process alongside the Next.js app container.
+// Polls ai_jobs queue and processes knowledge_unit_condensation jobs
+// using an iterative Analyst+Challenger loop via AWS Bedrock.
+
+import { startClaimLoop } from "./claim-loop";
+import { handleCondensationJob } from "./handle-job";
+
+// Validate required environment variables
+const REQUIRED_ENV = [
+  "SUPABASE_URL",
+  "SUPABASE_SERVICE_ROLE_KEY",
+  "AWS_REGION",
+  "AWS_ACCESS_KEY_ID",
+  "AWS_SECRET_ACCESS_KEY",
+];
+
+function validateEnv(): void {
+  const missing = REQUIRED_ENV.filter((key) => !process.env[key]);
+  if (missing.length > 0) {
+    console.error(
+      `[worker] Missing required environment variables: ${missing.join(", ")}`
+    );
+    process.exit(1);
+  }
+
+  // Default Bedrock model if not set
+  if (!process.env.LLM_MODEL) {
+    process.env.LLM_MODEL = "eu.anthropic.claude-sonnet-4-20250514-v1:0";
+  }
+
+  console.log("[worker] Environment validated");
+  console.log(`[worker] AWS_REGION=${process.env.AWS_REGION}`);
+  console.log(`[worker] LLM_MODEL=${process.env.LLM_MODEL}`);
+  console.log(
+    `[worker] AI_MIN_ITERATIONS=${process.env.AI_MIN_ITERATIONS || "2"}`
+  );
+  console.log(
+    `[worker] AI_MAX_ITERATIONS=${process.env.AI_MAX_ITERATIONS || "8"}`
+  );
+  console.log(
+    `[worker] AI_WORKER_POLL_MS=${process.env.AI_WORKER_POLL_MS || "2000"}`
+  );
+}
+
+// Graceful shutdown
+function setupShutdown(): void {
+  const shutdown = (signal: string) => {
+    console.log(`[worker] Received ${signal}, shutting down...`);
+    process.exit(0);
+  };
+
+  process.on("SIGINT", () => shutdown("SIGINT"));
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+}
+
+// Main
+async function main(): Promise<void> {
+  console.log("[worker] Knowledge Unit Condensation Worker starting...");
+  validateEnv();
+  setupShutdown();
+
+  // Start the claim loop — runs forever
+  await startClaimLoop(handleCondensationJob);
+}
+
+main().catch((err) => {
+  console.error("[worker] Fatal error:", err);
+  process.exit(1);
+});

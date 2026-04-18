@@ -1,0 +1,50 @@
+# ── Strategaize Onboarding Worker — Knowledge Unit Condensation ──────────
+# Standalone Node.js process that polls ai_jobs queue and runs
+# iterative Analyst+Challenger condensation via AWS Bedrock.
+# Runs alongside the Next.js app container in the same Docker network.
+
+# ── Stage 1: Dependencies ──────────────────────────────────────────────
+FROM node:22-alpine AS deps
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
+
+# ── Stage 2: Build ─────────────────────────────────────────────────────
+FROM node:22-alpine AS builder
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+RUN npm ci
+
+# Copy source files needed for worker build (entire lib/ for transitive imports)
+COPY src/workers/ ./src/workers/
+COPY src/lib/ ./src/lib/
+COPY tsconfig.worker.json ./
+COPY scripts/build-worker.mjs ./scripts/
+
+# Bundle worker into a single JS file
+RUN node scripts/build-worker.mjs
+
+# ── Stage 3: Production ────────────────────────────────────────────────
+FROM node:22-alpine AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+# Create non-root user
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 worker
+
+# Copy production dependencies + bundled worker
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=builder /app/dist/worker.js ./worker.js
+COPY --from=builder /app/package.json ./package.json
+
+USER worker
+
+# No HTTP port — worker only communicates via DB
+HEALTHCHECK --interval=60s --timeout=10s --retries=3 \
+  CMD node -e "process.exit(0)"
+
+CMD ["node", "worker.js"]

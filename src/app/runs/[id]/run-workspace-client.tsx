@@ -312,7 +312,7 @@ export function RunWorkspaceClient({
     setChatInput("");
     setChatLoading(true);
 
-    // Call local LLM via Ollama for follow-up response
+    // Call LLM via Bedrock for follow-up response
     try {
       const res = await fetch(
         `/api/tenant/runs/${runId}/questions/${activeQuestion}/chat`,
