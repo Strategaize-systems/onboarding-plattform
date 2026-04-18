@@ -140,7 +140,9 @@ export function QuestionnaireWorkspace({
   const [eventKey, setEventKey] = useState(0);
 
   // Voice recording state
-  const whisperEnabled = process.env.NEXT_PUBLIC_WHISPER_ENABLED === "true";
+  // Whisper transcription endpoint is not yet wired for capture sessions (stub in transcribeRecording).
+  // Disable mic button until /api/capture/[sessionId]/transcribe is implemented.
+  const whisperEnabled = false;
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
@@ -910,8 +912,9 @@ export function QuestionnaireWorkspace({
                                   <button
                                     onClick={() => {
                                       setAnswerText(msg.text);
-                                      setMessage({ text: "Zusammenfassung als Antwort übernommen", type: "success" });
-                                      setTimeout(() => setMessage(null), 4000);
+                                      setChatInput(msg.text);
+                                      setMessage({ text: "Zusammenfassung als Antwort übernommen — Text kann unten bearbeitet und gespeichert werden", type: "success" });
+                                      setTimeout(() => setMessage(null), 6000);
                                     }}
                                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-brand-success-dark to-brand-success text-white text-xs font-bold shadow-sm hover:shadow-md transition-all"
                                   >
