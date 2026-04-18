@@ -3,7 +3,7 @@
 
 import { BedrockRuntimeClient, ConverseCommand } from "@aws-sdk/client-bedrock-runtime";
 
-const MODEL_ID = process.env.LLM_MODEL || "anthropic.claude-sonnet-4-20250514-v1:0";
+const MODEL_ID = process.env.LLM_MODEL || "eu.anthropic.claude-sonnet-4-6-20250514-v1:0";
 
 const bedrockClient = new BedrockRuntimeClient({
   region: process.env.AWS_REGION || "eu-central-1",
