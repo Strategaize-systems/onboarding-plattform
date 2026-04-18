@@ -122,6 +122,14 @@ Der uebernommene Blueprint-Stand ist noch nicht auf einer Onboarding-Plattform-I
 - Risk: Gering — neue Tabellen, keine Aenderung an bestehenden.
 - Rollback Notes: `DROP TABLE session_memory; DROP TABLE capture_events;`
 
+### MIG-012 — SLC-012 error_log-Tabelle (Migration 039)
+- Date: 2026-04-18
+- Scope: Neue Tabelle `error_log` (id, level, source, message, stack, metadata, user_id, created_at). RLS aktiv — nur strategaize_admin kann lesen. service_role schreibt (bypasses RLS). Index auf created_at DESC. GRANT ALL TO service_role.
+- Reason: logger.ts schrieb seit V1-Deploy in error_log, aber die Tabelle existierte nie in der Onboarding-DB (Legacy-Migration 005 wurde nie ausgefuehrt). ISSUE-013.
+- Affected Areas: Observability, Error-Logging, /api/admin/errors
+- Risk: Gering — neue Tabelle, keine Aenderung an bestehenden Objekten.
+- Rollback Notes: `DROP TABLE IF EXISTS error_log CASCADE;`
+
 ### MIG-011 — SLC-009 Debrief-RPCs (Migration 037)
 - Date: 2026-04-18
 - Scope:

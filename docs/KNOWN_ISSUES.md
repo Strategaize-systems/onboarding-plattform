@@ -106,22 +106,20 @@
 - Resolution: SLC-011. 28 API-Routes, 15 Pages, 5 verwaiste Components, 16 Legacy-Migrations geloescht. Dashboard mirror_respondent-Redirects + Sidebar mirror-Link entfernt. admin/tenants Route von run_count auf session_count umgestellt. Build erfolgreich.
 
 ### ISSUE-012 — Dashboard zeigt leere Blueprint-Runs statt Capture-Sessions
-- Status: open
+- Status: resolved
+- Resolution Date: 2026-04-18
 - Severity: Medium
 - Area: Frontend / Dashboard
-- Summary: dashboard-client.tsx fetcht von /api/tenant/runs (Blueprint-API). Diese Route greift auf nicht-existierende runs-Tabelle zu. Der Fetch schlaegt fehl, wird per try/finally abgefangen, und das Dashboard zeigt den Empty-State "Keine Assessments vorhanden". Existierende Capture-Sessions sind im Dashboard nicht sichtbar.
-- Impact: tenant_admin sieht nach Login ein leeres Dashboard. Der Einstieg in die Erhebung ist nur ueber den Sidebar-Link "Neue Erhebung" moeglich. Bestehende Sessions sind nicht ueber die UI auffindbar — nur per Direkt-URL (/capture/[sessionId]).
-- Workaround: Sidebar-Link "Neue Erhebung" verwenden. Fuer bestehende Sessions Direkt-URL nutzen. strategaize_admin kann Sessions ueber /admin/debrief finden.
-- Next Action: Dashboard auf Capture-Sessions umbauen (V1.1 oder Maintenance-Slice).
+- Summary: dashboard-client.tsx fetchte von /api/tenant/runs (Blueprint-API, nicht-existent).
+- Resolution: SLC-012 MT-3. Dashboard auf Supabase capture_session-Query umgebaut. Zeigt Template-Name, Status, Zeitstempel. Links zu /capture/{sessionId}.
 
 ### ISSUE-013 — error_log-Tabelle fehlt in Onboarding-DB
-- Status: open
+- Status: resolved
+- Resolution Date: 2026-04-18
 - Severity: Medium
 - Area: Observability
-- Summary: logger.ts (aus Blueprint geerbt) schreibt Fehler in die error_log-Tabelle. Migration 005 (Blueprint-Legacy) wurde nie auf der Onboarding-DB ausgefuehrt. Alle Error-Log-Writes schlagen still fehl — Fehler gehen verloren.
-- Impact: Kein Runtime-Fehler (catch-Block in logToDb faengt den DB-Fehler ab), aber keine Fehler-Sichtbarkeit. Debugging nur ueber Container-Logs moeglich.
-- Workaround: Container-Logs ueber `docker logs` oder Coolify-UI.
-- Next Action: Migration 005 ausfuehren oder Sentry-Integration (V1.1).
+- Summary: logger.ts schrieb in error_log-Tabelle die in der Onboarding-DB nicht existierte.
+- Resolution: SLC-012 MT-1+MT-2. Migration 039_error_log.sql erstellt und auf Hetzner ausgefuehrt. Tabelle mit RLS (strategaize_admin read), Index, service_role GRANT.
 
 ### ISSUE-014 — Voice-Input (Whisper) nicht verdrahtet fuer Capture-Sessions
 - Status: open

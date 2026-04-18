@@ -215,7 +215,7 @@
       "title": "Dashboard auf Capture-Sessions umbauen",
       "type": "fix",
       "priority": "high",
-      "status": "open",
+      "status": "done",
       "version": "V1.1",
       "description": "ISSUE-012: dashboard-client.tsx fetcht von /api/tenant/runs (Blueprint, nicht-existent). Umbauen auf capture_session-Query. Session-Liste mit Status, Template-Name, letztem Update. Klick fuehrt zur Session.",
       "createdAt": "2026-04-18"
@@ -225,7 +225,7 @@
       "title": "error_log-Tabelle erstellen",
       "type": "fix",
       "priority": "medium",
-      "status": "open",
+      "status": "done",
       "version": "V1.1",
       "description": "ISSUE-013: logger.ts schreibt in error_log-Tabelle die in der Onboarding-DB nicht existiert. Migration erstellen und ausfuehren. Danach logger.ts-Fehler nicht mehr silent-fail.",
       "createdAt": "2026-04-18"

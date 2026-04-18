@@ -10,14 +10,14 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: V1.1 Maintenance Release — SLC-011 done (Legacy-Cleanup, 64 Dateien entfernt). SLC-012 (Dashboard + error_log) offen.
+- Current Focus: V1.1 Maintenance Release — alle 2/2 Slices done (SLC-011 Legacy-Cleanup, SLC-012 Dashboard+error_log). Gesamt-QA + Final-Check + Deploy offen.
 - Current Phase: V1.1 Implementation
 
 ## Immediate Next Steps
-1. /qa SLC-011
-2. /frontend SLC-012 — Dashboard + error_log (5 MTs: Migration, Dashboard-Umbau, Deploy)
-3. /qa SLC-012
-4. Gesamt-QA V1.1 + Final-Check + Deploy
+1. /qa SLC-012
+2. Gesamt-QA V1.1
+3. /final-check
+4. Deploy (Coolify Redeploy)
 
 ## Active Scope
 V1.1 Maintenance Release (3 Features):
