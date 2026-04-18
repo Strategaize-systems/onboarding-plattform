@@ -9,15 +9,15 @@
 Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdichtung. Ermoeglicht mehrere Capture-Modi (Fragebogen, Meeting, Voice, etc.) und Template-basierte Produktvarianten (z.B. Exit-Readiness, Immobilien-Onboarding).
 
 ## Current State
-- High-Level State: implementing
-- Current Focus: SLC-009 Backend done (Migration 037 deployed, RPCs + Server Actions + Debrief-UI + RLS-Test). SLC-009 pending /qa. SLC-010 verbleibend.
-- Current Phase: V1 Implementation (12/13 Slices done: SLC-001..006, SLC-008, SLC-009. FEAT-001..003, FEAT-005 done. FEAT-004 reverted. FEAT-006 in_progress.)
+- High-Level State: qa
+- Current Focus: ALLE 13 Slices implementiert (SLC-007 reverted). SLC-010 pending /qa. Danach Gesamt-QA + Final-Check.
+- Current Phase: V1 Implementation abgeschlossen — QA-Phase (13/13 Slices done: SLC-001..006, SLC-008..010. FEAT-001..003, FEAT-005, FEAT-006 done. FEAT-004 reverted.)
 
 ## Immediate Next Steps
-1. /qa fuer SLC-009 (Debrief-UI + KU-Editor)
+1. /qa fuer SLC-010 (Meeting-Snapshot + JSON-Export)
 2. Coolify-Redeploy (Reload Compose File → Redeploy) — baut App + Worker-Container
-3. SLC-010 Meeting-Snapshot + JSON-Export (FEAT-006)
-4. Worker-Smoke-Test (Block-Submit → KU-Erzeugung → Debrief verifizieren)
+3. Gesamt-QA ueber alle V1-Slices
+4. /final-check → /go-live → /deploy
 
 ## Active Scope
 V1 (siehe /docs/PRD.md, 6 Features), Implementierungs-Plan (siehe /slices/INDEX.md, 13 Slices):
@@ -26,7 +26,7 @@ V1 (siehe /docs/PRD.md, 6 Features), Implementierungs-Plan (siehe /slices/INDEX.
 - FEAT-003 Questionnaire Mode with Block-Submit → SLC-004, SLC-005, SLC-006 (done)
 - FEAT-004 Exception Mode Prompt Layer → SLC-007 (reverted, kein Use-Case)
 - FEAT-005 Multi-Agent AI Condensation + Blueprint-Chat-Flow → SLC-008 (done, pending Coolify-Redeploy)
-- FEAT-006 Debrief Meeting Interface → SLC-009 (done), SLC-010 (planned)
+- FEAT-006 Debrief Meeting Interface → SLC-009 (done), SLC-010 (done)
 
 ## Blockers
 - aktuell keine
@@ -41,7 +41,7 @@ V1 (siehe /docs/PRD.md, 6 Features), Implementierungs-Plan (siehe /slices/INDEX.
 - ISSUE-009 Blueprint-Profile-Flow Silent Failure — resolved (SLC-002d, 2026-04-16)
 
 ## Last Stable Version
-- V1-preview — 2026-04-18. 12/13 Slices done. SLC-009 Backend implementiert (Migration 037 deployed). SLC-010 verbleibend. Coolify-Redeploy pending.
+- V1-preview — 2026-04-18. 13/13 Slices done (SLC-007 reverted). Alle Features implementiert. Coolify-Redeploy + Gesamt-QA pending.
 
 ## Notes
 Code-Basis uebernommen aus strategaize-blueprint-plattform V3.4 (Stand 2026-04-14). Blueprint-Stack laeuft unveraendert parallel auf blueprint.strategaizetransition.com (selber Hetzner-Server, separate Coolify-Resource).

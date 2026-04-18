@@ -55,7 +55,7 @@
       "title": "Debrief Meeting Interface",
       "type": "feature",
       "priority": "high",
-      "status": "in_progress",
+      "status": "done",
       "version": "V1",
       "description": "UI fuer strategaize_admin: Knowledge-Unit-Review, Editor, Meeting-Snapshot als versionierter finaler Stand. Siehe FEAT-006. Implementierung: SLC-009 (Debrief-UI) + SLC-010 (Meeting-Snapshot + Export).",
       "createdAt": "2026-04-14"
@@ -195,7 +195,7 @@
       "title": "SLC-010 Meeting-Snapshot + JSON-Export",
       "type": "feature",
       "priority": "high",
-      "status": "open",
+      "status": "done",
       "version": "V1",
       "description": "Finaler Checkpoint + Export-API + E2E-Smoketest. Siehe /slices/SLC-010-meeting-snapshot-export.md.",
       "createdAt": "2026-04-14"

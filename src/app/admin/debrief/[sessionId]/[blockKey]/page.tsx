@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import { KnowledgeUnitList } from "./KnowledgeUnitList";
+import { DebriefBlockClient } from "./DebriefBlockClient";
 
 interface DebriefBlockPageProps {
   params: Promise<{ sessionId: string; blockKey: string }>;
@@ -78,6 +79,17 @@ export default async function DebriefBlockPage({
     validationEntries = vlData ?? [];
   }
 
+  // Check if block is already finalized (has meeting_final checkpoint)
+  const { data: blockCheckpoints } = await supabase
+    .from("block_checkpoint")
+    .select("checkpoint_type")
+    .eq("capture_session_id", sessionId)
+    .eq("block_key", blockKey);
+
+  const isAlreadyFinalized = (blockCheckpoints ?? []).some(
+    (cp) => cp.checkpoint_type === "meeting_final"
+  );
+
   const blockTitle = block.title?.de ?? block.title?.en ?? blockKey;
 
   return (
@@ -92,11 +104,13 @@ export default async function DebriefBlockPage({
         </p>
       </div>
 
-      <KnowledgeUnitList
+      <DebriefBlockClient
         sessionId={sessionId}
         blockKey={blockKey}
         knowledgeUnits={knowledgeUnits ?? []}
         validationEntries={validationEntries}
+        hasKnowledgeUnits={(knowledgeUnits?.length ?? 0) > 0}
+        isAlreadyFinalized={isAlreadyFinalized}
       />
     </div>
   );
