@@ -90,9 +90,28 @@
   - Commit 7a80504. Redeploy + Smoketest beide Seed-User PASS am 2026-04-16.
 
 ### ISSUE-010 — Questionnaire-UI fehlt Blueprint-Chat-Flow (Summary, Memory, Event-History)
-- Status: open
+- Status: resolved
+- Resolution Date: 2026-04-18
 - Severity: High
 - Area: Frontend / Questionnaire
 - Summary: Die Questionnaire-UI (SLC-005) divergierte vom Blueprint-Flow. Es fehlen: "Zusammenfassung erstellen"-Button, Summary-Card mit "Als Antwort uebernehmen"/"Regenerieren", "Was die KI sich gemerkt hat" Memory-Sektion, Event-History in der rechten Spalte. Stattdessen wurde ein falsches Direkt-Textarea rechts eingebaut (entfernt in b91a19d). Die fehlenden Features werden in SLC-008 Teil A nachgebaut.
 - Impact: Questionnaire ist ohne KI-Summary/Memory-Flow nicht produktiv nutzbar. Teilnehmer kann keine KI-generierte Zusammenfassung als Antwort uebernehmen.
-- Next Action: SLC-008 MT-A1..A6 implementiert den Blueprint-Chat-Flow 1:1.
+- Resolution: SLC-008 Teil A (MT-A1..A6). Blueprint-Chat-Flow komplett implementiert: Bedrock-Chat-API, Session-Memory, Zusammenfassung+Uebernahme, Event-History. Live-verifiziert nach Coolify-Redeploy.
+
+### ISSUE-011 — ~41 Blueprint-Legacy-Dateien im Codebase (Dead Code)
+- Status: open
+- Severity: Medium
+- Area: Repo-Hygiene / Code-Qualitaet
+- Summary: Aus dem Blueprint-Fork stammen ~41 Dateien die auf nicht-existierende Tabellen (runs, questions, evidence_items, mirror_profiles, mirror_policy_confirmations, question_catalog_snapshots, run_memory, run_feedback) zugreifen. Betroffen: 15 API-Routes unter /api/tenant/runs/, 5 Routes unter /api/tenant/mirror/, 6 Routes+Pages unter /api/admin/runs/ und /admin/runs/, 5 Dateien unter /mirror/, 2 Dateien unter /runs/, 2 Dateien unter /admin/catalog/. Dazu kommen ~7 Components die nur von Legacy-Routes verwendet werden.
+- Impact: Kein Runtime-Impact — Legacy-Routes sind nicht ueber die Onboarding-Navigation erreichbar und werden nie aufgerufen. Direkter URL-Zugriff wuerde HTTP 500 liefern. Verwirrungspotenzial fuer Entwickler. Code-Hygiene-Problem.
+- Workaround: Legacy-Routes ignorieren, nur Onboarding-spezifische Routes nutzen.
+- Next Action: Maintenance-Slice fuer V1.1 — alle Blueprint-Legacy-Dateien entfernen.
+
+### ISSUE-012 — Dashboard zeigt leere Blueprint-Runs statt Capture-Sessions
+- Status: open
+- Severity: Medium
+- Area: Frontend / Dashboard
+- Summary: dashboard-client.tsx fetcht von /api/tenant/runs (Blueprint-API). Diese Route greift auf nicht-existierende runs-Tabelle zu. Der Fetch schlaegt fehl, wird per try/finally abgefangen, und das Dashboard zeigt den Empty-State "Keine Assessments vorhanden". Existierende Capture-Sessions sind im Dashboard nicht sichtbar.
+- Impact: tenant_admin sieht nach Login ein leeres Dashboard. Der Einstieg in die Erhebung ist nur ueber den Sidebar-Link "Neue Erhebung" moeglich. Bestehende Sessions sind nicht ueber die UI auffindbar — nur per Direkt-URL (/capture/[sessionId]).
+- Workaround: Sidebar-Link "Neue Erhebung" verwenden. Fuer bestehende Sessions Direkt-URL nutzen. strategaize_admin kann Sessions ueber /admin/debrief finden.
+- Next Action: Dashboard auf Capture-Sessions umbauen (V1.1 oder Maintenance-Slice).

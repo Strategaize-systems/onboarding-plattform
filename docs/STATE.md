@@ -9,15 +9,15 @@
 Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdichtung. Ermoeglicht mehrere Capture-Modi (Fragebogen, Meeting, Voice, etc.) und Template-basierte Produktvarianten (z.B. Exit-Readiness, Immobilien-Onboarding).
 
 ## Current State
-- High-Level State: qa
-- Current Focus: ALLE 13 Slices implementiert (SLC-007 reverted). SLC-010 pending /qa. Danach Gesamt-QA + Final-Check.
-- Current Phase: V1 Implementation abgeschlossen — QA-Phase (13/13 Slices done: SLC-001..006, SLC-008..010. FEAT-001..003, FEAT-005, FEAT-006 done. FEAT-004 reverted.)
+- High-Level State: final-check
+- Current Focus: Gesamt-QA V1 PASS (RPT-029). Naechster Schritt /final-check.
+- Current Phase: V1 QA abgeschlossen — Pre-Release-Phase (13/13 Slices done, 5/6 Features done, Gesamt-QA PASS mit 0 Blocker, 4 Medium, 6 Low)
 
 ## Immediate Next Steps
-1. /qa fuer SLC-010 (Meeting-Snapshot + JSON-Export)
+1. /final-check — Hygiene, Dependencies, Security, Deployment-Readiness
 2. Coolify-Redeploy (Reload Compose File → Redeploy) — baut App + Worker-Container
-3. Gesamt-QA ueber alle V1-Slices
-4. /final-check → /go-live → /deploy
+3. /go-live → /deploy
+4. E2E-Smoke-Test gemaess /docs/E2E_SMOKE_TEST_V1.md
 
 ## Active Scope
 V1 (siehe /docs/PRD.md, 6 Features), Implementierungs-Plan (siehe /slices/INDEX.md, 13 Slices):
