@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Brain, ChevronDown, ChevronRight, Loader2 } from "lucide-react";
 
 interface MemoryData {
@@ -13,21 +13,37 @@ export function SessionMemoryView({ sessionId }: { sessionId: string }) {
   const [memory, setMemory] = useState<MemoryData | null>(null);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(false);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const loadMemory = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/capture/${sessionId}/memory`);
+      if (res.ok) {
+        const data = await res.json();
+        setMemory(data.memory);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [sessionId]);
 
   useEffect(() => {
-    async function loadMemory() {
-      try {
-        const res = await fetch(`/api/capture/${sessionId}/memory`);
-        if (res.ok) {
-          const data = await res.json();
-          setMemory(data.memory);
-        }
-      } finally {
-        setLoading(false);
-      }
-    }
     loadMemory();
-  }, [sessionId]);
+  }, [loadMemory]);
+
+  // Poll every 10s while expanded — memory updates async after each chat
+  useEffect(() => {
+    if (expanded && !pollRef.current) {
+      pollRef.current = setInterval(loadMemory, 10000);
+    }
+    if (!expanded && pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+    return () => {
+      if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+    };
+  }, [expanded, loadMemory]);
 
   if (loading) {
     return (
