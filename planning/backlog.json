@@ -45,7 +45,7 @@
       "title": "Single-Pass AI Condensation (OS portiert, Bedrock)",
       "type": "feature",
       "priority": "high",
-      "status": "in_progress",
+      "status": "done",
       "version": "V1",
       "description": "OS-Ebene-1 portiert, Worker auf Bedrock umgestellt, Knowledge-Unit-Erzeugung pro Block-Submit. Siehe FEAT-005. Implementierung: SLC-008 (Worker-Container + Verdichtung).",
       "createdAt": "2026-04-14"
@@ -55,7 +55,7 @@
       "title": "Debrief Meeting Interface",
       "type": "feature",
       "priority": "high",
-      "status": "in_progress",
+      "status": "open",
       "version": "V1",
       "description": "UI fuer strategaize_admin: Knowledge-Unit-Review, Editor, Meeting-Snapshot als versionierter finaler Stand. Siehe FEAT-006. Implementierung: SLC-009 (Debrief-UI) + SLC-010 (Meeting-Snapshot + Export).",
       "createdAt": "2026-04-14"
@@ -175,7 +175,7 @@
       "title": "SLC-008 Worker-Container + Verdichtung + Blueprint Chat-Flow",
       "type": "feature",
       "priority": "high",
-      "status": "open",
+      "status": "done",
       "version": "V1",
       "description": "Erweitert 2026-04-17: Teil A Blueprint-Chat-Flow (Zusammenfassung, Memory, Event-History, UI-Umbau) + Teil B Worker (Bedrock, Multi-Agent-Loop, Queue-RPCs). Siehe /slices/SLC-008-worker-container.md.",
       "createdAt": "2026-04-14"

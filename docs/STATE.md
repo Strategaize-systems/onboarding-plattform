@@ -10,13 +10,14 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: SLC-008 Teil A (Blueprint-Chat-Flow) live-verifiziert (2026-04-18). Chat + Summary + Event-History + Memory + Sidebar funktionieren. Teil B (Worker + Multi-Agent-Loop) als naechster Schritt.
-- Current Phase: V1 Implementation (10/13 Slices done: SLC-001..006. FEAT-001..003 done. FEAT-004 reverted. FEAT-005 Teil A live, Teil B planned. FEAT-006 planned.)
+- Current Focus: SLC-008 code-complete (Teil A + B), Worker-Container pending Coolify-Redeploy. Migration 035 deployed. SLC-009 + SLC-010 verbleibend.
+- Current Phase: V1 Implementation (11/13 Slices done: SLC-001..006, SLC-008. FEAT-001..003, FEAT-005 done. FEAT-004 reverted. FEAT-006 planned.)
 
 ## Immediate Next Steps
-1. SLC-008 /backend — Teil B: Worker-Container + Multi-Agent-Loop (MT-1..MT-10)
-2. SLC-009 Debrief-UI + KU-Editor (FEAT-006)
-3. SLC-010 Meeting-Snapshot + JSON-Export (FEAT-006)
+1. Coolify-Redeploy (Reload Compose File → Redeploy) — baut Worker-Container
+2. Worker-Container Smoke-Test (Block-Submit → KU-Erzeugung verifizieren)
+3. SLC-009 Debrief-UI + KU-Editor (FEAT-006)
+4. SLC-010 Meeting-Snapshot + JSON-Export (FEAT-006)
 
 ## Active Scope
 V1 (siehe /docs/PRD.md, 6 Features), Implementierungs-Plan (siehe /slices/INDEX.md, 13 Slices):
@@ -24,7 +25,7 @@ V1 (siehe /docs/PRD.md, 6 Features), Implementierungs-Plan (siehe /slices/INDEX.
 - FEAT-002 Exit-Readiness Template → SLC-003 (done)
 - FEAT-003 Questionnaire Mode with Block-Submit → SLC-004, SLC-005, SLC-006 (done)
 - FEAT-004 Exception Mode Prompt Layer → SLC-007 (reverted, kein Use-Case)
-- FEAT-005 Multi-Agent AI Condensation + Blueprint-Chat-Flow → SLC-008 (Teil A done, Teil B planned)
+- FEAT-005 Multi-Agent AI Condensation + Blueprint-Chat-Flow → SLC-008 (done, pending Coolify-Redeploy)
 - FEAT-006 Debrief Meeting Interface → SLC-009, SLC-010 (planned)
 
 ## Blockers
@@ -40,7 +41,7 @@ V1 (siehe /docs/PRD.md, 6 Features), Implementierungs-Plan (siehe /slices/INDEX.
 - ISSUE-009 Blueprint-Profile-Flow Silent Failure — resolved (SLC-002d, 2026-04-16)
 
 ## Last Stable Version
-- V1-preview @ acb5713 — 2026-04-18. 10/13 Slices done. SLC-008 Teil A live-verifiziert (Chat-Flow + Summary + Event-History + Memory + Sidebar). Migrations 033+034 deployed. Bedrock Cross-Region Inference Profile fix (eu.anthropic.claude-sonnet-4-20250514-v1:0).
+- V1-preview @ f297f05 — 2026-04-18. 11/13 Slices done. SLC-008 Teil A + B code-complete. Migration 035 deployed (Queue-RPCs, ai_cost_ledger, ai_iterations_log). Worker-Container pending Coolify-Redeploy.
 
 ## Notes
 Code-Basis uebernommen aus strategaize-blueprint-plattform V3.4 (Stand 2026-04-14). Blueprint-Stack laeuft unveraendert parallel auf blueprint.strategaizetransition.com (selber Hetzner-Server, separate Coolify-Resource).

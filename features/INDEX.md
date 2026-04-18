@@ -8,5 +8,5 @@
 | FEAT-002 | Exit-Readiness Template | done | [Spec](FEAT-002-exit-readiness-template.md) | 2026-04-14 |
 | FEAT-003 | Questionnaire Mode with Block-Submit | done | [Spec](FEAT-003-questionnaire-block-submit.md) | 2026-04-14 |
 | FEAT-004 | Exception Mode Prompt Layer | reverted | [Spec](FEAT-004-exception-mode.md) | 2026-04-14 |
-| FEAT-005 | Multi-Agent AI Condensation (Analyst+Challenger Loop) | planned | [Spec](FEAT-005-single-pass-ai-condensation.md) | 2026-04-14 |
+| FEAT-005 | Multi-Agent AI Condensation (Analyst+Challenger Loop) | done | [Spec](FEAT-005-single-pass-ai-condensation.md) | 2026-04-14 |
 | FEAT-006 | Debrief Meeting Interface | planned | [Spec](FEAT-006-debrief-meeting-interface.md) | 2026-04-14 |
