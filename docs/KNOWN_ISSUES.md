@@ -115,3 +115,20 @@
 - Impact: tenant_admin sieht nach Login ein leeres Dashboard. Der Einstieg in die Erhebung ist nur ueber den Sidebar-Link "Neue Erhebung" moeglich. Bestehende Sessions sind nicht ueber die UI auffindbar — nur per Direkt-URL (/capture/[sessionId]).
 - Workaround: Sidebar-Link "Neue Erhebung" verwenden. Fuer bestehende Sessions Direkt-URL nutzen. strategaize_admin kann Sessions ueber /admin/debrief finden.
 - Next Action: Dashboard auf Capture-Sessions umbauen (V1.1 oder Maintenance-Slice).
+
+### ISSUE-013 — error_log-Tabelle fehlt in Onboarding-DB
+- Status: open
+- Severity: Medium
+- Area: Observability
+- Summary: logger.ts (aus Blueprint geerbt) schreibt Fehler in die error_log-Tabelle. Migration 005 (Blueprint-Legacy) wurde nie auf der Onboarding-DB ausgefuehrt. Alle Error-Log-Writes schlagen still fehl — Fehler gehen verloren.
+- Impact: Kein Runtime-Fehler (catch-Block in logToDb faengt den DB-Fehler ab), aber keine Fehler-Sichtbarkeit. Debugging nur ueber Container-Logs moeglich.
+- Workaround: Container-Logs ueber `docker logs` oder Coolify-UI.
+- Next Action: Migration 005 ausfuehren oder Sentry-Integration (V1.1).
+
+### ISSUE-014 — Voice-Input (Whisper) nicht verdrahtet fuer Capture-Sessions
+- Status: open
+- Severity: Low
+- Area: Frontend / Voice
+- Summary: transcribeRecording() in questionnaire-form.tsx war ein Stub — Audio wurde aufgenommen aber nie an den Whisper-Container gesendet. Der Whisper-Endpoint fuer Blueprint-Runs (/api/tenant/runs/[runId]/questions/[questionId]/transcribe) existiert, aber es gibt kein Aequivalent fuer Capture-Sessions. Mic-Button ist seit 2026-04-18 deaktiviert (whisperEnabled = false).
+- Impact: Kein Voice-Input in V1. Tastatureingabe funktioniert.
+- Next Action: Whisper-Transkriptions-Endpoint fuer Capture-Sessions bauen (V1.1 oder V2).
