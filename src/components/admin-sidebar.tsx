@@ -3,13 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { logout } from "@/app/login/actions";
-import { Users, BookOpen, Play, LogOut, Menu, X, Shield } from "lucide-react";
+import { Users, FileText, LogOut, Menu, X, Shield } from "lucide-react";
 import { useState } from "react";
 
 const NAV_ITEMS = [
   { href: "/admin/tenants", label: "Tenants", icon: Users },
-  { href: "/admin/catalog", label: "Katalog", icon: BookOpen },
-  { href: "/admin/runs", label: "Runs", icon: Play },
+  { href: "/admin/debrief", label: "Debrief", icon: FileText },
 ];
 
 export function AdminSidebar({ email }: { email?: string }) {
