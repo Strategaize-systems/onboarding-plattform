@@ -20,13 +20,12 @@
 - Resolution: SLC-002a. Vitest 2.1 + @vitest/coverage-v8 + pg 8.13 + dotenv installiert. Scripts `test`, `test:watch`, `test:coverage` in package.json. Test-Harness unter `src/test/` (db.ts, auth-context.ts, fixtures/tenants.ts). README-Abschnitt "Running Tests" mit SSH-Tunnel- und server-side Variante dokumentiert. Erste Test-Datei `src/lib/db/__tests__/rls-isolation.test.ts` 3/3 gruen (verifiziert auf Hetzner via node:20-Container im Coolify-Netzwerk).
 
 ### ISSUE-003 — node_modules nicht installiert
-- Status: open
+- Status: resolved
+- Resolution Date: 2026-04-18
 - Severity: Medium
 - Area: Build-Toolchain
-- Summary: Im Onboarding-Repo wurde nach dem Blueprint-Fork noch kein `npm install` ausgefuehrt. Ohne `node_modules` koennen `next build`, `tsc --noEmit` und ein spaeter eingerichtetes Test-Framework nicht lokal validiert werden.
-- Impact: Static Type-Check fuer MT-4 Query-Layer in dieser Session nicht durchgefuehrt. Build-Verifikation erst moeglich nach `npm install`. Coolify-Build auf Hetzner lief durch (2026-04-15), Runtime-Verifikation via HTTP 200 auf /login also vorhanden.
-- Workaround: Vor Deploy `npm install` ausfuehren (passiert ohnehin im Coolify-Build automatisch).
-- Next Action: Einmalig `npm install` lokal ausfuehren, damit Type-Check + Lint in kommenden Slices verfuegbar sind.
+- Summary: Im Onboarding-Repo wurde nach dem Blueprint-Fork noch kein `npm install` ausgefuehrt.
+- Resolution: SLC-011 MT-1. npm install + npm run build lokal erfolgreich durchgefuehrt.
 
 ### ISSUE-004 — SLC-001 MT-5 nicht durchgefuehrt (2-Tenant-RLS-Isolationstest)
 - Status: resolved
@@ -47,12 +46,12 @@
 - Resolution: SLC-002c. Root-Metadata in `src/app/layout.tsx` + `src/messages/{de,en,nl}.json` auf `StrategAIze Onboarding` + Onboarding-spezifische Descriptions umgestellt. Sidebar-Blocks in `dashboard-sidebar.tsx` + `run-workspace-client.tsx` von hardcoded `"Blueprint Assessment"` auf i18n-Key `sidebar.title = "Assessment"` umgestellt (neutral bis Template-Infra in SLC-003 kommt). `package.json` name `ai-coding-starter-kit` → `strategaize-onboarding-plattform`. `src/i18n/config.ts` Header-Kommentar aktualisiert. Commit 77aa974. Live verifiziert per Smoketest: `<title>StrategAIze Onboarding</title>` + korrekte `<meta description>` + i18n-Payload enthält `sidebar.title: "Assessment"`.
 
 ### ISSUE-006 — Legacy-Blueprint-Migrations im sql/migrations/ Ordner
-- Status: open
+- Status: resolved
+- Resolution Date: 2026-04-18
 - Severity: Low
 - Area: Repo-Hygiene / Database
-- Summary: Die 17 Blueprint-Migrations (003-020) sind noch im `sql/migrations/`-Ordner, werden aber nicht ausgefuehrt (Dockerfile.db referenziert sie nicht, Migrations-Layer laeuft manuell nur fuer 021-023).
-- Impact: Keine funktionale Gefahr. Verwirrungspotenzial fuer Neu-Einsteiger.
-- Next Action: In einem Maintenance-Slice entfernen, sobald sicher ist dass keine Referenz mehr existiert.
+- Summary: Die 16 Blueprint-Migrations (003-020) waren noch im `sql/migrations/`-Ordner.
+- Resolution: SLC-011 MT-6. Alle 16 Legacy-Migrations (003-020) geloescht. sql/migrations/ enthaelt nur noch 021+.
 
 ### ISSUE-007 — JWT enthaelt nach Rollen-Umbenennung bis zum naechsten Login alten Wert
 - Status: open
@@ -99,13 +98,12 @@
 - Resolution: SLC-008 Teil A (MT-A1..A6). Blueprint-Chat-Flow komplett implementiert: Bedrock-Chat-API, Session-Memory, Zusammenfassung+Uebernahme, Event-History. Live-verifiziert nach Coolify-Redeploy.
 
 ### ISSUE-011 — ~41 Blueprint-Legacy-Dateien im Codebase (Dead Code)
-- Status: open
+- Status: resolved
+- Resolution Date: 2026-04-18
 - Severity: Medium
 - Area: Repo-Hygiene / Code-Qualitaet
-- Summary: Aus dem Blueprint-Fork stammen ~41 Dateien die auf nicht-existierende Tabellen (runs, questions, evidence_items, mirror_profiles, mirror_policy_confirmations, question_catalog_snapshots, run_memory, run_feedback) zugreifen. Betroffen: 15 API-Routes unter /api/tenant/runs/, 5 Routes unter /api/tenant/mirror/, 6 Routes+Pages unter /api/admin/runs/ und /admin/runs/, 5 Dateien unter /mirror/, 2 Dateien unter /runs/, 2 Dateien unter /admin/catalog/. Dazu kommen ~7 Components die nur von Legacy-Routes verwendet werden.
-- Impact: Kein Runtime-Impact — Legacy-Routes sind nicht ueber die Onboarding-Navigation erreichbar und werden nie aufgerufen. Direkter URL-Zugriff wuerde HTTP 500 liefern. Verwirrungspotenzial fuer Entwickler. Code-Hygiene-Problem.
-- Workaround: Legacy-Routes ignorieren, nur Onboarding-spezifische Routes nutzen.
-- Next Action: Maintenance-Slice fuer V1.1 — alle Blueprint-Legacy-Dateien entfernen.
+- Summary: Aus dem Blueprint-Fork stammten ~64 Legacy-Dateien (API-Routes, Pages, Components, Migrations).
+- Resolution: SLC-011. 28 API-Routes, 15 Pages, 5 verwaiste Components, 16 Legacy-Migrations geloescht. Dashboard mirror_respondent-Redirects + Sidebar mirror-Link entfernt. admin/tenants Route von run_count auf session_count umgestellt. Build erfolgreich.
 
 ### ISSUE-012 — Dashboard zeigt leere Blueprint-Runs statt Capture-Sessions
 - Status: open

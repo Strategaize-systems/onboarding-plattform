@@ -205,7 +205,7 @@
       "title": "Blueprint-Legacy-Cleanup (~41 tote Dateien + 17 Legacy-Migrations)",
       "type": "fix",
       "priority": "high",
-      "status": "open",
+      "status": "done",
       "version": "V1.1",
       "description": "ISSUE-011 + ISSUE-006: Alle Blueprint-Legacy-Dateien entfernen (API-Routes, Pages, Components die auf nicht-existierende Tabellen zugreifen) und Legacy-Migrations 003-020 aus sql/migrations/ loeschen. Grep-Audit vor Loeschung.",
       "createdAt": "2026-04-18"
@@ -235,7 +235,7 @@
       "title": "npm install lokal + Type-Check verifizieren",
       "type": "fix",
       "priority": "low",
-      "status": "open",
+      "status": "done",
       "version": "V1.1",
       "description": "ISSUE-003: npm install lokal ausfuehren, tsc --noEmit verifizieren. Dev-Convenience-Fix.",
       "createdAt": "2026-04-18"

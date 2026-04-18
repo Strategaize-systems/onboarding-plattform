@@ -10,14 +10,14 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: V1.1 Maintenance Release — Slice-Planning done. 2 Slices (SLC-011, SLC-012), 13 Micro-Tasks gesamt.
+- Current Focus: V1.1 Maintenance Release — SLC-011 done (Legacy-Cleanup, 64 Dateien entfernt). SLC-012 (Dashboard + error_log) offen.
 - Current Phase: V1.1 Implementation
 
 ## Immediate Next Steps
-1. /backend SLC-011 — Legacy-Cleanup (8 MTs: npm install, Grep-Audit, Loeschung, Build)
-2. /qa SLC-011
-3. /frontend SLC-012 — Dashboard + error_log (5 MTs: Migration, Dashboard-Umbau, Deploy)
-4. /qa SLC-012
+1. /qa SLC-011
+2. /frontend SLC-012 — Dashboard + error_log (5 MTs: Migration, Dashboard-Umbau, Deploy)
+3. /qa SLC-012
+4. Gesamt-QA V1.1 + Final-Check + Deploy
 
 ## Active Scope
 V1.1 Maintenance Release (3 Features):

@@ -15,6 +15,6 @@
 
 | ID | Feature | Status | Spec | Created |
 |----|---------|--------|------|---------|
-| FEAT-007 | Blueprint-Legacy-Cleanup | planned | — | 2026-04-18 |
+| FEAT-007 | Blueprint-Legacy-Cleanup | done | — | 2026-04-18 |
 | FEAT-008 | Dashboard Capture-Sessions | planned | — | 2026-04-18 |
 | FEAT-009 | Error-Logging | planned | — | 2026-04-18 |
