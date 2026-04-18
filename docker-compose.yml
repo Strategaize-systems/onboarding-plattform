@@ -72,6 +72,10 @@ services:
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
       LLM_MODEL: ${LLM_MODEL:-eu.anthropic.claude-sonnet-4-20250514-v1:0}
+      # Embedding (Amazon Titan V2, same region as LLM)
+      EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-titan}
+      EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:-1024}
+      EMBEDDING_REGION: ${EMBEDDING_REGION:-eu-central-1}
       # Worker config
       AI_WORKER_POLL_MS: ${AI_WORKER_POLL_MS:-2000}
       AI_MIN_ITERATIONS: ${AI_MIN_ITERATIONS:-2}

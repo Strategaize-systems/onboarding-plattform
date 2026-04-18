@@ -3,13 +3,15 @@
 // 2. Extract answers + block definition
 // 3. Run iteration loop (Analyst→Challenger)
 // 4. Persist Knowledge Units via RPC
-// 5. Log costs and iterations
-// 6. Mark job as completed
+// 5. Embed Knowledge Units for semantic search (fire-and-forget)
+// 6. Log costs and iterations
+// 7. Mark job as completed
 
 import { createAdminClient } from "../../lib/supabase/admin";
 import { captureException } from "../../lib/logger";
 import type { ClaimedJob } from "./claim-loop";
 import { runIterationLoop } from "./iteration-loop";
+import { embedKnowledgeUnits } from "./embed-knowledge-units";
 import type {
   BlockAnswer,
   BlockDefinition,
@@ -145,9 +147,20 @@ export async function handleCondensationJob(job: ClaimedJob): Promise<void> {
       throw new Error(`Failed to import KUs: ${importError.message}`);
     }
 
+    const importedIds = ((importResult as Record<string, unknown>)?.ids as string[]) || [];
     console.log(
       `[handle-job] Imported ${(importResult as Record<string, unknown>)?.inserted_count || 0} knowledge units`
     );
+
+    // 5b. Embed KUs for semantic search (fire-and-forget)
+    if (importedIds.length > 0) {
+      embedKnowledgeUnits(importedIds, job.tenant_id, job.id).catch((err) => {
+        captureException(err, {
+          source: "handle-job",
+          metadata: { jobId: job.id, action: "embed-knowledge-units" },
+        });
+      });
+    }
   }
 
   // 6. Log costs
