@@ -3,7 +3,7 @@
     {
       "id": "v1",
       "name": "V1",
-      "status": "active",
+      "status": "released",
       "summary": "Exit-Readiness als erstes marktreifes Template auf template-faehigem Fundament. Enthaelt Knowledge Unit / Capture Session / Validation Layer Datenmodell, Questionnaire-Mode mit Block-Submit-Pattern, Exception-Mode, Lightweight Single-Pass KI-Verdichtung via AWS Bedrock, portierte OS-Ebene-1 (block_sessions + debrief_items + Worker + Import-Endpoint) und Debrief-/Meeting-UI fuer strategaize_admin. Basis: Discovery 2026-04-14, DEC-001 bis DEC-006. Requirements 2026-04-14 abgeschlossen, 6 Features (FEAT-001..006) definiert.",
       "order": 1
     },

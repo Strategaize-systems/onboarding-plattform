@@ -9,14 +9,13 @@
 Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdichtung. Ermoeglicht mehrere Capture-Modi (Fragebogen, Meeting, Voice, etc.) und Template-basierte Produktvarianten (z.B. Exit-Readiness, Immobilien-Onboarding).
 
 ## Current State
-- High-Level State: post-launch
-- Current Focus: V1 deployed (REL-002, 2026-04-18). Alle Container healthy. E2E Smoke Test + /post-launch offen.
-- Current Phase: V1 Deployed — Post-Launch-Verifikation
+- High-Level State: released
+- Current Focus: V1 released und stabil (REL-002, 2026-04-18). E2E 10/10 PASS. Post-Launch STABLE (RPT-032).
+- Current Phase: V1 Released
 
 ## Immediate Next Steps
-1. E2E-Smoke-Test gemaess /docs/E2E_SMOKE_TEST_V1.md
-2. /post-launch — Live-System-Verifikation
-3. Bei Erfolg: Status auf `released` setzen
+1. V1.1 planen (Legacy-Cleanup ISSUE-011, Dashboard ISSUE-012, error_log ISSUE-013)
+2. Oder: V2 Discovery (3-Agenten-Loop, Evidence-Mode, zweites Template)
 
 ## Active Scope
 V1 (siehe /docs/PRD.md, 6 Features), Implementierungs-Plan (siehe /slices/INDEX.md, 13 Slices):
@@ -40,7 +39,7 @@ V1 (siehe /docs/PRD.md, 6 Features), Implementierungs-Plan (siehe /slices/INDEX.
 - ISSUE-009 Blueprint-Profile-Flow Silent Failure — resolved (SLC-002d, 2026-04-16)
 
 ## Last Stable Version
-- V1 — 2026-04-18 — deployed auf https://onboarding.strategaizetransition.com (REL-002). E2E Smoke Test pending.
+- V1 — 2026-04-18 — released auf https://onboarding.strategaizetransition.com (REL-002). E2E 10/10 PASS. Post-Launch STABLE (RPT-032).
 
 ## Notes
 Code-Basis uebernommen aus strategaize-blueprint-plattform V3.4 (Stand 2026-04-14). Blueprint-Stack laeuft unveraendert parallel auf blueprint.strategaizetransition.com (selber Hetzner-Server, separate Coolify-Resource).
