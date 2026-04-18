@@ -201,6 +201,46 @@
       "createdAt": "2026-04-14"
     },
     {
+      "id": "BL-022",
+      "title": "Blueprint-Legacy-Cleanup (~41 tote Dateien + 17 Legacy-Migrations)",
+      "type": "fix",
+      "priority": "high",
+      "status": "open",
+      "version": "V1.1",
+      "description": "ISSUE-011 + ISSUE-006: Alle Blueprint-Legacy-Dateien entfernen (API-Routes, Pages, Components die auf nicht-existierende Tabellen zugreifen) und Legacy-Migrations 003-020 aus sql/migrations/ loeschen. Grep-Audit vor Loeschung.",
+      "createdAt": "2026-04-18"
+    },
+    {
+      "id": "BL-023",
+      "title": "Dashboard auf Capture-Sessions umbauen",
+      "type": "fix",
+      "priority": "high",
+      "status": "open",
+      "version": "V1.1",
+      "description": "ISSUE-012: dashboard-client.tsx fetcht von /api/tenant/runs (Blueprint, nicht-existent). Umbauen auf capture_session-Query. Session-Liste mit Status, Template-Name, letztem Update. Klick fuehrt zur Session.",
+      "createdAt": "2026-04-18"
+    },
+    {
+      "id": "BL-024",
+      "title": "error_log-Tabelle erstellen",
+      "type": "fix",
+      "priority": "medium",
+      "status": "open",
+      "version": "V1.1",
+      "description": "ISSUE-013: logger.ts schreibt in error_log-Tabelle die in der Onboarding-DB nicht existiert. Migration erstellen und ausfuehren. Danach logger.ts-Fehler nicht mehr silent-fail.",
+      "createdAt": "2026-04-18"
+    },
+    {
+      "id": "BL-025",
+      "title": "npm install lokal + Type-Check verifizieren",
+      "type": "fix",
+      "priority": "low",
+      "status": "open",
+      "version": "V1.1",
+      "description": "ISSUE-003: npm install lokal ausfuehren, tsc --noEmit verifizieren. Dev-Convenience-Fix.",
+      "createdAt": "2026-04-18"
+    },
+    {
       "id": "BL-020",
       "title": "Evidence-Bulk-Import (Archive, E-Mail-Postfaecher, Dokumentenbestaende)",
       "type": "feature",

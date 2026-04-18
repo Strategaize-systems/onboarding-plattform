@@ -10,3 +10,11 @@
 | FEAT-004 | Exception Mode Prompt Layer | reverted | [Spec](FEAT-004-exception-mode.md) | 2026-04-14 |
 | FEAT-005 | Multi-Agent AI Condensation (Analyst+Challenger Loop) | deployed | [Spec](FEAT-005-single-pass-ai-condensation.md) | 2026-04-14 |
 | FEAT-006 | Debrief Meeting Interface | deployed | [Spec](FEAT-006-debrief-meeting-interface.md) | 2026-04-14 |
+
+## V1.1 Features (Maintenance)
+
+| ID | Feature | Status | Spec | Created |
+|----|---------|--------|------|---------|
+| FEAT-007 | Blueprint-Legacy-Cleanup | planned | — | 2026-04-18 |
+| FEAT-008 | Dashboard Capture-Sessions | planned | — | 2026-04-18 |
+| FEAT-009 | Error-Logging | planned | — | 2026-04-18 |

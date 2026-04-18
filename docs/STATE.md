@@ -9,22 +9,21 @@
 Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdichtung. Ermoeglicht mehrere Capture-Modi (Fragebogen, Meeting, Voice, etc.) und Template-basierte Produktvarianten (z.B. Exit-Readiness, Immobilien-Onboarding).
 
 ## Current State
-- High-Level State: released
-- Current Focus: V1 released und stabil (REL-002, 2026-04-18). E2E 10/10 PASS. Post-Launch STABLE (RPT-032).
-- Current Phase: V1 Released
+- High-Level State: requirements
+- Current Focus: V1.1 Maintenance Release — Requirements definiert. 3 Features (FEAT-007..009), 4 Backlog-Items (BL-022..025).
+- Current Phase: V1.1 Requirements
 
 ## Immediate Next Steps
-1. V1.1 planen (Legacy-Cleanup ISSUE-011, Dashboard ISSUE-012, error_log ISSUE-013)
-2. Oder: V2 Discovery (3-Agenten-Loop, Evidence-Mode, zweites Template)
+1. /architecture fuer V1.1 (minimal — kein neues Schema-Design noetig, nur Cleanup + Dashboard-Datenquelle + 1 Migration)
+2. /slice-planning fuer V1.1
+3. Implementation (voraussichtlich 2-3 Slices)
 
 ## Active Scope
-V1 (siehe /docs/PRD.md, 6 Features), Implementierungs-Plan (siehe /slices/INDEX.md, 13 Slices):
-- FEAT-001 Foundation Data Model & RBAC → SLC-001..002d (done)
-- FEAT-002 Exit-Readiness Template → SLC-003 (done)
-- FEAT-003 Questionnaire Mode with Block-Submit → SLC-004, SLC-005, SLC-006 (done)
-- FEAT-004 Exception Mode Prompt Layer → SLC-007 (reverted, kein Use-Case)
-- FEAT-005 Multi-Agent AI Condensation + Blueprint-Chat-Flow → SLC-008 (done, pending Coolify-Redeploy)
-- FEAT-006 Debrief Meeting Interface → SLC-009 (done), SLC-010 (done)
+V1.1 Maintenance Release (3 Features):
+- FEAT-007 Blueprint-Legacy-Cleanup — ~41 tote Dateien + 17 Legacy-Migrations entfernen (ISSUE-011, ISSUE-006)
+- FEAT-008 Dashboard Capture-Sessions — Dashboard auf echte Capture-Sessions umbauen (ISSUE-012)
+- FEAT-009 Error-Logging — error_log-Tabelle erstellen (ISSUE-013)
+- Plus: ISSUE-003 npm install lokal (Dev-Convenience)
 
 ## Blockers
 - aktuell keine

@@ -8,39 +8,46 @@
       "order": 1
     },
     {
+      "id": "v1-1",
+      "name": "V1.1",
+      "status": "active",
+      "summary": "Maintenance Release: Blueprint-Legacy-Cleanup (~41 tote Dateien + 17 Legacy-Migrations entfernen), Dashboard auf Capture-Sessions umbauen, error_log-Tabelle erstellen. Loest ISSUE-003, ISSUE-006, ISSUE-011, ISSUE-012, ISSUE-013.",
+      "order": 2
+    },
+    {
       "id": "v2",
       "name": "V2",
       "status": "planned",
       "summary": "3-Agenten-Loop (Analyst + Challenger + Orchestrator) mit Iterations-Break-Kriterien, SOP-Generation (Ebene 2), automatische Rueckfrage-Rueckspielung ins Questionnaire bei Luecken, Evidence-Mode mit KI-Auto-Mapping (Single + Bulk fuer Archive/E-Mail-Dumps/Dokumentenbestaende), zweites Template mit Switcher-UI.",
-      "order": 2
+      "order": 3
     },
     {
       "id": "v3",
       "name": "V3",
       "status": "planned",
       "summary": "Dialogue-Mode (2-Personen-Interview mit LLM-Extraktion). Abhaengig von Meeting-Infrastruktur (Jitsi + Jibri + Whisper), shared mit Business System V4.1.",
-      "order": 3
+      "order": 4
     },
     {
       "id": "v4",
       "name": "V4",
       "status": "planned",
       "summary": "Walkthrough-Mode (Screen-Capture + Think-Aloud). Benoetigt vorher Technologie-Entscheidungs-Spike (Browser-Extension vs. Electron vs. Native).",
-      "order": 4
+      "order": 5
     },
     {
       "id": "v5",
       "name": "V5",
       "status": "planned",
       "summary": "Diary-Mode (zeitlich verteilte In-Situ-Aufnahmen, Mobile/PWA).",
-      "order": 5
+      "order": 6
     },
     {
       "id": "v6",
       "name": "V6+",
       "status": "planned",
       "summary": "Queroptionen: Process-Mining-Connector, kollaborative Annotation, Anomalie-Flagging, Prozess-Simulation.",
-      "order": 6
+      "order": 7
     }
   ]
 }
