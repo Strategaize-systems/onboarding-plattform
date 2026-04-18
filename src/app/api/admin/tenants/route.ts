@@ -40,17 +40,17 @@ export async function GET() {
     });
   }
 
-  // Single query: all runs for these tenants
-  const { data: runRows } = tenantIds.length > 0
+  // Single query: all capture_sessions for these tenants
+  const { data: sessionRows } = tenantIds.length > 0
     ? await adminClient!
-        .from("runs")
+        .from("capture_session")
         .select("tenant_id")
         .in("tenant_id", tenantIds)
     : { data: [] };
 
-  const runsByTenant = new Map<string, number>();
-  for (const r of runRows ?? []) {
-    runsByTenant.set(r.tenant_id, (runsByTenant.get(r.tenant_id) ?? 0) + 1);
+  const sessionsByTenant = new Map<string, number>();
+  for (const s of sessionRows ?? []) {
+    sessionsByTenant.set(s.tenant_id, (sessionsByTenant.get(s.tenant_id) ?? 0) + 1);
   }
 
   // Enrich tenants with pre-fetched data
@@ -60,7 +60,7 @@ export async function GET() {
       ...t,
       owner_email: owner?.email ?? null,
       owner_confirmed: owner?.confirmed ?? false,
-      run_count: runsByTenant.get(t.id) ?? 0,
+      session_count: sessionsByTenant.get(t.id) ?? 0,
     };
   });
 

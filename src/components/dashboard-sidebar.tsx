@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { logout } from "@/app/login/actions";
-import { Play, PlusCircle, ShieldCheck, User, LogOut } from "lucide-react";
+import { PlusCircle, LogOut } from "lucide-react";
 
 interface DashboardSidebarProps {
   profile: {
@@ -15,7 +15,6 @@ interface DashboardSidebarProps {
 
 export function DashboardSidebar({ profile, activePage }: DashboardSidebarProps) {
   const t = useTranslations();
-  const isMirror = profile.role === "mirror_respondent";
 
   async function handleLogout() {
     await logout();
@@ -67,15 +66,6 @@ export function DashboardSidebar({ profile, activePage }: DashboardSidebarProps)
         <div className="mb-2 truncate px-2 text-xs text-slate-500" title={profile.email}>
           {profile.email}
         </div>
-        {isMirror && (
-          <Link
-            href="/mirror/profile"
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-primary/10 to-brand-primary-dark/10 px-3 py-2.5 text-sm font-medium text-slate-400 transition-all hover:from-brand-primary/20 hover:to-brand-primary-dark/20 hover:text-white mb-2"
-          >
-            <User className="h-4 w-4" />
-            {t("mirror.profileTitle")}
-          </Link>
-        )}
         <button
           onClick={handleLogout}
           className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-primary/20 to-brand-primary-dark/20 px-3 py-3 text-sm font-semibold text-slate-300 transition-all hover:from-brand-primary/30 hover:to-brand-primary-dark/30 hover:text-white"

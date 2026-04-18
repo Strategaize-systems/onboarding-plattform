@@ -82,7 +82,7 @@ interface Tenant {
   created_at: string;
   owner_email: string | null;
   owner_confirmed: boolean;
-  run_count: number;
+  session_count: number;
 }
 
 const LANG_LABELS: Record<string, string> = { de: "DE", en: "EN", nl: "NL" };
@@ -554,7 +554,7 @@ export function TenantsClient({ email }: { email: string }) {
                       )}
                       </span>
                       <span className="text-slate-500">
-                        <span className="font-bold text-brand-primary">{tenant.run_count}</span> Runs
+                        <span className="font-bold text-brand-primary">{tenant.session_count}</span> Sessions
                       </span>
                       <span className="text-slate-400">
                         Erstellt: {new Date(tenant.created_at).toLocaleDateString("de-DE")}

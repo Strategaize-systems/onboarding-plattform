@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { DashboardClient } from "./dashboard-client";
 
 export default async function DashboardPage() {
@@ -28,34 +27,6 @@ export default async function DashboardPage() {
   // Admin users go to the admin dashboard
   if (profile.role === "strategaize_admin") {
     redirect("/admin");
-  }
-
-  // Mirror respondents: check policy → check mirror profile → dashboard
-  if (profile.role === "mirror_respondent") {
-    const adminClient = createAdminClient();
-    const { data: policyConfirmation } = await adminClient
-      .from("mirror_policy_confirmations")
-      .select("confirmed_at")
-      .eq("profile_id", user.id)
-      .eq("tenant_id", profile.tenant_id)
-      .single();
-
-    if (!policyConfirmation) {
-      redirect("/mirror/policy");
-    }
-
-    // Check if mirror profile exists — redirect to profile form if not
-    const { data: mirrorProfile } = await adminClient
-      .from("mirror_profiles")
-      .select("id")
-      .eq("profile_id", user.id)
-      .single();
-
-    if (!mirrorProfile) {
-      redirect("/mirror/profile");
-    }
-
-    return <DashboardClient profile={profile} />;
   }
 
   return <DashboardClient profile={profile} />;
