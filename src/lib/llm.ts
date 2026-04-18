@@ -974,3 +974,59 @@ export async function updateRunMemory(
     captureException(error, { source: "updateRunMemory", metadata: { runId } });
   }
 }
+
+/**
+ * Update the session memory asynchronously after a chat interaction.
+ * Fire-and-forget — errors are logged but don't block the chat response.
+ * Mirrors updateRunMemory but uses session_memory table for capture sessions.
+ */
+export async function updateSessionMemory(
+  sessionId: string,
+  currentMemory: string,
+  chatSummary: string,
+  locale?: string,
+): Promise<void> {
+  const loc = (locale && locale in PROMPTS_BY_LOCALE ? locale : "de") as LLMLocale;
+  const prompt = MEMORY_UPDATE_PROMPTS[loc];
+
+  const memoryLabel = loc === "en" ? "CURRENT MEMORY:" : loc === "nl" ? "HUIDIG GEHEUGEN:" : "BISHERIGES MEMORY:";
+  const chatLabel = loc === "en" ? "NEW CONVERSATION (summary):" : loc === "nl" ? "NIEUW GESPREK (samenvatting):" : "NEUE KONVERSATION (Zusammenfassung):";
+  const outputLabel = loc === "en" ? "UPDATED MEMORY:" : loc === "nl" ? "BIJGEWERKT GEHEUGEN:" : "AKTUALISIERTES MEMORY:";
+  const emptyLabel = loc === "en" ? "(no previous memory)" : loc === "nl" ? "(geen eerder geheugen)" : "(kein bisheriges Memory)";
+
+  try {
+    const updatedMemory = await chatWithLLM([
+      {
+        role: "system",
+        content: prompt,
+      },
+      {
+        role: "user",
+        content: `${memoryLabel}\n${currentMemory || emptyLabel}\n\n${chatLabel}\n${chatSummary}\n\n${outputLabel}`,
+      },
+    ], { temperature: 0.2, maxTokens: 1024 });
+
+    const { createAdminClient } = await import("@/lib/supabase/admin");
+    const adminClient = createAdminClient();
+
+    const { data: existing } = await adminClient
+      .from("session_memory")
+      .select("version")
+      .eq("session_id", sessionId)
+      .single();
+
+    const newVersion = (existing?.version ?? 0) + 1;
+
+    await adminClient
+      .from("session_memory")
+      .upsert({
+        session_id: sessionId,
+        memory_text: updatedMemory.trim(),
+        version: newVersion,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "session_id" });
+  } catch (error) {
+    const { captureException } = await import("@/lib/logger");
+    captureException(error, { source: "updateSessionMemory", metadata: { sessionId } });
+  }
+}

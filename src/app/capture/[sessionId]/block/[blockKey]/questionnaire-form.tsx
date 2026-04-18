@@ -26,6 +26,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { WorkspaceTabs, type WorkspaceTab } from "@/components/workspace/workspace-tabs";
+import { CaptureEventHistory } from "@/components/capture-event-history";
+import { SessionMemoryView } from "@/components/session-memory-view";
 import {
   ChevronDown,
   ChevronRight,
@@ -122,14 +124,20 @@ export function QuestionnaireWorkspace({
   // Tab state
   const [activeTab, setActiveTab] = useState<WorkspaceTab>("questionnaire");
 
-  // Chat state
+  // Chat state — includes "summary" role like Blueprint
   const [chatMessages, setChatMessages] = useState<
-    { role: "user" | "assistant"; text: string }[]
+    { role: "user" | "assistant" | "summary"; text: string }[]
   >([]);
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // Answer text from accepted summary
+  const [answerText, setAnswerText] = useState("");
+
+  // Event history refresh key
+  const [eventKey, setEventKey] = useState(0);
 
   // Voice recording state
   const whisperEnabled = process.env.NEXT_PUBLIC_WHISPER_ENABLED === "true";
@@ -150,13 +158,13 @@ export function QuestionnaireWorkspace({
   const [submitting, setSubmitting] = useState(false);
   const [blockSubmitted, setBlockSubmitted] = useState(existingCheckpoints.length > 0);
 
-  // Debounce timer
+  // Debounce timer for autosave
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
 
   // ─── Derived state ──────────────────────────────────────────────
   const activeQ = activeQuestions.find((q) => q.id === activeQuestionId);
   const answerKey = activeQ ? `${activeBlockKey}.${activeQ.id}` : "";
-  const answerText = answerKey ? answers[answerKey] ?? "" : "";
+  const currentAnswer = answerKey ? answers[answerKey] ?? "" : "";
 
   // Progress: gesamt
   const totalQuestions = allQuestions.length;
@@ -176,7 +184,7 @@ export function QuestionnaireWorkspace({
   const blockPercent =
     blockTotal > 0 ? Math.round((blockAnswered / blockTotal) * 100) : 0;
 
-  // ─── Autosave ───────────────────────────────────────────────────
+  // ─── Autosave to JSONB (keeps local answer state in sync) ───────
   const doSave = useCallback(
     async (key: string, value: string) => {
       const [bk, qId] = key.split(".");
@@ -199,15 +207,6 @@ export function QuestionnaireWorkspace({
     [sessionId]
   );
 
-  function handleAnswerChange(value: string) {
-    if (!answerKey) return;
-    setAnswers((prev) => ({ ...prev, [answerKey]: value }));
-    if (debounceTimer.current) clearTimeout(debounceTimer.current);
-    debounceTimer.current = setTimeout(() => {
-      doSave(answerKey, value);
-    }, 500);
-  }
-
   useEffect(() => {
     return () => {
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
@@ -219,6 +218,7 @@ export function QuestionnaireWorkspace({
     setActiveQuestionId(q.id);
     setChatMessages([]);
     setChatInput("");
+    setAnswerText("");
     setMessage(null);
     setSidebarOpen(false);
   }
@@ -239,7 +239,7 @@ export function QuestionnaireWorkspace({
     setMessage(null);
 
     try {
-      const result = await submitBlock(sessionId, activeBlockKey, chatMessages);
+      const result = await submitBlock(sessionId, activeBlockKey, chatMessages.filter(m => m.role !== "summary").map(m => ({ role: m.role as "user" | "assistant", text: m.text })));
 
       if (result.error) {
         setMessage({ text: result.error, type: "error" });
@@ -251,7 +251,6 @@ export function QuestionnaireWorkspace({
       }
 
       setBlockSubmitted(true);
-      // Redirect to session overview (block list) after short delay
       setTimeout(() => {
         router.push(`/capture/${sessionId}`);
         router.refresh();
@@ -280,7 +279,7 @@ export function QuestionnaireWorkspace({
           blockKey: activeBlockKey,
           questionId: activeQ.id,
           message: messageText,
-          chatHistory: chatMessages,
+          chatHistory: chatMessages.filter(m => m.role !== "summary"),
         }),
       });
       if (res.ok) {
@@ -305,6 +304,85 @@ export function QuestionnaireWorkspace({
       setTimeout(() => {
         chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
       }, 50);
+    }
+  }
+
+  // ─── Generate Answer (Summary) ──────────────────────────────────
+  async function generateAnswer() {
+    if (!activeQ || generating) return;
+    setGenerating(true);
+    setMessage(null);
+    try {
+      const res = await fetch("/api/chat/block/generate-answer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId,
+          blockKey: activeBlockKey,
+          questionId: activeQ.id,
+          chatMessages: chatMessages.filter(m => m.role !== "summary"),
+          currentDraft: answerText || undefined,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setChatMessages((prev) => [
+          ...prev,
+          { role: "summary", text: data.generatedAnswer },
+        ]);
+        setMessage({ text: "Zusammenfassung erstellt", type: "success" });
+        setTimeout(() => setMessage(null), 4000);
+      } else {
+        setMessage({ text: "Zusammenfassung konnte nicht erstellt werden.", type: "error" });
+      }
+    } catch {
+      setMessage({ text: "Verbindungsfehler.", type: "error" });
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  // ─── Save Answer (event-based, like Blueprint) ──────────────────
+  async function handleSaveAnswer() {
+    const textToSave = answerText.trim() || chatInput.trim();
+    if (!textToSave || !activeQ) return;
+    setSaving(true);
+    setMessage(null);
+
+    try {
+      // 1. Save as event
+      const res = await fetch(`/api/capture/${sessionId}/events`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          blockKey: activeBlockKey,
+          questionId: activeQ.id,
+          clientEventId: crypto.randomUUID(),
+          eventType: "answer_submitted",
+          payload: { text: textToSave },
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        setMessage({ text: data.error ?? "Speichern fehlgeschlagen", type: "error" });
+        return;
+      }
+
+      // 2. Also persist to JSONB for progress tracking + checkpoint
+      setAnswers((prev) => ({ ...prev, [answerKey]: textToSave }));
+      await doSave(answerKey, textToSave);
+
+      // 3. Clear state + refresh event history
+      setAnswerText("");
+      setChatInput("");
+      setEventKey((k) => k + 1);
+      setMessage({ text: "Antwort gespeichert", type: "success" });
+      setTimeout(() => setMessage(null), 3000);
+    } catch {
+      setMessage({ text: "Speichern fehlgeschlagen", type: "error" });
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -351,8 +429,7 @@ export function QuestionnaireWorkspace({
     try {
       const formData = new FormData();
       formData.append("audio", audioBlob, "recording.webm");
-      // Whisper transcription endpoint — will be wired in a later slice
-      // For now, the button is visible but transcription requires the API endpoint
+      // Whisper transcription — endpoint not yet wired for capture sessions
       setIsTranscribing(false);
     } catch {
       setIsTranscribing(false);
@@ -532,7 +609,6 @@ export function QuestionnaireWorkspace({
                             key={q.id}
                             onClick={() => {
                               if (block.key !== activeBlockKey) {
-                                // Navigate to different block
                                 window.location.href = `/capture/${sessionId}/block/${block.key}`;
                               } else {
                                 selectQuestion(q);
@@ -645,7 +721,6 @@ export function QuestionnaireWorkspace({
 
             {/* CENTER: Dual Progress */}
             <div className="flex-1 max-w-sm space-y-2.5 hidden md:block">
-              {/* Gesamt */}
               <div className="flex items-center gap-4">
                 <div className="w-16 text-right">
                   <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
@@ -664,7 +739,6 @@ export function QuestionnaireWorkspace({
                   </span>
                 </div>
               </div>
-              {/* Block */}
               <div className="flex items-center gap-4">
                 <div className="w-16 text-right">
                   <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
@@ -798,7 +872,7 @@ export function QuestionnaireWorkspace({
                 </div>
               </div>
 
-              {/* Side-by-side: Chat+Answer (2/3) + Info (1/3) */}
+              {/* Side-by-side: Chat+Answer (2/3) + Event History (1/3) */}
               <div
                 className="grid grid-cols-1 xl:grid-cols-3 gap-3"
                 style={{ height: "calc(100vh - 260px)" }}
@@ -815,13 +889,6 @@ export function QuestionnaireWorkspace({
                           {chatMessages.length} Nachrichten
                         </span>
                       )}
-                      {/* Save indicator */}
-                      {saving && (
-                        <Loader2 className="ml-auto h-3.5 w-3.5 text-slate-400 animate-spin" />
-                      )}
-                      {saved && (
-                        <Check className="ml-auto h-3.5 w-3.5 text-green-500" />
-                      )}
                     </label>
                   </div>
 
@@ -830,31 +897,50 @@ export function QuestionnaireWorkspace({
                     {chatMessages.length > 0 ? (
                       <div className="px-5 py-3 space-y-2">
                         {chatMessages.map((msg, i) => (
-                          <div
-                            key={i}
-                            className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-                          >
-                            <div
-                              className={`max-w-[75%] rounded-xl px-3 py-2 text-xs leading-relaxed ${
-                                msg.role === "user"
-                                  ? "bg-brand-primary text-white rounded-br-sm"
-                                  : "bg-slate-100 text-slate-700 rounded-bl-sm"
-                              }`}
-                            >
-                              {msg.text}
-                              {msg.role === "assistant" && (
-                                <div className="mt-2 pt-2 border-t border-slate-200/50">
+                          <div key={i}>
+                            {msg.role === "summary" ? (
+                              /* ─── Summary Card (Blueprint 1:1) ─── */
+                              <div className="rounded-xl border border-brand-success/30 bg-emerald-50/50 px-4 py-3">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Sparkles className="h-3.5 w-3.5 text-brand-success-dark" />
+                                  <span className="text-[10px] font-bold uppercase tracking-wider text-brand-success-dark">Zusammenfassung</span>
+                                </div>
+                                <p className="text-xs leading-relaxed text-slate-800 whitespace-pre-wrap">{msg.text}</p>
+                                <div className="mt-3 flex items-center gap-2">
                                   <button
-                                    onClick={() =>
-                                      handleAnswerChange(msg.text)
-                                    }
-                                    className="text-[10px] font-medium text-brand-primary hover:text-brand-primary-dark transition-colors"
+                                    onClick={() => {
+                                      setAnswerText(msg.text);
+                                      setMessage({ text: "Zusammenfassung als Antwort übernommen", type: "success" });
+                                      setTimeout(() => setMessage(null), 4000);
+                                    }}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-brand-success-dark to-brand-success text-white text-xs font-bold shadow-sm hover:shadow-md transition-all"
                                   >
+                                    <span>&#10003;</span>
                                     Als Antwort übernehmen
                                   </button>
+                                  <button
+                                    onClick={generateAnswer}
+                                    disabled={generating}
+                                    className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-500 hover:text-brand-primary transition-all"
+                                  >
+                                    Regenerieren
+                                  </button>
                                 </div>
-                              )}
-                            </div>
+                              </div>
+                            ) : (
+                              /* ─── Normal chat bubble ─── */
+                              <div className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                                <div
+                                  className={`max-w-[75%] rounded-xl px-3 py-2 text-xs leading-relaxed ${
+                                    msg.role === "user"
+                                      ? "bg-brand-primary text-white rounded-br-sm"
+                                      : "bg-slate-100 text-slate-700 rounded-bl-sm"
+                                  }`}
+                                >
+                                  {msg.text}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         ))}
                         {chatLoading && (
@@ -940,24 +1026,31 @@ export function QuestionnaireWorkspace({
                     </div>
                   </div>
 
-                  {/* Action bar */}
+                  {/* Action bar — Blueprint 1:1: Summary button + Save button */}
                   <div className="px-6 py-4 border-t-2 border-slate-100 bg-slate-50/30">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium text-slate-500 tabular-nums">
-                        {answerText
-                          ? `${answerText.length} Zeichen`
-                          : "Noch keine Antwort"}
+                        {answerText ? `${answerText.length} Zeichen (Zusammenfassung)` : chatInput.trim() ? `${chatInput.trim().length} Zeichen` : "Noch keine Antwort"}
                       </span>
                       <div className="flex items-center gap-3">
+                        {/* "Zusammenfassung erstellen" — appears after ≥2 messages */}
+                        {chatMessages.filter(m => m.role !== "summary").length >= 2 && (
+                          <button
+                            onClick={generateAnswer}
+                            disabled={generating}
+                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 border-brand-success/30 text-sm font-bold text-brand-success-dark hover:bg-brand-success/5 transition-all disabled:opacity-50"
+                          >
+                            {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                            {generating ? "Wird erstellt..." : "Zusammenfassung erstellen"}
+                          </button>
+                        )}
+                        {/* Save button */}
                         <button
-                          onClick={() => {
-                            if (!answerText.trim()) return;
-                            handleAnswerChange(answerText);
-                          }}
-                          disabled={saving || !answerText.trim()}
+                          onClick={handleSaveAnswer}
+                          disabled={saving || (!answerText.trim() && !chatInput.trim())}
                           className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-brand-primary-dark via-brand-primary to-brand-primary-dark text-white font-bold shadow-xl shadow-brand-primary/30 hover:shadow-2xl hover:scale-[1.02] transition-all disabled:opacity-50 disabled:hover:scale-100 flex items-center gap-2"
                         >
-                          {saving ? "Speichert..." : "Speichern"}
+                          {saving ? "Speichert..." : "Antwort speichern"}
                           {!saving && <span>&#10003;</span>}
                         </button>
                       </div>
@@ -965,41 +1058,31 @@ export function QuestionnaireWorkspace({
                   </div>
                 </div>
 
-                {/* Right column — answer preview + info */}
+                {/* Right column — Event History (Blueprint 1:1) */}
                 <div className="xl:col-span-1 bg-white rounded-2xl border-2 border-slate-200 shadow-lg overflow-hidden flex flex-col">
                   <div className="px-4 py-3 border-b border-slate-200 bg-slate-50/50 flex-shrink-0">
                     <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wide flex items-center gap-2">
                       <div className="w-6 h-6 rounded-md bg-gradient-to-br from-slate-600 to-slate-700 flex items-center justify-center">
                         <FileText className="h-3 w-3 text-white" />
                       </div>
-                      Aktuelle Antwort
+                      Antwort-Verlauf
                     </h3>
                   </div>
-                  <div className="flex-1 overflow-y-auto p-4">
-                    {answerText.trim() ? (
-                      <div className="space-y-3">
-                        <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
-                          {answerText}
-                        </p>
-                        <div className="text-xs text-slate-400 tabular-nums">
-                          {answerText.length} Zeichen
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="py-6 text-center">
-                        <p className="text-sm text-slate-400">
-                          Noch keine Antwort
-                        </p>
-                        <p className="text-xs text-slate-400 mt-1">
-                          Nutzen Sie den KI-Assistenten oder
-                          beantworten Sie direkt.
-                        </p>
-                      </div>
-                    )}
+                  <div className="flex-1 overflow-y-auto">
+                    <div className="p-4">
+                      <CaptureEventHistory
+                        key={`${activeQ.id}-${eventKey}`}
+                        sessionId={sessionId}
+                        blockKey={activeBlockKey}
+                        questionId={activeQ.id}
+                      />
+                    </div>
                   </div>
-
                 </div>
               </div>
+
+              {/* KI Memory Section */}
+              <SessionMemoryView sessionId={sessionId} />
 
               {/* ── Evidence + Checkpoints Grid (Blueprint V3.4 Style) ── */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

@@ -1,16 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { chatWithLLM, getSystemPrompts, buildMemoryContext, updateSessionMemory } from "@/lib/llm";
+import { chatWithLLM, getSystemPrompts, buildMemoryContext } from "@/lib/llm";
 
 /**
- * POST /api/chat/block
+ * POST /api/chat/block/generate-answer
  *
- * Per-block KI-Chat for the questionnaire. Sends user message + context
- * to Bedrock (Claude Sonnet, eu-central-1) and returns assistant response.
- * Includes session memory and profile context (like Blueprint chat API).
+ * Takes chat history and generates a summary answer via Bedrock.
+ * Analog to Blueprint generate-answer, adapted for capture sessions.
  *
- * Body: { sessionId, blockKey, questionId, message, chatHistory }
+ * Body: { sessionId, blockKey, questionId, chatMessages, currentDraft? }
  */
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -37,8 +36,8 @@ export async function POST(request: NextRequest) {
     sessionId: string;
     blockKey: string;
     questionId: string;
-    message: string;
-    chatHistory?: { role: "user" | "assistant"; text: string }[];
+    chatMessages?: { role: string; text: string }[];
+    currentDraft?: string;
   };
 
   try {
@@ -47,9 +46,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Ungültiger Body" }, { status: 400 });
   }
 
-  const { sessionId, blockKey, questionId, message, chatHistory = [] } = body;
+  const { sessionId, blockKey, questionId, chatMessages, currentDraft } = body;
 
-  if (!sessionId || !blockKey || !questionId || !message?.trim()) {
+  if (!sessionId || !blockKey || !questionId) {
     return NextResponse.json({ error: "Fehlende Felder" }, { status: 400 });
   }
 
@@ -64,7 +63,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Kein Zugriff" }, { status: 403 });
   }
 
-  // Load template to get question text for context
+  // Load template to get question text
   const { data: template } = await supabase
     .from("template")
     .select("blocks")
@@ -93,56 +92,50 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // Load session memory for context (like Blueprint run_memory)
+  // Load session memory
   const adminClient = createAdminClient();
   const { data: memoryData } = await adminClient
     .from("session_memory")
     .select("memory_text")
     .eq("session_id", sessionId)
     .single();
-  const currentMemory = memoryData?.memory_text ?? "";
-  const memoryContext = buildMemoryContext(currentMemory, "de");
+  const memoryContext = buildMemoryContext(memoryData?.memory_text ?? "", "de");
 
-  // Build system prompt with question + memory context
+  // Build LLM messages for summary generation
   const prompts = getSystemPrompts("de");
-  const systemParts = [prompts.rückfrage];
-  if (memoryContext) systemParts.push(memoryContext);
+  const systemContent = `${prompts.zusammenfassung}${memoryContext ? `\n\n${memoryContext}` : ""}\n\nOriginalfrage: ${questionText}\nBlock: ${blockKey} — ${blockTitle}${questionUnterbereich ? ` / ${questionUnterbereich}` : ""}${questionEbene ? `\nTyp: ${questionEbene}` : ""}`;
 
-  systemParts.push(
-    `Die aktuelle Frage lautet: "${questionText}"\nBlock: ${blockKey} — ${blockTitle}${questionUnterbereich ? ` / ${questionUnterbereich}` : ""}${questionEbene ? `\nTyp: ${questionEbene}` : ""}`
-  );
-
-  // Build conversation messages for LLM
-  const llmMessages: { role: "system" | "user" | "assistant"; content: string }[] = [
-    { role: "system", content: systemParts.join("\n\n") },
+  const messages: { role: "system" | "user" | "assistant"; content: string }[] = [
+    { role: "system", content: systemContent },
+    ...((chatMessages ?? []).map((m) => ({
+      role: (m.role === "user" ? "user" : "assistant") as "user" | "assistant",
+      content: m.text,
+    }))),
   ];
 
-  // Add chat history
-  for (const msg of chatHistory) {
-    llmMessages.push({
-      role: msg.role,
-      content: msg.text,
+  if (currentDraft) {
+    messages.push({
+      role: "user",
+      content: `Mein bisheriger Entwurf der Antwort:\n\n${currentDraft}\n\nBitte überarbeite und verbessere diese Zusammenfassung basierend auf dem gesamten Gespräch.`,
+    });
+  } else {
+    messages.push({
+      role: "user",
+      content: "Bitte fasse das bisherige Gespräch zu einer strukturierten Antwort auf die Originalfrage zusammen.",
     });
   }
 
-  // Add current user message
-  llmMessages.push({ role: "user", content: message });
-
   try {
-    const response = await chatWithLLM(llmMessages, {
-      temperature: 0.7,
-      maxTokens: 512,
+    const generatedAnswer = await chatWithLLM(messages, {
+      temperature: 0.3,
+      maxTokens: 2048,
     });
 
-    // Async memory update (fire-and-forget, like Blueprint DEC-024)
-    const chatSummary = `Frage: ${questionText}\nBlock: ${blockKey}\nNutzer: ${message}\nKI: ${response.substring(0, 300)}`;
-    updateSessionMemory(sessionId, currentMemory, chatSummary, "de");
-
-    return NextResponse.json({ response });
+    return NextResponse.json({ generatedAnswer });
   } catch (error) {
-    console.error("[chat/block] Bedrock error:", error);
+    console.error("[chat/block/generate-answer] Bedrock error:", error);
     return NextResponse.json(
-      { error: "KI-Antwort fehlgeschlagen" },
+      { error: "Zusammenfassung fehlgeschlagen" },
       { status: 502 }
     );
   }
