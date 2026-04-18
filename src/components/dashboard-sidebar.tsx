@@ -10,7 +10,7 @@ interface DashboardSidebarProps {
     email: string;
     role: string;
   };
-  activePage: "runs" | "capture" | "nominations";
+  activePage: "capture";
 }
 
 export function DashboardSidebar({ profile, activePage }: DashboardSidebarProps) {

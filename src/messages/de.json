@@ -177,13 +177,15 @@
     "buttonLoading": "Wird gespeichert..."
   },
   "dashboard": {
-    "title": "Ihre Runs",
-    "subtitle": "Ihre zugewiesenen Assessment-Runs",
-    "emptyTitle": "Noch keine Runs zugewiesen",
-    "emptyDescription": "Bitte warten Sie auf eine Zuweisung durch StrategAIze.",
-    "evidenceLabel": "Evidence-Dokumente",
-    "created": "Erstellt: {date}",
-    "submitted": "Eingereicht: {date}"
+    "title": "Ihre Erhebungen",
+    "subtitle": "Aktive und abgeschlossene Erhebungssitzungen",
+    "emptyTitle": "Noch keine Erhebungen vorhanden",
+    "emptyDescription": "Starten Sie eine neue Erhebung ueber den Sidebar-Link.",
+    "started": "Gestartet: {date}",
+    "lastUpdated": "Letzte Aenderung: {date}",
+    "statusActive": "In Bearbeitung",
+    "statusCompleted": "Abgeschlossen",
+    "unknownTemplate": "Erhebung"
   },
   "memory": {
     "title": "Was die KI sich gemerkt hat",

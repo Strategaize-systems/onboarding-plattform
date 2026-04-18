@@ -177,13 +177,15 @@
     "buttonLoading": "Saving..."
   },
   "dashboard": {
-    "title": "Your Runs",
-    "subtitle": "Your assigned assessment runs",
-    "emptyTitle": "No runs assigned yet",
-    "emptyDescription": "Please wait for an assignment from StrategAIze.",
-    "evidenceLabel": "Evidence documents",
-    "created": "Created: {date}",
-    "submitted": "Submitted: {date}"
+    "title": "Your Sessions",
+    "subtitle": "Active and completed capture sessions",
+    "emptyTitle": "No sessions yet",
+    "emptyDescription": "Start a new session via the sidebar link.",
+    "started": "Started: {date}",
+    "lastUpdated": "Last updated: {date}",
+    "statusActive": "In Progress",
+    "statusCompleted": "Completed",
+    "unknownTemplate": "Session"
   },
   "memory": {
     "title": "What the AI remembers",

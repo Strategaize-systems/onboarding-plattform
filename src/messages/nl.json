@@ -177,13 +177,15 @@
     "buttonLoading": "Wordt opgeslagen..."
   },
   "dashboard": {
-    "title": "Uw Runs",
-    "subtitle": "Uw toegewezen assessment-runs",
-    "emptyTitle": "Nog geen runs toegewezen",
-    "emptyDescription": "Wacht op een toewijzing door StrategAIze.",
-    "evidenceLabel": "Bewijsdocumenten",
-    "created": "Aangemaakt: {date}",
-    "submitted": "Ingediend: {date}"
+    "title": "Uw Sessies",
+    "subtitle": "Actieve en afgeronde sessies",
+    "emptyTitle": "Nog geen sessies",
+    "emptyDescription": "Start een nieuwe sessie via de zijbalk.",
+    "started": "Gestart: {date}",
+    "lastUpdated": "Laatst bijgewerkt: {date}",
+    "statusActive": "In bewerking",
+    "statusCompleted": "Afgerond",
+    "unknownTemplate": "Sessie"
   },
   "memory": {
     "title": "Wat de AI heeft onthouden",

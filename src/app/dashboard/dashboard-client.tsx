@@ -2,21 +2,19 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { StatusBadge } from "@/components/status-badge";
-import { ProgressIndicator } from "@/components/progress-indicator";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { FileText, Menu, X } from "lucide-react";
+import { FileText, Menu, X, Clock, PlayCircle, CheckCircle2 } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
 import { HelpButton } from "@/components/help-button";
 import { LearningCenterPanel } from "@/components/learning-center/learning-center-panel";
 import { DashboardSidebar } from "@/components/dashboard-sidebar";
+import { createClient } from "@/lib/supabase/client";
 
 interface Profile {
   id: string;
@@ -25,46 +23,52 @@ interface Profile {
   role: string;
 }
 
-interface Run {
+interface CaptureSession {
   id: string;
-  title: string;
-  description: string | null;
   status: string;
-  due_date: string | null;
-  question_count: number;
-  answered_count: number;
-  evidence_count: number;
-  created_at: string;
-  submitted_at: string | null;
+  started_at: string;
+  updated_at: string;
+  template: { name: string; slug: string } | null;
 }
+
+const STATUS_CONFIG: Record<string, { label: string; icon: typeof Clock; className: string }> = {
+  active: { label: "dashboard.statusActive", icon: PlayCircle, className: "bg-blue-50 text-blue-700 border-blue-200" },
+  completed: { label: "dashboard.statusCompleted", icon: CheckCircle2, className: "bg-green-50 text-green-700 border-green-200" },
+};
 
 export function DashboardClient({ profile }: { profile: Profile }) {
   const t = useTranslations();
   const locale = useLocale();
-  const isMirror = profile.role === "mirror_respondent";
-  const [runs, setRuns] = useState<Run[]>([]);
+  const [sessions, setSessions] = useState<CaptureSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [learningCenterOpen, setLearningCenterOpen] = useState(false);
 
   useEffect(() => {
-    async function loadRuns() {
+    async function loadSessions() {
       try {
-        const res = await fetch("/api/tenant/runs");
-        if (res.ok) {
-          const data = await res.json();
-          setRuns(data.runs ?? []);
-        }
+        const supabase = createClient();
+        const { data } = await supabase
+          .from("capture_session")
+          .select("id, status, started_at, updated_at, template:template_id(name, slug)")
+          .order("updated_at", { ascending: false });
+        const mapped: CaptureSession[] = (data ?? []).map((row) => ({
+          id: row.id,
+          status: row.status,
+          started_at: row.started_at,
+          updated_at: row.updated_at,
+          template: Array.isArray(row.template) ? row.template[0] ?? null : row.template,
+        }));
+        setSessions(mapped);
       } finally {
         setLoading(false);
       }
     }
-    loadRuns();
+    loadSessions();
   }, []);
 
-  const sidebar = <DashboardSidebar profile={profile} activePage="runs" />;
+  const sidebar = <DashboardSidebar profile={profile} activePage="capture" />;
 
-  // ─── Main layout ──────────────────────────────────────────────────────
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden">
       {/* Mobile toggle */}
@@ -98,8 +102,8 @@ export function DashboardClient({ profile }: { profile: Profile }) {
         <header className="flex-shrink-0 bg-white/95 backdrop-blur-xl border-b border-slate-200/60 shadow-sm">
           <div className="flex items-center justify-between px-8 py-5 pl-14 lg:pl-8">
             <div>
-              <h1 className="text-2xl font-bold text-slate-900 tracking-tight">{isMirror ? t("mirror.dashboardTitle") : t("dashboard.title")}</h1>
-              <p className="text-sm text-slate-500 mt-0.5">{isMirror ? t("mirror.dashboardSubtitle") : t("dashboard.subtitle")}</p>
+              <h1 className="text-2xl font-bold text-slate-900 tracking-tight">{t("dashboard.title")}</h1>
+              <p className="text-sm text-slate-500 mt-0.5">{t("dashboard.subtitle")}</p>
             </div>
           </div>
         </header>
@@ -110,10 +114,10 @@ export function DashboardClient({ profile }: { profile: Profile }) {
             {loading ? (
               <div className="space-y-4">
                 {[1, 2].map((i) => (
-                  <Skeleton key={i} className="h-32 w-full rounded-xl" />
+                  <Skeleton key={i} className="h-28 w-full rounded-xl" />
                 ))}
               </div>
-            ) : runs.length === 0 ? (
+            ) : sessions.length === 0 ? (
               <Card className="border-dashed">
                 <CardContent className="flex flex-col items-center justify-center py-16 text-center">
                   <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
@@ -127,57 +131,43 @@ export function DashboardClient({ profile }: { profile: Profile }) {
               </Card>
             ) : (
               <div className="space-y-4">
-                {runs.map((run) => (
-                  <Link key={run.id} href={`/runs/${run.id}`}>
-                    <Card className="relative overflow-hidden cursor-pointer">
-                      <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-brand-primary-dark to-brand-primary" />
-                      <CardHeader className="pb-3 pt-5">
-                        <div className="flex items-center justify-between">
-                          <CardTitle className="text-lg text-brand-primary-dark">{run.title}</CardTitle>
-                          <StatusBadge status={run.status} />
-                        </div>
-                        {run.description && (
-                          <CardDescription>{run.description}</CardDescription>
-                        )}
-                      </CardHeader>
-                      <CardContent>
-                        <ProgressIndicator
-                          answered={run.answered_count}
-                          total={run.question_count}
-                        />
-                        <div className="flex flex-wrap gap-4 text-xs text-slate-500 mt-3">
-                          <span>
-                            <span className="font-semibold text-brand-primary">{run.evidence_count}</span> {t("dashboard.evidenceLabel")}
-                          </span>
-                          <span>
-                            {t("dashboard.created", { date: new Date(run.created_at).toLocaleDateString(locale) })}
-                          </span>
-                          {run.submitted_at && (
-                            <span>
-                              {t("dashboard.submitted", { date: new Date(run.submitted_at).toLocaleDateString(locale) })}
+                {sessions.map((session) => {
+                  const statusCfg = STATUS_CONFIG[session.status] ?? {
+                    label: "dashboard.statusActive",
+                    icon: Clock,
+                    className: "bg-slate-50 text-slate-600 border-slate-200",
+                  };
+                  const StatusIcon = statusCfg.icon;
+
+                  return (
+                    <Link key={session.id} href={`/capture/${session.id}`}>
+                      <Card className="relative overflow-hidden cursor-pointer hover:shadow-md transition-shadow">
+                        <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-brand-primary-dark to-brand-primary" />
+                        <CardHeader className="pb-3 pt-5">
+                          <div className="flex items-center justify-between">
+                            <CardTitle className="text-lg text-brand-primary-dark">
+                              {session.template?.name ?? t("dashboard.unknownTemplate")}
+                            </CardTitle>
+                            <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${statusCfg.className}`}>
+                              <StatusIcon className="h-3.5 w-3.5" />
+                              {t(statusCfg.label)}
                             </span>
-                          )}
-                          {run.due_date && (() => {
-                            const due = new Date(run.due_date);
-                            const now = new Date();
-                            const daysLeft = Math.ceil((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-                            const badgeClass = daysLeft < 0
-                              ? "bg-red-100 text-red-700 border border-red-300"
-                              : daysLeft <= 3
-                                ? "bg-amber-100 text-amber-700 border border-amber-300"
-                                : "bg-slate-100 text-slate-600 border border-slate-200";
-                            const label = daysLeft < 0 ? t("deadline.overdue") : daysLeft <= 3 ? t("deadline.dueSoon") : t("deadline.dueDate");
-                            return (
-                              <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-bold ${badgeClass}`}>
-                                {label}: {due.toLocaleDateString(locale)}
-                              </span>
-                            );
-                          })()}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                ))}
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="flex flex-wrap gap-4 text-xs text-slate-500">
+                            <span>
+                              {t("dashboard.started", { date: new Date(session.started_at).toLocaleDateString(locale) })}
+                            </span>
+                            <span>
+                              {t("dashboard.lastUpdated", { date: new Date(session.updated_at).toLocaleDateString(locale) })}
+                            </span>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </Link>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -189,7 +179,6 @@ export function DashboardClient({ profile }: { profile: Profile }) {
       <LearningCenterPanel
         open={learningCenterOpen}
         onOpenChange={setLearningCenterOpen}
-        isMirror={isMirror}
       />
     </div>
   );
