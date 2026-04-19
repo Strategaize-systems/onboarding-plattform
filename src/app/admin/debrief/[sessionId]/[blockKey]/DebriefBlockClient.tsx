@@ -1,10 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Clock, MessageSquare, SkipForward, Star } from "lucide-react";
+import { CheckCircle2, Clock, FileText, MessageSquare, Pencil, SkipForward, Star } from "lucide-react";
 import { KnowledgeUnitList } from "./KnowledgeUnitList";
 import { MeetingModeBar } from "./MeetingModeBar";
+import { SopGenerateButton } from "./SopGenerateButton";
+import { SopView } from "./SopView";
+import { SopEditor } from "./SopEditor";
+import { SopExportButton } from "./SopExportButton";
+import { updateSopContent, type SopRow } from "./sop-actions";
+import type { SopContent } from "@/workers/sop/types";
 
 interface KnowledgeUnit {
   id: string;
@@ -45,6 +51,8 @@ interface DebriefBlockClientProps {
   isAlreadyFinalized: boolean;
   qualityReport?: Record<string, unknown> | null;
   gapQuestionStats?: GapQuestionStats;
+  initialSop?: SopRow | null;
+  checkpointId?: string | null;
 }
 
 export function DebriefBlockClient({
@@ -56,13 +64,37 @@ export function DebriefBlockClient({
   isAlreadyFinalized: initialFinalized,
   qualityReport,
   gapQuestionStats,
+  initialSop,
+  checkpointId,
 }: DebriefBlockClientProps) {
   const [isFinalized, setIsFinalized] = useState(initialFinalized);
+  const [sop, setSop] = useState<SopRow | null>(initialSop ?? null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, startSaveTransition] = useTransition();
+  const [saveError, setSaveError] = useState<string | null>(null);
   const router = useRouter();
 
-  function handleSnapshotCreated(checkpointId: string) {
+  function handleSnapshotCreated(newCheckpointId: string) {
     setIsFinalized(true);
     router.refresh();
+  }
+
+  function handleSopGenerated(newSop: SopRow) {
+    setSop(newSop);
+  }
+
+  async function handleSopSave(content: SopContent) {
+    if (!sop) return;
+    setSaveError(null);
+    startSaveTransition(async () => {
+      const result = await updateSopContent(sop.id, content);
+      if (!result.success) {
+        setSaveError(result.error ?? "Speichern fehlgeschlagen");
+        return;
+      }
+      setSop({ ...sop, content, updated_at: new Date().toISOString() });
+      setIsEditing(false);
+    });
   }
 
   const hasBackspelling =
@@ -89,12 +121,116 @@ export function DebriefBlockClient({
         />
       )}
 
+      {/* SOP Section */}
+      {isFinalized && (
+        <SopSection
+          sessionId={sessionId}
+          blockKey={blockKey}
+          checkpointId={checkpointId ?? ""}
+          sop={sop}
+          isEditing={isEditing}
+          isSaving={isSaving}
+          saveError={saveError}
+          onSopGenerated={handleSopGenerated}
+          onEdit={() => setIsEditing(true)}
+          onCancelEdit={() => {
+            setIsEditing(false);
+            setSaveError(null);
+          }}
+          onSave={handleSopSave}
+        />
+      )}
+
       <KnowledgeUnitList
         sessionId={sessionId}
         blockKey={blockKey}
         knowledgeUnits={knowledgeUnits}
         validationEntries={validationEntries}
       />
+    </div>
+  );
+}
+
+function SopSection({
+  sessionId,
+  blockKey,
+  checkpointId,
+  sop,
+  isEditing,
+  isSaving,
+  saveError,
+  onSopGenerated,
+  onEdit,
+  onCancelEdit,
+  onSave,
+}: {
+  sessionId: string;
+  blockKey: string;
+  checkpointId: string;
+  sop: SopRow | null;
+  isEditing: boolean;
+  isSaving: boolean;
+  saveError: string | null;
+  onSopGenerated: (sop: SopRow) => void;
+  onEdit: () => void;
+  onCancelEdit: () => void;
+  onSave: (content: SopContent) => Promise<void>;
+}) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-3">
+      <div className="flex items-center gap-2">
+        <FileText className="h-4 w-4 text-slate-600" />
+        <h3 className="text-sm font-bold text-slate-900">
+          Standard Operating Procedure
+        </h3>
+      </div>
+
+      {!sop && checkpointId && (
+        <SopGenerateButton
+          sessionId={sessionId}
+          blockKey={blockKey}
+          checkpointId={checkpointId}
+          onSopGenerated={onSopGenerated}
+        />
+      )}
+
+      {!sop && !checkpointId && (
+        <p className="text-xs text-slate-500">
+          SOP-Generierung ist erst nach Meeting-Abschluss möglich
+        </p>
+      )}
+
+      {sop && !isEditing && (
+        <>
+          <SopView content={sop.content} />
+          <div className="flex items-center gap-2 border-t border-slate-100 pt-3">
+            <button
+              onClick={onEdit}
+              className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+              Bearbeiten
+            </button>
+            <SopExportButton content={sop.content} blockKey={blockKey} />
+          </div>
+        </>
+      )}
+
+      {sop && isEditing && (
+        <>
+          <SopEditor
+            content={sop.content}
+            onSave={onSave}
+            onCancel={onCancelEdit}
+            isSaving={isSaving}
+          />
+          {saveError && (
+            <div className="rounded bg-red-50 px-3 py-2 text-sm text-red-700">
+              {saveError}
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }

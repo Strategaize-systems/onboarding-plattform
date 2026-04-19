@@ -332,6 +332,33 @@
       "answered": "Beantwoord",
       "skipped": "Overgeslagen",
       "noData": "Geen backspelling uitgevoerd."
+    },
+    "sop": {
+      "title": "Standard Operating Procedure",
+      "generate": "SOP genereren",
+      "generating": "SOP wordt gegenereerd…",
+      "generatingHint": "Dit kan 30–60 seconden duren",
+      "generateHint": "Genereert een gestructureerd actieplan uit de Knowledge Units",
+      "onlyAfterFinalize": "SOP-generatie is pas beschikbaar na afsluiting van de meeting",
+      "objective": "Doelstelling",
+      "prerequisites": "Vereisten",
+      "steps": "Stappen",
+      "responsible": "Verantwoordelijk",
+      "timeframe": "Tijdskader",
+      "successCriterion": "Succescriterium",
+      "dependencies": "Afhankelijk van",
+      "risks": "Risico's",
+      "fallbacks": "Fallback-opties",
+      "export": "JSON exporteren",
+      "edit": "Bewerken",
+      "editing": "Bewerkingsmodus",
+      "save": "Opslaan",
+      "saving": "Wordt opgeslagen…",
+      "saved": "SOP opgeslagen",
+      "cancel": "Annuleren",
+      "clickToEdit": "Klik om te bewerken",
+      "emptyField": "Leeg — klik om te bewerken",
+      "saveFailed": "Opslaan mislukt"
     }
   },
   "freeform": {

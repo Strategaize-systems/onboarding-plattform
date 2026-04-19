@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
-import { KnowledgeUnitList } from "./KnowledgeUnitList";
 import { DebriefBlockClient } from "./DebriefBlockClient";
+import type { SopContent } from "@/workers/sop/types";
 
 interface DebriefBlockPageProps {
   params: Promise<{ sessionId: string; blockKey: string }>;
@@ -119,6 +119,28 @@ export default async function DebriefBlockPage({
     }
   }
 
+  // Load existing SOP for this block
+  const { data: sopData } = await supabase
+    .from("sop")
+    .select("id, content, created_at, updated_at")
+    .eq("capture_session_id", sessionId)
+    .eq("block_key", blockKey)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const sopRow = sopData
+    ? {
+        id: sopData.id as string,
+        content: sopData.content as SopContent,
+        created_at: sopData.created_at as string,
+        updated_at: sopData.updated_at as string,
+      }
+    : null;
+
+  // Get the latest checkpoint ID (needed for SOP generation trigger)
+  const latestCheckpointId = (blockCheckpoints ?? [])[0]?.id ?? null;
+
   const blockTitle = block.title?.de ?? block.title?.en ?? blockKey;
 
   return (
@@ -142,6 +164,8 @@ export default async function DebriefBlockPage({
         isAlreadyFinalized={isAlreadyFinalized}
         qualityReport={latestQualityReport}
         gapQuestionStats={gapQuestionStats}
+        initialSop={sopRow}
+        checkpointId={latestCheckpointId}
       />
     </div>
   );

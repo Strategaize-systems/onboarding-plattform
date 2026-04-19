@@ -332,6 +332,33 @@
       "answered": "Answered",
       "skipped": "Skipped",
       "noData": "No backspelling performed."
+    },
+    "sop": {
+      "title": "Standard Operating Procedure",
+      "generate": "Generate SOP",
+      "generating": "Generating SOP…",
+      "generatingHint": "This may take 30–60 seconds",
+      "generateHint": "Generates a structured action plan from the Knowledge Units",
+      "onlyAfterFinalize": "SOP generation is only available after meeting finalization",
+      "objective": "Objective",
+      "prerequisites": "Prerequisites",
+      "steps": "Steps",
+      "responsible": "Responsible",
+      "timeframe": "Timeframe",
+      "successCriterion": "Success Criterion",
+      "dependencies": "Depends on",
+      "risks": "Risks",
+      "fallbacks": "Fallback Options",
+      "export": "Export JSON",
+      "edit": "Edit",
+      "editing": "Edit Mode",
+      "save": "Save",
+      "saving": "Saving…",
+      "saved": "SOP saved",
+      "cancel": "Cancel",
+      "clickToEdit": "Click to edit",
+      "emptyField": "Empty — click to edit",
+      "saveFailed": "Save failed"
     }
   },
   "freeform": {
