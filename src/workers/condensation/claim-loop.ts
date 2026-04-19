@@ -16,12 +16,6 @@ export type JobHandler = (job: ClaimedJob) => Promise<void>;
 
 const JOB_TYPES = ["knowledge_unit_condensation", "recondense_with_gaps", "sop_generation"] as const;
 
-export interface JobHandlers {
-  condensation: JobHandler;
-  recondense?: JobHandler;
-  sop?: JobHandler;
-}
-
 /**
  * Start the polling claim-loop.
  * Polls for multiple job types in round-robin fashion.
