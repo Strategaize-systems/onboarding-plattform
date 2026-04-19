@@ -245,7 +245,7 @@
       "title": "3-Agent Orchestrator Loop",
       "type": "feature",
       "priority": "high",
-      "status": "in_progress",
+      "status": "done",
       "version": "V2",
       "description": "Orchestrator als dritter Agent steuert Analyst+Challenger-Loop intelligent: Qualitaets-Gates, systematische Luecken-Erkennung, Break-Kriterien basierend auf inhaltlicher Qualitaet. Basis fuer Backspelling (FEAT-011) und SOP-Quality-Gate (FEAT-012). Siehe FEAT-010.",
       "createdAt": "2026-04-19"
@@ -255,7 +255,7 @@
       "title": "Auto-Gap-Backspelling",
       "type": "feature",
       "priority": "high",
-      "status": "in_progress",
+      "status": "done",
       "version": "V2",
       "description": "Orchestrator erkennt Luecken → generiert Nachfragen → Kunde beantwortet im Questionnaire → Re-Verdichtung. Max 2 Runden, danach Meeting-Agenda. Schliesst den Feedback-Loop automatisch. Siehe FEAT-011.",
       "createdAt": "2026-04-19"
