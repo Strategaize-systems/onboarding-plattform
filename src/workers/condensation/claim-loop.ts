@@ -14,7 +14,13 @@ export interface ClaimedJob {
 
 export type JobHandler = (job: ClaimedJob) => Promise<void>;
 
-const JOB_TYPES = ["knowledge_unit_condensation", "recondense_with_gaps"] as const;
+const JOB_TYPES = ["knowledge_unit_condensation", "recondense_with_gaps", "sop_generation"] as const;
+
+export interface JobHandlers {
+  condensation: JobHandler;
+  recondense?: JobHandler;
+  sop?: JobHandler;
+}
 
 /**
  * Start the polling claim-loop.
@@ -23,7 +29,8 @@ const JOB_TYPES = ["knowledge_unit_condensation", "recondense_with_gaps"] as con
  */
 export async function startClaimLoop(
   handler: JobHandler,
-  recondenseHandler?: JobHandler
+  recondenseHandler?: JobHandler,
+  sopHandler?: JobHandler
 ): Promise<never> {
   const pollMs = parseInt(process.env.AI_WORKER_POLL_MS || "2000", 10);
   const adminClient = createAdminClient();
@@ -69,6 +76,8 @@ export async function startClaimLoop(
       try {
         if (job.job_type === "recondense_with_gaps" && recondenseHandler) {
           await recondenseHandler(job);
+        } else if (job.job_type === "sop_generation" && sopHandler) {
+          await sopHandler(job);
         } else {
           await handler(job);
         }
