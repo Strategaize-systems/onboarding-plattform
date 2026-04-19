@@ -10,21 +10,21 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: V2 Implementation. SLC-013..016 done (4/10). FEAT-010 + FEAT-011 komplett, FEAT-012 Backend done. Naechster Schritt: /qa SLC-016, dann /frontend SLC-017.
+- Current Focus: V2 Implementation. SLC-013..017 done (5/10). FEAT-010, FEAT-011, FEAT-012 komplett. Naechster Schritt: /qa SLC-017, dann Evidence-Kette (SLC-018..020).
 - Current Phase: V2 Implementation
 
 ## Immediate Next Steps
-1. /qa SLC-016 (SOP-Backend)
-2. /frontend SLC-017 (SOP-UI — 6 MTs, High)
-3. /qa nach SLC-017
+1. /qa SLC-017 (SOP-UI)
+2. /backend SLC-018 (Evidence-Schema + Storage)
+3. /qa nach SLC-018
 
 ## Active Scope
-V2 — 10 Slices, 67 Micro-Tasks (4/10 done):
+V2 — 10 Slices, 67 Micro-Tasks (5/10 done):
 - SLC-013 Orchestrator-Integration (6 MTs) — done
 - SLC-014 Gap-Question-Backend (7 MTs) — done
 - SLC-015 Backspelling-UI (6 MTs) — done
 - SLC-016 SOP-Backend (7 MTs) — done
-- SLC-017 SOP-UI (6 MTs) — High
+- SLC-017 SOP-UI (6 MTs) — done
 - SLC-018 Evidence-Schema+Storage (5 MTs) — High
 - SLC-019 Evidence-Extraction+Mapping (8 MTs) — High
 - SLC-020 Evidence-UI (6 MTs) — High

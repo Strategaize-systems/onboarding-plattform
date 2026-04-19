@@ -25,7 +25,7 @@
 |----|---------|--------|------|---------|
 | FEAT-010 | 3-Agent Orchestrator Loop | done | [Spec](FEAT-010-orchestrator-loop.md) | 2026-04-19 |
 | FEAT-011 | Auto-Gap-Backspelling | done | [Spec](FEAT-011-auto-gap-backspelling.md) | 2026-04-19 |
-| FEAT-012 | SOP Generation (Level 2) | in_progress | [Spec](FEAT-012-sop-generation.md) | 2026-04-19 |
+| FEAT-012 | SOP Generation (Level 2) | done | [Spec](FEAT-012-sop-generation.md) | 2026-04-19 |
 | FEAT-013 | Evidence-Mode + Bulk-Import | planned | [Spec](FEAT-013-evidence-mode.md) | 2026-04-19 |
 | FEAT-014 | Second Template + Switcher UI | planned | [Spec](FEAT-014-second-template.md) | 2026-04-19 |
 | FEAT-015 | Voice Input (Whisper) | planned | [Spec](FEAT-015-voice-input.md) | 2026-04-19 |
