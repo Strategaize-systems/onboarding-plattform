@@ -159,3 +159,11 @@ Der uebernommene Blueprint-Stand ist noch nicht auf einer Onboarding-Plattform-I
 - Affected Areas: Debrief-Workflow, Knowledge-Unit-Editor, Validation-Layer-Audit
 - Risk: Gering — neue Funktionen, keine Aenderung an bestehenden Tabellen oder RPCs.
 - Rollback Notes: `DROP FUNCTION rpc_update_knowledge_unit_with_audit; DROP FUNCTION rpc_add_knowledge_unit;`
+
+### MIG-014 — SOP-Tabelle + Template V2 Fields + SOP RPCs
+- Date: 2026-04-19
+- Scope: 3 Migrationen: (1) `042_sop.sql` — sop-Tabelle mit RLS (strategaize_admin Full, tenant_admin Read), Indexes, GRANTs. (2) `045_template_v2_fields.sql` — template.sop_prompt JSONB + template.owner_fields JSONB. (3) `048_rpc_sop.sql` — rpc_create_sop + rpc_update_sop RPCs + Exit-Readiness sop_prompt Content.
+- Affected Areas: sop-Tabelle (neu), template-Tabelle (2 neue Spalten), 2 neue RPCs
+- Reason: SLC-016 SOP Generation Backend (FEAT-012)
+- Risk: Gering — neue Tabelle + neue Spalten, keine Aenderung an bestehenden Strukturen.
+- Rollback Notes: `DROP TABLE sop; ALTER TABLE template DROP COLUMN sop_prompt, DROP COLUMN owner_fields; DROP FUNCTION rpc_create_sop; DROP FUNCTION rpc_update_sop;`

@@ -265,7 +265,7 @@
       "title": "SOP Generation (Level 2)",
       "type": "feature",
       "priority": "high",
-      "status": "open",
+      "status": "in_progress",
       "version": "V2",
       "description": "Aus verdichteten Knowledge Units werden pro Block Standard Operating Procedures generiert. On-demand per Button, template-spezifischer Prompt. JSON-Export. Zweite Verdichtungsebene nach KUs. Siehe FEAT-012.",
       "createdAt": "2026-04-19"
