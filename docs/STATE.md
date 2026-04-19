@@ -10,18 +10,18 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: V2 Implementation. SLC-013 (Orchestrator-Integration) done. Naechster Schritt: /qa SLC-013, dann /backend SLC-014.
+- Current Focus: V2 Implementation. SLC-013 + SLC-014 done (2/10). Naechster Schritt: /qa SLC-014, dann /frontend SLC-015.
 - Current Phase: V2 Implementation
 
 ## Immediate Next Steps
-1. /qa SLC-013 (Orchestrator-Integration)
-2. /backend SLC-014 (Gap-Question-Backend — 7 MTs, Blocker)
-3. /qa nach SLC-014
+1. /qa SLC-014 (Gap-Question-Backend)
+2. /frontend SLC-015 (Backspelling-UI — 6 MTs, High)
+3. /qa nach SLC-015
 
 ## Active Scope
-V2 — 10 Slices, 67 Micro-Tasks (1/10 done):
+V2 — 10 Slices, 67 Micro-Tasks (2/10 done):
 - SLC-013 Orchestrator-Integration (6 MTs) — done
-- SLC-014 Gap-Question-Backend (7 MTs) — Blocker
+- SLC-014 Gap-Question-Backend (7 MTs) — done
 - SLC-015 Backspelling-UI (6 MTs) — High
 - SLC-016 SOP-Backend (7 MTs) — High
 - SLC-017 SOP-UI (6 MTs) — High

@@ -1,12 +1,13 @@
-// Complete Job Handler — Orchestrates the condensation pipeline for one job.
-// 1. Load block checkpoint + template
-// 2. Extract answers + block definition
-// 3. Run iteration loop (Analyst→Challenger)
-// 4. Persist Knowledge Units via RPC
-// 5. Embed Knowledge Units for semantic search (fire-and-forget)
-// 6. Run orchestrator assessment (quality report + gap detection)
-// 7. Log costs and iterations
-// 8. Mark job as completed
+// Re-Condensation Job Handler — processes recondense_with_gaps jobs.
+// 1. Load original checkpoint + gap answers
+// 2. Build extended input (original answers + gap answers)
+// 3. Run A+C loop with extended input
+// 4. Create new block_checkpoint (type=backspelling_recondense)
+// 5. Import new KUs + embed
+// 6. Run orchestrator
+// 7. If further gaps AND round < 2: create new gap_questions
+// 8. If round >= 2: log meeting_agenda recommendation
+// 9. Mark original gap_questions as recondensed
 
 import { createAdminClient } from "../../lib/supabase/admin";
 import { captureException } from "../../lib/logger";
@@ -21,60 +22,57 @@ import type {
 } from "./types";
 
 /**
- * Handle a single knowledge_unit_condensation job.
- * Called by the claim loop after successfully claiming a job.
+ * Handle a recondense_with_gaps job.
+ * Re-runs A+C+Orchestrator with original answers + gap answers as extended input.
  */
-export async function handleCondensationJob(job: ClaimedJob): Promise<void> {
+export async function handleRecondenseJob(job: ClaimedJob): Promise<void> {
   const adminClient = createAdminClient();
   const startTime = Date.now();
+  const payload = job.payload;
 
-  console.log(`[handle-job] Processing job ${job.id} for tenant ${job.tenant_id}`);
+  const originalCheckpointId = payload.block_checkpoint_id as string;
+  const gapQuestionIds = (payload.gap_question_ids as string[]) || [];
 
-  // 1. Load block checkpoint
-  const checkpointId = job.payload.block_checkpoint_id as string;
-  if (!checkpointId) {
-    throw new Error("Job payload missing block_checkpoint_id");
-  }
+  console.log(
+    `[handle-recondense] Processing job ${job.id}: checkpoint=${originalCheckpointId}, ` +
+      `gaps=${gapQuestionIds.length}`
+  );
 
+  // 1. Load original checkpoint
   const { data: checkpoint, error: cpError } = await adminClient
     .from("block_checkpoint")
-    .select("id, tenant_id, capture_session_id, block_key, content, checkpoint_type")
-    .eq("id", checkpointId)
+    .select("id, tenant_id, capture_session_id, block_key, content, created_by")
+    .eq("id", originalCheckpointId)
     .single();
 
   if (cpError || !checkpoint) {
-    throw new Error(`Failed to load checkpoint ${checkpointId}: ${cpError?.message}`);
+    throw new Error(`Failed to load checkpoint ${originalCheckpointId}: ${cpError?.message}`);
   }
 
-  console.log(`[handle-job] Checkpoint loaded: block=${checkpoint.block_key}, session=${checkpoint.capture_session_id}`);
-
-  // 2. Load template for this session
-  const { data: session, error: sessError } = await adminClient
+  // 2. Load template
+  const { data: session } = await adminClient
     .from("capture_session")
     .select("template_id, template_version")
     .eq("id", checkpoint.capture_session_id)
     .single();
 
-  if (sessError || !session) {
-    throw new Error(`Failed to load session ${checkpoint.capture_session_id}: ${sessError?.message}`);
+  if (!session) {
+    throw new Error(`Failed to load session ${checkpoint.capture_session_id}`);
   }
 
-  const { data: template, error: tmplError } = await adminClient
+  const { data: template } = await adminClient
     .from("template")
     .select("blocks")
     .eq("id", session.template_id)
     .single();
 
-  if (tmplError || !template) {
-    throw new Error(`Failed to load template ${session.template_id}: ${tmplError?.message}`);
+  if (!template) {
+    throw new Error(`Failed to load template ${session.template_id}`);
   }
 
-  // 3. Extract block definition and answers
+  // 3. Extract block definition
   const blocks = template.blocks as Array<Record<string, unknown>>;
-  const blockDef = blocks.find(
-    (b) => (b.key as string) === checkpoint.block_key
-  );
-
+  const blockDef = blocks.find((b) => (b.key as string) === checkpoint.block_key);
   if (!blockDef) {
     throw new Error(`Block "${checkpoint.block_key}" not found in template`);
   }
@@ -97,40 +95,95 @@ export async function handleCondensationJob(job: ClaimedJob): Promise<void> {
       : [],
   };
 
-  // Extract answers from checkpoint content
+  // 4. Extract original answers
   const content = checkpoint.content as Record<string, unknown>;
-  const answers = extractAnswers(content, block);
+  const originalAnswers = extractOriginalAnswers(content, block);
 
-  const knownQuestionIds = block.questions.map((q) => q.id);
+  // 5. Load gap answers
+  const { data: gapQuestions } = await adminClient
+    .from("gap_question")
+    .select("id, question_text, answer_text, subtopic, backspelling_round")
+    .in("id", gapQuestionIds)
+    .eq("status", "answered");
+
+  const currentRound = gapQuestions?.[0]?.backspelling_round ?? 1;
+
+  // Build extended answers: original + gap answers as synthetic Q&A
+  const gapAnswers: BlockAnswer[] = (gapQuestions || []).map((g) => ({
+    question_id: `gap_${g.id.substring(0, 8)}`,
+    question_text: g.question_text,
+    answer_text: g.answer_text || "",
+    subtopic: g.subtopic || undefined,
+    block_key: block.key,
+  }));
+
+  const allAnswers = [...originalAnswers, ...gapAnswers];
+  const knownQuestionIds = [
+    ...block.questions.map((q) => q.id),
+    ...gapAnswers.map((g) => g.question_id),
+  ];
 
   console.log(
-    `[handle-job] Block ${block.key}: ${block.questions.length} questions, ` +
-      `${answers.length} answers with content`
+    `[handle-recondense] Block ${block.key}: ${originalAnswers.length} original + ` +
+      `${gapAnswers.length} gap answers, round=${currentRound}`
   );
 
-  // 4. Run iteration loop
+  // 6. Run A+C loop with extended input
   const result = await runIterationLoop({
     blockKey: checkpoint.block_key,
     block,
-    answers,
+    answers: allAnswers,
     knownQuestionIds,
     onIterationComplete: async (iterResult: IterationResult) => {
-      // Log each iteration to ai_iterations_log
       await logIteration(adminClient, job.id, iterResult);
     },
   });
 
   console.log(
-    `[handle-job] Loop completed: ${result.total_iterations} iterations, ` +
-      `verdict=${result.final_verdict}, ${result.debrief_items.length} items`
+    `[handle-recondense] Loop completed: ${result.total_iterations} iterations, ` +
+      `${result.debrief_items.length} items`
   );
 
-  // 5. Persist Knowledge Units via RPC
+  // 7. Create new block_checkpoint (backspelling_recondense)
+  const recondenseContent = {
+    ...content,
+    gap_answers: (gapQuestions || []).map((g) => ({
+      gap_id: g.id,
+      question: g.question_text,
+      answer: g.answer_text,
+      subtopic: g.subtopic,
+    })),
+    backspelling_round: currentRound,
+  };
+
+  const contentHash = simpleHash(JSON.stringify(recondenseContent));
+
+  const { data: newCheckpoint, error: cpCreateError } = await adminClient
+    .from("block_checkpoint")
+    .insert({
+      tenant_id: checkpoint.tenant_id,
+      capture_session_id: checkpoint.capture_session_id,
+      block_key: checkpoint.block_key,
+      checkpoint_type: "backspelling_recondense",
+      content: recondenseContent,
+      content_hash: contentHash,
+      created_by: checkpoint.created_by as string,
+    })
+    .select("id")
+    .single();
+
+  if (cpCreateError || !newCheckpoint) {
+    throw new Error(`Failed to create recondense checkpoint: ${cpCreateError?.message}`);
+  }
+
+  console.log(`[handle-recondense] New checkpoint created: ${newCheckpoint.id}`);
+
+  // 8. Import KUs on new checkpoint
   if (result.debrief_items.length > 0) {
     const kuPayload = result.debrief_items.map((item) => ({
       tenant_id: checkpoint.tenant_id,
       capture_session_id: checkpoint.capture_session_id,
-      block_checkpoint_id: checkpoint.id,
+      block_checkpoint_id: newCheckpoint.id,
       block_key: checkpoint.block_key,
       unit_type: item.unit_type,
       source: "ai_draft",
@@ -146,87 +199,78 @@ export async function handleCondensationJob(job: ClaimedJob): Promise<void> {
     );
 
     if (importError) {
-      throw new Error(`Failed to import KUs: ${importError.message}`);
+      throw new Error(`Failed to import recondensed KUs: ${importError.message}`);
     }
 
     const importedIds = ((importResult as Record<string, unknown>)?.ids as string[]) || [];
-    console.log(
-      `[handle-job] Imported ${(importResult as Record<string, unknown>)?.inserted_count || 0} knowledge units`
-    );
-
-    // 5b. Embed KUs for semantic search (fire-and-forget)
     if (importedIds.length > 0) {
       embedKnowledgeUnits(importedIds, job.tenant_id, job.id).catch((err) => {
         captureException(err, {
-          source: "handle-job",
+          source: "handle-recondense",
           metadata: { jobId: job.id, action: "embed-knowledge-units" },
         });
       });
     }
   }
 
-  // 6. Run orchestrator assessment
+  // 9. Run orchestrator on new checkpoint
   try {
     const orchestratorResult = await runOrchestratorAssessment({
       adminClient,
       job,
-      checkpointId: checkpoint.id,
+      checkpointId: newCheckpoint.id,
       block,
-      answers,
+      answers: allAnswers,
       debriefItems: result.debrief_items,
     });
 
-    console.log(
-      `[handle-job] Orchestrator: score=${orchestratorResult.quality_report.overall_score}, ` +
-        `recommendation=${orchestratorResult.quality_report.recommendation}, ` +
-        `gaps=${orchestratorResult.quality_report.gap_questions.length}`
-    );
+    // 9b. Handle gap questions from re-assessment
+    const newGaps = orchestratorResult.quality_report.gap_questions;
+    if (newGaps.length > 0 && currentRound < 2) {
+      // Round < 2: create new gaps for another backspelling round
+      const gapsPayload = newGaps.map((g) => ({
+        question_text: g.question_text,
+        context: g.context,
+        subtopic: g.subtopic,
+        priority: g.priority,
+        related_ku_title: g.related_ku_title || null,
+      }));
 
-    // 6b. Persist gap questions if any
-    if (orchestratorResult.quality_report.gap_questions.length > 0) {
-      try {
-        const gapsPayload = orchestratorResult.quality_report.gap_questions.map((g) => ({
-          question_text: g.question_text,
-          context: g.context,
-          subtopic: g.subtopic,
-          priority: g.priority,
-          related_ku_title: g.related_ku_title || null,
-        }));
+      await adminClient.rpc("rpc_create_gap_questions", {
+        p_checkpoint_id: newCheckpoint.id,
+        p_gaps: gapsPayload,
+      });
 
-        const { data: gapResult, error: gapError } = await adminClient.rpc(
-          "rpc_create_gap_questions",
-          { p_checkpoint_id: checkpoint.id, p_gaps: gapsPayload }
-        );
-
-        if (gapError) {
-          console.error(`[handle-job] Gap creation failed: ${gapError.message}`);
-        } else {
-          const gapInfo = gapResult as { inserted_count: number; round?: number; reason?: string };
-          console.log(
-            `[handle-job] Gap questions created: ${gapInfo.inserted_count} ` +
-              `(round=${gapInfo.round || "n/a"}${gapInfo.reason ? ", reason=" + gapInfo.reason : ""})`
-          );
-        }
-      } catch (gapErr) {
-        captureException(gapErr, {
-          source: "handle-job",
-          metadata: { jobId: job.id, action: "create-gap-questions" },
-        });
-      }
+      console.log(
+        `[handle-recondense] Round ${currentRound} → ${newGaps.length} new gaps created ` +
+          `(round ${currentRound + 1} available)`
+      );
+    } else if (newGaps.length > 0 && currentRound >= 2) {
+      // Round >= 2: max reached, remaining gaps become meeting agenda
+      console.log(
+        `[handle-recondense] Round ${currentRound} reached max. ` +
+          `${newGaps.length} remaining gaps → meeting agenda`
+      );
     }
   } catch (err) {
-    // Orchestrator failure is non-fatal — KUs are already persisted
     captureException(err, {
-      source: "handle-job",
+      source: "handle-recondense",
       metadata: { jobId: job.id, action: "orchestrator-assessment" },
     });
-    console.error(`[handle-job] Orchestrator failed (non-fatal): ${err}`);
   }
 
-  // 7. Log costs
+  // 10. Mark original gap questions as recondensed
+  if (gapQuestionIds.length > 0) {
+    await adminClient
+      .from("gap_question")
+      .update({ status: "recondensed" })
+      .in("id", gapQuestionIds);
+  }
+
+  // 11. Log costs
   await logCosts(adminClient, job, result);
 
-  // 8. Mark job as completed
+  // 12. Mark job as completed
   const { error: completeError } = await adminClient.rpc("rpc_complete_ai_job", {
     p_job_id: job.id,
   });
@@ -237,24 +281,19 @@ export async function handleCondensationJob(job: ClaimedJob): Promise<void> {
 
   const totalDuration = Date.now() - startTime;
   console.log(
-    `[handle-job] Job ${job.id} completed in ${totalDuration}ms ` +
-      `(${result.total_iterations} iterations, ` +
-      `${result.debrief_items.length} KUs, ` +
-      `$${result.total_cost.usd_cost.toFixed(4)})`
+    `[handle-recondense] Job ${job.id} completed in ${totalDuration}ms ` +
+      `(round=${currentRound}, ${result.debrief_items.length} KUs)`
   );
 }
 
-/**
- * Extract answers from checkpoint content.
- * Supports both flat format {questionId: answerText} and structured format.
- */
-function extractAnswers(
+// --- Helper functions (shared patterns from handle-job.ts) ---
+
+function extractOriginalAnswers(
   content: Record<string, unknown>,
   block: BlockDefinition
 ): BlockAnswer[] {
   const answers: BlockAnswer[] = [];
 
-  // Try structured format: { answers: [{question_id, answer_text}] }
   if (Array.isArray(content.answers)) {
     for (const a of content.answers as Array<Record<string, unknown>>) {
       const questionId = String(a.question_id || a.questionId || "");
@@ -273,7 +312,6 @@ function extractAnswers(
     return answers;
   }
 
-  // Try flat format: {questionId: answerText} or nested in a block key
   const flatData = (content[block.key] as Record<string, unknown>) || content;
   for (const question of block.questions) {
     const answerText = flatData[question.id];
@@ -291,10 +329,6 @@ function extractAnswers(
   return answers;
 }
 
-/**
- * Build the KU body text from a debrief item.
- * Includes current_state, target_state, scores, and recommendation.
- */
 function buildKuBody(item: {
   current_state: string;
   target_state: string;
@@ -310,39 +344,36 @@ function buildKuBody(item: {
   effort: string;
 }): string {
   const lines: string[] = [];
-
   if (item.body) {
-    lines.push(item.body);
-    lines.push("");
+    lines.push(item.body, "");
   }
-
   lines.push(`**Ist-Zustand:** ${item.current_state}`);
   lines.push(`**Soll-Zustand:** ${item.target_state}`);
   lines.push("");
-  lines.push(
-    `**Scores:** Maturity ${item.maturity}/10 | Risk ${item.risk}/10 | Leverage ${item.leverage}/10`
-  );
-  lines.push(
-    `**Priorität:** ${item.priority} | **Ampel:** ${item.traffic_light} | **Aufwand:** ${item.effort}`
-  );
+  lines.push(`**Scores:** Maturity ${item.maturity}/10 | Risk ${item.risk}/10 | Leverage ${item.leverage}/10`);
+  lines.push(`**Priorität:** ${item.priority} | **Ampel:** ${item.traffic_light} | **Aufwand:** ${item.effort}`);
   lines.push("");
   lines.push(`**Empfehlung:** ${item.recommendation}`);
   lines.push(`**Nächster Schritt:** ${item.next_step}`);
   lines.push(`**Verantwortlich:** ${item.owner}`);
-
   return lines.join("\n");
 }
 
-/**
- * Log iteration data to ai_iterations_log.
- */
+function simpleHash(str: string): string {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash + char) | 0;
+  }
+  return Math.abs(hash).toString(36);
+}
+
 async function logIteration(
-  adminClient: ReturnType<typeof createAdminClient>,
+  adminClient: ReturnType<typeof import("../../lib/supabase/admin").createAdminClient>,
   jobId: string,
   iterResult: IterationResult
 ): Promise<void> {
   try {
-    // Log analyst step
     await adminClient.from("ai_iterations_log").insert({
       job_id: jobId,
       iteration_number: iterResult.iteration,
@@ -357,7 +388,6 @@ async function logIteration(
       },
     });
 
-    // Log challenger step
     await adminClient.from("ai_iterations_log").insert({
       job_id: jobId,
       iteration_number: iterResult.iteration,
@@ -379,17 +409,14 @@ async function logIteration(
     });
   } catch (err) {
     captureException(err, {
-      source: "handle-job",
-      metadata: { jobId, iteration: iterResult.iteration, action: "log-iteration" },
+      source: "handle-recondense",
+      metadata: { jobId, iteration: iterResult.iteration },
     });
   }
 }
 
-/**
- * Log total costs to ai_cost_ledger.
- */
 async function logCosts(
-  adminClient: ReturnType<typeof createAdminClient>,
+  adminClient: ReturnType<typeof import("../../lib/supabase/admin").createAdminClient>,
   job: ClaimedJob,
   result: { iteration_log: IterationResult[]; total_cost: { model_id: string } }
 ): Promise<void> {
@@ -405,6 +432,7 @@ async function logCosts(
         duration_ms: iter.analyst_cost.duration_ms,
         iteration: iter.iteration,
         role: "analyst",
+        feature: "recondense",
       },
       {
         tenant_id: job.tenant_id,
@@ -416,19 +444,14 @@ async function logCosts(
         duration_ms: iter.challenger_cost.duration_ms,
         iteration: iter.iteration,
         role: "challenger",
+        feature: "recondense",
       },
     ]);
 
-    const { error } = await adminClient.from("ai_cost_ledger").insert(costEntries);
-    if (error) {
-      captureException(new Error(`Failed to log costs: ${error.message}`), {
-        source: "handle-job",
-        metadata: { jobId: job.id },
-      });
-    }
+    await adminClient.from("ai_cost_ledger").insert(costEntries);
   } catch (err) {
     captureException(err, {
-      source: "handle-job",
+      source: "handle-recondense",
       metadata: { jobId: job.id, action: "log-costs" },
     });
   }

@@ -14,27 +14,37 @@ export interface ClaimedJob {
 
 export type JobHandler = (job: ClaimedJob) => Promise<void>;
 
-const JOB_TYPE = "knowledge_unit_condensation";
+const JOB_TYPES = ["knowledge_unit_condensation", "recondense_with_gaps"] as const;
 
 /**
  * Start the polling claim-loop.
+ * Polls for multiple job types in round-robin fashion.
  * Runs indefinitely until the process is killed.
  */
-export async function startClaimLoop(handler: JobHandler): Promise<never> {
+export async function startClaimLoop(
+  handler: JobHandler,
+  recondenseHandler?: JobHandler
+): Promise<never> {
   const pollMs = parseInt(process.env.AI_WORKER_POLL_MS || "2000", 10);
   const adminClient = createAdminClient();
 
-  captureInfo(`Worker claim-loop started (poll=${pollMs}ms, type=${JOB_TYPE})`, {
+  captureInfo(`Worker claim-loop started (poll=${pollMs}ms, types=${JOB_TYPES.join(",")})`, {
     source: "claim-loop",
   });
+
+  let typeIndex = 0;
 
   // eslint-disable-next-line no-constant-condition
   while (true) {
     try {
+      // Round-robin across job types
+      const jobType = JOB_TYPES[typeIndex % JOB_TYPES.length];
+      typeIndex++;
+
       // Claim next pending job via SKIP LOCKED RPC
       const { data, error } = await adminClient.rpc(
         "rpc_claim_next_ai_job_for_type",
-        { p_job_type: JOB_TYPE }
+        { p_job_type: jobType }
       );
 
       if (error) {
@@ -55,9 +65,13 @@ export async function startClaimLoop(handler: JobHandler): Promise<never> {
       const job = data as ClaimedJob;
       console.log(`[claim-loop] Claimed job ${job.id} (tenant=${job.tenant_id})`);
 
-      // Dispatch to handler
+      // Dispatch to correct handler based on job_type
       try {
-        await handler(job);
+        if (job.job_type === "recondense_with_gaps" && recondenseHandler) {
+          await recondenseHandler(job);
+        } else {
+          await handler(job);
+        }
       } catch (handlerError) {
         // Handler failed — mark job as failed
         captureException(handlerError, {

@@ -31,7 +31,7 @@
 | ID | Slice | Feature | Status | Priority | Created |
 |----|-------|---------|--------|----------|---------|
 | SLC-013 | [Orchestrator-Integration](SLC-013-orchestrator-integration.md) | FEAT-010 | done | Blocker | 2026-04-19 |
-| SLC-014 | [Gap-Question-Schema + Backspelling-Backend](SLC-014-gap-question-backend.md) | FEAT-010, FEAT-011 | planned | Blocker | 2026-04-19 |
+| SLC-014 | [Gap-Question-Schema + Backspelling-Backend](SLC-014-gap-question-backend.md) | FEAT-010, FEAT-011 | done | Blocker | 2026-04-19 |
 | SLC-015 | [Backspelling-UI](SLC-015-backspelling-ui.md) | FEAT-011 | planned | High | 2026-04-19 |
 | SLC-016 | [SOP-Schema + Generation](SLC-016-sop-backend.md) | FEAT-012 | planned | High | 2026-04-19 |
 | SLC-017 | [SOP-UI](SLC-017-sop-ui.md) | FEAT-012 | planned | High | 2026-04-19 |

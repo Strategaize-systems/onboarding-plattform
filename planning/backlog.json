@@ -255,7 +255,7 @@
       "title": "Auto-Gap-Backspelling",
       "type": "feature",
       "priority": "high",
-      "status": "open",
+      "status": "in_progress",
       "version": "V2",
       "description": "Orchestrator erkennt Luecken → generiert Nachfragen → Kunde beantwortet im Questionnaire → Re-Verdichtung. Max 2 Runden, danach Meeting-Agenda. Schliesst den Feedback-Loop automatisch. Siehe FEAT-011.",
       "createdAt": "2026-04-19"
