@@ -9,35 +9,33 @@
 Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdichtung. Ermoeglicht mehrere Capture-Modi (Fragebogen, Meeting, Voice, etc.) und Template-basierte Produktvarianten (z.B. Exit-Readiness, Immobilien-Onboarding).
 
 ## Current State
-- High-Level State: architecture
-- Current Focus: V2 Architecture abgeschlossen. 5 neue DECs (DEC-017..021), 10 Migrations geplant (MIG-013), 10 Slices empfohlen. Naechster Schritt: /slice-planning.
-- Current Phase: V2 Architecture
+- High-Level State: slice-planning
+- Current Focus: V2 Slice-Planning abgeschlossen. 10 Slices (SLC-013..022) mit 67 Micro-Tasks. Naechster Schritt: /backend SLC-013 (Orchestrator-Integration).
+- Current Phase: V2 Slice-Planning
 
 ## Immediate Next Steps
-1. V2 /slice-planning (10 Slices mit Micro-Tasks)
-2. Dann /backend SLC-013 (Orchestrator-Integration)
+1. /backend SLC-013 (Orchestrator-Integration — 6 MTs, Blocker)
+2. /qa nach SLC-013
+3. /backend SLC-014 (Gap-Question-Backend — 7 MTs)
 
 ## Active Scope
-V2 — Intelligence Upgrade + Evidence + Template-Expansion (6 Features):
-- FEAT-010 3-Agent Orchestrator Loop — planned
-- FEAT-011 Auto-Gap-Backspelling — planned
-- FEAT-012 SOP Generation (Level 2) — planned
-- FEAT-013 Evidence-Mode + Bulk-Import — planned
-- FEAT-014 Second Template + Switcher UI — planned
-- FEAT-015 Voice Input (Whisper) — planned
+V2 — 10 Slices, 67 Micro-Tasks:
+- SLC-013 Orchestrator-Integration (6 MTs) — Blocker
+- SLC-014 Gap-Question-Backend (7 MTs) — Blocker
+- SLC-015 Backspelling-UI (6 MTs) — High
+- SLC-016 SOP-Backend (7 MTs) — High
+- SLC-017 SOP-UI (6 MTs) — High
+- SLC-018 Evidence-Schema+Storage (5 MTs) — High
+- SLC-019 Evidence-Extraction+Mapping (8 MTs) — High
+- SLC-020 Evidence-UI (6 MTs) — High
+- SLC-021 Template-Switcher (7 MTs) — Medium
+- SLC-022 Whisper-Voice-Input (7 MTs) — Medium
 
 ## Blockers
 - aktuell keine
 
 ## Last Stable Version
-- V1.1 — 2026-04-19 — released auf https://onboarding.strategaizetransition.com (REL-003). Post-Launch STABLE (RPT-037).
+- V1.1 — 2026-04-19 — released auf https://onboarding.strategaizetransition.com (REL-003).
 
 ## Notes
-V2-Architektur-Kernentscheidungen:
-- DEC-017: Alle neuen Job-Types im bestehenden Worker (kein neuer Service)
-- DEC-018: Self-hosted Whisper + Adapter-Pattern (Container existiert bereits)
-- DEC-019: Evidence in Supabase Storage (tenant-isoliert)
-- DEC-020: SOP on-demand (nicht automatisch)
-- DEC-021: Demo-Template PoC, Template-Editor erst V3
-
-Keine neuen Docker-Services. Keine neuen Cloud-Provider. Bestehende Infrastruktur wird erweitert.
+Parallelisierungs-Potential: Evidence-Kette (SLC-018..020) kann parallel zur Orchestrator+SOP-Kette (SLC-013..017) laufen. Whisper (SLC-022) ist komplett unabhaengig.

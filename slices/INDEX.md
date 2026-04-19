@@ -26,8 +26,32 @@
 | SLC-011 | [Blueprint-Legacy-Cleanup](SLC-011-legacy-cleanup.md) | FEAT-007 | done | High | 2026-04-18 |
 | SLC-012 | [Dashboard + Error-Logging](SLC-012-dashboard-errorlog.md) | FEAT-008, FEAT-009 | done | High | 2026-04-18 |
 
+## V2 Slices (Intelligence Upgrade + Evidence + Template-Expansion)
+
+| ID | Slice | Feature | Status | Priority | Created |
+|----|-------|---------|--------|----------|---------|
+| SLC-013 | [Orchestrator-Integration](SLC-013-orchestrator-integration.md) | FEAT-010 | planned | Blocker | 2026-04-19 |
+| SLC-014 | [Gap-Question-Schema + Backspelling-Backend](SLC-014-gap-question-backend.md) | FEAT-010, FEAT-011 | planned | Blocker | 2026-04-19 |
+| SLC-015 | [Backspelling-UI](SLC-015-backspelling-ui.md) | FEAT-011 | planned | High | 2026-04-19 |
+| SLC-016 | [SOP-Schema + Generation](SLC-016-sop-backend.md) | FEAT-012 | planned | High | 2026-04-19 |
+| SLC-017 | [SOP-UI](SLC-017-sop-ui.md) | FEAT-012 | planned | High | 2026-04-19 |
+| SLC-018 | [Evidence-Schema + Storage](SLC-018-evidence-schema-storage.md) | FEAT-013 | planned | High | 2026-04-19 |
+| SLC-019 | [Evidence-Extraction + Mapping](SLC-019-evidence-extraction-mapping.md) | FEAT-013 | planned | High | 2026-04-19 |
+| SLC-020 | [Evidence-UI](SLC-020-evidence-ui.md) | FEAT-013 | planned | High | 2026-04-19 |
+| SLC-021 | [Template-Erweiterung + Demo-Template](SLC-021-template-switcher.md) | FEAT-014 | planned | Medium | 2026-04-19 |
+| SLC-022 | [Whisper-Adapter + Voice-Input](SLC-022-whisper-voice-input.md) | FEAT-015 | planned | Medium | 2026-04-19 |
+
 ## Execution Order Notes
 
 - **SLC-001** ist Code+Schema+Deploy `done` (RPT-006 Mixed: Test-Coverage in SLC-002a nachgeholt — Status hier bewusst auf `done` gehoben, Gap wird nicht mehr als in_progress gezaehlt).
 - **Reihenfolge-Grund:** SLC-002 kommt vor 002a, weil 002a den neuen Rollen-Namen bereits voraussetzt. 002b kommt nach 002a, damit der Seed sofort gegen die Test-Infra verifiziert werden kann. 002c kann parallel oder zwischendrin laufen. 002d wurde beim Login-Smoketest nach SLC-002b entdeckt (Blueprint-Legacy-Profile-Flow verweist auf entfernte `owner_profiles`-Tabelle, ISSUE-009) und sollte vor SLC-003 laufen, damit die Owner-Profile-UI den Template-Flow nicht torpediert.
 - **Vor SLC-005** muss SLC-002a durch sein — SaaS-TDD-Mandat.
+
+### V2 Execution Order
+- **SLC-013 → SLC-014 → SLC-015:** Orchestrator → Backspelling-Backend → Backspelling-UI (strikt sequentiell, jeder baut auf dem vorherigen auf)
+- **SLC-016 → SLC-017:** SOP-Backend → SOP-UI (SLC-016 kann parallel zu SLC-014 laufen, braucht nur SLC-013)
+- **SLC-018 → SLC-019 → SLC-020:** Evidence-Infra → Extraktion → UI (strikt sequentiell, aber unabhaengig von Orchestrator-Kette)
+- **SLC-021:** Template-Erweiterung (braucht SLC-016 MT-2 fuer template.sop_prompt Spalte, kann sonst parallel)
+- **SLC-022:** Whisper (komplett unabhaengig, kann jederzeit laufen)
+- **Empfohlene Reihenfolge:** 013 → 014 → 015 → 016 → 017 → 018 → 019 → 020 → 021 → 022
+- **Parallelisierbar:** SLC-018..020 (Evidence) kann parallel zu SLC-014..017 (Orchestrator+SOP) laufen. SLC-022 (Whisper) kann jederzeit eingeschoben werden.
