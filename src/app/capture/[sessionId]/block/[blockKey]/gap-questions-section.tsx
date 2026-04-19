@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { AlertCircle, CheckCircle2, Loader2, MessageSquare, SkipForward } from "lucide-react";
+import { CheckCircle2, Loader2, MessageSquare, SkipForward } from "lucide-react";
 import { useGapQuestions, type GapQuestion } from "./use-gap-questions";
 import { answerGapQuestion, skipGapQuestion } from "./gap-actions";
 

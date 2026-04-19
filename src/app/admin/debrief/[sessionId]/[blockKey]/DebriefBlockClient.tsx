@@ -106,7 +106,6 @@ function BackspellingStatusSection({
   stats: GapQuestionStats;
   qualityReport?: Record<string, unknown> | null;
 }) {
-  const total = stats.pending + stats.answered + stats.skipped;
   const overallScore = qualityReport?.overall_score as string | undefined;
 
   const scoreColor: Record<string, string> = {
