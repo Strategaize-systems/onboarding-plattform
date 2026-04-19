@@ -10,17 +10,16 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: V2 Scope-Erweiterung. SLC-013..017 done (5/12). FEAT-010, FEAT-011, FEAT-012 komplett. FEAT-016 Architektur + Slice-Planning done — bereit fuer Implementation.
+- Current Focus: V2 Scope-Erweiterung. SLC-013..017 + SLC-023 done (6/12). FEAT-010, FEAT-011, FEAT-012 komplett. FEAT-016 Backend done — Frontend naechster Schritt.
 - Current Phase: V2 Implementation (FEAT-016 Diagnose-Layer)
 
 ## Immediate Next Steps
-1. /backend SLC-023 (Diagnose-Backend: block_diagnosis + Worker + RPCs + Template-Seed, 8 MTs)
-2. /qa SLC-023
-3. /frontend SLC-024 (Diagnose-Frontend + SOP-Gate, 7 MTs)
-4. /qa SLC-024
+1. /qa SLC-023 (Diagnose-Backend)
+2. /frontend SLC-024 (Diagnose-Frontend + SOP-Gate, 7 MTs)
+3. /qa SLC-024
 
 ## Active Scope
-V2 — 12 Slices (5/12 done):
+V2 — 12 Slices (6/12 done):
 - SLC-013 Orchestrator-Integration (6 MTs) — done
 - SLC-014 Gap-Question-Backend (7 MTs) — done
 - SLC-015 Backspelling-UI (6 MTs) — done
@@ -31,7 +30,7 @@ V2 — 12 Slices (5/12 done):
 - SLC-020 Evidence-UI (6 MTs) — High
 - SLC-021 Template-Switcher (7 MTs) — Medium
 - SLC-022 Whisper-Voice-Input (7 MTs) — Medium
-- SLC-023 Diagnose-Backend (8 MTs) — Blocker (FEAT-016)
+- SLC-023 Diagnose-Backend (8 MTs) — done
 - SLC-024 Diagnose-Frontend + SOP-Gate (7 MTs) — Blocker (FEAT-016)
 
 ## Blockers
