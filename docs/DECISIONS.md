@@ -81,3 +81,28 @@
 - Status: accepted
 - Reason: Im Debrief-Meeting kann der strategaize_admin eigene Beobachtungen, Erkenntnisse oder Massnahmen ergaenzen, die nicht aus dem Fragebogen oder der KI-Verdichtung stammen. Diese brauchen eine eigene Source-Kennzeichnung, um im Audit-Trail und in der UI klar von KI-generierten oder Fragebogen-basierten KUs unterscheidbar zu sein. Der Wert 'manual' existiert bereits im CHECK-Constraint von knowledge_unit.source (Migration 021).
 - Consequence: RPC `rpc_add_knowledge_unit` (Migration 037) setzt `source = 'manual'` fuer alle vom Admin manuell erstellten KUs. Confidence wird auf 'medium' gesetzt (Admin-Input, nicht KI-validiert). Die UI zeigt 'Manuell' als Source-Badge. Validation-Layer erhaelt einen initialen 'comment'-Eintrag bei Erstellung.
+
+## DEC-017 — Orchestrator und alle neuen V2-Job-Types laufen im bestehenden Worker-Container
+- Status: accepted
+- Reason: V1 hat einen einzelnen Worker-Container mit Polling-Loop gegen ai_jobs (SKIP LOCKED). Dieser Ansatz skaliert horizontal (mehrere Worker-Instanzen koennen parallel claimen) und ist einfach zu debuggen. Einen separaten Orchestrator-Service zu bauen wuerde die Deployment-Komplexitaet erhoehen (3 Services statt 2), ohne in V2-Volumen einen Vorteil zu bringen. Die 4 neuen Job-Types (orchestrator_assessment, recondense_with_gaps, sop_generation, evidence_extraction) sind alle I/O-bound (Bedrock-Calls, File-Processing), nicht CPU-bound — kein Grund fuer Service-Trennung.
+- Consequence: Worker handle-job.ts bekommt einen Dispatcher, der nach job_type auf verschiedene Handler delegiert. Alle Handler teilen denselben Bedrock-Client und dieselbe DB-Verbindung. Wenn spaeter ein Job-Type problematisch wird (z.B. Evidence-Extraction blockiert andere Jobs), kann ein zweiter Worker-Container gestartet werden, der nur diesen Type claimed — ohne Code-Aenderung (nur ENV AI_WORKER_JOB_TYPES).
+
+## DEC-018 — Self-hosted Whisper Docker + Adapter-Pattern fuer Onboarding-Plattform
+- Status: accepted
+- Reason: (1) Onboarding-Plattform muss eigenstaendig deploybar sein — kein Shared-Infra mit Business System. (2) Separate API-Accounts pro Plattform fuer Kosten-Tracking spaeter. (3) Whisper-Container existiert bereits im Docker-Compose (Blueprint-Erbe, onerahmet/openai-whisper-asr-webservice). (4) DSGVO: Self-hosted auf eigenem EU-Server ist die sauberste Variante fuer Kundendaten. (5) Adapter-Pattern ermoeglicht spaeteren Switch auf Azure EU oder anderen Provider ohne Code-Rewrite — analog zu Business System DEC-035.
+- Consequence: Whisper-Container wird reaktiviert (ASR_MODEL via ENV konfigurierbar, Default: medium). Neues Adapter-Pattern unter /src/lib/ai/whisper/ (provider.ts Interface, local.ts, azure.ts, factory.ts). ENV WHISPER_PROVIDER=local|azure steuert den Provider. Transkriptions-Endpoint POST /api/capture/[sessionId]/transcribe. Audio wird nach Transkription NICHT persistiert.
+
+## DEC-019 — Evidence-Dateien in Supabase Storage mit tenant-isolierten Pfaden
+- Status: accepted
+- Reason: Supabase Storage ist bereits Teil des Stacks (Container laeuft, File-Backend konfiguriert). Alternatives Vorgehen waere ein eigener S3-Bucket oder ein separater File-Service — beides waere Infrastruktur-Sprawl ohne V2-Nutzen. Storage-Pfad-Pattern {tenant_id}/{session_id}/{filename} garantiert Tenant-Isolation auf Dateisystem-Ebene. Bucket-Policies ergaenzen RLS auf Storage-API-Ebene.
+- Consequence: Neuer Bucket 'evidence' (nicht public, 20MB Limit, definierte MIME-Types). Worker laedt Dateien via Service-Role aus Storage herunter fuer Extraktion. Keine direkte Browser→Storage-Verbindung fuer Evidence (Upload laeuft ueber API-Route fuer Validierung + Logging).
+
+## DEC-020 — SOP-Generation ist on-demand, nicht automatisch
+- Status: accepted
+- Reason: Automatische SOP-Generierung nach jedem Block-Submit wuerde Bedrock-Kosten verdoppeln, ohne dass der Berater die SOP in jedem Fall braucht. SOPs sind ein Mehrwert-Feature fuer das Meeting, nicht ein Muss fuer die Verdichtung. On-demand per Button im Debrief-UI gibt dem strategaize_admin die Kontrolle ueber Kosten und Timing.
+- Consequence: SOP-Generierung wird nur ausgeloest, wenn der strategaize_admin im Debrief-UI den Button klickt. Server Action enqueued ai_job mit type=sop_generation. Worker generiert SOP + speichert in sop-Tabelle. Kein automatischer Trigger nach Verdichtung.
+
+## DEC-021 — Demo-Template fuer V2 PoC, Template-Editor in V3
+- Status: accepted
+- Reason: V2 muss die Template-Flexibilitaet beweisen (SC-3), braucht aber keinen visuellen Template-Editor. Templates per Migration anlegen reicht fuer V2 (ein Demo-Template + das bestehende Exit-Readiness). Der Template-Editor ist ein eigenes Feature mit signifikantem UI-Aufwand (Block-Builder, Frage-Editor, Drag-and-Drop), das den V2-Scope sprengen wuerde. V3 ist der richtige Zeitpunkt.
+- Consequence: FEAT-014 liefert: template.sop_prompt + template.owner_fields Spalten, Template-Switcher-Dropdown bei Session-Erstellung, ein Demo-Template "Mitarbeiter-Wissenserhebung" (4-5 Bloecke) per Migration. Template-Erstellung bleibt Migration-only in V2.

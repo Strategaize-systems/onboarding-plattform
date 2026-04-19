@@ -9,13 +9,13 @@
 Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdichtung. Ermoeglicht mehrere Capture-Modi (Fragebogen, Meeting, Voice, etc.) und Template-basierte Produktvarianten (z.B. Exit-Readiness, Immobilien-Onboarding).
 
 ## Current State
-- High-Level State: requirements
-- Current Focus: V2 Requirements abgeschlossen. 6 Features definiert (FEAT-010..015). Naechster Schritt: /architecture.
-- Current Phase: V2 Requirements
+- High-Level State: architecture
+- Current Focus: V2 Architecture abgeschlossen. 5 neue DECs (DEC-017..021), 10 Migrations geplant (MIG-013), 10 Slices empfohlen. Naechster Schritt: /slice-planning.
+- Current Phase: V2 Architecture
 
 ## Immediate Next Steps
-1. V2 /architecture (Orchestrator-Worker-Erweiterung, Evidence-Storage, Whisper-Infrastruktur, Template-Schema)
-2. Offene Fragen Q6-Q11 klaeren (insb. zweites Template-Thema, Whisper-Infrastruktur)
+1. V2 /slice-planning (10 Slices mit Micro-Tasks)
+2. Dann /backend SLC-013 (Orchestrator-Integration)
 
 ## Active Scope
 V2 — Intelligence Upgrade + Evidence + Template-Expansion (6 Features):
@@ -27,13 +27,17 @@ V2 — Intelligence Upgrade + Evidence + Template-Expansion (6 Features):
 - FEAT-015 Voice Input (Whisper) — planned
 
 ## Blockers
-- Q6: Welches zweite Template? Entscheidung noetig vor /architecture.
-- Q9: Whisper-Infrastruktur (shared/lokal/Azure) — Entscheidung noetig vor /architecture.
+- aktuell keine
 
 ## Last Stable Version
 - V1.1 — 2026-04-19 — released auf https://onboarding.strategaizetransition.com (REL-003). Post-Launch STABLE (RPT-037).
 
 ## Notes
-V2 baut auf stabilem V1.1 auf. Kernidee: vom Fragebogen-Verdichtungs-Tool zum intelligenten Wissens-System. Orchestrator + Backspelling schliessen den Feedback-Loop automatisch. Evidence erweitert die Wissensquellen. SOP liefert operative Handlungsplaene. Zweites Template beweist Plattform-Charakter.
+V2-Architektur-Kernentscheidungen:
+- DEC-017: Alle neuen Job-Types im bestehenden Worker (kein neuer Service)
+- DEC-018: Self-hosted Whisper + Adapter-Pattern (Container existiert bereits)
+- DEC-019: Evidence in Supabase Storage (tenant-isoliert)
+- DEC-020: SOP on-demand (nicht automatisch)
+- DEC-021: Demo-Template PoC, Template-Editor erst V3
 
-Free-Form Capture-Mode (BL-021/BL-031) bewusst deferred — evaluieren gegen V3 Dialogue-Mode.
+Keine neuen Docker-Services. Keine neuen Cloud-Provider. Bestehende Infrastruktur wird erweitert.

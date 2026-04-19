@@ -460,3 +460,415 @@ Zwei Slices reichen. SLC-011 ist rein subtraktiv (Loeschen + Verifizieren). SLC-
 ### Naechster Schritt V1.1
 
 `/slice-planning` mit 2 Slices.
+
+---
+
+## V2 Architecture Addendum — Intelligence Upgrade + Evidence + Template-Expansion
+
+### Status
+V2-Architektur festgelegt am 2026-04-19. Baut auf V1.1-Stack (stabil, released) auf.
+
+### Architektur-Zusammenfassung V2
+
+V2 erweitert den bestehenden Stack ohne neue Docker-Services. Die drei Kernprinzipien:
+
+1. **Worker-Erweiterung statt Service-Explosion** — Orchestrator, SOP-Generation, Evidence-Extraction und Backspelling-Re-Condensation laufen alle als neue Job-Types im bestehenden Worker-Container (DEC-017).
+2. **Whisper reaktivieren, nicht neu bauen** — Der Whisper-Container existiert bereits im Docker-Compose (Blueprint-Erbe). Er wird ueber ein Adapter-Pattern (DEC-018) angebunden, das spaeter Azure EU oder andere Provider erlaubt.
+3. **Template-Infrastruktur statt Template-Hardcoding** — Template-Tabelle bekommt erweiterbare Felder (sop_prompt, owner_fields), ein Demo-Template beweist den Mechanismus.
+
+### Service-Topologie V2
+
+Keine neuen Docker-Services. Bestehende 9 Services + Worker bleiben.
+
+| Service | V2-Aenderung |
+|---------|-------------|
+| `app` | Neue API-Routes (Transcribe, Evidence-Upload, Gap-Questions, SOP-Trigger), Template-Switcher-UI, Evidence-UI, Backspelling-UI |
+| `worker` | 4 neue Job-Types, Orchestrator-Prompt, SOP-Prompt, Evidence-Extraction-Logic |
+| `supabase-storage` | Neuer Bucket `evidence` (tenant-isoliert) |
+| `whisper` | Reaktiviert (bereits vorhanden, ASR_MODEL konfigurierbar via ENV) |
+| Alle anderen | Unveraendert |
+
+### Neue Tabellen V2
+
+#### `gap_question` (FEAT-011 Backspelling)
+Vom Orchestrator erkannte Wissensluecken als strukturierte Nachfragen.
+
+```sql
+CREATE TABLE gap_question (
+  id                    uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id             uuid        NOT NULL REFERENCES tenants ON DELETE CASCADE,
+  capture_session_id    uuid        NOT NULL REFERENCES capture_session ON DELETE CASCADE,
+  block_checkpoint_id   uuid        NOT NULL REFERENCES block_checkpoint ON DELETE CASCADE,
+  knowledge_unit_id     uuid        REFERENCES knowledge_unit ON DELETE SET NULL,
+  question_text         text        NOT NULL,
+  context               text,
+  subtopic              text,
+  priority              text        NOT NULL CHECK (priority IN ('required', 'nice_to_have'))
+                                    DEFAULT 'required',
+  status                text        NOT NULL CHECK (status IN (
+                                      'pending', 'answered', 'skipped', 'recondensed'))
+                                    DEFAULT 'pending',
+  answer_text           text,
+  answered_at           timestamptz,
+  backspelling_round    integer     NOT NULL DEFAULT 1,
+  created_at            timestamptz NOT NULL DEFAULT now()
+);
+```
+
+RLS: tenant_admin/member liest+schreibt eigenen Tenant, strategaize_admin Cross-Tenant.
+
+#### `sop` (FEAT-012 SOP Generation)
+Generierte Standard Operating Procedures pro Block.
+
+```sql
+CREATE TABLE sop (
+  id                    uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id             uuid        NOT NULL REFERENCES tenants ON DELETE CASCADE,
+  capture_session_id    uuid        NOT NULL REFERENCES capture_session ON DELETE CASCADE,
+  block_key             text        NOT NULL,
+  block_checkpoint_id   uuid        NOT NULL REFERENCES block_checkpoint ON DELETE CASCADE,
+  content               jsonb       NOT NULL,
+  generated_by_model    text        NOT NULL,
+  cost_usd              numeric(10,6),
+  created_by            uuid        REFERENCES auth.users,
+  created_at            timestamptz NOT NULL DEFAULT now(),
+  updated_at            timestamptz NOT NULL DEFAULT now()
+);
+```
+
+SOP `content` JSONB-Struktur:
+```json
+{
+  "title": "SOP: Nachfolgeplanung",
+  "objective": "...",
+  "prerequisites": ["..."],
+  "steps": [
+    {
+      "number": 1,
+      "action": "Nachfolger-Profil definieren",
+      "responsible": "Geschaeftsfuehrer",
+      "timeframe": "2 Wochen",
+      "success_criterion": "Schriftliches Profil liegt vor",
+      "dependencies": []
+    }
+  ],
+  "risks": ["..."],
+  "fallbacks": ["..."]
+}
+```
+
+RLS: strategaize_admin Full, tenant_admin Read eigener Tenant.
+
+#### `evidence_file` (FEAT-013 Evidence-Mode)
+Metadaten hochgeladener Dateien.
+
+```sql
+CREATE TABLE evidence_file (
+  id                    uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id             uuid        NOT NULL REFERENCES tenants ON DELETE CASCADE,
+  capture_session_id    uuid        NOT NULL REFERENCES capture_session ON DELETE CASCADE,
+  block_key             text,
+  storage_path          text        NOT NULL,
+  original_filename     text        NOT NULL,
+  mime_type             text        NOT NULL,
+  file_size_bytes       integer     NOT NULL,
+  extraction_status     text        NOT NULL CHECK (extraction_status IN (
+                                      'pending', 'extracting', 'extracted', 'failed'))
+                                    DEFAULT 'pending',
+  extraction_error      text,
+  created_by            uuid        NOT NULL REFERENCES auth.users,
+  created_at            timestamptz NOT NULL DEFAULT now()
+);
+```
+
+RLS: tenant_admin/member Write+Read eigener Tenant, strategaize_admin Cross-Tenant Read.
+
+#### `evidence_chunk` (FEAT-013 Evidence-Mode)
+Extrahierte Text-Chunks mit KI-Mapping-Vorschlaegen.
+
+```sql
+CREATE TABLE evidence_chunk (
+  id                    uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id             uuid        NOT NULL REFERENCES tenants ON DELETE CASCADE,
+  evidence_file_id      uuid        NOT NULL REFERENCES evidence_file ON DELETE CASCADE,
+  chunk_index           integer     NOT NULL,
+  chunk_text            text        NOT NULL,
+  mapping_suggestion    jsonb,
+  mapping_status        text        NOT NULL CHECK (mapping_status IN (
+                                      'pending', 'suggested', 'confirmed', 'rejected'))
+                                    DEFAULT 'pending',
+  confirmed_question_id uuid,
+  confirmed_block_key   text,
+  created_at            timestamptz NOT NULL DEFAULT now()
+);
+```
+
+`mapping_suggestion` JSONB:
+```json
+{
+  "question_id": "uuid",
+  "block_key": "A",
+  "question_text": "Was macht Ihr Unternehmen...",
+  "confidence": 0.85,
+  "relevant_excerpt": "Wir sind spezialisiert auf..."
+}
+```
+
+RLS: analog evidence_file.
+
+### Template-Schema-Erweiterung
+
+Bestehende `template`-Tabelle bekommt 2 neue JSONB-Spalten:
+
+```sql
+ALTER TABLE template
+  ADD COLUMN sop_prompt     jsonb DEFAULT NULL,
+  ADD COLUMN owner_fields   jsonb DEFAULT NULL;
+```
+
+`sop_prompt`: Template-spezifischer System-Prompt fuer SOP-Generation. Jedes Template definiert eigene SOP-Struktur und Fokus.
+
+`owner_fields`: Template-spezifische Fragen zur Owner-Erhebung (DEC-012). Werden als spezielle Fragen im ersten Block dargestellt.
+
+```json
+{
+  "fields": [
+    { "key": "owner_age", "label": {"de": "Alter", "en": "Age"}, "type": "number" },
+    { "key": "owner_years", "label": {"de": "Jahre als Inhaber"}, "type": "number" },
+    { "key": "owner_education", "label": {"de": "Ausbildung"}, "type": "text" }
+  ]
+}
+```
+
+### Worker-Erweiterung V2
+
+Der Worker bleibt ein einzelner Container mit Polling-Loop. Neue Job-Types werden im bestehenden `handle-job.ts`-Dispatcher registriert.
+
+#### Neue Job-Types
+
+| Job-Type | Trigger | Input | Output |
+|----------|---------|-------|--------|
+| `orchestrator_assessment` | Automatisch nach A+C-Loop | block_checkpoint_id + KU-IDs | quality_report JSONB auf block_checkpoint, gap_question-Rows |
+| `recondense_with_gaps` | Automatisch nach Gap-Antworten | block_checkpoint_id + gap_answers | Neue KUs (neuer Checkpoint), evtl. weitere Gaps (max 2 Runden) |
+| `sop_generation` | On-demand (Admin-Button) | block_checkpoint_id + template.sop_prompt | sop-Row |
+| `evidence_extraction` | Automatisch nach Upload | evidence_file_id | evidence_chunk-Rows mit mapping_suggestions |
+
+#### Erweiterter Condensation-Flow (FEAT-010 + FEAT-011)
+
+```
+Job: knowledge_unit_condensation (V2 erweitert)
+  1. [Unveraendert] A+C Loop (2-8 Iterationen) → KUs
+  2. [Unveraendert] KUs importieren via RPC
+  3. [NEU] Orchestrator-Assessment:
+     - Input: Alle KUs des Blocks + Original-Antworten + Template-Metadaten
+     - Bedrock-Call mit Orchestrator-Prompt
+     - Output: quality_report JSONB
+       {
+         "overall_score": "acceptable",
+         "coverage": { "covered": 8, "total": 10, "gaps": [...] },
+         "evidence_quality": "medium",
+         "consistency": "good",
+         "gap_questions": [
+           {
+             "question_text": "Sie erwaehnen eine Nachfolgeregelung...",
+             "context": "Block A, Subtopic Unternehmensstrategie",
+             "subtopic": "A1 Grundverstaendnis",
+             "priority": "required",
+             "affected_ku_id": "uuid"
+           }
+         ],
+         "recommendation": "backspelling_needed"
+       }
+  4. [NEU] Quality-Report auf block_checkpoint speichern
+  5. [NEU] Gap-Questions in gap_question-Tabelle schreiben
+  6. [Unveraendert] Embeddings generieren
+  7. Job abschliessen
+```
+
+#### Re-Condensation-Flow (FEAT-011)
+
+```
+Job: recondense_with_gaps
+  1. Lade Original-Checkpoint + Gap-Antworten
+  2. Erstelle erweiterten Input (Original-Answers + Gap-Answers)
+  3. A+C Loop (2-8 Iterationen) mit erweitertem Input
+  4. Orchestrator-Assessment (Runde 2)
+  5. Neuer block_checkpoint (type=backspelling_recondense)
+  6. Neue/aktualisierte KUs
+  7. Wenn weitere Gaps UND Runde < 2: neue gap_questions
+  8. Wenn Runde = 2 und noch Gaps: als meeting_agenda markieren
+  9. Embeddings aktualisieren
+```
+
+### Evidence-Processing-Flow (FEAT-013)
+
+```
+Job: evidence_extraction
+  1. evidence_file laden (Metadaten)
+  2. Datei aus Supabase Storage herunterladen
+  3. Text-Extraktion:
+     - PDF: pdf-parse (text-basiert)
+     - DOCX: mammoth (HTML → Text)
+     - TXT/CSV: Direkt-Lesen
+     - ZIP: node:zlib → Rekursion ueber Einzeldateien
+  4. Chunking (~500-800 Tokens, kein Overlap bei Dokumenten)
+  5. evidence_chunk-Rows schreiben (status=pending)
+  6. KI-Mapping pro Chunk:
+     - Bedrock-Call: "Welche Template-Frage passt zu diesem Text-Chunk?"
+     - mapping_suggestion JSONB schreiben (status=suggested)
+  7. evidence_file.extraction_status = 'extracted'
+```
+
+Bestaetigung durch Kunden: Server Action akzeptiert/lehnt Mappings ab. Bestaetigte Mappings werden in `capture_session.answers` gemerged (neuer Key-Prefix `evidence.{blockKey}.{questionId}` damit Original-Antworten erhalten bleiben).
+
+### Whisper-Integration (FEAT-015)
+
+#### Adapter-Pattern (DEC-018)
+
+```
+/src/lib/ai/whisper/
+  provider.ts          — WhisperProvider Interface
+  local.ts             — Self-hosted Whisper (HTTP POST to whisper:9000)
+  azure.ts             — Azure Speech EU (Fallback/Spaeter)
+  factory.ts           — Factory: liest WHISPER_PROVIDER ENV
+  index.ts             — Re-Export
+```
+
+Interface:
+```typescript
+interface WhisperProvider {
+  transcribe(audioBuffer: Buffer, options?: {
+    language?: string;
+    format?: 'verbose_json' | 'json' | 'text';
+  }): Promise<{ text: string; duration_ms: number }>;
+}
+```
+
+ENV-Konfiguration:
+```bash
+WHISPER_PROVIDER=local               # local | azure
+WHISPER_URL=http://whisper:9000      # Nur fuer local
+WHISPER_MODEL=medium                 # large-v3 | medium | small
+AZURE_SPEECH_KEY=                    # Nur fuer azure
+AZURE_SPEECH_REGION=westeurope       # Nur fuer azure
+```
+
+#### Transkriptions-Endpoint
+
+```
+POST /api/capture/[sessionId]/transcribe
+  - Auth: Session-Owner (RLS)
+  - Request: multipart/form-data { audio: Blob }
+  - Response: { text: string, duration_ms: number }
+  - Audio wird nach Transkription NICHT persistiert (DSGVO)
+```
+
+#### RAM-Budget Whisper
+
+Whisper-Modell-Groessen auf CPX62 (16 GB RAM):
+
+| Modell | RAM | Qualitaet | Empfehlung |
+|--------|-----|-----------|------------|
+| large-v3 | ~3-4 GB | Beste | Nur mit Server-Upgrade auf CPX72 (32 GB) |
+| medium | ~2 GB | Gut, fuer Deutsch ausreichend | **Default fuer V2** |
+| small | ~1 GB | Akzeptabel | Fallback bei RAM-Druck |
+
+Empfehlung: Start mit `medium` (WHISPER_MODEL=medium in ENV). Monitoring des Server-RAM nach Deploy. Upgrade auf CPX72 + large-v3 wenn Qualitaet nicht reicht oder weitere Services dazukommen.
+
+### Supabase Storage Bucket (FEAT-013)
+
+Neuer Bucket `evidence` mit RLS:
+- Tenant-Isolation: Pfad-Pattern `{tenant_id}/{session_id}/{filename}`
+- Upload-Limit: 20 MB pro Datei, 100 MB pro Bulk-Upload (serverseitig validiert)
+- Accepted MIME-Types: `application/pdf`, `application/vnd.openxmlformats-officedocument.wordprocessingml.document`, `text/plain`, `text/csv`, `application/zip`
+- Bucket-Policy: INSERT fuer tenant_admin/member, SELECT fuer tenant + strategaize_admin
+
+Bucket wird per Migration als SQL erstellt:
+```sql
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES ('evidence', 'evidence', false, 20971520, 
+  ARRAY['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 
+        'text/plain', 'text/csv', 'application/zip']);
+```
+
+### Neue Dependencies V2
+
+| Dependency | Zweck | Wo |
+|-----------|-------|-----|
+| `pdf-parse` | PDF-Text-Extraktion | Worker |
+| `mammoth` | DOCX → Text | Worker |
+| `node:zlib` | ZIP-Entpacken | Worker (bereits in Node.js) |
+
+Keine neuen externen Services. Keine neuen Cloud-Provider.
+
+### Kosten-Erweiterung V2
+
+Bestehender `ai_cost_ledger` wird fuer alle neuen Bedrock-Calls genutzt. Neues Feld `feature` fuer Kosten-Zuordnung:
+
+```sql
+ALTER TABLE ai_cost_ledger ADD COLUMN feature text DEFAULT 'condensation';
+-- Values: condensation, orchestrator, sop, evidence_mapping, backspelling, chat, embedding
+```
+
+Geschaetzte Kosten pro Session (9 Blocks, alle Features aktiv):
+| Feature | Calls | Kosten |
+|---------|-------|--------|
+| A+C Loop (V1) | ~36-144 | $0.90-$3.60 |
+| Orchestrator | ~9-18 | $0.45-$1.35 |
+| Backspelling Re-Condensation (max 2 Runden) | ~0-72 | $0-$3.60 |
+| SOP Generation (on-demand) | ~9 | $0.45-$0.90 |
+| Evidence Mapping (10 Docs) | ~50-200 | $0.50-$2.00 |
+| **Gesamt pro Session** | | **$2.30-$11.45** |
+
+Fuer B2B-SaaS mit Beratungs-Hintergrund akzeptabel (Vergleich: 1h Berater-Zeit = €200+).
+
+### Security / Privacy V2
+
+Alle V1-Regeln gelten weiter. Zusaetzlich:
+
+- **Evidence-Dateien:** Tenant-isoliert in Supabase Storage. Kein Cross-Tenant-Zugriff. Dateien werden nach Extraktion NICHT geloescht (Audit-Trail). Loeschung per Retention-Policy spaeter (V3).
+- **Audio-Daten:** Werden nach Whisper-Transkription sofort verworfen. Kein persistentes Audio in V2.
+- **Gap-Questions:** Enthalten potenziell Business-sensitiven Kontext. RLS-geschuetzt wie alle anderen tenant-scoped Tabellen.
+- **SOP-Content:** Enthaelt operative Handlungsplaene. Gleiche Schutzstufe wie Knowledge Units.
+
+### Constraints und Tradeoffs V2
+
+#### Constraint — Worker als einziger Job-Processor (DEC-017)
+Alle neuen Job-Types laufen im selben Worker-Container.
+**Tradeoff:** Ein langer Evidence-Extraction-Job blockiert kurzzeitig andere Jobs. Akzeptabel in V2 (Volumen gering). Horizontale Worker-Skalierung (SKIP LOCKED) ist trivial, falls noetig.
+
+#### Constraint — Whisper Medium statt Large (RAM-Budget)
+CPX62 hat 16 GB RAM. Medium-Modell spart ~1-2 GB.
+**Tradeoff:** Leicht geringere Transkriptions-Qualitaet bei Akzent/Dialekt. Fuer Deutsch-Geschaeftskontexte ausreichend. Upgrade-Pfad klar (ENV-Aenderung + Server-Upgrade).
+
+#### Constraint — Max 2 Backspelling-Runden
+Nach 2 Runden werden verbleibende Gaps als Meeting-Agenda markiert.
+**Tradeoff:** Nicht alle Gaps werden automatisch geschlossen. Akzeptiert, weil unendliches Backspelling den Kunden frustriert und das Meeting-Review (DEC-004) als Auffangnetz dient.
+
+#### Constraint — Evidence OCR nicht in V2
+Bild-PDFs (Scans) werden nicht via OCR extrahiert.
+**Tradeoff:** Nur Text-PDFs und DOCX liefern Ergebnisse. Scans zeigen eine Warnung. OCR (Tesseract) kommt in V2.1 wenn Bedarf.
+
+### Open Technical Questions V2
+
+- **Q12 — Orchestrator-Prompt-Qualitaet:** Wie gut erkennt Claude Sonnet Wissensluecken in einem Meta-Assessment? Muss in den ersten Slices empirisch getestet und prompt-optimiert werden.
+- **Q13 — Evidence-Chunk-Groesse fuer Mapping:** Optimale Chunk-Groesse fuer KI-Mapping auf Template-Fragen. Start mit 500-800 Tokens, empirisch anpassen.
+- **Q14 — Backspelling-UX:** Nachfragen als eigene Sektion im Questionnaire oder als eigener Tab? Entscheidung in /frontend.
+- **Q15 — SOP-Format-Iteration:** SOP-Struktur muss template-spezifisch tuned werden. V2 startet mit generischem JSON-Format, Iteration nach erstem Kunden-Feedback.
+
+### Empfohlene Slice-Reihenfolge V2
+
+1. **SLC-013: Orchestrator-Integration** — Orchestrator-Prompt + quality_report auf block_checkpoint + ai_cost_ledger feature-Spalte (FEAT-010 Kern)
+2. **SLC-014: Gap-Question-Schema + Backspelling-Backend** — gap_question-Tabelle + RLS + Orchestrator→Gap-Generierung + recondense_with_gaps Job-Type (FEAT-010+011 Backend)
+3. **SLC-015: Backspelling-UI** — Nachfragen-Sektion im Questionnaire + Dashboard-Badge + Re-Submit-Flow (FEAT-011 Frontend)
+4. **SLC-016: SOP-Schema + Generation** — sop-Tabelle + sop_generation Job-Type + template.sop_prompt (FEAT-012 Backend)
+5. **SLC-017: SOP-UI** — SOP-Anzeige/Edit im Debrief + JSON-Export (FEAT-012 Frontend)
+6. **SLC-018: Evidence-Schema + Storage** — evidence_file + evidence_chunk Tabellen + Supabase Storage Bucket + Upload-API (FEAT-013 Infra)
+7. **SLC-019: Evidence-Extraction + Mapping** — Worker evidence_extraction Job-Type + pdf-parse + mammoth + KI-Mapping (FEAT-013 Backend)
+8. **SLC-020: Evidence-UI** — Upload-UI + Mapping-Review + Integration in Block-Submit (FEAT-013 Frontend)
+9. **SLC-021: Template-Erweiterung + Demo-Template** — Template-Schema (sop_prompt, owner_fields) + Demo-Template + Switcher-UI (FEAT-014)
+10. **SLC-022: Whisper-Adapter + Voice-Input** — Whisper-Provider-Pattern + Transcribe-Endpoint + Mic-Button reaktivieren (FEAT-015)
+
+### Naechster Schritt V2
+
+`/slice-planning` mit 10 Slices.

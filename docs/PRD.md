@@ -285,9 +285,9 @@ Alle V1-Constraints gelten weiter, zusaetzlich:
 
 ### Open Questions (V2)
 
-- **Q6 — Welches zweite Template?** Immobilien-Onboarding (Synergie ImmoCheckheft-Vision), Mitarbeiter-Discovery (generischer Use-Case), oder User-definiertes Thema? Entscheidung vor /architecture.
+- **Q6 — Welches zweite Template?** ENTSCHIEDEN: Demo-Template fuer Proof-of-Concept (Thema TBD, z.B. "Mitarbeiter-Wissenserhebung"). Kernziel ist Template-Infrastruktur, nicht spezifisches Fach-Template. Template-Editor-UI fuer freies Zusammenbauen in V3.
 - **Q7 — Evidence-Dateiformate V2:** Welche Formate? PDF und DOCX als Minimum. Bilder (OCR)? E-Mail-Dumps (mbox/PST)? E-Mail-Dumps erhoehen Komplexitaet signifikant — ggf. V2.1.
 - **Q8 — SOP-Output-Format:** JSON (maschinell) + Markdown (menschlich)? PDF? Template-spezifisch? Entscheidung in /architecture.
-- **Q9 — Whisper-Infrastruktur:** Auf Onboarding-Server (159.69.207.29) deployen oder Business-System-Whisper (91.98.20.191) cross-server nutzen? Shared Infra per DEC-036 (Business System) ist moeglich. Entscheidung in /architecture.
+- **Q9 — Whisper-Infrastruktur:** ENTSCHIEDEN: Self-hosted Whisper-Docker auf Onboarding-Server (159.69.207.29). Adapter-Pattern (wie Business System DEC-035) fuer spaeteren Provider-Switch (Azure EU, etc.). Kein Shared-Infra, jede Plattform eigenstaendig deploybar. Separate API-Accounts spaeter fuer Kosten-Tracking.
 - **Q10 — Backspelling-Benachrichtigung:** Wie erfaehrt der Kunde von Nachfragen? Dashboard-Badge, E-Mail, In-Session-Alert? Entscheidung in /architecture.
 - **Q11 — Template-Content-Erstellung:** Wer liefert Bloecke/Fragen? User schreibt manuell, KI generiert Vorschlag, oder beides? Entscheidung vor Implementierung von FEAT-014.

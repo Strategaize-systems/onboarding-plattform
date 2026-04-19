@@ -130,6 +130,24 @@ Der uebernommene Blueprint-Stand ist noch nicht auf einer Onboarding-Plattform-I
 - Risk: Gering — neue Tabelle, keine Aenderung an bestehenden Objekten.
 - Rollback Notes: `DROP TABLE IF EXISTS error_log CASCADE;`
 
+### MIG-013 — V2 Geplante Migrationen
+- Date: 2026-04-19
+- Scope:
+  - `040_orchestrator_extensions.sql` — quality_report JSONB-Spalte auf block_checkpoint, feature-Spalte auf ai_cost_ledger, neue CHECK-Values fuer block_checkpoint.checkpoint_type (backspelling_recondense)
+  - `041_gap_question.sql` — Neue Tabelle gap_question mit RLS + Indexes + GRANTs
+  - `042_sop.sql` — Neue Tabelle sop mit RLS + Indexes + GRANTs
+  - `043_evidence_tables.sql` — Neue Tabellen evidence_file + evidence_chunk mit RLS + Indexes + GRANTs
+  - `044_evidence_storage_bucket.sql` — Supabase Storage Bucket 'evidence' mit Policies
+  - `045_template_v2_fields.sql` — ALTER template ADD sop_prompt + owner_fields JSONB-Spalten
+  - `046_seed_demo_template.sql` — INSERT Demo-Template "Mitarbeiter-Wissenserhebung" (4-5 Bloecke)
+  - `047_rpc_orchestrator_and_gaps.sql` — RPCs fuer Orchestrator-Report speichern, Gap-Questions schreiben, Gap-Answers verarbeiten
+  - `048_rpc_sop_generation.sql` — RPCs fuer SOP erstellen/aktualisieren
+  - `049_rpc_evidence_processing.sql` — RPCs fuer Evidence-Chunk-Schreibung und Mapping-Bestaetigung
+- Reason: V2 braucht 4 neue Tabellen, 1 Storage-Bucket, 2 Spalten-Erweiterungen, 1 Demo-Template-Seed und mehrere neue RPCs fuer die 6 neuen Features.
+- Affected Areas: Core-DB-Schema, AI-Queue-System, Storage-Layer, Template-System
+- Risk: Mittel — neue Tabellen + Spalten sind additiv (kein DROP/ALTER bestehender Tabellen). Storage-Bucket-Erstellung via SQL auf Supabase-internal Schema (storage.buckets) muss getestet werden.
+- Rollback Notes: Alle Migrationen sind idempotent konzipiert (IF NOT EXISTS). Rollback: DROP der neuen Tabellen, ALTER TABLE DROP COLUMN fuer Template-Erweiterungen, DELETE Storage-Bucket.
+
 ### MIG-011 — SLC-009 Debrief-RPCs (Migration 037)
 - Date: 2026-04-18
 - Scope:
