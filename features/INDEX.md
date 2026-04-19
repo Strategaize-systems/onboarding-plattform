@@ -18,3 +18,14 @@
 | FEAT-007 | Blueprint-Legacy-Cleanup | deployed | — | 2026-04-18 |
 | FEAT-008 | Dashboard Capture-Sessions | deployed | — | 2026-04-18 |
 | FEAT-009 | Error-Logging | deployed | — | 2026-04-18 |
+
+## V2 Features (Intelligence Upgrade + Evidence + Template-Expansion)
+
+| ID | Feature | Status | Spec | Created |
+|----|---------|--------|------|---------|
+| FEAT-010 | 3-Agent Orchestrator Loop | planned | [Spec](FEAT-010-orchestrator-loop.md) | 2026-04-19 |
+| FEAT-011 | Auto-Gap-Backspelling | planned | [Spec](FEAT-011-auto-gap-backspelling.md) | 2026-04-19 |
+| FEAT-012 | SOP Generation (Level 2) | planned | [Spec](FEAT-012-sop-generation.md) | 2026-04-19 |
+| FEAT-013 | Evidence-Mode + Bulk-Import | planned | [Spec](FEAT-013-evidence-mode.md) | 2026-04-19 |
+| FEAT-014 | Second Template + Switcher UI | planned | [Spec](FEAT-014-second-template.md) | 2026-04-19 |
+| FEAT-015 | Voice Input (Whisper) | planned | [Spec](FEAT-015-voice-input.md) | 2026-04-19 |

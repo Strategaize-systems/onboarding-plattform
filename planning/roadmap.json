@@ -17,8 +17,8 @@
     {
       "id": "v2",
       "name": "V2",
-      "status": "planned",
-      "summary": "3-Agenten-Loop (Analyst + Challenger + Orchestrator) mit Iterations-Break-Kriterien, SOP-Generation (Ebene 2), automatische Rueckfrage-Rueckspielung ins Questionnaire bei Luecken, Evidence-Mode mit KI-Auto-Mapping (Single + Bulk fuer Archive/E-Mail-Dumps/Dokumentenbestaende), zweites Template mit Switcher-UI.",
+      "status": "active",
+      "summary": "Intelligence Upgrade + Evidence + Template-Expansion. 3-Agent Orchestrator Loop (intelligente Loop-Steuerung + Luecken-Erkennung), Auto-Gap-Backspelling (Nachfragen zurueck an Kunden), SOP-Generation (Level 2 — operative Handlungsplaene), Evidence-Mode + Bulk-Import (Dokumente als Wissensquelle), zweites Template + Switcher-UI, Voice Input (Whisper). 6 Features (FEAT-010..015).",
       "order": 3
     },
     {

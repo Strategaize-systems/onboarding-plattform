@@ -241,23 +241,73 @@
       "createdAt": "2026-04-18"
     },
     {
+      "id": "BL-026",
+      "title": "3-Agent Orchestrator Loop",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V2",
+      "description": "Orchestrator als dritter Agent steuert Analyst+Challenger-Loop intelligent: Qualitaets-Gates, systematische Luecken-Erkennung, Break-Kriterien basierend auf inhaltlicher Qualitaet. Basis fuer Backspelling (FEAT-011) und SOP-Quality-Gate (FEAT-012). Siehe FEAT-010.",
+      "createdAt": "2026-04-19"
+    },
+    {
+      "id": "BL-027",
+      "title": "Auto-Gap-Backspelling",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V2",
+      "description": "Orchestrator erkennt Luecken → generiert Nachfragen → Kunde beantwortet im Questionnaire → Re-Verdichtung. Max 2 Runden, danach Meeting-Agenda. Schliesst den Feedback-Loop automatisch. Siehe FEAT-011.",
+      "createdAt": "2026-04-19"
+    },
+    {
+      "id": "BL-028",
+      "title": "SOP Generation (Level 2)",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V2",
+      "description": "Aus verdichteten Knowledge Units werden pro Block Standard Operating Procedures generiert. On-demand per Button, template-spezifischer Prompt. JSON-Export. Zweite Verdichtungsebene nach KUs. Siehe FEAT-012.",
+      "createdAt": "2026-04-19"
+    },
+    {
       "id": "BL-020",
-      "title": "Evidence-Bulk-Import (Archive, E-Mail-Postfaecher, Dokumentenbestaende)",
+      "title": "Evidence-Mode + Bulk-Import",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V2",
+      "description": "Neuer Capture-Mode: Dokumente (PDF, DOCX) hochladen, KI extrahiert + mappt auf Template-Fragen. Einzel + Bulk (Multi-File, ZIP). Supabase Storage, evidence_chunk-Tabelle, Mapping-Review-UI. Siehe FEAT-013. Urspruenglich nur Bulk-Import geplant, erweitert auf vollstaendigen Evidence-Mode.",
+      "createdAt": "2026-04-15"
+    },
+    {
+      "id": "BL-029",
+      "title": "Second Template + Switcher UI",
       "type": "feature",
       "priority": "medium",
       "status": "open",
       "version": "V2",
-      "description": "Erweiterung des Evidence-Modus um Bulk-Variante. Ermoeglicht Import ganzer Archive: E-Mail-Dumps (IMAP/PST/mbox), Angebots-/Projekt-Historien, Dokumentenbestaende. Pre-Processing: Privat-/Geschaeftlich-Filter, Relevanz-Klassifikation, Deduplizierung. Danach identische Verdichtungs-Pipeline wie Evidence-Single. Synergie-Pruefung: IMAP-Adapter aus Business System V4 wiederverwenden. Herkunft: Plattform-Idee 2 aus IS-Re-Discovery-Runde 2026-04-15.",
-      "createdAt": "2026-04-15"
+      "description": "Zweites Template (Thema TBD — Q6), Template-Auswahl bei Session-Erstellung, template-spezifische Owner-Felder (DEC-012), template-spezifischer SOP-Prompt. Beweist Template-Flexibilitaet in Praxis. Siehe FEAT-014.",
+      "createdAt": "2026-04-19"
     },
     {
-      "id": "BL-021",
-      "title": "Free-Form Capture-Mode (offenes Gespraech → KI-Mapping auf Template-Fragen)",
-      "type": "later",
-      "priority": "low",
+      "id": "BL-030",
+      "title": "Voice Input (Whisper)",
+      "type": "feature",
+      "priority": "medium",
       "status": "open",
       "version": "V2",
-      "description": "Blueprint V3.2 Free-Form-Chat als eigenen Capture-Mode portieren. Kunde erzaehlt frei, KI mappt Gespraechsinhalte auf Template-Fragen (Neutralisierung + Confidence). Code existiert (freeform.ts, FreeformChat, MappingReview), arbeitet aber gegen altes runs/question_catalog_snapshots-Datenmodell. Muss auf capture_session-Schema umgebaut werden. Abwaegen gegen V3 Dialogue-Mode (Jitsi+Whisper), der den frei-erzaehlen-Use-Case moeglicherweise besser abdeckt. In V1 bewusst deaktiviert (SLC-005, 2026-04-17).",
+      "description": "Mic-Button reaktivieren, Whisper-Transkription fuer Capture-Sessions. Infrastruktur-Option TBD (Q9: shared/lokal/Azure). Loest ISSUE-014. Siehe FEAT-015.",
+      "createdAt": "2026-04-19"
+    },
+    {
+      "id": "BL-031",
+      "title": "Free-Form Capture-Mode",
+      "type": "later",
+      "priority": "low",
+      "status": "deferred",
+      "version": null,
+      "description": "Blueprint V3.2 Free-Form-Chat als eigenen Capture-Mode portieren. Kunde erzaehlt frei, KI mappt auf Template-Fragen. Bewusst deferred: evaluieren gegen V3 Dialogue-Mode (Jitsi+Whisper), der den frei-erzaehlen-Use-Case moeglicherweise besser abdeckt. Urspruenglich BL-021 (V2, low), jetzt unversioned deferred.",
       "createdAt": "2026-04-17"
     }
   ]
