@@ -305,6 +305,35 @@
       }
     }
   },
+  "gapQuestions": {
+    "title": "AI-vervolgvragen",
+    "subtitle": "De AI heeft kennislacunes geïdentificeerd en vraagt om aanvullende informatie.",
+    "context": "Context",
+    "answerPlaceholder": "Uw antwoord op deze vervolgvraag...",
+    "submit": "Antwoord verzenden",
+    "submitting": "Wordt verzonden...",
+    "submitted": "Antwoord opgeslagen",
+    "skip": "Overslaan",
+    "skipped": "Overgeslagen",
+    "answered": "Beantwoord",
+    "pending": "Open",
+    "required": "Vereist",
+    "niceToHave": "Optioneel",
+    "pendingBadge": "{count} open vervolgvragen",
+    "recondenseTriggered": "Alle verplichte vervolgvragen beantwoord — herverdichting gestart",
+    "emptyState": "Geen vervolgvragen voor dit blok."
+  },
+  "debrief": {
+    "backspelling": {
+      "title": "Backspelling-status",
+      "rounds": "Rondes",
+      "score": "Kwaliteitsbeoordeling",
+      "pending": "Open",
+      "answered": "Beantwoord",
+      "skipped": "Overgeslagen",
+      "noData": "Geen backspelling uitgevoerd."
+    }
+  },
   "freeform": {
     "modeSelector": {
       "title": "Hoe wilt u werken?",

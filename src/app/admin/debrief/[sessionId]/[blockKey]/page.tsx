@@ -80,15 +80,44 @@ export default async function DebriefBlockPage({
   }
 
   // Check if block is already finalized (has meeting_final checkpoint)
+  // Also load quality_report for backspelling status
   const { data: blockCheckpoints } = await supabase
     .from("block_checkpoint")
-    .select("checkpoint_type")
+    .select("id, checkpoint_type, quality_report")
     .eq("capture_session_id", sessionId)
-    .eq("block_key", blockKey);
+    .eq("block_key", blockKey)
+    .order("created_at", { ascending: false });
 
   const isAlreadyFinalized = (blockCheckpoints ?? []).some(
     (cp) => cp.checkpoint_type === "meeting_final"
   );
+
+  // Extract quality report from latest checkpoint that has one
+  const latestQualityReport = (blockCheckpoints ?? []).find(
+    (cp) => cp.quality_report != null
+  )?.quality_report as Record<string, unknown> | null;
+
+  // Load gap questions for backspelling status
+  const checkpointIds = (blockCheckpoints ?? []).map((cp) => cp.id);
+  let gapQuestionStats = { pending: 0, answered: 0, skipped: 0, maxRound: 0 };
+
+  if (checkpointIds.length > 0) {
+    const { data: gapData } = await supabase
+      .from("gap_question")
+      .select("status, backspelling_round")
+      .in("block_checkpoint_id", checkpointIds);
+
+    if (gapData && gapData.length > 0) {
+      for (const g of gapData) {
+        if (g.status === "pending") gapQuestionStats.pending++;
+        else if (g.status === "answered" || g.status === "recondensed") gapQuestionStats.answered++;
+        else if (g.status === "skipped") gapQuestionStats.skipped++;
+        if (g.backspelling_round > gapQuestionStats.maxRound) {
+          gapQuestionStats.maxRound = g.backspelling_round;
+        }
+      }
+    }
+  }
 
   const blockTitle = block.title?.de ?? block.title?.en ?? blockKey;
 
@@ -111,6 +140,8 @@ export default async function DebriefBlockPage({
         validationEntries={validationEntries}
         hasKnowledgeUnits={(knowledgeUnits?.length ?? 0) > 0}
         isAlreadyFinalized={isAlreadyFinalized}
+        qualityReport={latestQualityReport}
+        gapQuestionStats={gapQuestionStats}
       />
     </div>
   );

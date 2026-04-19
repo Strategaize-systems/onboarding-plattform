@@ -305,6 +305,35 @@
       }
     }
   },
+  "gapQuestions": {
+    "title": "Nachfragen der KI",
+    "subtitle": "Die KI hat Wissenslücken erkannt und bittet um ergänzende Angaben.",
+    "context": "Kontext",
+    "answerPlaceholder": "Ihre Antwort auf diese Nachfrage...",
+    "submit": "Antwort senden",
+    "submitting": "Wird gesendet...",
+    "submitted": "Antwort gespeichert",
+    "skip": "Überspringen",
+    "skipped": "Übersprungen",
+    "answered": "Beantwortet",
+    "pending": "Offen",
+    "required": "Erforderlich",
+    "niceToHave": "Optional",
+    "pendingBadge": "{count} offene Nachfragen",
+    "recondenseTriggered": "Alle Pflicht-Nachfragen beantwortet — Neu-Verdichtung gestartet",
+    "emptyState": "Keine Nachfragen für diesen Block."
+  },
+  "debrief": {
+    "backspelling": {
+      "title": "Backspelling-Status",
+      "rounds": "Runden",
+      "score": "Qualitätsbewertung",
+      "pending": "Offen",
+      "answered": "Beantwortet",
+      "skipped": "Übersprungen",
+      "noData": "Kein Backspelling durchgeführt."
+    }
+  },
   "freeform": {
     "modeSelector": {
       "title": "Wie möchten Sie arbeiten?",

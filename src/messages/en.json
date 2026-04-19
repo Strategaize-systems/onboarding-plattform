@@ -305,6 +305,35 @@
       }
     }
   },
+  "gapQuestions": {
+    "title": "AI Follow-up Questions",
+    "subtitle": "The AI identified knowledge gaps and requests additional information.",
+    "context": "Context",
+    "answerPlaceholder": "Your answer to this follow-up question...",
+    "submit": "Submit answer",
+    "submitting": "Submitting...",
+    "submitted": "Answer saved",
+    "skip": "Skip",
+    "skipped": "Skipped",
+    "answered": "Answered",
+    "pending": "Pending",
+    "required": "Required",
+    "niceToHave": "Optional",
+    "pendingBadge": "{count} open follow-up questions",
+    "recondenseTriggered": "All required follow-ups answered — re-condensation started",
+    "emptyState": "No follow-up questions for this block."
+  },
+  "debrief": {
+    "backspelling": {
+      "title": "Backspelling Status",
+      "rounds": "Rounds",
+      "score": "Quality Assessment",
+      "pending": "Pending",
+      "answered": "Answered",
+      "skipped": "Skipped",
+      "noData": "No backspelling performed."
+    }
+  },
   "freeform": {
     "modeSelector": {
       "title": "How would you like to work?",

@@ -9,7 +9,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { FileText, Menu, X, Clock, PlayCircle, CheckCircle2 } from "lucide-react";
+import { FileText, Menu, X, Clock, PlayCircle, CheckCircle2, MessageSquare } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
 import { HelpButton } from "@/components/help-button";
 import { LearningCenterPanel } from "@/components/learning-center/learning-center-panel";
@@ -43,6 +43,7 @@ export function DashboardClient({ profile }: { profile: Profile }) {
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [learningCenterOpen, setLearningCenterOpen] = useState(false);
+  const [gapCounts, setGapCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
     async function loadSessions() {
@@ -60,6 +61,20 @@ export function DashboardClient({ profile }: { profile: Profile }) {
           template: Array.isArray(row.template) ? row.template[0] ?? null : row.template,
         }));
         setSessions(mapped);
+
+        // Load pending gap question counts per session
+        const { data: pendingGaps } = await supabase
+          .from("gap_question")
+          .select("capture_session_id")
+          .eq("status", "pending");
+
+        if (pendingGaps && pendingGaps.length > 0) {
+          const counts: Record<string, number> = {};
+          for (const g of pendingGaps) {
+            counts[g.capture_session_id] = (counts[g.capture_session_id] ?? 0) + 1;
+          }
+          setGapCounts(counts);
+        }
       } finally {
         setLoading(false);
       }
@@ -155,13 +170,19 @@ export function DashboardClient({ profile }: { profile: Profile }) {
                           </div>
                         </CardHeader>
                         <CardContent>
-                          <div className="flex flex-wrap gap-4 text-xs text-slate-500">
+                          <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500">
                             <span>
                               {t("dashboard.started", { date: new Date(session.started_at).toLocaleDateString(locale) })}
                             </span>
                             <span>
                               {t("dashboard.lastUpdated", { date: new Date(session.updated_at).toLocaleDateString(locale) })}
                             </span>
+                            {(gapCounts[session.id] ?? 0) > 0 && (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 border border-amber-300 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
+                                <MessageSquare className="h-3 w-3" />
+                                {t("gapQuestions.pendingBadge", { count: gapCounts[session.id] })}
+                              </span>
+                            )}
                           </div>
                         </CardContent>
                       </Card>
