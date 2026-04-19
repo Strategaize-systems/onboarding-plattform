@@ -10,13 +10,14 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: V2 Implementation. SLC-013..017 done (5/10). FEAT-010, FEAT-011, FEAT-012 komplett. Naechster Schritt: /qa SLC-017, dann Evidence-Kette (SLC-018..020).
-- Current Phase: V2 Implementation
+- Current Focus: V2 Scope-Erweiterung. SLC-013..017 done (5/10). FEAT-010, FEAT-011, FEAT-012 komplett. Neues Kern-Feature FEAT-016 (Diagnose-Layer) als Prioritaet 1 aufgenommen — muss VOR weiteren V2-Slices implementiert werden.
+- Current Phase: V2 Requirements (FEAT-016)
 
 ## Immediate Next Steps
-1. /qa SLC-017 (SOP-UI)
-2. /backend SLC-018 (Evidence-Schema + Storage)
-3. /qa nach SLC-018
+1. /architecture FEAT-016 (Diagnose-Layer)
+2. /slice-planning FEAT-016
+3. Implementation Diagnose-Layer (Backend + Frontend)
+4. SOP-Gate einbauen (SOP erst nach Diagnose-Bestaetigung)
 
 ## Active Scope
 V2 — 10 Slices, 67 Micro-Tasks (5/10 done):

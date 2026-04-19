@@ -301,6 +301,16 @@
       "createdAt": "2026-04-19"
     },
     {
+      "id": "BL-032",
+      "title": "Template-driven Diagnosis Layer",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V2",
+      "description": "KI-generierte Diagnose pro Unterthema im template-spezifischen Output-Format. Neues diagnosis_schema auf Template, block_diagnosis-Tabelle, Diagnose-UI im Debrief (Generate, View, Edit, Confirm, Export). SOP erst nach Diagnose-Bestaetigung. Kernprodukt-Feature — Bruecke zwischen KU-Verdichtung und Meeting mit Auftraggeber. Siehe FEAT-016.",
+      "createdAt": "2026-04-19"
+    },
+    {
       "id": "BL-031",
       "title": "Free-Form Capture-Mode",
       "type": "later",
