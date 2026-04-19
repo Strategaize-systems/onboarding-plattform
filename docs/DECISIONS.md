@@ -106,3 +106,18 @@
 - Status: accepted
 - Reason: V2 muss die Template-Flexibilitaet beweisen (SC-3), braucht aber keinen visuellen Template-Editor. Templates per Migration anlegen reicht fuer V2 (ein Demo-Template + das bestehende Exit-Readiness). Der Template-Editor ist ein eigenes Feature mit signifikantem UI-Aufwand (Block-Builder, Frage-Editor, Drag-and-Drop), das den V2-Scope sprengen wuerde. V3 ist der richtige Zeitpunkt.
 - Consequence: FEAT-014 liefert: template.sop_prompt + template.owner_fields Spalten, Template-Switcher-Dropdown bei Session-Erstellung, ein Demo-Template "Mitarbeiter-Wissenserhebung" (4-5 Bloecke) per Migration. Template-Erstellung bleibt Migration-only in V2.
+
+## DEC-022 — Diagnose folgt on-demand-Pattern (wie SOP, nicht automatisch)
+- Status: accepted
+- Reason: Konsistent mit DEC-020 (SOP on-demand). Admin kontrolliert, wann Diagnose generiert wird. Vermeidet unnoetige Bedrock-Kosten. Diagnose ist erst sinnvoll, nachdem KUs reviewed sind — automatische Generierung nach Verdichtung waere zu frueh und wuerde ungepruefte KUs als Basis nutzen. Timing-Kontrolle bleibt beim strategaize_admin.
+- Consequence: Button-Klick im Debrief → Server Action enqueued ai_job mit type='diagnosis_generation' → Worker generiert Diagnose → Ergebnis in block_diagnosis-Tabelle. Kein automatischer Trigger nach Verdichtung oder nach Orchestrator-Assessment.
+
+## DEC-023 — diagnosis_schema + diagnosis_prompt als JSONB-Spalten auf template-Tabelle
+- Status: accepted
+- Reason: Folgt dem etablierten Pattern (sop_prompt, owner_fields sind bereits JSONB-Spalten auf template). Keine separaten Tabellen fuer Template-Metadaten. Jedes Template definiert seine eigene Diagnose-Struktur und seinen eigenen Prompt. 5 JSONB-Spalten auf einer Tabelle mit <10 Zeilen ist performant und wartbar.
+- Consequence: ALTER TABLE template ADD COLUMN diagnosis_schema JSONB, ADD COLUMN diagnosis_prompt JSONB. Exit-Readiness-Template bekommt das erste konkrete diagnosis_schema (13 Bewertungsfelder, ~30 Subtopics ueber 9 Bloecke) und den ersten diagnosis_prompt per UPDATE-Migration. Andere Templates koennen voellig andere Felder definieren.
+
+## DEC-024 — SOP-Gate ist einfacher Status-Check auf block_diagnosis
+- Status: accepted
+- Reason: block_diagnosis.status = 'confirmed' ist ein ausreichender Gate-Mechanismus. Kein separater Gate-Mechanismus, kein Event-System, kein Trigger noetig. Der Debrief-Page laedt block_diagnosis ohnehin — ein einfacher Status-Check steuert die SOP-Button-Sichtbarkeit. KISS-Prinzip.
+- Consequence: Debrief Page laedt block_diagnosis neben sop. SOP-Sektion prueft diagnosisConfirmed-Flag. Gate ist UI-seitig in V2. API-Level-Gate (CHECK in rpc_create_sop) kann in V3 nachgeruestet werden, wenn externe API-Caller relevant werden. Bestehender SOP-Code bleibt unveraendert — nur Button-Sichtbarkeit wird bedingt.

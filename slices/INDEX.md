@@ -40,6 +40,8 @@
 | SLC-020 | [Evidence-UI](SLC-020-evidence-ui.md) | FEAT-013 | planned | High | 2026-04-19 |
 | SLC-021 | [Template-Erweiterung + Demo-Template](SLC-021-template-switcher.md) | FEAT-014 | planned | Medium | 2026-04-19 |
 | SLC-022 | [Whisper-Adapter + Voice-Input](SLC-022-whisper-voice-input.md) | FEAT-015 | planned | Medium | 2026-04-19 |
+| SLC-023 | [Diagnose-Backend](SLC-023-diagnosis-backend.md) | FEAT-016 | planned | Blocker | 2026-04-19 |
+| SLC-024 | [Diagnose-Frontend + SOP-Gate](SLC-024-diagnosis-frontend.md) | FEAT-016 | planned | Blocker | 2026-04-19 |
 
 ## Execution Order Notes
 
@@ -53,5 +55,6 @@
 - **SLC-018 → SLC-019 → SLC-020:** Evidence-Infra → Extraktion → UI (strikt sequentiell, aber unabhaengig von Orchestrator-Kette)
 - **SLC-021:** Template-Erweiterung (braucht SLC-016 MT-2 fuer template.sop_prompt Spalte, kann sonst parallel)
 - **SLC-022:** Whisper (komplett unabhaengig, kann jederzeit laufen)
-- **Empfohlene Reihenfolge:** 013 → 014 → 015 → 016 → 017 → 018 → 019 → 020 → 021 → 022
-- **Parallelisierbar:** SLC-018..020 (Evidence) kann parallel zu SLC-014..017 (Orchestrator+SOP) laufen. SLC-022 (Whisper) kann jederzeit eingeschoben werden.
+- **Empfohlene Reihenfolge:** 013 → 014 → 015 → 016 → 017 → **023 → 024** → 018 → 019 → 020 → 021 → 022
+- **SLC-023 + SLC-024 (Diagnose-Layer)** sind Prioritaet 1 nach SLC-017 (SOP). Diagnose ist Kernprodukt-Feature und SOP-Gate-Abhaengigkeit.
+- **Parallelisierbar:** SLC-018..020 (Evidence) kann parallel zu SLC-023..024 laufen. SLC-022 (Whisper) kann jederzeit eingeschoben werden.

@@ -872,3 +872,432 @@ Bild-PDFs (Scans) werden nicht via OCR extrahiert.
 ### Naechster Schritt V2
 
 `/slice-planning` mit 10 Slices.
+
+---
+
+## FEAT-016 Architecture Addendum — Template-driven Diagnosis Layer
+
+### Status
+FEAT-016-Architektur festgelegt am 2026-04-19. Baut auf V2-Stack auf (SLC-013..017 stabil).
+
+### Architektur-Zusammenfassung FEAT-016
+
+FEAT-016 fuegt dem bestehenden Stack eine **strukturierte Analyse-Praesentation** zwischen Knowledge-Unit-Verdichtung und SOP-Generierung hinzu. Der Diagnose-Layer beantwortet drei Fragen pro Unterthema, bevor SOPs generiert werden:
+
+1. **"Wie ist der Ist-Zustand?"** (Ist-Situation, Belege)
+2. **"Wie reif/riskant ist es?"** (Ampel, Reifegrad, Risiko, Hebel)
+3. **"Was hat strategische Prioritaet?"** (Relevanz, Empfehlung, Owner, Zielbild)
+
+Kein neuer Docker-Service. Kein neues externes Dependency. Diagnose folgt dem SOP-Pattern exakt (on-demand, Worker-Job, RPC-Persistierung, Debrief-UI-Integration).
+
+### Position im Pipeline-Flow
+
+```
+Block-Submit
+    ↓
+A+C Loop (Verdichtung)
+    ↓
+Knowledge Units
+    ↓
+Orchestrator Assessment
+    ↓
+Gap-Questions / Backspelling (falls noetig)
+    ↓
+━━━ Diagnose-Layer (FEAT-016, on-demand) ━━━
+    ↓
+Diagnosis confirmed?
+    ├── Nein → SOP-Button gesperrt, Hinweis
+    └── Ja → SOP-Generierung freigeschaltet
+    ↓
+SOP (FEAT-012, on-demand)
+```
+
+### Service-Topologie FEAT-016
+
+Keine neuen Docker-Services. Aenderungen an bestehenden:
+
+| Service | FEAT-016-Aenderung |
+|---------|-------------------|
+| `app` | Neue Server Actions (diagnosis-actions.ts), Diagnose-UI-Komponenten im Debrief, SOP-Gate-Logik |
+| `worker` | Neuer Job-Type `diagnosis_generation`, Handler + Prompt-Builder |
+| Alle anderen | Unveraendert |
+
+### Neue Tabelle: `block_diagnosis`
+
+Folgt dem `sop`-Tabellen-Pattern exakt. Speichert die KI-generierte Diagnose pro Block.
+
+```sql
+CREATE TABLE block_diagnosis (
+  id                    uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id             uuid        NOT NULL REFERENCES tenants ON DELETE CASCADE,
+  capture_session_id    uuid        NOT NULL REFERENCES capture_session ON DELETE CASCADE,
+  block_key             text        NOT NULL,
+  block_checkpoint_id   uuid        NOT NULL REFERENCES block_checkpoint ON DELETE CASCADE,
+  content               jsonb       NOT NULL,
+  status                text        NOT NULL DEFAULT 'draft'
+                                    CHECK (status IN ('draft', 'reviewed', 'confirmed')),
+  generated_by_model    text        NOT NULL,
+  cost_usd              numeric(10,6),
+  created_by            uuid        REFERENCES auth.users,
+  created_at            timestamptz NOT NULL DEFAULT now(),
+  updated_at            timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_block_diagnosis_session_block ON block_diagnosis(capture_session_id, block_key);
+CREATE INDEX idx_block_diagnosis_checkpoint ON block_diagnosis(block_checkpoint_id);
+```
+
+RLS: `strategaize_admin` Full (Cross-Tenant), `tenant_admin` Read eigener Tenant. Analog zu `sop`.
+
+### Template-Erweiterung: 2 neue JSONB-Spalten
+
+```sql
+ALTER TABLE template
+  ADD COLUMN diagnosis_schema  jsonb DEFAULT NULL,
+  ADD COLUMN diagnosis_prompt  jsonb DEFAULT NULL;
+```
+
+#### `diagnosis_schema` — Template-spezifische Diagnose-Struktur
+
+Definiert pro Block die Unterthemen (Subtopics) und die Bewertungsfelder (Fields), die pro Unterthema generiert werden sollen. Jedes Template kann voellig andere Bewertungsfelder definieren.
+
+```json
+{
+  "blocks": {
+    "A": {
+      "subtopics": [
+        {
+          "key": "kernlogik",
+          "name": "Kernlogik Geschaeftsmodell",
+          "question_keys": ["A1", "A2"]
+        },
+        {
+          "key": "marktposition",
+          "name": "Marktposition & Wettbewerb",
+          "question_keys": ["A3", "A4", "A5"]
+        }
+      ]
+    }
+  },
+  "fields": [
+    { "key": "ist_situation", "label": "Beschreibung Ist-Situation", "type": "text" },
+    { "key": "ampel", "label": "Ampel", "type": "enum", "options": ["green", "yellow", "red"] },
+    { "key": "reifegrad", "label": "Reifegrad", "type": "number", "min": 0, "max": 10 },
+    { "key": "risiko", "label": "Risiko", "type": "number", "min": 0, "max": 10 },
+    { "key": "hebel", "label": "Hebel", "type": "number", "min": 0, "max": 10 },
+    { "key": "relevanz_90d", "label": "90-Tage-Relevanz", "type": "enum", "options": ["high", "medium", "low"] },
+    { "key": "empfehlung", "label": "Empfehlung / Massnahme", "type": "text" },
+    { "key": "belege", "label": "Belege / Zitate / Quelle", "type": "text" },
+    { "key": "owner", "label": "Owner (Intern)", "type": "text" },
+    { "key": "aufwand", "label": "Aufwand", "type": "enum", "options": ["S", "M", "L"] },
+    { "key": "naechster_schritt", "label": "Naechster Schritt", "type": "text" },
+    { "key": "abhaengigkeiten", "label": "Abhaengigkeiten/Blocker", "type": "text" },
+    { "key": "zielbild", "label": "Zielbild (DOD)", "type": "text" }
+  ]
+}
+```
+
+**Subtopic-Granularitaet (Q12-Entscheidung):** Thematisch gruppiert (2-3 Fragen pro Subtopic), nicht 1:1 mit Fragen. Die Diagnose arbeitet auf Themenebene, nicht auf Fragenebene. `question_keys` ordnet Subtopics den relevanten Template-Fragen zu, damit der KI-Prompt die zugehoerigen KUs filtern kann.
+
+#### `diagnosis_prompt` — Template-spezifischer System-Prompt
+
+Analog zu `sop_prompt`. Definiert Rolle, Analysefokus und Qualitaetskriterien fuer die KI-Diagnose. Jedes Template kann eigene Diagnose-Perspektiven definieren.
+
+```json
+{
+  "system_prompt": "Du bist ein erfahrener M&A-Berater und strategischer Analyst...",
+  "output_instructions": "Antworte IMMER mit einem JSON-Objekt...",
+  "field_instructions": {
+    "ist_situation": "Beschreibe den aktuellen Zustand basierend auf den Knowledge Units...",
+    "ampel": "Bewerte: green = solide, yellow = Handlungsbedarf, red = kritisch...",
+    "reifegrad": "0 = nicht vorhanden, 10 = Best Practice..."
+  }
+}
+```
+
+### Diagnosis Content (gespeichert in block_diagnosis.content)
+
+```json
+{
+  "block_key": "A",
+  "block_title": "Geschaeftsmodell & Markt",
+  "subtopics": [
+    {
+      "key": "kernlogik",
+      "name": "Kernlogik Geschaeftsmodell",
+      "fields": {
+        "ist_situation": "Das Geschaeftsmodell basiert auf...",
+        "ampel": "yellow",
+        "reifegrad": 6,
+        "risiko": 4,
+        "hebel": 7,
+        "relevanz_90d": "high",
+        "empfehlung": "Kernleistung schaerfen...",
+        "belege": "Antwort A1: '...'",
+        "owner": "",
+        "aufwand": "M",
+        "naechster_schritt": "",
+        "abhaengigkeiten": "",
+        "zielbild": ""
+      }
+    }
+  ]
+}
+```
+
+Leere Felder sind explizit erlaubt — der Mensch fuellt sie im Meeting (R12).
+
+### Worker-Erweiterung: Job-Type `diagnosis_generation`
+
+#### Handler-Architektur
+
+```
+src/workers/diagnosis/
+  handle-diagnosis-job.ts   — Job-Handler (analog handle-sop-job.ts)
+  diagnosis-prompt.ts       — Prompt-Builder (System + User)
+  types.ts                  — TypeScript Interfaces (DiagnosisContent, DiagnosisSubtopic)
+```
+
+#### Handler-Flow
+
+```typescript
+export async function handleDiagnosisJob(job: ClaimedJob): Promise<void> {
+  // 1. Load block_checkpoint by payload.block_checkpoint_id
+  // 2. Load Knowledge Units for this checkpoint (status IN proposed/accepted/edited)
+  // 3. Load template (diagnosis_schema + diagnosis_prompt)
+  // 4. Build system prompt from diagnosis_prompt config
+  // 5. Build user prompt with: KUs, subtopic definitions, quality_report
+  // 6. chatWithLLM() — temperature 0.3, maxTokens 8192
+  // 7. Parse JSON output, validate against diagnosis_schema fields
+  // 8. rpc_create_diagnosis() — persist result
+  // 9. Log costs to ai_cost_ledger (feature='diagnosis')
+  // 10. rpc_complete_ai_job()
+}
+```
+
+#### Claim-Loop-Integration
+
+```typescript
+// claim-loop.ts — erweitert um diagnosis-Handler
+const JOB_TYPES = [
+  'knowledge_unit_condensation',
+  'recondense_with_gaps',
+  'sop_generation',
+  'diagnosis_generation'   // NEU
+];
+```
+
+```typescript
+// run.ts — erweitert
+import { handleDiagnosisJob } from "../diagnosis/handle-diagnosis-job";
+await startClaimLoop(
+  handleCondensationJob,
+  handleRecondenseJob,
+  handleSopJob,
+  handleDiagnosisJob  // NEU
+);
+```
+
+#### Prompt-Strategie
+
+**System-Prompt** (aus template.diagnosis_prompt):
+- Rolle: M&A-Berater / strategischer Analyst (template-spezifisch)
+- Aufgabe: Analyse der Knowledge Units pro Unterthema
+- Output-Format: JSON matching diagnosis_schema-Struktur
+- Feld-Instruktionen: Was jedes Assessment-Feld enthalten soll
+- Qualitaetskriterien: evidenzbasiert, KU-Quellen zitieren, realistische Bewertungen
+
+**User-Prompt:**
+- Block-Kontext (key, title)
+- Subtopic-Definitionen aus diagnosis_schema
+- Alle Knowledge Units des Blocks (title, body, type, confidence, status)
+- Quality-Report vom Orchestrator (falls vorhanden)
+- Instruktion: pro Subtopic alle definierten Felder ausfuellen
+
+**LLM-Parameter:**
+- Temperature: 0.3 (niedriger als SOP 0.4 — Diagnose soll analytisch/faktisch sein)
+- Max Tokens: 8192 (Diagnose ist umfangreicher als SOP — 13 Felder × N Subtopics)
+- Modell: Bedrock Claude Sonnet (identisch zu SOP)
+
+### RPCs
+
+#### `rpc_create_diagnosis`
+
+```sql
+CREATE OR REPLACE FUNCTION rpc_create_diagnosis(
+  p_session_id       uuid,
+  p_block_key        text,
+  p_checkpoint_id    uuid,
+  p_content          jsonb,
+  p_model            text,
+  p_cost             numeric,
+  p_created_by       uuid
+) RETURNS jsonb AS $$
+  -- Ermittelt tenant_id aus capture_session
+  -- INSERT block_diagnosis
+  -- RETURN { diagnosis_id: uuid }
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+```
+
+#### `rpc_update_diagnosis`
+
+```sql
+CREATE OR REPLACE FUNCTION rpc_update_diagnosis(
+  p_diagnosis_id     uuid,
+  p_content          jsonb
+) RETURNS void AS $$
+  -- Prueft strategaize_admin-Rolle
+  -- UPDATE block_diagnosis SET content = p_content, updated_at = now()
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+```
+
+#### `rpc_confirm_diagnosis`
+
+```sql
+CREATE OR REPLACE FUNCTION rpc_confirm_diagnosis(
+  p_diagnosis_id     uuid
+) RETURNS void AS $$
+  -- Prueft strategaize_admin-Rolle
+  -- UPDATE block_diagnosis SET status = 'confirmed', updated_at = now()
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+```
+
+Alle RPCs: `GRANT EXECUTE TO authenticated` (Rollencheck intern via `auth.user_role()`).
+
+### UI-Architektur im Debrief
+
+#### Layout-Position
+
+```
+Debrief Page /admin/debrief/[sessionId]/[blockKey]
+  ┌─────────────────────────────────────┐
+  │  Block Header                       │
+  ├─────────────────────────────────────┤
+  │  Knowledge Units (bestehend)        │
+  │  Gap Questions (bestehend)          │
+  ├─────────────────────────────────────┤
+  │  ▼ Diagnose-Sektion (NEU)           │  ← FEAT-016
+  │    [Diagnose generieren] Button     │
+  │    Tabelle/Karten pro Subtopic      │
+  │    Ampel-Visualisierung (Farben)    │
+  │    Inline-Editing aller Felder      │
+  │    [Diagnose bestaetigen] Button    │
+  │    [JSON Export] Button             │
+  ├─────────────────────────────────────┤
+  │  ▼ SOP-Sektion (bestehend, GATED)  │  ← SOP-Gate
+  │    Hinweis: "Erst Diagnose          │
+  │    bestaetigen" ODER SOP-Buttons    │
+  └─────────────────────────────────────┘
+```
+
+#### Neue Komponenten
+
+| Komponente | Verantwortung |
+|-----------|--------------|
+| `DiagnosisGenerateButton.tsx` | Trigger-Button, enqueued ai_job, pollt fetchDiagnosis alle 3s |
+| `DiagnosisView.tsx` | Strukturierte Anzeige: Tabelle/Karten pro Subtopic, Ampel-Farben |
+| `DiagnosisEditor.tsx` | Inline-Editing aller Felder, Save via updateDiagnosisContent |
+| `DiagnosisConfirmButton.tsx` | Bestaetigt Diagnose (status → confirmed), zeigt Bestaetigt-State |
+| `DiagnosisExportButton.tsx` | JSON-Download der Diagnose-Daten |
+
+#### Server Actions
+
+```typescript
+// diagnosis-actions.ts (analog sop-actions.ts)
+export async function triggerDiagnosisGeneration(sessionId, blockKey, checkpointId)
+export async function fetchDiagnosis(sessionId, blockKey)
+export async function updateDiagnosisContent(diagnosisId, content)
+export async function confirmDiagnosis(diagnosisId)
+```
+
+Auth-Check: Nur `strategaize_admin` kann generieren, editieren, bestaetigen. `tenant_admin` kann lesen (eigener Tenant via RLS).
+
+#### Polling-Pattern
+
+Identisch zu SOP: `DiagnosisGenerateButton` pollt `fetchDiagnosis()` alle 3 Sekunden bis ein Result in der DB erscheint. Kein WebSocket, kein Realtime — konsistent mit bestehendem Pattern.
+
+### SOP-Gate-Mechanismus
+
+Einfacher Status-Check, kein separater Mechanismus (DEC-024):
+
+```typescript
+// Im Debrief Page Server Component:
+const diagnosis = await fetchDiagnosis(sessionId, blockKey);
+const diagnosisConfirmed = diagnosis?.status === 'confirmed';
+
+// SOP-Sektion:
+{diagnosisConfirmed ? (
+  <SopSection ... />
+) : (
+  <Alert>Erst Diagnose bestaetigen, bevor SOPs generiert werden koennen.</Alert>
+)}
+```
+
+Bestehender SOP-Code bleibt unveraendert. Nur die Button-Sichtbarkeit wird durch eine Bedingung gesteuert.
+
+### Kosten-Schaetzung
+
+| Operation | Input-Tokens | Output-Tokens | Kosten/Block | Kosten/Session (9 Blocks) |
+|-----------|-------------|--------------|-------------|--------------------------|
+| Diagnosis Generation | ~3.000-5.000 | ~2.000-4.000 | ~$0.03-$0.10 | ~$0.27-$0.90 |
+
+Gesamtkosten pro Session (alle Features):
+- Bisherig (V2): $2.30-$11.45
+- Mit Diagnose: **$2.57-$12.35**
+
+Fuer B2B-SaaS mit Beratungs-Hintergrund weiterhin akzeptabel.
+
+### Migrationen (geplant)
+
+3 neue Migrationen:
+
+| Nr. | Datei | Inhalt |
+|-----|-------|--------|
+| 050 | `050_block_diagnosis.sql` | block_diagnosis-Tabelle + RLS + Indexes + GRANTs + updated_at-Trigger |
+| 051 | `051_template_diagnosis_fields.sql` | ALTER template ADD diagnosis_schema + diagnosis_prompt, UPDATE exit_readiness mit initialem Schema + Prompt |
+| 052 | `052_rpc_diagnosis.sql` | rpc_create_diagnosis + rpc_update_diagnosis + rpc_confirm_diagnosis |
+
+### Security / Privacy FEAT-016
+
+Alle V1/V2-Regeln gelten weiter. Zusaetzlich:
+
+- **Diagnose-Content:** Enthaelt analytische Bewertungen ueber Unternehmensdaten. Gleiche Schutzstufe wie Knowledge Units und SOPs.
+- **RLS:** block_diagnosis ist tenant-isoliert. strategaize_admin Cross-Tenant fuer Beratungsarbeit.
+- **Diagnose-Prompt:** Enthaelt keine Kundendaten — nur Template-spezifische Instruktionen. Wird in template-Tabelle gespeichert (system-weit, nicht tenant-scoped).
+- **Export:** JSON-Export enthaelt potenziell sensitive Unternehmensbewertungen. Download nur fuer strategaize_admin (UI-seitig, nicht API-geschuetzt in V2 — API-Level Export-Auth in V3).
+
+### Constraints und Tradeoffs FEAT-016
+
+#### Constraint — Diagnose ist on-demand (DEC-022)
+Admin kontrolliert, wann Diagnose generiert wird. Keine automatische Generierung nach Verdichtung.
+**Tradeoff:** Admin muss aktiv den Button klicken. Vorteil: Kosten-Kontrolle, Timing-Kontrolle (Diagnose erst nach KU-Review sinnvoll).
+
+#### Constraint — Diagnose-Schema auf Template-Tabelle (DEC-023)
+Keine separate `diagnosis_template`-Tabelle. Schema + Prompt als JSONB-Spalten am bestehenden `template`.
+**Tradeoff:** Template-Tabelle waechst (jetzt 5 JSONB-Spalten: blocks, sop_prompt, owner_fields, diagnosis_schema, diagnosis_prompt). Akzeptabel — wenige Templates (<10 in V2), keine Performance-Relevanz.
+
+#### Constraint — SOP-Gate ist reiner Status-Check (DEC-024)
+Kein Event-System, kein Trigger, kein separater Gate-Mechanismus.
+**Tradeoff:** Gate ist UI-seitig — ein API-Caller koennte theoretisch SOP ohne Diagnose-Bestaetigung triggern. Fuer V2 akzeptabel (nur strategaize_admin hat Zugriff). API-Level Gate in V3 moeglich ueber CHECK in rpc_create_sop.
+
+#### Constraint — 13 Felder pro Subtopic im Prompt
+Ein einzelner LLM-Call soll 13 Bewertungsfelder pro Subtopic fuellen. Bei 5-8 Subtopics pro Block sind das 65-104 Felder.
+**Tradeoff:** Prompt-Komplexitaet ist hoch. Mitigation: field_instructions im diagnosis_prompt geben dem LLM klare Feld-Definitionen. Leere Felder sind explizit erlaubt (R12). Iterative Prompt-Verbesserung nach erstem Template (R11).
+
+### Open Technical Questions FEAT-016
+
+- **Q12 (beantwortet):** Subtopic-Granularitaet → thematisch gruppiert (2-3 Fragen pro Subtopic)
+- **Q13 (offen):** Meeting-Export-Format → JSON ist V2. Print-CSS als Quick-Win fuer druckbare Tabellen-Ansicht evaluieren in /frontend
+- **Q16 — Diagnose-Re-Generierung:** Was passiert, wenn der Admin die Diagnose nochmal generiert? V2: Ueberschreibt die bestehende block_diagnosis-Row (kein Versioning). V2.1: Optional Versioning.
+- **Q17 — Diagnose nach Backspelling:** Soll eine bestehende Diagnose invalidiert werden, wenn nach der Diagnose nochmal Backspelling laeuft? V2: Manuell (Admin entscheidet). Automatische Invalidierung in V3.
+
+### Empfohlene Slice-Reihenfolge FEAT-016
+
+1. **Diagnose-Backend:** block_diagnosis-Tabelle + RPCs + Template-Erweiterung + Worker diagnosis_generation + Exit-Readiness diagnosis_schema Seed
+2. **Diagnose-Frontend:** Diagnose-UI im Debrief (Generate, View, Edit, Confirm, Export) + SOP-Gate + i18n
+
+2 Slices. Backend-first, weil Frontend auf RPCs und Worker-Output aufsetzt.
+
+### Naechster Schritt FEAT-016
+
+`/slice-planning` fuer FEAT-016 (2 Slices mit Micro-Tasks).
