@@ -10,7 +10,7 @@
     {
       "id": "v1-1",
       "name": "V1.1",
-      "status": "active",
+      "status": "released",
       "summary": "Maintenance Release: Blueprint-Legacy-Cleanup (~41 tote Dateien + 17 Legacy-Migrations entfernen), Dashboard auf Capture-Sessions umbauen, error_log-Tabelle erstellen. Loest ISSUE-003, ISSUE-006, ISSUE-011, ISSUE-012, ISSUE-013.",
       "order": 2
     },

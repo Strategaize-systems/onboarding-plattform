@@ -9,37 +9,29 @@
 Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdichtung. Ermoeglicht mehrere Capture-Modi (Fragebogen, Meeting, Voice, etc.) und Template-basierte Produktvarianten (z.B. Exit-Readiness, Immobilien-Onboarding).
 
 ## Current State
-- High-Level State: implementing
-- Current Focus: V1.1 Maintenance Release — alle 2/2 Slices done (SLC-011 Legacy-Cleanup, SLC-012 Dashboard+error_log). Gesamt-QA + Final-Check + Deploy offen.
-- Current Phase: V1.1 Implementation
+- High-Level State: released
+- Current Focus: V1.1 released. Naechste Arbeit: V2 Planung oder Business System V4.3.
+- Current Phase: Stable (V1.1)
 
 ## Immediate Next Steps
-1. /qa SLC-012
-2. Gesamt-QA V1.1
-3. /final-check
-4. Deploy (Coolify Redeploy)
+1. Business System V4.3 /architecture
+2. Onboarding V2 Planung (bei Bedarf)
 
 ## Active Scope
-V1.1 Maintenance Release (3 Features):
-- FEAT-007 Blueprint-Legacy-Cleanup — ~41 tote Dateien + 17 Legacy-Migrations entfernen (ISSUE-011, ISSUE-006)
-- FEAT-008 Dashboard Capture-Sessions — Dashboard auf echte Capture-Sessions umbauen (ISSUE-012)
-- FEAT-009 Error-Logging — error_log-Tabelle erstellen (ISSUE-013)
-- Plus: ISSUE-003 npm install lokal (Dev-Convenience)
+V1.1 Maintenance Release (3 Features) — RELEASED:
+- FEAT-007 Blueprint-Legacy-Cleanup — done (SLC-011)
+- FEAT-008 Dashboard Capture-Sessions — done (SLC-012)
+- FEAT-009 Error-Logging — done (SLC-012)
 
 ## Blockers
 - aktuell keine
 
 ## Known Issues (reference)
-- ISSUE-002 Test-Infrastruktur fehlt — resolved (SLC-002a, 2026-04-15)
-- ISSUE-003 node_modules lokal nicht installiert — nur Dev-Convenience, Build auf Server laeuft
-- ISSUE-004 2-Tenant-RLS-Isolation unverifiziert — resolved (SLC-002a MT-4, 2026-04-15)
-- ISSUE-005 App-Title Blueprint-Branding — resolved (SLC-002c, 2026-04-16)
-- ISSUE-007 JWT-Refresh-Randbedingung nach Rollen-Umbenennung — aktuell kein Handlungsbedarf
-- ISSUE-008 Legacy-Route /api/tenant/runs/[runId]/feedback — resolved (SLC-002d, 2026-04-16)
-- ISSUE-009 Blueprint-Profile-Flow Silent Failure — resolved (SLC-002d, 2026-04-16)
+- ISSUE-007 JWT-Refresh-Randbedingung nach Rollen-Umbenennung — Low, aktuell kein Handlungsbedarf
+- ISSUE-014 Voice-Input nicht verdrahtet — Low, bewusst deaktiviert in V1
 
 ## Last Stable Version
-- V1 — 2026-04-18 — released auf https://onboarding.strategaizetransition.com (REL-002). E2E 10/10 PASS. Post-Launch STABLE (RPT-032).
+- V1.1 — 2026-04-19 — released auf https://onboarding.strategaizetransition.com (REL-003). Post-Launch STABLE (RPT-037).
 
 ## Notes
 Code-Basis uebernommen aus strategaize-blueprint-plattform V3.4 (Stand 2026-04-14). Blueprint-Stack laeuft unveraendert parallel auf blueprint.strategaizetransition.com (selber Hetzner-Server, separate Coolify-Resource).

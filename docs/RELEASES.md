@@ -14,3 +14,10 @@
 - Risks: ~41 Blueprint-Legacy-Dateien (kein Runtime-Impact, ISSUE-011). Dashboard zeigt keine Capture-Sessions (ISSUE-012). Error-Logging-Tabelle fehlt in DB. Kein CSP-Header. Kein Backup-Schedule. Kein Impressum/Datenschutz. Alle akzeptiert fuer internen Launch.
 - Rollback Notes: Coolify UI → vorheriges Deployment waehlen → Redeploy. DB-Stand unveraendert (keine neuen Migrations in diesem Deploy). Bei Bedarf: `docker compose down -v` — keine Echtdaten, Verlust akzeptabel.
 - Post-Launch: STABLE (RPT-032, 2026-04-18). E2E 10/10 PASS. 0 Fehler in Logs. Keine neuen Post-Deploy-Issues. RLS-Isolation verifiziert.
+
+### REL-003 — V1.1 Maintenance Release
+- Date: 2026-04-19
+- Scope: 2 Slices (SLC-011 Legacy-Cleanup, SLC-012 Dashboard+error_log). 64 Legacy-Dateien geloescht. Dashboard von Blueprint-Runs auf Capture-Sessions umgebaut. error_log-Tabelle erstellt (MIG-012). 5 Issues resolved (ISSUE-003, -006, -011, -012, -013).
+- Summary: Maintenance Release. Kein neues Feature, rein subtraktiv + inkrementell. Legacy-Ballast aus Blueprint-Fork entfernt, Dashboard auf echte Daten umgestellt, Error-Logging aktiviert. Gesamt-QA PASS (RPT-035), Final-Check PASS (RPT-036).
+- Risks: Keine materiellen. CSP-Header fehlt weiterhin (pre-existing, V2-Scope). Kein Backup-Schedule (pre-existing, keine Echtdaten).
+- Rollback Notes: Coolify UI → vorheriges Deployment waehlen. error_log-Tabelle bleibt in DB (additive Migration, kein Schaden).
