@@ -5,6 +5,8 @@ import type {
   AnalystOutput,
   ChallengerOutput,
   ChallengerVerdict,
+  GapQuestion,
+  OrchestratorOutput,
 } from "./types";
 
 /** Extract JSON from a potentially messy LLM response */
@@ -282,4 +284,89 @@ function normalizeStringArray(val: unknown): string[] {
 
 function clampScore(val: number): number {
   return Math.max(0, Math.min(10, Math.round(val)));
+}
+
+/** Validate and normalize orchestrator output */
+export function parseOrchestratorOutput(raw: string): {
+  output: OrchestratorOutput;
+  warnings: string[];
+} {
+  const warnings: string[] = [];
+  const jsonStr = extractJSON(raw);
+
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = JSON.parse(jsonStr);
+  } catch {
+    throw new Error(`Orchestrator output is not valid JSON: ${jsonStr.substring(0, 200)}...`);
+  }
+
+  // overall_score: clamp 0-100
+  const overallScore = Math.max(0, Math.min(100, Math.round(Number(parsed.overall_score) || 0)));
+
+  // coverage
+  const rawCoverage = (parsed.coverage as Record<string, unknown>) || {};
+  const coverage = {
+    covered_subtopics: normalizeStringArray(rawCoverage.covered_subtopics),
+    missing_subtopics: normalizeStringArray(rawCoverage.missing_subtopics),
+    coverage_ratio: String(rawCoverage.coverage_ratio || "0/0"),
+  };
+
+  // evidence_quality
+  const rawEvidence = (parsed.evidence_quality as Record<string, unknown>) || {};
+  const evidenceQuality = {
+    strong_evidence: normalizeStringArray(rawEvidence.strong_evidence),
+    weak_evidence: normalizeStringArray(rawEvidence.weak_evidence),
+    no_evidence: normalizeStringArray(rawEvidence.no_evidence),
+    score: Math.max(0, Math.min(100, Math.round(Number(rawEvidence.score) || 0))),
+  };
+
+  // consistency
+  const rawConsistency = (parsed.consistency as Record<string, unknown>) || {};
+  const consistency = {
+    consistent: rawConsistency.consistent !== false,
+    issues: normalizeStringArray(rawConsistency.issues),
+    score: Math.max(0, Math.min(100, Math.round(Number(rawConsistency.score) || 0))),
+  };
+
+  // gap_questions
+  const rawGaps = Array.isArray(parsed.gap_questions)
+    ? (parsed.gap_questions as Record<string, unknown>[])
+    : [];
+  const gapQuestions: GapQuestion[] = rawGaps.slice(0, 8).map((g, idx) => {
+    const priority = String(g.priority || "required").toLowerCase();
+    if (priority !== "required" && priority !== "nice_to_have") {
+      warnings.push(`Gap question ${idx}: priority "${g.priority}" normalized to "required"`);
+    }
+    return {
+      question_text: String(g.question_text || ""),
+      context: String(g.context || ""),
+      subtopic: String(g.subtopic || ""),
+      priority: priority === "nice_to_have" ? "nice_to_have" : "required",
+      related_ku_title: g.related_ku_title ? String(g.related_ku_title) : undefined,
+    };
+  });
+
+  // recommendation
+  const rawRecommendation = String(parsed.recommendation || "sufficient").toLowerCase();
+  let recommendation: OrchestratorOutput["recommendation"] = "sufficient";
+  if (rawRecommendation === "needs_backspelling") {
+    recommendation = "needs_backspelling";
+  } else if (rawRecommendation === "critical_gaps") {
+    recommendation = "critical_gaps";
+  } else if (rawRecommendation !== "sufficient") {
+    warnings.push(`Recommendation "${parsed.recommendation}" normalized to "sufficient"`);
+  }
+
+  const output: OrchestratorOutput = {
+    overall_score: overallScore,
+    coverage,
+    evidence_quality: evidenceQuality,
+    consistency,
+    gap_questions: gapQuestions,
+    recommendation,
+    recommendation_rationale: String(parsed.recommendation_rationale || ""),
+  };
+
+  return { output, warnings };
 }

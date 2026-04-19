@@ -4,14 +4,16 @@
 // 3. Run iteration loop (Analyst→Challenger)
 // 4. Persist Knowledge Units via RPC
 // 5. Embed Knowledge Units for semantic search (fire-and-forget)
-// 6. Log costs and iterations
-// 7. Mark job as completed
+// 6. Run orchestrator assessment (quality report + gap detection)
+// 7. Log costs and iterations
+// 8. Mark job as completed
 
 import { createAdminClient } from "../../lib/supabase/admin";
 import { captureException } from "../../lib/logger";
 import type { ClaimedJob } from "./claim-loop";
 import { runIterationLoop } from "./iteration-loop";
 import { embedKnowledgeUnits } from "./embed-knowledge-units";
+import { runOrchestratorAssessment } from "./orchestrator";
 import type {
   BlockAnswer,
   BlockDefinition,
@@ -163,10 +165,35 @@ export async function handleCondensationJob(job: ClaimedJob): Promise<void> {
     }
   }
 
-  // 6. Log costs
+  // 6. Run orchestrator assessment
+  try {
+    const orchestratorResult = await runOrchestratorAssessment({
+      adminClient,
+      job,
+      checkpointId: checkpoint.id,
+      block,
+      answers,
+      debriefItems: result.debrief_items,
+    });
+
+    console.log(
+      `[handle-job] Orchestrator: score=${orchestratorResult.quality_report.overall_score}, ` +
+        `recommendation=${orchestratorResult.quality_report.recommendation}, ` +
+        `gaps=${orchestratorResult.quality_report.gap_questions.length}`
+    );
+  } catch (err) {
+    // Orchestrator failure is non-fatal — KUs are already persisted
+    captureException(err, {
+      source: "handle-job",
+      metadata: { jobId: job.id, action: "orchestrator-assessment" },
+    });
+    console.error(`[handle-job] Orchestrator failed (non-fatal): ${err}`);
+  }
+
+  // 7. Log costs
   await logCosts(adminClient, job, result);
 
-  // 7. Mark job as completed
+  // 8. Mark job as completed
   const { error: completeError } = await adminClient.rpc("rpc_complete_ai_job", {
     p_job_id: job.id,
   });

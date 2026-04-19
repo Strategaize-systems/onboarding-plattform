@@ -130,3 +130,36 @@ export interface CondensationResult {
   iteration_log: IterationResult[];
   total_cost: CallCost;
 }
+
+/** A single gap question identified by the orchestrator */
+export interface GapQuestion {
+  question_text: string;
+  context: string;
+  subtopic: string;
+  priority: "required" | "nice_to_have";
+  related_ku_title?: string;
+}
+
+/** Orchestrator quality report — stored as JSONB on block_checkpoint */
+export interface OrchestratorOutput {
+  overall_score: number;
+  coverage: {
+    covered_subtopics: string[];
+    missing_subtopics: string[];
+    coverage_ratio: string;
+  };
+  evidence_quality: {
+    strong_evidence: string[];
+    weak_evidence: string[];
+    no_evidence: string[];
+    score: number;
+  };
+  consistency: {
+    consistent: boolean;
+    issues: string[];
+    score: number;
+  };
+  gap_questions: GapQuestion[];
+  recommendation: "sufficient" | "needs_backspelling" | "critical_gaps";
+  recommendation_rationale: string;
+}

@@ -9,18 +9,18 @@
 Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdichtung. Ermoeglicht mehrere Capture-Modi (Fragebogen, Meeting, Voice, etc.) und Template-basierte Produktvarianten (z.B. Exit-Readiness, Immobilien-Onboarding).
 
 ## Current State
-- High-Level State: slice-planning
-- Current Focus: V2 Slice-Planning abgeschlossen. 10 Slices (SLC-013..022) mit 67 Micro-Tasks. Naechster Schritt: /backend SLC-013 (Orchestrator-Integration).
-- Current Phase: V2 Slice-Planning
+- High-Level State: implementing
+- Current Focus: V2 Implementation. SLC-013 (Orchestrator-Integration) done. Naechster Schritt: /qa SLC-013, dann /backend SLC-014.
+- Current Phase: V2 Implementation
 
 ## Immediate Next Steps
-1. /backend SLC-013 (Orchestrator-Integration — 6 MTs, Blocker)
-2. /qa nach SLC-013
-3. /backend SLC-014 (Gap-Question-Backend — 7 MTs)
+1. /qa SLC-013 (Orchestrator-Integration)
+2. /backend SLC-014 (Gap-Question-Backend — 7 MTs, Blocker)
+3. /qa nach SLC-014
 
 ## Active Scope
-V2 — 10 Slices, 67 Micro-Tasks:
-- SLC-013 Orchestrator-Integration (6 MTs) — Blocker
+V2 — 10 Slices, 67 Micro-Tasks (1/10 done):
+- SLC-013 Orchestrator-Integration (6 MTs) — done
 - SLC-014 Gap-Question-Backend (7 MTs) — Blocker
 - SLC-015 Backspelling-UI (6 MTs) — High
 - SLC-016 SOP-Backend (7 MTs) — High

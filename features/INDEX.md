@@ -23,7 +23,7 @@
 
 | ID | Feature | Status | Spec | Created |
 |----|---------|--------|------|---------|
-| FEAT-010 | 3-Agent Orchestrator Loop | planned | [Spec](FEAT-010-orchestrator-loop.md) | 2026-04-19 |
+| FEAT-010 | 3-Agent Orchestrator Loop | in_progress | [Spec](FEAT-010-orchestrator-loop.md) | 2026-04-19 |
 | FEAT-011 | Auto-Gap-Backspelling | planned | [Spec](FEAT-011-auto-gap-backspelling.md) | 2026-04-19 |
 | FEAT-012 | SOP Generation (Level 2) | planned | [Spec](FEAT-012-sop-generation.md) | 2026-04-19 |
 | FEAT-013 | Evidence-Mode + Bulk-Import | planned | [Spec](FEAT-013-evidence-mode.md) | 2026-04-19 |
