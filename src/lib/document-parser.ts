@@ -10,7 +10,8 @@ export async function extractText(
   // PDF
   if (mimeType === "application/pdf") {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const pdfParse = require("pdf-parse");
+    // pdf-parse/index.js crashes in ESM (module.parent undefined → reads test file)
+    const pdfParse = require("pdf-parse/lib/pdf-parse");
     const result = await pdfParse(buffer);
     return result.text?.trim() || null;
   }

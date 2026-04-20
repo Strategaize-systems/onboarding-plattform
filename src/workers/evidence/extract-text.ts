@@ -1,7 +1,10 @@
 // Evidence Text Extraction Module
 // Dispatches extraction by MIME type: PDF (pdf-parse), DOCX (mammoth), TXT/CSV (direct), ZIP (recursive).
 
-import pdfParse from "pdf-parse";
+// pdf-parse/index.js crashes in ESM: module.parent is undefined → debug code
+// tries to read a non-existent test file. Import implementation directly.
+// @ts-expect-error no type declarations for subpath
+import pdfParse from "pdf-parse/lib/pdf-parse.js";
 import mammoth from "mammoth";
 import { createReadStream } from "fs";
 import { Readable } from "stream";
