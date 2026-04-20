@@ -138,6 +138,7 @@ export async function GET(
     return NextResponse.json({ error: "Nicht authentifiziert" }, { status: 401 });
   }
 
+  // Load question-specific events + block-level document_analysis events
   let query = supabase
     .from("capture_events")
     .select("id, event_type, payload, created_at, created_by")
@@ -145,8 +146,14 @@ export async function GET(
     .order("created_at", { ascending: false })
     .limit(200);
 
-  if (blockKey) query = query.eq("block_key", blockKey);
-  if (questionId) query = query.eq("question_id", questionId);
+  if (blockKey && questionId) {
+    // Include both: events for this question AND document_analysis for this block
+    query = query.eq("block_key", blockKey).or(`question_id.eq.${questionId},event_type.eq.document_analysis`);
+  } else if (blockKey) {
+    query = query.eq("block_key", blockKey);
+  } else if (questionId) {
+    query = query.eq("question_id", questionId);
+  }
 
   const { data: events, error } = await query;
 

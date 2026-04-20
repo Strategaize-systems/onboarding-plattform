@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { extractText } from "@/lib/document-parser";
 
 export const ALLOWED_MIME_TYPES = [
   "application/pdf",
@@ -203,7 +204,7 @@ export async function POST(
     );
   }
 
-  // Enqueue evidence_extraction job for async processing
+  // Enqueue evidence_extraction job for async processing (chunking + mapping)
   try {
     await adminClient.from("ai_jobs").insert({
       tenant_id: session.tenant_id,
@@ -215,8 +216,101 @@ export async function POST(
       status: "pending",
     });
   } catch (enqueueErr) {
-    // Non-blocking: file is uploaded, extraction can be retried
     console.error("[evidence-upload] Failed to enqueue extraction job:", enqueueErr);
+  }
+
+  // --- Async KI Document Analysis (ported from Blueprint) ---
+  // Extract text inline, then fire-and-forget LLM analysis.
+  // Result is saved as capture_events entry with event_type='document_analysis'.
+  const extractedText = await extractText(buffer, file.type, file.name).catch(() => null);
+
+  if (extractedText && blockKey) {
+    (async () => {
+      try {
+        const { chatWithLLM } = await import("@/lib/llm");
+
+        const truncatedText = extractedText.length > 4000
+          ? extractedText.slice(0, 4000) + "\n\n[... Dokument gekuerzt ...]"
+          : extractedText;
+
+        // Load question context if available (first question of the block)
+        const { data: sessionData } = await adminClient
+          .from("capture_session")
+          .select("template_id")
+          .eq("id", sessionId)
+          .single();
+
+        let questionContext = "";
+        if (sessionData?.template_id) {
+          const { data: template } = await adminClient
+            .from("template")
+            .select("blocks")
+            .eq("id", sessionData.template_id)
+            .single();
+
+          if (template?.blocks) {
+            const blocks = template.blocks as Array<{
+              key: string;
+              title?: Record<string, string> | string;
+              questions?: Array<{ text?: Record<string, string> | string }>;
+            }>;
+            const block = blocks.find((b) => b.key === blockKey);
+            if (block) {
+              const blockTitle = typeof block.title === "object" ? block.title.de ?? "" : block.title ?? "";
+              const questions = (block.questions ?? [])
+                .slice(0, 5)
+                .map((q) => typeof q.text === "object" ? q.text.de ?? "" : q.text ?? "")
+                .filter(Boolean);
+              questionContext = `\nBlock: ${blockTitle}\nFragen in diesem Block:\n${questions.map((q, i) => `${i + 1}. ${q}`).join("\n")}`;
+            }
+          }
+        }
+
+        const analysis = await chatWithLLM([
+          {
+            role: "system",
+            content: `Du bist ein erfahrener Berater. Dir wurde ein Dokument vorgelegt, das als Nachweis fuer eine strukturierte Wissenserhebung hochgeladen wurde.
+
+DEINE AUFGABE:
+Analysiere das Dokument und gib strukturiertes Feedback.
+
+REGELN:
+1. Beginne mit einer kurzen Einordnung: Was fuer ein Dokument ist das?
+2. Nenne die 3-5 wichtigsten Erkenntnisse aus dem Dokument
+3. Bewerte: Wie relevant ist das Dokument fuer die Fragen in diesem Block?
+4. Nenne konkret was das Dokument NICHT abdeckt
+5. Halte dich kurz und praegnant (max. 200 Woerter)
+6. Verwende Aufzaehlungspunkte${questionContext}`,
+          },
+          {
+            role: "user",
+            content: `Bitte analysiere folgendes Dokument (${file.name}):\n\n${truncatedText}`,
+          },
+        ], { temperature: 0.3, maxTokens: 1024 });
+
+        // Save as capture_events entry
+        await adminClient.from("capture_events").insert({
+          session_id: sessionId,
+          tenant_id: session.tenant_id,
+          block_key: blockKey,
+          question_id: "_document_analysis",
+          client_event_id: crypto.randomUUID(),
+          event_type: "document_analysis",
+          payload: {
+            text: analysis,
+            file_name: file.name,
+            evidence_file_id: evidenceFile.id,
+          },
+          created_by: user.id,
+        });
+      } catch (err) {
+        const { captureException: logErr } = await import("@/lib/logger");
+        logErr(err, {
+          source: "evidence/document-analysis",
+          metadata: { fileId: evidenceFile.id, fileName: file.name },
+        });
+      }
+    })();
   }
 
   return NextResponse.json(
