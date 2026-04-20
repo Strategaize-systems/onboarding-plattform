@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { AlertCircle, CheckCircle2, Clock, FileText, MessageSquare, Pencil, SkipForward, Star, Stethoscope } from "lucide-react";
+import { AlertCircle, CheckCircle2, Clock, FileText, MessageSquare, Pencil, SkipForward, Star } from "lucide-react";
 import { KnowledgeUnitList } from "./KnowledgeUnitList";
 import { MeetingModeBar } from "./MeetingModeBar";
 import { SopGenerateButton } from "./SopGenerateButton";
@@ -11,14 +11,8 @@ import { SopEditor } from "./SopEditor";
 import { SopExportButton } from "./SopExportButton";
 import { updateSopContent, type SopRow } from "./sop-actions";
 import type { SopContent } from "@/workers/sop/types";
-import { DiagnosisGenerateButton } from "./DiagnosisGenerateButton";
-import { DiagnosisView } from "./DiagnosisView";
-import { DiagnosisEditor } from "./DiagnosisEditor";
-import { DiagnosisConfirmButton } from "./DiagnosisConfirmButton";
-import { DiagnosisExportButton } from "./DiagnosisExportButton";
-import { updateDiagnosisContent, type DiagnosisRow } from "./diagnosis-actions";
-import type { DiagnosisContent } from "@/workers/diagnosis/types";
-import { SourceDataSidebar } from "./SourceDataSidebar";
+import { type DiagnosisRow } from "./diagnosis-actions";
+import { DiagnosisWorkspace } from "./DiagnosisWorkspace";
 
 interface KnowledgeUnit {
   id: string;
@@ -108,9 +102,6 @@ export function DebriefBlockClient({
 
   // Diagnosis state
   const [diagnosis, setDiagnosis] = useState<DiagnosisRow | null>(initialDiagnosis ?? null);
-  const [isDiagnosisEditing, setIsDiagnosisEditing] = useState(false);
-  const [isDiagnosisSaving, startDiagnosisSaveTransition] = useTransition();
-  const [diagnosisSaveError, setDiagnosisSaveError] = useState<string | null>(null);
 
   const router = useRouter();
 
@@ -133,20 +124,6 @@ export function DebriefBlockClient({
     if (diagnosis) {
       setDiagnosis({ ...diagnosis, status: "confirmed" });
     }
-  }
-
-  async function handleDiagnosisSave(content: DiagnosisContent) {
-    if (!diagnosis) return;
-    setDiagnosisSaveError(null);
-    startDiagnosisSaveTransition(async () => {
-      const result = await updateDiagnosisContent(diagnosis.id, content);
-      if (!result.success) {
-        setDiagnosisSaveError(result.error ?? "Speichern fehlgeschlagen");
-        return;
-      }
-      setDiagnosis({ ...diagnosis, content, updated_at: new Date().toISOString() });
-      setIsDiagnosisEditing(false);
-    });
   }
 
   async function handleSopSave(content: SopContent) {
@@ -187,48 +164,28 @@ export function DebriefBlockClient({
         />
       )}
 
-      {/* Diagnosis Section — Split-View: Diagnosis (2/3) + Source Data (1/3) */}
+      {/* Diagnosis Workspace — Subtopic-by-subtopic review with source data sidebar */}
       {hasKnowledgeUnits && checkpointId && (
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4" style={{ minHeight: "400px" }}>
-          {/* Left: Diagnosis (2/3) */}
-          <div className="xl:col-span-2">
-            <DiagnosisSection
-              sessionId={sessionId}
-              blockKey={blockKey}
-              checkpointId={checkpointId}
-              diagnosis={diagnosis}
-              isDiagnosisEditing={isDiagnosisEditing}
-              isDiagnosisSaving={isDiagnosisSaving}
-              diagnosisSaveError={diagnosisSaveError}
-              onDiagnosisGenerated={handleDiagnosisGenerated}
-              onDiagnosisConfirmed={handleDiagnosisConfirmed}
-              onEdit={() => setIsDiagnosisEditing(true)}
-              onCancelEdit={() => {
-                setIsDiagnosisEditing(false);
-                setDiagnosisSaveError(null);
-              }}
-              onSave={handleDiagnosisSave}
-            />
-          </div>
-
-          {/* Right: Source Data Sidebar (1/3) */}
-          <div className="xl:col-span-1">
-            <SourceDataSidebar
-              answersBySubtopic={answersBySubtopic}
-              allAnswers={sourceAnswers}
-              knowledgeUnits={knowledgeUnits.map((ku) => ({
-                id: ku.id,
-                title: ku.title,
-                body: ku.body,
-                unit_type: ku.unit_type,
-                confidence: ku.confidence,
-                status: ku.status,
-              }))}
-              evidenceFiles={evidenceFiles}
-              subtopicLabels={subtopicLabels}
-            />
-          </div>
-        </div>
+        <DiagnosisWorkspace
+          sessionId={sessionId}
+          blockKey={blockKey}
+          checkpointId={checkpointId}
+          diagnosis={diagnosis}
+          answersBySubtopic={answersBySubtopic}
+          allAnswers={sourceAnswers}
+          knowledgeUnits={knowledgeUnits.map((ku) => ({
+            id: ku.id,
+            title: ku.title,
+            body: ku.body,
+            unit_type: ku.unit_type,
+            confidence: ku.confidence,
+            status: ku.status,
+          }))}
+          evidenceFiles={evidenceFiles}
+          subtopicLabels={subtopicLabels}
+          onDiagnosisGenerated={handleDiagnosisGenerated}
+          onDiagnosisConfirmed={handleDiagnosisConfirmed}
+        />
       )}
 
       {/* SOP Section — gated by diagnosis confirmation */}
@@ -271,129 +228,6 @@ export function DebriefBlockClient({
         knowledgeUnits={knowledgeUnits}
         validationEntries={validationEntries}
       />
-    </div>
-  );
-}
-
-function DiagnosisSection({
-  sessionId,
-  blockKey,
-  checkpointId,
-  diagnosis,
-  isDiagnosisEditing,
-  isDiagnosisSaving,
-  diagnosisSaveError,
-  onDiagnosisGenerated,
-  onDiagnosisConfirmed,
-  onEdit,
-  onCancelEdit,
-  onSave,
-}: {
-  sessionId: string;
-  blockKey: string;
-  checkpointId: string;
-  diagnosis: DiagnosisRow | null;
-  isDiagnosisEditing: boolean;
-  isDiagnosisSaving: boolean;
-  diagnosisSaveError: string | null;
-  onDiagnosisGenerated: (d: DiagnosisRow) => void;
-  onDiagnosisConfirmed: () => void;
-  onEdit: () => void;
-  onCancelEdit: () => void;
-  onSave: (content: DiagnosisContent) => Promise<void>;
-}) {
-  const statusColor: Record<string, string> = {
-    draft: "bg-slate-100 text-slate-600 border-slate-200",
-    reviewed: "bg-blue-100 text-blue-700 border-blue-200",
-    confirmed: "bg-green-100 text-green-700 border-green-200",
-  };
-  const statusLabel: Record<string, string> = {
-    draft: "Entwurf",
-    reviewed: "Überprüft",
-    confirmed: "Bestätigt",
-  };
-
-  return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Stethoscope className="h-4 w-4 text-slate-600" />
-          <h3 className="text-sm font-bold text-slate-900">Diagnose</h3>
-        </div>
-        {diagnosis && (
-          <span
-            className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-bold ${
-              statusColor[diagnosis.status] ?? statusColor.draft
-            }`}
-          >
-            {statusLabel[diagnosis.status] ?? diagnosis.status}
-          </span>
-        )}
-      </div>
-
-      {/* No diagnosis yet — show generate button */}
-      {!diagnosis && (
-        <DiagnosisGenerateButton
-          sessionId={sessionId}
-          blockKey={blockKey}
-          checkpointId={checkpointId}
-          hasExisting={false}
-          onDiagnosisGenerated={onDiagnosisGenerated}
-        />
-      )}
-
-      {/* Diagnosis exists — view or edit */}
-      {diagnosis && !isDiagnosisEditing && (
-        <>
-          <DiagnosisView content={diagnosis.content} />
-          <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
-            {diagnosis.status !== "confirmed" && (
-              <button
-                onClick={onEdit}
-                className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
-              >
-                <Pencil className="h-3.5 w-3.5" />
-                Bearbeiten
-              </button>
-            )}
-            <DiagnosisConfirmButton
-              diagnosisId={diagnosis.id}
-              isConfirmed={diagnosis.status === "confirmed"}
-              onConfirmed={onDiagnosisConfirmed}
-            />
-            <DiagnosisExportButton
-              content={diagnosis.content}
-              blockKey={blockKey}
-            />
-            {diagnosis.status !== "confirmed" && (
-              <DiagnosisGenerateButton
-                sessionId={sessionId}
-                blockKey={blockKey}
-                checkpointId={checkpointId}
-                hasExisting={true}
-                onDiagnosisGenerated={onDiagnosisGenerated}
-              />
-            )}
-          </div>
-        </>
-      )}
-
-      {/* Diagnosis edit mode */}
-      {diagnosis && isDiagnosisEditing && (
-        <>
-          <DiagnosisEditor
-            content={diagnosis.content}
-            onSave={onSave}
-            onCancel={onCancelEdit}
-            isSaving={isDiagnosisSaving}
-          />
-          {diagnosisSaveError && (
-            <div className="rounded bg-red-50 px-3 py-2 text-sm text-red-700">
-              {diagnosisSaveError}
-            </div>
-          )}
-        </>
-      )}
     </div>
   );
 }
