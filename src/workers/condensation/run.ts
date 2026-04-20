@@ -8,6 +8,7 @@ import { handleCondensationJob } from "./handle-job";
 import { handleRecondenseJob } from "./handle-recondense";
 import { handleSopJob } from "../sop/handle-sop-job";
 import { handleDiagnosisJob } from "../diagnosis/handle-diagnosis-job";
+import { handleEvidenceJob } from "../evidence/handle-evidence-job";
 
 // Validate required environment variables
 const REQUIRED_ENV = [
@@ -64,7 +65,7 @@ async function main(): Promise<void> {
   setupShutdown();
 
   // Start the claim loop — runs forever, handles all job types
-  await startClaimLoop(handleCondensationJob, handleRecondenseJob, handleSopJob, handleDiagnosisJob);
+  await startClaimLoop(handleCondensationJob, handleRecondenseJob, handleSopJob, handleDiagnosisJob, handleEvidenceJob);
 }
 
 main().catch((err) => {

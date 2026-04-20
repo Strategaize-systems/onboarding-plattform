@@ -203,6 +203,22 @@ export async function POST(
     );
   }
 
+  // Enqueue evidence_extraction job for async processing
+  try {
+    await adminClient.from("ai_jobs").insert({
+      tenant_id: session.tenant_id,
+      job_type: "evidence_extraction",
+      payload: {
+        evidence_file_id: evidenceFile.id,
+        session_id: sessionId,
+      },
+      status: "pending",
+    });
+  } catch (enqueueErr) {
+    // Non-blocking: file is uploaded, extraction can be retried
+    console.error("[evidence-upload] Failed to enqueue extraction job:", enqueueErr);
+  }
+
   return NextResponse.json(
     {
       id: evidenceFile.id,
