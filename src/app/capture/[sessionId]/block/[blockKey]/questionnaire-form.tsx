@@ -5,14 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -47,13 +39,9 @@ import type { TemplateBlock, TemplateQuestion } from "@/lib/db/template-queries"
 import { saveAnswer } from "./actions";
 import { submitBlock } from "./submit-action";
 import { GapQuestionsSection } from "./gap-questions-section";
-
-const EVIDENCE_LABEL_KEYS = ["policy", "process", "template", "contract", "financial", "legal", "system", "org", "kpi", "other"] as const;
-const EVIDENCE_LABELS: Record<string, string> = {
-  policy: "Richtlinie", process: "Prozess", template: "Vorlage", contract: "Vertrag",
-  financial: "Finanzen", legal: "Recht", system: "System", org: "Organisation",
-  kpi: "Kennzahl", other: "Sonstiges",
-};
+import { FileUploadZone } from "./evidence/FileUploadZone";
+import { EvidenceFileList } from "./evidence/EvidenceFileList";
+import { MappingReview } from "./evidence/MappingReview";
 
 interface CheckpointInfo {
   id: string;
@@ -151,11 +139,8 @@ export function QuestionnaireWorkspace({
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Evidence state (visual structure — upload wiring in future slice)
-  const [uploadLabel, setUploadLabel] = useState("");
-  const [noteText, setNoteText] = useState("");
-  const [noteLabel, setNoteLabel] = useState("");
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  // Evidence state
+  const [evidenceRefreshKey, setEvidenceRefreshKey] = useState(0);
 
   // Block submit state
   const [submitting, setSubmitting] = useState(false);
@@ -1091,76 +1076,36 @@ export function QuestionnaireWorkspace({
               {/* Gap Questions / Backspelling Section */}
               <GapQuestionsSection sessionId={sessionId} blockKey={activeBlockKey} />
 
-              {/* ── Evidence + Checkpoints Grid (Blueprint V3.4 Style) ── */}
+              {/* ── Evidence + Checkpoints Grid ── */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* LEFT: Evidence / Nachweise */}
+                {/* LEFT: Evidence / Dokumente */}
                 <div className="bg-white rounded-2xl border-2 border-slate-200 shadow-lg overflow-hidden">
                   <div className="px-6 py-4 border-b border-slate-200 bg-slate-50/50">
                     <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide flex items-center gap-3">
                       <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-primary-dark to-brand-primary flex items-center justify-center shadow-md">
                         <FileText className="h-4 w-4 text-white" />
                       </div>
-                      Hochgeladene Nachweise
-                      <span className="ml-auto text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-200 text-slate-600">
-                        0
-                      </span>
+                      Dokumente & Evidenz
                     </h3>
                   </div>
-                  <div className="p-5 space-y-3">
-                    <p className="text-sm text-slate-400 py-3 text-center">Noch keine Nachweise hochgeladen.</p>
-
-                    <Separator className="my-3" />
-                    <div className="space-y-2">
-                      <div className="grid grid-cols-1 gap-2">
-                        <Input
-                          ref={fileInputRef}
-                          type="file"
-                          accept=".pdf,.docx,.xlsx,.xls,.png,.jpg,.jpeg"
-                        />
-                        <Select value={uploadLabel} onValueChange={setUploadLabel}>
-                          <SelectTrigger><SelectValue placeholder="Kategorie" /></SelectTrigger>
-                          <SelectContent>
-                            {EVIDENCE_LABEL_KEYS.map((key) => (
-                              <SelectItem key={key} value={key}>{EVIDENCE_LABELS[key]}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <Button
-                        disabled={!uploadLabel || !fileInputRef.current?.files?.length}
-                        size="sm"
-                        className="w-full bg-gradient-to-r from-brand-success-dark to-brand-success text-white"
-                      >
-                        Datei hochladen
-                      </Button>
-                    </div>
-                    <Separator className="my-3" />
-                    <div className="space-y-2">
-                      <textarea
-                        value={noteText}
-                        onChange={(e) => setNoteText(e.target.value)}
-                        placeholder="Textnotiz eingeben..."
-                        rows={2}
-                        className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:border-brand-primary focus:outline-none transition-colors resize-none"
-                      />
-                      <div className="flex gap-2">
-                        <Select value={noteLabel} onValueChange={setNoteLabel}>
-                          <SelectTrigger><SelectValue placeholder="Kategorie" /></SelectTrigger>
-                          <SelectContent>
-                            {EVIDENCE_LABEL_KEYS.map((key) => (
-                              <SelectItem key={key} value={key}>{EVIDENCE_LABELS[key]}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Button
-                          disabled={!noteText.trim() || !noteLabel}
-                          size="sm"
-                          variant="outline"
-                        >
-                          Notiz speichern
-                        </Button>
-                      </div>
-                    </div>
+                  <div className="p-5 space-y-4">
+                    <FileUploadZone
+                      sessionId={sessionId}
+                      blockKey={activeBlockKey}
+                      onUploadComplete={() =>
+                        setEvidenceRefreshKey((k) => k + 1)
+                      }
+                    />
+                    <EvidenceFileList
+                      sessionId={sessionId}
+                      blockKey={activeBlockKey}
+                      refreshKey={evidenceRefreshKey}
+                    />
+                    <MappingReview
+                      sessionId={sessionId}
+                      blockKey={activeBlockKey}
+                      refreshKey={evidenceRefreshKey}
+                    />
                   </div>
                 </div>
 

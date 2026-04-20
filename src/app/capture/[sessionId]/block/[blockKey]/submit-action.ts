@@ -77,6 +77,36 @@ export async function submitBlock(
     }
   }
 
+  // 4b. Load confirmed evidence mappings for this block
+  const { data: confirmedChunks } = await supabase
+    .from("evidence_chunk")
+    .select("confirmed_question_id, chunk_text, mapping_suggestion")
+    .eq("mapping_status", "confirmed")
+    .eq("confirmed_block_key", blockKey);
+
+  // Merge confirmed evidence into answers (additive — does not overwrite)
+  if (confirmedChunks && confirmedChunks.length > 0) {
+    for (const chunk of confirmedChunks) {
+      if (!chunk.confirmed_question_id) continue;
+      const evidenceKey = `evidence.${blockKey}.${chunk.confirmed_question_id}`;
+      // Extract the relevant excerpt from the mapping suggestion
+      const suggestions = chunk.mapping_suggestion as Array<{
+        question_id: string;
+        relevant_excerpt?: string;
+      }> | null;
+      const matched = suggestions?.find(
+        (s) => s.question_id === chunk.confirmed_question_id
+      );
+      const excerpt = matched?.relevant_excerpt ?? chunk.chunk_text;
+
+      // Append to existing evidence for this question (multiple chunks possible)
+      const existing = blockAnswers[evidenceKey];
+      blockAnswers[evidenceKey] = existing
+        ? `${existing}\n\n${excerpt}`
+        : excerpt;
+    }
+  }
+
   // 5. Build checkpoint content
   const content = {
     answers: blockAnswers,
