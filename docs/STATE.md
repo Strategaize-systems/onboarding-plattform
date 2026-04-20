@@ -10,13 +10,13 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: V2 Scope-Erweiterung. SLC-013..017 + SLC-023..024 done (7/12). FEAT-010..012 + FEAT-016 komplett. Diagnose-Layer vollstaendig implementiert.
-- Current Phase: V2 Implementation (FEAT-016 done, naechste: QA SLC-024)
+- Current Focus: V2 Scope-Erweiterung. SLC-013..018 + SLC-023..024 done (8/12). FEAT-010..012 + FEAT-016 komplett. FEAT-013 in_progress (SLC-018 done, SLC-019+020 offen).
+- Current Phase: V2 Implementation (SLC-018 done, naechste: /qa SLC-018 dann /backend SLC-019)
 
 ## Immediate Next Steps
-1. /qa SLC-024 (Diagnose-Frontend + SOP-Gate)
-2. Redeploy Worker + App auf Hetzner (Coolify)
-3. Weiter mit SLC-018..022 (Evidence, Template-Switcher, Whisper)
+1. /qa SLC-018 (Evidence-Schema + Storage + Upload-API)
+2. /backend SLC-019 (Evidence-Extraction + Mapping)
+3. SLC-020..022 danach
 
 ## Active Scope
 V2 — 12 Slices (7/12 done):
@@ -25,7 +25,7 @@ V2 — 12 Slices (7/12 done):
 - SLC-015 Backspelling-UI (6 MTs) — done
 - SLC-016 SOP-Backend (7 MTs) — done
 - SLC-017 SOP-UI (6 MTs) — done
-- SLC-018 Evidence-Schema+Storage (5 MTs) — High
+- SLC-018 Evidence-Schema+Storage (5 MTs) — done
 - SLC-019 Evidence-Extraction+Mapping (8 MTs) — High
 - SLC-020 Evidence-UI (6 MTs) — High
 - SLC-021 Template-Switcher (7 MTs) — Medium

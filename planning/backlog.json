@@ -275,7 +275,7 @@
       "title": "Evidence-Mode + Bulk-Import",
       "type": "feature",
       "priority": "high",
-      "status": "open",
+      "status": "in_progress",
       "version": "V2",
       "description": "Neuer Capture-Mode: Dokumente (PDF, DOCX) hochladen, KI extrahiert + mappt auf Template-Fragen. Einzel + Bulk (Multi-File, ZIP). Supabase Storage, evidence_chunk-Tabelle, Mapping-Review-UI. Siehe FEAT-013. Urspruenglich nur Bulk-Import geplant, erweitert auf vollstaendigen Evidence-Mode.",
       "createdAt": "2026-04-15"
