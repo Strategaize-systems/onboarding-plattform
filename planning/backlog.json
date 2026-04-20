@@ -285,7 +285,7 @@
       "title": "Second Template + Switcher UI",
       "type": "feature",
       "priority": "medium",
-      "status": "open",
+      "status": "done",
       "version": "V2",
       "description": "Zweites Template (Thema TBD — Q6), Template-Auswahl bei Session-Erstellung, template-spezifische Owner-Felder (DEC-012), template-spezifischer SOP-Prompt. Beweist Template-Flexibilitaet in Praxis. Siehe FEAT-014.",
       "createdAt": "2026-04-19"

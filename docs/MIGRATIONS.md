@@ -189,6 +189,14 @@ Der uebernommene Blueprint-Stand ist noch nicht auf einer Onboarding-Plattform-I
 - Risk: Gering — neue Tabellen und neuer Storage-Bucket, keine Aenderung an bestehenden Strukturen.
 - Rollback Notes: `DROP TABLE evidence_chunk; DROP TABLE evidence_file; DELETE FROM storage.buckets WHERE id = 'evidence'; DELETE FROM storage.objects WHERE bucket_id = 'evidence';`
 
+### MIG-018 — SLC-021 Demo-Template Mitarbeiter-Wissenserhebung (Migration 046)
+- Date: 2026-04-20
+- Scope: `046_seed_demo_template.sql` — INSERT template slug='mitarbeiter_wissenserhebung' v1.0.0 mit 5 Bloecken (30 Fragen), owner_fields (Abteilung, Position, Jahre im Unternehmen), HR-spezifischem sop_prompt. ON CONFLICT DO NOTHING (idempotent).
+- Affected Areas: template-Tabelle (neuer Eintrag), Session-Erstellungs-UI (zeigt jetzt 2 Templates)
+- Reason: SLC-021 Template-Switcher Proof-of-Concept — zweites Template fuer Multi-Template-Faehigkeit
+- Risk: Gering — reiner INSERT, keine Schema-Aenderung
+- Rollback Notes: `DELETE FROM template WHERE slug = 'mitarbeiter_wissenserhebung';`
+
 ### MIG-017 — SLC-019 Evidence RPCs + Cost Ledger Update (Migration 054)
 - Date: 2026-04-20
 - Scope:

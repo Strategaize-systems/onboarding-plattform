@@ -42,6 +42,8 @@ import { GapQuestionsSection } from "./gap-questions-section";
 import { FileUploadZone } from "./evidence/FileUploadZone";
 import { EvidenceFileList } from "./evidence/EvidenceFileList";
 import { MappingReview } from "./evidence/MappingReview";
+import { OwnerFieldsSection } from "./owner-fields-section";
+import type { OwnerField } from "@/lib/db/template-queries";
 
 interface CheckpointInfo {
   id: string;
@@ -55,6 +57,7 @@ interface Props {
   activeBlockKey: string;
   templateName: string;
   blocks: TemplateBlock[];
+  ownerFields?: OwnerField[];
   savedAnswers: Record<string, string>;
   locale: string;
   existingCheckpoints: CheckpointInfo[];
@@ -65,6 +68,7 @@ export function QuestionnaireWorkspace({
   activeBlockKey,
   templateName,
   blocks,
+  ownerFields = [],
   savedAnswers,
   locale,
   existingCheckpoints,
@@ -1069,6 +1073,24 @@ export function QuestionnaireWorkspace({
                   </div>
                 </div>
               </div>
+
+              {/* Owner Fields — only in first block, if template defines them */}
+              {ownerFields.length > 0 && activeBlockKey === blocks[0]?.key && (
+                <OwnerFieldsSection
+                  ownerFields={ownerFields}
+                  answers={answers}
+                  locale={locale}
+                  onFieldChange={(answerKey, value) => {
+                    setAnswers((prev) => ({ ...prev, [answerKey]: value }));
+                    // Autosave owner fields — answerKey is "owner.{fieldKey}"
+                    const fieldKey = answerKey.replace("owner.", "");
+                    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+                    debounceTimer.current = setTimeout(() => {
+                      saveAnswer(sessionId, "owner", fieldKey, value);
+                    }, 800);
+                  }}
+                />
+              )}
 
               {/* KI Memory Section */}
               <SessionMemoryView sessionId={sessionId} />

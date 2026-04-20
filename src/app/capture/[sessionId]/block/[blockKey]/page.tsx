@@ -69,6 +69,7 @@ export default async function BlockDetailPage({
       activeBlockKey={blockKey}
       templateName={template.name}
       blocks={template.blocks}
+      ownerFields={template.owner_fields ?? []}
       savedAnswers={session.answers}
       locale={locale}
       existingCheckpoints={blockCheckpoints ?? []}

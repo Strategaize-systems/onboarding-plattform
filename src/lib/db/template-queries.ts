@@ -30,6 +30,15 @@ export const TemplateBlockSchema = z.object({
 
 export type TemplateBlock = z.infer<typeof TemplateBlockSchema>;
 
+export const OwnerFieldSchema = z.object({
+  key: z.string(),
+  label: z.union([z.string(), z.record(z.string(), z.string())]),
+  type: z.enum(["text", "number"]).default("text"),
+  required: z.boolean().default(false),
+});
+
+export type OwnerField = z.infer<typeof OwnerFieldSchema>;
+
 export const TemplateRowSchema = z.object({
   id: z.string(),
   slug: z.string(),
@@ -37,6 +46,7 @@ export const TemplateRowSchema = z.object({
   version: z.string(),
   description: z.string().nullable(),
   blocks: z.array(TemplateBlockSchema),
+  owner_fields: z.array(OwnerFieldSchema).nullable().default(null),
   created_at: z.string(),
   updated_at: z.string(),
 });
