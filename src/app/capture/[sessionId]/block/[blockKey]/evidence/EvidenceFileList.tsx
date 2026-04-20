@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Image, Loader2, CheckCircle2, AlertCircle, Download } from "lucide-react";
+import { Image, Loader2, CheckCircle2, AlertCircle, Download, Sparkles, ChevronDown, ChevronRight } from "lucide-react";
 
 interface EvidenceFile {
   id: string;
@@ -11,6 +11,12 @@ interface EvidenceFile {
   file_size_bytes: number;
   extraction_status: string;
   extraction_error: string | null;
+  created_at: string;
+}
+
+interface AnalysisResult {
+  evidence_file_id: string;
+  text: string;
   created_at: string;
 }
 
@@ -31,12 +37,12 @@ const STATUS_CONFIG: Record<
   },
   extracting: {
     icon: <Loader2 className="h-3.5 w-3.5 animate-spin" />,
-    label: "Wird analysiert...",
+    label: "Wird verarbeitet...",
     color: "text-brand-primary",
   },
   extracted: {
     icon: <CheckCircle2 className="h-3.5 w-3.5" />,
-    label: "Analysiert",
+    label: "Verarbeitet",
     color: "text-green-600",
   },
   failed: {
@@ -46,7 +52,6 @@ const STATUS_CONFIG: Record<
   },
 };
 
-/** MIME-type icon mapping — ported from Blueprint run-workspace-client.tsx */
 function getFileTypeDisplay(filename: string, mimeType: string) {
   const ext = filename.split(".").pop()?.toLowerCase() ?? "";
   const isPdf = ext === "pdf" || mimeType === "application/pdf";
@@ -92,7 +97,7 @@ async function downloadFile(sessionId: string, fileId: string) {
       window.open(data.download_url, "_blank");
     }
   } catch {
-    // Silent fail — download is non-critical
+    // Silent fail
   }
 }
 
@@ -102,43 +107,85 @@ export function EvidenceFileList({
   refreshKey = 0,
 }: EvidenceFileListProps) {
   const [files, setFiles] = useState<EvidenceFile[]>([]);
+  const [analyses, setAnalyses] = useState<Map<string, AnalysisResult>>(new Map());
   const [loading, setLoading] = useState(true);
+  const [expandedAnalyses, setExpandedAnalyses] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     let cancelled = false;
     let pollTimer: NodeJS.Timeout | null = null;
 
-    async function loadFiles() {
+    async function loadData() {
       const supabase = createClient();
-      const { data } = await supabase
+
+      // Load files
+      const { data: fileData } = await supabase
         .from("evidence_file")
-        .select(
-          "id, original_filename, mime_type, file_size_bytes, extraction_status, extraction_error, created_at"
-        )
+        .select("id, original_filename, mime_type, file_size_bytes, extraction_status, extraction_error, created_at")
         .eq("capture_session_id", sessionId)
         .eq("block_key", blockKey)
         .order("created_at", { ascending: false });
 
+      // Load document_analysis events for this block
+      const { data: eventData } = await supabase
+        .from("capture_events")
+        .select("payload, created_at")
+        .eq("session_id", sessionId)
+        .eq("block_key", blockKey)
+        .eq("event_type", "document_analysis")
+        .order("created_at", { ascending: false });
+
       if (!cancelled) {
-        setFiles(data ?? []);
+        const currentFiles = fileData ?? [];
+        setFiles(currentFiles);
+
+        // Map analyses by evidence_file_id
+        const analysisMap = new Map<string, AnalysisResult>();
+        for (const event of eventData ?? []) {
+          const payload = event.payload as Record<string, unknown>;
+          const fileId = payload?.evidence_file_id as string;
+          if (fileId && payload?.text) {
+            analysisMap.set(fileId, {
+              evidence_file_id: fileId,
+              text: payload.text as string,
+              created_at: event.created_at,
+            });
+          }
+        }
+        setAnalyses(analysisMap);
         setLoading(false);
 
-        const hasPending = (data ?? []).some(
+        // Poll if any files are pending extraction OR pending analysis
+        const hasProcessing = currentFiles.some(
           (f) => f.extraction_status === "pending" || f.extraction_status === "extracting"
         );
-        if (hasPending) {
-          pollTimer = setTimeout(loadFiles, 5000);
+        const recentWithoutAnalysis = currentFiles.some((f) => {
+          const age = Date.now() - new Date(f.created_at).getTime();
+          return age < 3 * 60 * 1000 && !analysisMap.has(f.id);
+        });
+
+        if (hasProcessing || recentWithoutAnalysis) {
+          pollTimer = setTimeout(loadData, 5000);
         }
       }
     }
 
-    loadFiles();
+    loadData();
 
     return () => {
       cancelled = true;
       if (pollTimer) clearTimeout(pollTimer);
     };
   }, [sessionId, blockKey, refreshKey]);
+
+  function toggleAnalysis(fileId: string) {
+    setExpandedAnalyses((prev) => {
+      const next = new Set(prev);
+      if (next.has(fileId)) next.delete(fileId);
+      else next.add(fileId);
+      return next;
+    });
+  }
 
   if (loading) {
     return (
@@ -160,45 +207,82 @@ export function EvidenceFileList({
       {files.map((file) => {
         const status = STATUS_CONFIG[file.extraction_status] ?? STATUS_CONFIG.pending;
         const { iconBg, iconLabel, isImage: isImageFile } = getFileTypeDisplay(file.original_filename, file.mime_type);
+        const analysis = analyses.get(file.id);
+        const age = Date.now() - new Date(file.created_at).getTime();
+        const isAnalysisPending = !analysis && age < 3 * 60 * 1000;
+        const isExpanded = expandedAnalyses.has(file.id);
+
         return (
-          <div
-            key={file.id}
-            className="group flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 hover:border-slate-300 hover:shadow-md transition-all px-3 py-2.5"
-          >
-            {/* File type icon — Blueprint-style gradient */}
-            <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${iconBg} flex items-center justify-center text-white shadow-md flex-shrink-0`}>
-              {isImageFile ? (
-                <Image className="h-4 w-4" />
-              ) : (
-                <span className="text-[10px] font-bold">{iconLabel}</span>
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-slate-900 truncate">
-                {file.original_filename}
-              </p>
-              <div className="flex items-center gap-2 text-xs text-slate-400">
-                <span>{formatFileSize(file.file_size_bytes)}</span>
-                <span>&bull;</span>
-                <span>{new Date(file.created_at).toLocaleDateString("de-DE")}</span>
+          <div key={file.id} className="space-y-0">
+            {/* File row */}
+            <div className="group flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 hover:border-slate-300 hover:shadow-md transition-all px-3 py-2.5">
+              <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${iconBg} flex items-center justify-center text-white shadow-md flex-shrink-0`}>
+                {isImageFile ? (
+                  <Image className="h-4 w-4" />
+                ) : (
+                  <span className="text-[10px] font-bold">{iconLabel}</span>
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-slate-900 truncate">
+                  {file.original_filename}
+                </p>
+                <div className="flex items-center gap-2 text-xs text-slate-400">
+                  <span>{formatFileSize(file.file_size_bytes)}</span>
+                  <span>&bull;</span>
+                  <span>{new Date(file.created_at).toLocaleDateString("de-DE")}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className={`flex items-center gap-1.5 ${status.color}`}>
+                  {status.icon}
+                  <span className="text-xs font-medium">{status.label}</span>
+                </div>
+                <button
+                  onClick={(e) => { e.stopPropagation(); downloadFile(sessionId, file.id); }}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-slate-200"
+                  title="Herunterladen"
+                >
+                  <Download className="h-3.5 w-3.5 text-slate-500" />
+                </button>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <div className={`flex items-center gap-1.5 ${status.color}`}>
-                {status.icon}
-                <span className="text-xs font-medium">{status.label}</span>
+
+            {/* KI Analysis pending indicator */}
+            {isAnalysisPending && (
+              <div className="ml-5 mt-1 flex items-center gap-2 rounded-lg border border-brand-primary/20 bg-brand-primary/5 px-3 py-2">
+                <Sparkles className="h-3.5 w-3.5 text-brand-primary animate-pulse flex-shrink-0" />
+                <Loader2 className="h-3 w-3 animate-spin text-brand-primary flex-shrink-0" />
+                <span className="text-xs text-brand-primary font-medium">
+                  KI analysiert Dokument...
+                </span>
               </div>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  downloadFile(sessionId, file.id);
-                }}
-                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-slate-200"
-                title="Herunterladen"
-              >
-                <Download className="h-3.5 w-3.5 text-slate-500" />
-              </button>
-            </div>
+            )}
+
+            {/* KI Analysis result */}
+            {analysis && (
+              <div className="ml-5 mt-1 rounded-lg border border-brand-primary/20 bg-brand-primary/5 px-3 py-2">
+                <button
+                  onClick={() => toggleAnalysis(file.id)}
+                  className="w-full flex items-center gap-2 text-left"
+                >
+                  <Sparkles className="h-3.5 w-3.5 text-brand-primary flex-shrink-0" />
+                  <span className="text-xs font-semibold text-brand-primary flex-1">
+                    KI-Analyse
+                  </span>
+                  {isExpanded ? (
+                    <ChevronDown className="h-3 w-3 text-brand-primary" />
+                  ) : (
+                    <ChevronRight className="h-3 w-3 text-brand-primary" />
+                  )}
+                </button>
+                {isExpanded && (
+                  <p className="mt-2 text-xs text-slate-600 leading-relaxed whitespace-pre-wrap border-t border-brand-primary/10 pt-2">
+                    {analysis.text}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         );
       })}
