@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import { DebriefBlockClient } from "./DebriefBlockClient";
 import type { SopContent } from "@/workers/sop/types";
+import type { DiagnosisContent } from "@/workers/diagnosis/types";
 
 interface DebriefBlockPageProps {
   params: Promise<{ sessionId: string; blockKey: string }>;
@@ -119,6 +120,26 @@ export default async function DebriefBlockPage({
     }
   }
 
+  // Load existing diagnosis for this block
+  const { data: diagnosisData } = await supabase
+    .from("block_diagnosis")
+    .select("id, content, status, created_at, updated_at")
+    .eq("capture_session_id", sessionId)
+    .eq("block_key", blockKey)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const diagnosisRow = diagnosisData
+    ? {
+        id: diagnosisData.id as string,
+        content: diagnosisData.content as DiagnosisContent,
+        status: diagnosisData.status as "draft" | "reviewed" | "confirmed",
+        created_at: diagnosisData.created_at as string,
+        updated_at: diagnosisData.updated_at as string,
+      }
+    : null;
+
   // Load existing SOP for this block
   const { data: sopData } = await supabase
     .from("sop")
@@ -165,6 +186,7 @@ export default async function DebriefBlockPage({
         qualityReport={latestQualityReport}
         gapQuestionStats={gapQuestionStats}
         initialSop={sopRow}
+        initialDiagnosis={diagnosisRow}
         checkpointId={latestCheckpointId}
       />
     </div>

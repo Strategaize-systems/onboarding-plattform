@@ -359,6 +359,60 @@
       "clickToEdit": "Klik om te bewerken",
       "emptyField": "Leeg — klik om te bewerken",
       "saveFailed": "Opslaan mislukt"
+    },
+    "diagnosis": {
+      "title": "Diagnose",
+      "generate": "Diagnose genereren",
+      "regenerate": "Diagnose opnieuw genereren",
+      "generating": "Diagnose wordt gegenereerd…",
+      "generatingHint": "Dit kan 30–60 seconden duren",
+      "generateHint": "Genereert een gestructureerde diagnose per subonderwerp uit de Knowledge Units",
+      "confirm": "Diagnose bevestigen",
+      "confirmed": "Diagnose bevestigd",
+      "confirmHint": "Na bevestiging wordt SOP-generatie ontgrendeld",
+      "export": "JSON exporteren",
+      "edit": "Bewerken",
+      "editing": "Bewerkingsmodus",
+      "save": "Opslaan",
+      "saving": "Wordt opgeslagen…",
+      "cancel": "Annuleren",
+      "saveFailed": "Opslaan mislukt",
+      "status": {
+        "draft": "Concept",
+        "reviewed": "Beoordeeld",
+        "confirmed": "Bevestigd"
+      },
+      "sopGateHint": "Bevestig eerst de diagnose voordat SOPs gegenereerd kunnen worden.",
+      "fields": {
+        "ist_situation": "Beschrijving huidige situatie",
+        "ampel": "Stoplicht",
+        "reifegrad": "Volwassenheidsniveau",
+        "risiko": "Risico",
+        "hebel": "Hefboom",
+        "relevanz_90d": "90-dagen-relevantie",
+        "empfehlung": "Aanbeveling / Maatregel",
+        "belege": "Bewijs / Citaten / Bron",
+        "owner": "Eigenaar (Intern)",
+        "aufwand": "Inspanning",
+        "naechster_schritt": "Volgende stap",
+        "abhaengigkeiten": "Afhankelijkheden/Blokkers",
+        "zielbild": "Doelbeeld (DOD)"
+      },
+      "ampelValues": {
+        "green": "Groen",
+        "yellow": "Geel",
+        "red": "Rood"
+      },
+      "relevanzValues": {
+        "high": "Hoog",
+        "medium": "Gemiddeld",
+        "low": "Laag"
+      },
+      "aufwandValues": {
+        "S": "Klein (S)",
+        "M": "Gemiddeld (M)",
+        "L": "Groot (L)"
+      }
     }
   },
   "freeform": {

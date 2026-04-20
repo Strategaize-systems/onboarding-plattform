@@ -359,6 +359,60 @@
       "clickToEdit": "Click to edit",
       "emptyField": "Empty — click to edit",
       "saveFailed": "Save failed"
+    },
+    "diagnosis": {
+      "title": "Diagnosis",
+      "generate": "Generate Diagnosis",
+      "regenerate": "Regenerate Diagnosis",
+      "generating": "Generating Diagnosis…",
+      "generatingHint": "This may take 30–60 seconds",
+      "generateHint": "Generates a structured diagnosis per subtopic from the Knowledge Units",
+      "confirm": "Confirm Diagnosis",
+      "confirmed": "Diagnosis Confirmed",
+      "confirmHint": "After confirmation, SOP generation will be unlocked",
+      "export": "Export JSON",
+      "edit": "Edit",
+      "editing": "Edit Mode",
+      "save": "Save",
+      "saving": "Saving…",
+      "cancel": "Cancel",
+      "saveFailed": "Save failed",
+      "status": {
+        "draft": "Draft",
+        "reviewed": "Reviewed",
+        "confirmed": "Confirmed"
+      },
+      "sopGateHint": "Please confirm the diagnosis before generating SOPs.",
+      "fields": {
+        "ist_situation": "Current State Description",
+        "ampel": "Traffic Light",
+        "reifegrad": "Maturity Level",
+        "risiko": "Risk",
+        "hebel": "Leverage",
+        "relevanz_90d": "90-Day Relevance",
+        "empfehlung": "Recommendation / Action",
+        "belege": "Evidence / Quotes / Source",
+        "owner": "Owner (Internal)",
+        "aufwand": "Effort",
+        "naechster_schritt": "Next Step",
+        "abhaengigkeiten": "Dependencies/Blockers",
+        "zielbild": "Target State (DOD)"
+      },
+      "ampelValues": {
+        "green": "Green",
+        "yellow": "Yellow",
+        "red": "Red"
+      },
+      "relevanzValues": {
+        "high": "High",
+        "medium": "Medium",
+        "low": "Low"
+      },
+      "aufwandValues": {
+        "S": "Small (S)",
+        "M": "Medium (M)",
+        "L": "Large (L)"
+      }
     }
   },
   "freeform": {
