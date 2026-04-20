@@ -18,6 +18,7 @@ import { DiagnosisConfirmButton } from "./DiagnosisConfirmButton";
 import { DiagnosisExportButton } from "./DiagnosisExportButton";
 import { updateDiagnosisContent, type DiagnosisRow } from "./diagnosis-actions";
 import type { DiagnosisContent } from "@/workers/diagnosis/types";
+import { SourceDataSidebar } from "./SourceDataSidebar";
 
 interface KnowledgeUnit {
   id: string;
@@ -49,6 +50,20 @@ interface GapQuestionStats {
   maxRound: number;
 }
 
+interface AnswerData {
+  questionId: string;
+  questionText: string;
+  answer: string;
+}
+
+interface EvidenceFileData {
+  id: string;
+  original_filename: string;
+  mime_type: string;
+  file_size_bytes: number;
+  extraction_status: string;
+}
+
 interface DebriefBlockClientProps {
   sessionId: string;
   blockKey: string;
@@ -61,6 +76,11 @@ interface DebriefBlockClientProps {
   initialSop?: SopRow | null;
   initialDiagnosis?: DiagnosisRow | null;
   checkpointId?: string | null;
+  // Source data for sidebar
+  sourceAnswers?: AnswerData[];
+  answersBySubtopic?: Record<string, AnswerData[]>;
+  subtopicLabels?: Record<string, string>;
+  evidenceFiles?: EvidenceFileData[];
 }
 
 export function DebriefBlockClient({
@@ -75,6 +95,10 @@ export function DebriefBlockClient({
   initialSop,
   initialDiagnosis,
   checkpointId,
+  sourceAnswers = [],
+  answersBySubtopic = {},
+  subtopicLabels = {},
+  evidenceFiles = [],
 }: DebriefBlockClientProps) {
   const [isFinalized, setIsFinalized] = useState(initialFinalized);
   const [sop, setSop] = useState<SopRow | null>(initialSop ?? null);
@@ -163,25 +187,48 @@ export function DebriefBlockClient({
         />
       )}
 
-      {/* Diagnosis Section (before SOP, gate for SOP) */}
+      {/* Diagnosis Section — Split-View: Diagnosis (2/3) + Source Data (1/3) */}
       {hasKnowledgeUnits && checkpointId && (
-        <DiagnosisSection
-          sessionId={sessionId}
-          blockKey={blockKey}
-          checkpointId={checkpointId}
-          diagnosis={diagnosis}
-          isDiagnosisEditing={isDiagnosisEditing}
-          isDiagnosisSaving={isDiagnosisSaving}
-          diagnosisSaveError={diagnosisSaveError}
-          onDiagnosisGenerated={handleDiagnosisGenerated}
-          onDiagnosisConfirmed={handleDiagnosisConfirmed}
-          onEdit={() => setIsDiagnosisEditing(true)}
-          onCancelEdit={() => {
-            setIsDiagnosisEditing(false);
-            setDiagnosisSaveError(null);
-          }}
-          onSave={handleDiagnosisSave}
-        />
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4" style={{ minHeight: "400px" }}>
+          {/* Left: Diagnosis (2/3) */}
+          <div className="xl:col-span-2">
+            <DiagnosisSection
+              sessionId={sessionId}
+              blockKey={blockKey}
+              checkpointId={checkpointId}
+              diagnosis={diagnosis}
+              isDiagnosisEditing={isDiagnosisEditing}
+              isDiagnosisSaving={isDiagnosisSaving}
+              diagnosisSaveError={diagnosisSaveError}
+              onDiagnosisGenerated={handleDiagnosisGenerated}
+              onDiagnosisConfirmed={handleDiagnosisConfirmed}
+              onEdit={() => setIsDiagnosisEditing(true)}
+              onCancelEdit={() => {
+                setIsDiagnosisEditing(false);
+                setDiagnosisSaveError(null);
+              }}
+              onSave={handleDiagnosisSave}
+            />
+          </div>
+
+          {/* Right: Source Data Sidebar (1/3) */}
+          <div className="xl:col-span-1">
+            <SourceDataSidebar
+              answersBySubtopic={answersBySubtopic}
+              allAnswers={sourceAnswers}
+              knowledgeUnits={knowledgeUnits.map((ku) => ({
+                id: ku.id,
+                title: ku.title,
+                body: ku.body,
+                unit_type: ku.unit_type,
+                confidence: ku.confidence,
+                status: ku.status,
+              }))}
+              evidenceFiles={evidenceFiles}
+              subtopicLabels={subtopicLabels}
+            />
+          </div>
+        </div>
       )}
 
       {/* SOP Section — gated by diagnosis confirmation */}

@@ -25,18 +25,37 @@ export default async function DebriefBlockPage({
     notFound();
   }
 
-  // Template laden fuer Block-Titel
+  // Template laden fuer Block-Titel + Diagnosis-Schema (fuer Subtopic→Frage-Mapping)
   const { data: template } = await supabase
     .from("template")
-    .select("blocks")
+    .select("blocks, diagnosis_schema")
     .eq("id", session.template_id)
     .single();
 
   const blocks = (template?.blocks ?? []) as Array<{
     key: string;
     title: Record<string, string>;
+    questions?: Array<{
+      id: string;
+      frage_id: string;
+      text: string;
+    }>;
   }>;
   const block = blocks.find((b) => b.key === blockKey);
+
+  // diagnosis_schema for subtopic→question_keys mapping
+  const diagnosisSchema = template?.diagnosis_schema as {
+    blocks?: Record<
+      string,
+      {
+        subtopics: Array<{
+          key: string;
+          name: string;
+          question_keys: string[];
+        }>;
+      }
+    >;
+  } | null;
 
   if (!block) {
     notFound();
@@ -120,6 +139,71 @@ export default async function DebriefBlockPage({
     }
   }
 
+  // Load raw answers from latest checkpoint content
+  const latestCheckpointWithContent = (blockCheckpoints ?? []).find(
+    (cp) => cp.checkpoint_type === "questionnaire_submit" || cp.checkpoint_type === "backspelling_recondense"
+  );
+
+  // Load answers from capture_session.answers for this block
+  const { data: sessionAnswers } = await supabase
+    .from("capture_session")
+    .select("answers")
+    .eq("id", sessionId)
+    .single();
+
+  const allSessionAnswers = (sessionAnswers?.answers ?? {}) as Record<
+    string,
+    string
+  >;
+
+  // Build question map from template block
+  const blockQuestions = (block?.questions ?? []) as Array<{
+    id: string;
+    frage_id: string;
+    text: string;
+  }>;
+
+  // Build answer data: match template questions with session answers
+  const sourceAnswers = blockQuestions.map((q) => {
+    const answerKey = `${blockKey}.${q.frage_id}`;
+    return {
+      questionId: q.frage_id,
+      questionText: q.text,
+      answer: allSessionAnswers[answerKey] ?? "",
+    };
+  });
+
+  // Build subtopic→answers mapping from diagnosis_schema
+  const subtopicDefs =
+    diagnosisSchema?.blocks?.[blockKey]?.subtopics ?? [];
+
+  const answersBySubtopic: Record<
+    string,
+    Array<{ questionId: string; questionText: string; answer: string }>
+  > = {};
+  const subtopicLabels: Record<string, string> = {};
+
+  for (const st of subtopicDefs) {
+    subtopicLabels[st.key] = st.name;
+    answersBySubtopic[st.key] = sourceAnswers.filter((a) =>
+      st.question_keys.includes(a.questionId)
+    );
+  }
+
+  // Load evidence files for this session (optionally scoped to block)
+  const { data: evidenceFiles } = await supabase
+    .from("evidence_file")
+    .select(
+      "id, original_filename, mime_type, file_size_bytes, extraction_status, block_key"
+    )
+    .eq("capture_session_id", sessionId)
+    .order("created_at", { ascending: false });
+
+  // Filter: show evidence for this block OR unscoped evidence
+  const blockEvidence = (evidenceFiles ?? []).filter(
+    (ef) => !ef.block_key || ef.block_key === blockKey
+  );
+
   // Load existing diagnosis for this block
   const { data: diagnosisData } = await supabase
     .from("block_diagnosis")
@@ -188,6 +272,16 @@ export default async function DebriefBlockPage({
         initialSop={sopRow}
         initialDiagnosis={diagnosisRow}
         checkpointId={latestCheckpointId}
+        sourceAnswers={sourceAnswers}
+        answersBySubtopic={answersBySubtopic}
+        subtopicLabels={subtopicLabels}
+        evidenceFiles={blockEvidence.map((ef) => ({
+          id: ef.id,
+          original_filename: ef.original_filename,
+          mime_type: ef.mime_type,
+          file_size_bytes: ef.file_size_bytes,
+          extraction_status: ef.extraction_status,
+        }))}
       />
     </div>
   );
