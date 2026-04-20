@@ -77,12 +77,25 @@ export async function submitBlock(
     }
   }
 
-  // 4b. Load confirmed evidence mappings for this block
-  const { data: confirmedChunks } = await supabase
-    .from("evidence_chunk")
-    .select("confirmed_question_id, chunk_text, mapping_suggestion")
-    .eq("mapping_status", "confirmed")
-    .eq("confirmed_block_key", blockKey);
+  // 4b. Load confirmed evidence mappings for this block (scoped to this session)
+  // Step 1: Get evidence file IDs for this session + block
+  const { data: evidenceFiles } = await supabase
+    .from("evidence_file")
+    .select("id")
+    .eq("capture_session_id", sessionId)
+    .eq("block_key", blockKey);
+
+  const evidenceFileIds = (evidenceFiles ?? []).map((f) => f.id);
+
+  // Step 2: Get confirmed chunks only from this session's files
+  const { data: confirmedChunks } = evidenceFileIds.length > 0
+    ? await supabase
+        .from("evidence_chunk")
+        .select("confirmed_question_id, chunk_text, mapping_suggestion")
+        .eq("mapping_status", "confirmed")
+        .eq("confirmed_block_key", blockKey)
+        .in("evidence_file_id", evidenceFileIds)
+    : { data: null };
 
   // Merge confirmed evidence into answers (additive — does not overwrite)
   if (confirmedChunks && confirmedChunks.length > 0) {
