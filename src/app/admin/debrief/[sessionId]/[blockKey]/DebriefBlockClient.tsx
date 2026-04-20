@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { AlertCircle, CheckCircle2, Clock, FileText, MessageSquare, Pencil, SkipForward, Star } from "lucide-react";
-import { KnowledgeUnitList } from "./KnowledgeUnitList";
+
 import { MeetingModeBar } from "./MeetingModeBar";
 import { SopGenerateButton } from "./SopGenerateButton";
 import { SopView } from "./SopView";
@@ -81,7 +81,6 @@ export function DebriefBlockClient({
   sessionId,
   blockKey,
   knowledgeUnits,
-  validationEntries,
   hasKnowledgeUnits,
   isAlreadyFinalized: initialFinalized,
   qualityReport,
@@ -222,12 +221,6 @@ export function DebriefBlockClient({
         )
       )}
 
-      <KnowledgeUnitList
-        sessionId={sessionId}
-        blockKey={blockKey}
-        knowledgeUnits={knowledgeUnits}
-        validationEntries={validationEntries}
-      />
     </div>
   );
 }
