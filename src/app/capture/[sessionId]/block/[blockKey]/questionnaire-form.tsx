@@ -429,11 +429,7 @@ export function QuestionnaireWorkspace({
       }
       const { text } = await res.json();
       if (text) {
-        const key = `${activeBlockKey}.${activeQ.id}`;
-        setAnswers((prev) => {
-          const existing = prev[key] || "";
-          return { ...prev, [key]: existing ? `${existing} ${text}` : text };
-        });
+        setChatInput((prev) => (prev ? `${prev} ${text}` : text));
       }
     } catch (err) {
       console.error("Transkription fehlgeschlagen:", err);
