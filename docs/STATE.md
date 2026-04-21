@@ -9,13 +9,13 @@
 Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdichtung. Ermoeglicht mehrere Capture-Modi (Fragebogen, Meeting, Voice, etc.) und Template-basierte Produktvarianten (z.B. Exit-Readiness, Immobilien-Onboarding).
 
 ## Current State
-- High-Level State: implementing
-- Current Focus: V2 Go-Live APPROVED. Gesamt-QA PASS (RPT-053), Final-Check PASS (RPT-054), Go-Live GO (RPT-055).
-- Current Phase: V2 Go-Live — bereit fuer /deploy
+- High-Level State: released
+- Current Focus: V2 released (REL-004). Post-Launch STABLE (RPT-056). 0 Fehler in Logs, alle Container healthy.
+- Current Phase: Stable (V2)
 
 ## Immediate Next Steps
-1. /deploy V2 (User deployt manuell ueber Coolify)
-2. /post-launch V2
+1. V2 in Betrieb beobachten
+2. V3 Planung (Dialogue-Mode mit Jitsi+Whisper) bei Bedarf starten
 
 ## Active Scope
 V2 — 12 Slices (12/12 done):
@@ -36,7 +36,7 @@ V2 — 12 Slices (12/12 done):
 - aktuell keine
 
 ## Last Stable Version
-- V1.1 — 2026-04-19 — released auf https://onboarding.strategaizetransition.com (REL-003).
+- V2 — 2026-04-21 — released auf https://onboarding.strategaizetransition.com (REL-004).
 
 ## Notes
 Parallelisierungs-Potential: Evidence-Kette (SLC-018..020) kann parallel zur Orchestrator+SOP-Kette (SLC-013..017) laufen. Whisper (SLC-022) ist komplett unabhaengig.

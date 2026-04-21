@@ -17,7 +17,7 @@
     {
       "id": "v2",
       "name": "V2",
-      "status": "active",
+      "status": "released",
       "summary": "Intelligence Upgrade + Evidence + Template-Expansion + Diagnosis Layer. 3-Agent Orchestrator Loop, Auto-Gap-Backspelling, SOP-Generation (Level 2), Template-driven Diagnosis Layer (Kernprodukt-Feature — strukturierte Analyse zwischen KU-Verdichtung und Meeting), Evidence-Mode + Bulk-Import, zweites Template + Switcher-UI, Voice Input (Whisper). 7 Features (FEAT-010..016).",
       "order": 3
     },
