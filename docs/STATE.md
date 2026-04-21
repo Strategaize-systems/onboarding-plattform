@@ -10,13 +10,13 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: V2 alle 12/12 Slices implementiert. FEAT-010..016 komplett. Naechste: /qa SLC-022 dann Gesamt-QA V2.
-- Current Phase: V2 Implementation Complete — QA Phase
+- Current Focus: V2 alle 12/12 Slices implementiert + QA-geprüft. FEAT-010..016 komplett. Gesamt-QA V2 laeuft.
+- Current Phase: V2 Gesamt-QA
 
 ## Immediate Next Steps
-1. /qa SLC-022 (Whisper-Voice-Input)
-2. Gesamt-QA V2
-3. /final-check → /go-live → /deploy V2
+1. Gesamt-QA V2 abschliessen
+2. /final-check
+3. /go-live → /deploy V2
 
 ## Active Scope
 V2 — 12 Slices (12/12 done):
