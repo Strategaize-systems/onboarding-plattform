@@ -58,3 +58,25 @@
 - **Empfohlene Reihenfolge:** 013 → 014 → 015 → 016 → 017 → **023 → 024** → 018 → 019 → 020 → 021 → 022
 - **SLC-023 + SLC-024 (Diagnose-Layer)** sind Prioritaet 1 nach SLC-017 (SOP). Diagnose ist Kernprodukt-Feature und SOP-Gate-Abhaengigkeit.
 - **Parallelisierbar:** SLC-018..020 (Evidence) kann parallel zu SLC-023..024 laufen. SLC-022 (Whisper) kann jederzeit eingeschoben werden.
+
+## V3 Slices (Dialogue-Mode)
+
+| ID | Slice | Feature | Status | Priority | Created |
+|----|-------|---------|--------|----------|---------|
+| SLC-025 | [Jitsi Infrastructure](SLC-025-jitsi-infrastructure.md) | FEAT-017 | planned | Blocker | 2026-04-21 |
+| SLC-026 | [Meeting Guide Backend](SLC-026-meeting-guide-backend.md) | FEAT-018 | planned | High | 2026-04-21 |
+| SLC-027 | [Meeting Guide UI](SLC-027-meeting-guide-ui.md) | FEAT-018 | planned | High | 2026-04-21 |
+| SLC-028 | [Dialogue Session Backend](SLC-028-dialogue-session-backend.md) | FEAT-019 | planned | High | 2026-04-21 |
+| SLC-029 | [Dialogue Session UI](SLC-029-dialogue-session-ui.md) | FEAT-019 | planned | High | 2026-04-21 |
+| SLC-030 | [Recording Pipeline](SLC-030-recording-pipeline.md) | FEAT-020 | planned | Blocker | 2026-04-21 |
+| SLC-031 | [Dialogue Extraction](SLC-031-dialogue-extraction.md) | FEAT-020 | planned | Blocker | 2026-04-21 |
+| SLC-032 | [Pipeline Integration + Debrief](SLC-032-pipeline-integration.md) | FEAT-021 | planned | High | 2026-04-21 |
+
+### V3 Execution Order
+- **SLC-025:** Jitsi-Infra (Blocker fuer alles)
+- **SLC-026 → SLC-027:** Meeting Guide Backend → UI (sequentiell)
+- **SLC-028 → SLC-029:** Dialogue Session Backend → UI (sequentiell, braucht SLC-025 + SLC-026)
+- **SLC-030:** Recording Pipeline (braucht SLC-025 + SLC-028)
+- **SLC-031:** Dialogue Extraction (braucht SLC-030 + SLC-026)
+- **SLC-032:** Pipeline Integration (braucht SLC-031 + SLC-027 + SLC-029)
+- **Parallelisierbar:** SLC-026+027 kann parallel zu SLC-028+029 laufen (beide brauchen nur SLC-025). SLC-030+031 sind strikt sequentiell.

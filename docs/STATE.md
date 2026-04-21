@@ -9,21 +9,25 @@
 Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdichtung. Ermoeglicht mehrere Capture-Modi (Fragebogen, Meeting, Voice, etc.) und Template-basierte Produktvarianten (z.B. Exit-Readiness, Immobilien-Onboarding).
 
 ## Current State
-- High-Level State: architecture
-- Current Focus: V3 Dialogue-Mode Architecture abgeschlossen. 6 neue DECs (DEC-025..030), 5 geplante Migrationen, 8 Slices vorgeschlagen. Naechster Schritt: /slice-planning.
-- Current Phase: V3 Architecture
+- High-Level State: slice-planning
+- Current Focus: V3 Slice-Planning abgeschlossen. 8 Slices (SLC-025..032), 42 Micro-Tasks. Naechster Schritt: /backend SLC-025 (Jitsi-Infra).
+- Current Phase: V3 Slice-Planning
 
 ## Immediate Next Steps
-1. /slice-planning fuer V3 (8 Slices mit Micro-Tasks)
-2. Implementation V3 (SLC-025 Jitsi-Infra zuerst)
+1. /backend SLC-025 (Jitsi Infrastructure — Docker-Compose + Deploy + Smoke-Test)
+2. /qa SLC-025
+3. /backend SLC-026 (Meeting Guide Backend)
 
 ## Active Scope
-V3 — Dialogue-Mode (Strukturierte Wissenserhebung durch Gespraeche):
-- FEAT-017 Jitsi Meeting Infrastructure — planned
-- FEAT-018 Meeting Guide (Basic) — planned
-- FEAT-019 Dialogue Session (Video-Call + Recording) — planned
-- FEAT-020 Recording-to-Knowledge Pipeline — planned
-- FEAT-021 Dialogue Pipeline Integration — planned
+V3 — Dialogue-Mode, 8 Slices (0/8 done):
+- SLC-025 Jitsi Infrastructure (5 MTs) — planned
+- SLC-026 Meeting Guide Backend (5 MTs) — planned
+- SLC-027 Meeting Guide UI (5 MTs) — planned
+- SLC-028 Dialogue Session Backend (7 MTs) — planned
+- SLC-029 Dialogue Session UI (6 MTs) — planned
+- SLC-030 Recording Pipeline (6 MTs) — planned
+- SLC-031 Dialogue Extraction (4 MTs) — planned
+- SLC-032 Pipeline Integration + Debrief (6 MTs) — planned
 
 V2 — 12/12 Slices done, released (REL-004).
 
@@ -34,4 +38,4 @@ V2 — 12/12 Slices done, released (REL-004).
 - V2 — 2026-04-21 — released auf https://onboarding.strategaizetransition.com (REL-004).
 
 ## Notes
-V3 Discovery + Requirements + Architecture am 2026-04-21. Alle Architektur-Fragen beantwortet: Eigene Jitsi-Instanz (DEC-025), keine Speaker Diarization (DEC-026), Accounts fuer beide Teilnehmer (DEC-027), Recording in Supabase Storage (DEC-028), Transkript persistent (DEC-029), Meeting Guide als separate Tabelle (DEC-030). 8 Slices vorgeschlagen (SLC-025..032).
+V3 Discovery + Requirements + Architecture + Slice-Planning am 2026-04-21. 8 Slices mit 42 Micro-Tasks. Reihenfolge: SLC-025 (Jitsi-Infra, Blocker) → SLC-026+027 (Meeting Guide) parallel zu SLC-028+029 (Dialogue Session) → SLC-030+031 (Pipeline) → SLC-032 (Integration). SaaS: Worktree-Isolation empfohlen fuer alle Slices ausser SLC-025 (Infra).
