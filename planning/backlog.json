@@ -319,6 +319,56 @@
       "version": null,
       "description": "Blueprint V3.2 Free-Form-Chat als eigenen Capture-Mode portieren. Kunde erzaehlt frei, KI mappt auf Template-Fragen. Bewusst deferred: evaluieren gegen V3 Dialogue-Mode (Jitsi+Whisper), der den frei-erzaehlen-Use-Case moeglicherweise besser abdeckt. Urspruenglich BL-021 (V2, low), jetzt unversioned deferred.",
       "createdAt": "2026-04-17"
+    },
+    {
+      "id": "BL-033",
+      "title": "Jitsi Meeting Infrastructure (eigene Instanz)",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V3",
+      "description": "Eigene Jitsi+Jibri-Instanz auf Onboarding-Server (159.69.207.29). Docker-Compose mit 5 Services, JWT-Auth, snd-aloop, Traefik-Integration, Recording-Faehigkeit. Unabhaengig von Business System. Basis fuer alle Dialogue-Features. Siehe FEAT-017.",
+      "createdAt": "2026-04-21"
+    },
+    {
+      "id": "BL-034",
+      "title": "Meeting Guide (Basic)",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V3",
+      "description": "Auftraggeber erstellt strukturierte Gespraechsvorgabe (Themen, Leitfragen, Ziele). Basismässige KI-Unterstuetzung (Vorschlaege aus Template-Kontext). Bewusster Produkt-Split: volle KI-Vorbereitung nur mit Intelligence Platform. Siehe FEAT-018.",
+      "createdAt": "2026-04-21"
+    },
+    {
+      "id": "BL-035",
+      "title": "Dialogue Session (Video-Call + Recording)",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V3",
+      "description": "Jitsi-Embed in Plattform-UI, zwei Teilnehmer, Meeting-Raum-Management, Jibri-Recording, Meeting-Guide als Referenz im Call, DSGVO-Consent vor Aufnahme. Siehe FEAT-019.",
+      "createdAt": "2026-04-21"
+    },
+    {
+      "id": "BL-036",
+      "title": "Recording-to-Knowledge Pipeline",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V3",
+      "description": "MP4 → Whisper-Transkription → KI-Verarbeitung gegen Meeting Guide → Knowledge Units + Meeting-Summary + Gap Detection. Neuer Job-Typ dialogue_extraction. Transkript persistent gespeichert. Siehe FEAT-020.",
+      "createdAt": "2026-04-21"
+    },
+    {
+      "id": "BL-037",
+      "title": "Dialogue Pipeline Integration",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V3",
+      "description": "Dialogue als gleichwertiger Capture-Mode: capture_mode='dialogue', KUs mit source='dialogue' in Diagnose-Layer + SOP-Generation, Debrief-UI zeigt Dialogue-Sessions, Dashboard-Integration. Siehe FEAT-021.",
+      "createdAt": "2026-04-21"
     }
   ]
 }

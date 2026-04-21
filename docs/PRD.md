@@ -292,3 +292,113 @@ Alle V1-Constraints gelten weiter, zusaetzlich:
 - **Q9 — Whisper-Infrastruktur:** ENTSCHIEDEN: Self-hosted Whisper-Docker auf Onboarding-Server (159.69.207.29). Adapter-Pattern (wie Business System DEC-035) fuer spaeteren Provider-Switch (Azure EU, etc.). Kein Shared-Infra, jede Plattform eigenstaendig deploybar. Separate API-Accounts spaeter fuer Kosten-Tracking.
 - **Q10 — Backspelling-Benachrichtigung:** Wie erfaehrt der Kunde von Nachfragen? Dashboard-Badge, E-Mail, In-Session-Alert? Entscheidung in /architecture.
 - **Q11 — Template-Content-Erstellung:** Wer liefert Bloecke/Fragen? User schreibt manuell, KI generiert Vorschlag, oder beides? Entscheidung vor Implementierung von FEAT-014.
+
+---
+
+## V3 — Dialogue-Mode (Strukturierte Wissenserhebung durch Gespraeche)
+
+### Problem Statement (V3)
+
+V2 liefert drei Capture-Modi: Questionnaire (strukturierter Fragebogen), Evidence (Dokumente + KI-Extraktion) und Voice (Diktat im Questionnaire). Alle drei sind asynchron — der Kunde arbeitet allein, KI verarbeitet, Berater reviewed im Debrief.
+
+In der Realitaet entsteht ein grosser Teil von Unternehmenswissen nicht in Formularen, sondern in **Gespraechen zwischen Menschen**: Chef mit Mitarbeiter, Experte mit Nicht-Experte, Kollege mit Kollege, Knowledge Manager mit Fachabteilung. Dieses Wissen geht heute in fluechtige Meeting-Notizen oder wird gar nicht festgehalten.
+
+Es gibt keinen Capture-Modus, der:
+1. Zwei Menschen ein strukturiertes Gespraech fuehren laesst,
+2. das Gespraech aufzeichnet und transkribiert,
+3. das Transkript gegen eine vorgegebene Struktur verarbeitet (Knowledge Units, Luecken-Erkennung),
+4. eine strukturierte Meeting-Summary erzeugt, die beide Parteien reviewen koennen,
+5. das Ergebnis in die bestehende Verdichtungs-Pipeline (Diagnose, SOP) einspeist.
+
+### Goal (V3)
+
+Dialogue-Mode als neuer gleichwertiger Capture-Modus: Zwei Menschen fuehren ein Video-Meeting innerhalb der Plattform. Ein vorab definierter Meeting-Guide gibt Struktur. Die Plattform zeichnet auf, transkribiert und verarbeitet das Gespraech zu Knowledge Units und einer Meeting-Summary. Das Ergebnis fliesst in die bestehende Pipeline (Diagnose, SOP, Debrief).
+
+### Target Users (V3)
+
+- **Auftraggeber (strategaize_admin oder tenant_admin):** Definiert Meeting-Guide, weist Teilnehmer zu, reviewed Ergebnis
+- **Gespraechspartner A + B:** Fuehren das Gespraech. Konstellationen: GF↔MA, Expert↔Nicht-Expert, Kollege↔Kollege, externer Berater↔interner MA, Knowledge Manager↔Fachabteilung
+- **strategaize_admin:** Nutzt Dialogue-Output im Debrief-Meeting wie Questionnaire-Output
+
+### V3 In Scope
+
+| ID | Feature | Zweck |
+|----|---------|-------|
+| FEAT-017 | Jitsi Meeting Infrastructure | Eigene Jitsi+Jibri-Instanz auf Onboarding-Server, Docker-Compose, JWT-Auth, Recording-Faehigkeit |
+| FEAT-018 | Meeting Guide (Basic) | Auftraggeber erstellt strukturierte Gespraechsvorgabe (Themen, Leitfragen, Ziele). Basismässig mit leichter KI-Unterstuetzung |
+| FEAT-019 | Dialogue Session (Video-Call + Recording) | Jitsi-Embed in Plattform, zwei Teilnehmer, Jibri-Recording, Meeting-Guide als Referenz im Call |
+| FEAT-020 | Recording-to-Knowledge Pipeline | MP4 → Whisper-Transkription → KI-Verarbeitung gegen Meeting Guide → Knowledge Units + Summary + Gap Detection |
+| FEAT-021 | Dialogue Pipeline Integration | Dialogue als gleichwertiger Capture-Mode in bestehender V2-Pipeline (Diagnose, SOP, Debrief) |
+
+### V3 Out of Scope
+
+- **Mid-Meeting-KI (Echtzeit-Zusammenfassung, Live-Rueckfragen)** → V3.1. Technisch komplex (Streaming-Transkription), V3 fokussiert Post-Meeting-Processing.
+- **Automatisches Follow-up-Meeting aus Luecken** → V3.1. Abhaengig von stabil laufendem Basis-Dialogue.
+- **Speaker Diarization (Sprecher-Trennung)** → entscheiden in /architecture. Undifferenziertes Transkript reicht moeglicherweise fuer V3.
+- **Template-Editor UI** → V3.1 oder V4. Templates per Migration anlegen (wie V2).
+- **Projekt-Management-Cockpit** → V5+. Orchestrierung mehrerer Capture-Methoden pro Wissens-Projekt.
+- **Cross-Meeting-Verdichtung** (Erkenntnisse aus mehreren Meetings zusammenfuehren) → V3.1+.
+- **Screen-Recording parallel zum Meeting** → V4 (Walkthrough-Mode).
+- **Tenant Self-Service Signup** → V3+.
+- **Free-Form Capture-Mode** (BL-031) → weiter deferred, Dialogue-Mode deckt den Use-Case besser ab.
+
+### Produkt-Split: Meeting-Vorbereitung Basic vs. Premium
+
+Die Meeting-Vorbereitung (Meeting Guide) hat zwei Tiers — ein **bewusster kommerzieller Split**:
+
+- **Basic (in Onboarding-Plattform V3):** Auftraggeber kann Themen, Leitfragen und Ziele manuell definieren. Leichte KI-Unterstuetzung (Vorschlaege aus Template-Kontext). Auftraggeber macht viel selbst.
+- **Premium (Intelligence Platform, separates Produkt):** Volle KI-gestuetzte Vorbereitung — granulare Fragen aus bestehendem Wissen, Learnings, Analyse. Der volle Loop.
+
+Wer das volle Paket will, kauft die Intelligence Platform dazu. Die Onboarding-Plattform verwaessert diesen Wert nicht.
+
+### Success Criteria (V3)
+
+**SC-V3-1 — Eigene Jitsi-Instanz laeuft**
+Jitsi+Jibri auf Onboarding-Server (159.69.207.29) deployed. JWT-Auth verifiziert. Test-Meeting mit Recording funktioniert. Unabhaengig von Business System.
+
+**SC-V3-2 — Meeting-Guide kann erstellt werden**
+Auftraggeber (strategaize_admin oder tenant_admin) kann pro Capture-Session einen Meeting-Guide erstellen: mindestens Themen, Leitfragen und Ziele. Optionale KI-Vorschlaege aus Template-Kontext.
+
+**SC-V3-3 — Video-Meeting aus der Plattform**
+Zwei Teilnehmer koennen aus der Plattform heraus ein Video-Meeting starten (Jitsi-Embed oder Link). Meeting-Guide wird als Referenz angezeigt.
+
+**SC-V3-4 — Recording + Transkription automatisch**
+Meeting-Recording (Jibri → MP4) wird automatisch via Whisper transkribiert. Transkript ist als Volltext gespeichert und zurueckverfolgbar.
+
+**SC-V3-5 — KI verarbeitet Transkript zu Knowledge Units**
+KI-Verarbeitung des Transkripts gegen den Meeting-Guide extrahiert Knowledge Units pro Thema, erkennt nicht besprochene Themen und generiert eine strukturierte Meeting-Summary.
+
+**SC-V3-6 — Meeting-Summary fuer alle Beteiligten**
+Beide Gespraechspartner + Auftraggeber sehen die strukturierte Meeting-Summary und koennen sie reviewen.
+
+**SC-V3-7 — Pipeline-Integration**
+Dialogue-Output (KUs, Gaps) fliesst in bestehende V2-Pipeline: Diagnose-Layer kann aus Dialogue-KUs generieren. SOP-Generation funktioniert. Debrief-UI zeigt Dialogue-Sessions gleichwertig.
+
+**SC-V3-8 — Keine V2-Regression**
+Alle V1/V1.1/V2-Funktionalitaet bleibt stabil. Bestehende Capture-Sessions werden nicht beeintraechtigt.
+
+### Constraints (V3)
+
+Alle V1/V2-Constraints gelten weiter, zusaetzlich:
+- **Eigene Jitsi-Instanz:** Onboarding-Server (159.69.207.29), kein Shared-Infra mit Business System. Plattformen muessen unabhaengig voneinander laufen.
+- **Server-Ressourcen:** CPX62 muss Jitsi+Jibri+Whisper+App+Supabase gleichzeitig handlen. Monitoring obligatorisch.
+- **DSGVO:** Meeting-Recording ist besonders sensibel. Alle Daten auf EU-Server. Aufnahme-Hinweis im Meeting-UI obligatorisch.
+- **Mid-Meeting-KI ist NICHT V3:** Keine Echtzeit-Transkription, keine Live-Zusammenfassung, keine Live-Rueckfragen im Gespraech. Nur Post-Meeting-Processing.
+- **Meeting-Guide bleibt basismässig:** Volle KI-Vorbereitung nur mit Intelligence Platform (Produkt-Split).
+- **Bedrock-Kosten:** Transkript-zu-KU-Processing ist on-demand (nach Meeting-Ende), nicht streaming. Kosten-Logging pro Dialogue-Session.
+
+### Risks (V3)
+
+- **R10 — Server-Ressourcen (CPX62):** Jitsi+Jibri+Whisper+App+Supabase gleichzeitig ist resourcen-intensiv. Jibri braucht `shm_size: 2gb` und snd-aloop. Mitigation: Server-Monitoring vor/nach Deploy, ggf. Server-Upgrade auf CPX62+ oder Auslagerung von Jibri auf eigenen Container-Server.
+- **R11 — Jibri-Setup auf neuem Server:** Die 7 dokumentierten Blocker aus Business System gelten auch hier. Mitigation: jitsi-jibri-deployment Rule existiert im Dev System. Alle 7 Fixes sind vorab bekannt und im Docker-Compose-Template vorweggenommen.
+- **R12 — Transkriptions-Qualitaet bei 2-Personen-Dialog:** Whisper wurde bisher nur fuer Diktat (1 Person) getestet. Speaker Diarization bei 2 Personen kann Herausforderung sein. Mitigation: V3 startet mit undifferenziertem Transkript. KI-Processing kann trotzdem Themen extrahieren. Diarization als V3.1-Enhancement evaluieren.
+- **R13 — Meeting-Guide-Nutzbarkeit:** "Basic" Meeting-Vorbereitung muss trotzdem nuetzlich genug sein. Zu basic = niemand nutzt es. Mitigation: Template-Kontext fuer KI-Vorschlaege nutzen. Iterativ verbessern.
+- **R14 — DSGVO bei Meeting-Recording:** Aufzeichnung von Gespraechen benoetigt explizite Einwilligung beider Teilnehmer. Mitigation: Aufnahme-Hinweis vor Meeting-Start, Consent-UI als Pflichtschritt.
+
+### Open Questions (V3)
+
+- **Q12 — Speaker Diarization:** Soll das Transkript nach Sprecher getrennt werden? Whisper allein kann das nicht (kein built-in Diarization). Optionen: undifferenziertes Transkript (V3), pyannote/NeMo nachgelagert (V3.1), oder als /architecture-Entscheidung. Entscheidung in /architecture.
+- **Q13 — Meeting-Teilnehmer-Modell:** Muessen beide Teilnehmer Plattform-Accounts haben? Oder kann einer per Link beitreten (Guest-Mode mit temporaerem JWT)? Entscheidung in /architecture.
+- **Q14 — Meeting-Guide KI-Stufe:** Wie "basic" ist basic? Vorschlaege generieren aus bestehenden Template-Fragen und vorhandenen Antworten? Oder komplett manuell mit nur einem Textfeld? Entscheidung in /architecture.
+- **Q15 — Recording-Storage:** Jibri-MP4 im Docker-Volume oder in Supabase Storage (analog Evidence)? Entscheidung in /architecture.
+- **Q16 — Transkript-Persistence:** Volles Transkript persistent speichern (fuer spaetere Re-Analyse, Cross-Meeting-Verdichtung) oder nur KI-Verarbeitung? Empfehlung: persistent — Rohdaten sind Audit-relevant und ermoeglichen Re-Processing bei besseren Modellen.

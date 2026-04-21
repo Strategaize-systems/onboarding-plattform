@@ -24,8 +24,8 @@
     {
       "id": "v3",
       "name": "V3",
-      "status": "planned",
-      "summary": "Dialogue-Mode (2-Personen-Interview mit LLM-Extraktion). Abhaengig von Meeting-Infrastruktur (Jitsi + Jibri + Whisper), shared mit Business System V4.1.",
+      "status": "active",
+      "summary": "Dialogue-Mode: Strukturierte Wissenserhebung durch Gespraeche. Eigene Jitsi+Jibri-Instanz auf Onboarding-Server, Meeting-Guide (Basic) mit leichter KI-Unterstuetzung, Video-Call mit Recording, Post-Meeting KI-Pipeline (Transkript → Knowledge Units + Summary + Gap Detection), Pipeline-Integration in Diagnose/SOP/Debrief. 5 Features (FEAT-017..021). Requirements 2026-04-21.",
       "order": 4
     },
     {

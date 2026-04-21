@@ -9,28 +9,24 @@
 Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdichtung. Ermoeglicht mehrere Capture-Modi (Fragebogen, Meeting, Voice, etc.) und Template-basierte Produktvarianten (z.B. Exit-Readiness, Immobilien-Onboarding).
 
 ## Current State
-- High-Level State: released
-- Current Focus: V2 released (REL-004). Post-Launch STABLE (RPT-056). 0 Fehler in Logs, alle Container healthy.
-- Current Phase: Stable (V2)
+- High-Level State: requirements
+- Current Focus: V3 Dialogue-Mode Requirements abgeschlossen. 5 Features definiert (FEAT-017..021). Naechster Schritt: /architecture.
+- Current Phase: V3 Requirements
 
 ## Immediate Next Steps
-1. V2 in Betrieb beobachten
-2. V3 Planung (Dialogue-Mode mit Jitsi+Whisper) bei Bedarf starten
+1. /architecture fuer V3 (Jitsi-Deployment-Strategie, Datenmodell, Pipeline-Design, offene Fragen Q12-Q16)
+2. /slice-planning V3
+3. Implementation V3
 
 ## Active Scope
-V2 — 12 Slices (12/12 done):
-- SLC-013 Orchestrator-Integration (6 MTs) — done
-- SLC-014 Gap-Question-Backend (7 MTs) — done
-- SLC-015 Backspelling-UI (6 MTs) — done
-- SLC-016 SOP-Backend (7 MTs) — done
-- SLC-017 SOP-UI (6 MTs) — done
-- SLC-018 Evidence-Schema+Storage (5 MTs) — done
-- SLC-019 Evidence-Extraction+Mapping (8 MTs) — done
-- SLC-020 Evidence-UI (6 MTs) — done
-- SLC-021 Template-Switcher (7 MTs) — done
-- SLC-022 Whisper-Voice-Input (7 MTs) — done
-- SLC-023 Diagnose-Backend (8 MTs) — done
-- SLC-024 Diagnose-Frontend + SOP-Gate (7 MTs) — done
+V3 — Dialogue-Mode (Strukturierte Wissenserhebung durch Gespraeche):
+- FEAT-017 Jitsi Meeting Infrastructure — planned
+- FEAT-018 Meeting Guide (Basic) — planned
+- FEAT-019 Dialogue Session (Video-Call + Recording) — planned
+- FEAT-020 Recording-to-Knowledge Pipeline — planned
+- FEAT-021 Dialogue Pipeline Integration — planned
+
+V2 — 12/12 Slices done, released (REL-004).
 
 ## Blockers
 - aktuell keine
@@ -39,4 +35,4 @@ V2 — 12 Slices (12/12 done):
 - V2 — 2026-04-21 — released auf https://onboarding.strategaizetransition.com (REL-004).
 
 ## Notes
-Parallelisierungs-Potential: Evidence-Kette (SLC-018..020) kann parallel zur Orchestrator+SOP-Kette (SLC-013..017) laufen. Whisper (SLC-022) ist komplett unabhaengig.
+V3 Discovery + Requirements am 2026-04-21 abgeschlossen. Kernentscheidungen: Eigene Jitsi-Instanz (kein Shared-Infra), Meeting-Guide Basic (Premium nur mit Intelligence Platform), Mid-Meeting-KI nicht in V3 (V3.1). Offene Architektur-Fragen: Speaker Diarization (Q12), Teilnehmer-Modell (Q13), Meeting-Guide KI-Stufe (Q14), Recording-Storage (Q15), Transkript-Persistence (Q16).

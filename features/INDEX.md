@@ -30,3 +30,13 @@
 | FEAT-014 | Second Template + Switcher UI | deployed | [Spec](FEAT-014-second-template.md) | 2026-04-19 |
 | FEAT-015 | Voice Input (Whisper) | deployed | [Spec](FEAT-015-voice-input.md) | 2026-04-19 |
 | FEAT-016 | Template-driven Diagnosis Layer | deployed | [Spec](FEAT-016-diagnosis-layer.md) | 2026-04-19 |
+
+## V3 Features (Dialogue-Mode)
+
+| ID | Feature | Status | Spec | Created |
+|----|---------|--------|------|---------|
+| FEAT-017 | Jitsi Meeting Infrastructure | planned | [Spec](FEAT-017-jitsi-meeting-infrastructure.md) | 2026-04-21 |
+| FEAT-018 | Meeting Guide (Basic) | planned | [Spec](FEAT-018-meeting-guide.md) | 2026-04-21 |
+| FEAT-019 | Dialogue Session (Video-Call + Recording) | planned | [Spec](FEAT-019-dialogue-session.md) | 2026-04-21 |
+| FEAT-020 | Recording-to-Knowledge Pipeline | planned | [Spec](FEAT-020-recording-to-knowledge-pipeline.md) | 2026-04-21 |
+| FEAT-021 | Dialogue Pipeline Integration | planned | [Spec](FEAT-021-dialogue-pipeline-integration.md) | 2026-04-21 |
