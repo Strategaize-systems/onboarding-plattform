@@ -116,9 +116,8 @@ export function EvidenceFileList({
     let pollTimer: NodeJS.Timeout | null = null;
 
     async function loadData() {
+      // Load files via Supabase client
       const supabase = createClient();
-
-      // Load files
       const { data: fileData } = await supabase
         .from("evidence_file")
         .select("id, original_filename, mime_type, file_size_bytes, extraction_status, extraction_error, created_at")
@@ -126,14 +125,21 @@ export function EvidenceFileList({
         .eq("block_key", blockKey)
         .order("created_at", { ascending: false });
 
-      // Load document_analysis events for this block
-      const { data: eventData } = await supabase
-        .from("capture_events")
-        .select("payload, created_at")
-        .eq("session_id", sessionId)
-        .eq("block_key", blockKey)
-        .eq("event_type", "document_analysis")
-        .order("created_at", { ascending: false });
+      // Load analyses via server API (avoids browser-side RLS/routing issues)
+      let analysisEvents: Array<{ event_type: string; payload: Record<string, unknown>; created_at: string }> = [];
+      try {
+        const res = await fetch(
+          `/api/capture/${sessionId}/events?blockKey=${blockKey}&questionId=_document_analysis`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          analysisEvents = (data.events ?? []).filter(
+            (e: { event_type: string }) => e.event_type === "document_analysis"
+          );
+        }
+      } catch {
+        // Non-critical
+      }
 
       if (!cancelled) {
         const currentFiles = fileData ?? [];
@@ -141,8 +147,8 @@ export function EvidenceFileList({
 
         // Map analyses by evidence_file_id
         const analysisMap = new Map<string, AnalysisResult>();
-        for (const event of eventData ?? []) {
-          const payload = event.payload as Record<string, unknown>;
+        for (const event of analysisEvents) {
+          const payload = event.payload;
           const fileId = payload?.evidence_file_id as string;
           if (fileId && payload?.text) {
             analysisMap.set(fileId, {
