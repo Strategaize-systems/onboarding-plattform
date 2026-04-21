@@ -331,7 +331,7 @@ services:
     expose:
       - "9000"
     environment:
-      - ASR_MODEL=large-v3
+      - ASR_MODEL=${WHISPER_MODEL:-medium}
       - ASR_ENGINE=openai_whisper
     networks:
       - strategaize-net

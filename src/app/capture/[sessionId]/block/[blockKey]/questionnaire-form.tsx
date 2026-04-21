@@ -132,10 +132,8 @@ export function QuestionnaireWorkspace({
   // Event history refresh key
   const [eventKey, setEventKey] = useState(0);
 
-  // Voice recording state
-  // Whisper transcription endpoint is not yet wired for capture sessions (stub in transcribeRecording).
-  // Disable mic button until /api/capture/[sessionId]/transcribe is implemented.
-  const whisperEnabled = false;
+  // Voice recording state — enabled via NEXT_PUBLIC_WHISPER_ENABLED env flag
+  const whisperEnabled = process.env.NEXT_PUBLIC_WHISPER_ENABLED === "true";
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
@@ -421,9 +419,25 @@ export function QuestionnaireWorkspace({
     try {
       const formData = new FormData();
       formData.append("audio", audioBlob, "recording.webm");
-      // Whisper transcription — endpoint not yet wired for capture sessions
-      setIsTranscribing(false);
-    } catch {
+      const res = await fetch(`/api/capture/${sessionId}/transcribe`, {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Transkription fehlgeschlagen" }));
+        throw new Error(err.error || `HTTP ${res.status}`);
+      }
+      const { text } = await res.json();
+      if (text) {
+        const key = `${activeBlockKey}.${activeQ.id}`;
+        setAnswers((prev) => {
+          const existing = prev[key] || "";
+          return { ...prev, [key]: existing ? `${existing} ${text}` : text };
+        });
+      }
+    } catch (err) {
+      console.error("Transkription fehlgeschlagen:", err);
+    } finally {
       setIsTranscribing(false);
     }
   }

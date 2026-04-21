@@ -28,5 +28,5 @@
 | FEAT-012 | SOP Generation (Level 2) | done | [Spec](FEAT-012-sop-generation.md) | 2026-04-19 |
 | FEAT-013 | Evidence-Mode + Bulk-Import | done | [Spec](FEAT-013-evidence-mode.md) | 2026-04-19 |
 | FEAT-014 | Second Template + Switcher UI | done | [Spec](FEAT-014-second-template.md) | 2026-04-19 |
-| FEAT-015 | Voice Input (Whisper) | planned | [Spec](FEAT-015-voice-input.md) | 2026-04-19 |
+| FEAT-015 | Voice Input (Whisper) | done | [Spec](FEAT-015-voice-input.md) | 2026-04-19 |
 | FEAT-016 | Template-driven Diagnosis Layer | done | [Spec](FEAT-016-diagnosis-layer.md) | 2026-04-19 |

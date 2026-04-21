@@ -295,7 +295,7 @@
       "title": "Voice Input (Whisper)",
       "type": "feature",
       "priority": "medium",
-      "status": "open",
+      "status": "done",
       "version": "V2",
       "description": "Mic-Button reaktivieren, Whisper-Transkription fuer Capture-Sessions. Infrastruktur-Option TBD (Q9: shared/lokal/Azure). Loest ISSUE-014. Siehe FEAT-015.",
       "createdAt": "2026-04-19"

@@ -122,9 +122,9 @@
 - Resolution: SLC-012 MT-1+MT-2. Migration 039_error_log.sql erstellt und auf Hetzner ausgefuehrt. Tabelle mit RLS (strategaize_admin read), Index, service_role GRANT.
 
 ### ISSUE-014 — Voice-Input (Whisper) nicht verdrahtet fuer Capture-Sessions
-- Status: open
+- Status: resolved
 - Severity: Low
 - Area: Frontend / Voice
 - Summary: transcribeRecording() in questionnaire-form.tsx war ein Stub — Audio wurde aufgenommen aber nie an den Whisper-Container gesendet. Der Whisper-Endpoint fuer Blueprint-Runs (/api/tenant/runs/[runId]/questions/[questionId]/transcribe) existiert, aber es gibt kein Aequivalent fuer Capture-Sessions. Mic-Button ist seit 2026-04-18 deaktiviert (whisperEnabled = false).
 - Impact: Kein Voice-Input in V1. Tastatureingabe funktioniert.
-- Next Action: Whisper-Transkriptions-Endpoint fuer Capture-Sessions bauen (V1.1 oder V2).
+- Resolution: SLC-022 (V2). Whisper-Adapter-Pattern (DEC-018) unter /src/lib/ai/whisper/ implementiert. Transkriptions-Endpoint POST /api/capture/[sessionId]/transcribe. Mic-Button via NEXT_PUBLIC_WHISPER_ENABLED aktiviert. Resolution Date: 2026-04-21.
