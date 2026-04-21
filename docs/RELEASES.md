@@ -21,3 +21,10 @@
 - Summary: Maintenance Release. Kein neues Feature, rein subtraktiv + inkrementell. Legacy-Ballast aus Blueprint-Fork entfernt, Dashboard auf echte Daten umgestellt, Error-Logging aktiviert. Gesamt-QA PASS (RPT-035), Final-Check PASS (RPT-036).
 - Risks: Keine materiellen. CSP-Header fehlt weiterhin (pre-existing, V2-Scope). Kein Backup-Schedule (pre-existing, keine Echtdaten).
 - Rollback Notes: Coolify UI → vorheriges Deployment waehlen. error_log-Tabelle bleibt in DB (additive Migration, kein Schaden).
+
+### REL-004 — V2 Intelligence Upgrade
+- Date: 2026-04-21
+- Scope: 12 Slices (SLC-013..024), 7 Features (FEAT-010..016), 6 Migrationen (MIG-013..018). 3-Agent Orchestrator Loop, Auto-Gap-Backspelling (2-Runden-Limit), SOP-Generation (Level 2), Template-driven Diagnosis Layer, Evidence-Mode + Bulk-Import + KI-Analyse, Second Template + Switcher UI, Whisper Voice-Input mit Adapter-Pattern.
+- Summary: Groesstes Feature-Upgrade seit Launch. Verwandelt die Plattform von einfacher Fragebogen-Erfassung in eine KI-gestuetzte Analyse-Pipeline: Orchestrator steuert Verdichtungsqualitaet, Backspelling schliesst Luecken automatisch, Diagnose-Layer erzeugt strukturierte Bewertungen pro Unterthema, SOPs werden erst nach Diagnose-Bestaetigung generiert. Evidence-Mode ermoeglicht Dokument-Upload mit automatischer Extraktion und Mapping. Voice-Input per Self-hosted Whisper (DSGVO-konform). Gesamt-QA PASS (RPT-053), Final-Check PASS (RPT-054).
+- Risks: 1 Medium (supabase-studio unhealthy — nicht produktionskritisch). 3 Low (kein Whisper-Error-Toast, Worker-Logging unstrukturiert, kein Impressum). ISSUE-007 (JWT stale role) akzeptiertes Restrisiko. Kein Backup-Schedule (keine Echtdaten).
+- Rollback Notes: Coolify UI → vorheriges Deployment (V1.1). Alle V2-Migrationen sind additiv (neue Tabellen, neue Spalten, neue RPCs) — DB-Rollback nur bei explizitem Bedarf noetig. V1.1-Code ignoriert V2-Tabellen.

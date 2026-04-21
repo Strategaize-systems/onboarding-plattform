@@ -10,13 +10,12 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: V2 alle 12/12 Slices implementiert + QA-geprüft. FEAT-010..016 komplett. Gesamt-QA V2 laeuft.
-- Current Phase: V2 Gesamt-QA
+- Current Focus: V2 Go-Live APPROVED. Gesamt-QA PASS (RPT-053), Final-Check PASS (RPT-054), Go-Live GO (RPT-055).
+- Current Phase: V2 Go-Live — bereit fuer /deploy
 
 ## Immediate Next Steps
-1. Gesamt-QA V2 abschliessen
-2. /final-check
-3. /go-live → /deploy V2
+1. /deploy V2 (User deployt manuell ueber Coolify)
+2. /post-launch V2
 
 ## Active Scope
 V2 — 12 Slices (12/12 done):
