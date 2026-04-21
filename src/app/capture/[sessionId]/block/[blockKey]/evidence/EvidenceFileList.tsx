@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { Image, Loader2, CheckCircle2, AlertCircle, Download, Sparkles, ChevronDown, ChevronRight } from "lucide-react";
 
 interface EvidenceFile {
@@ -15,7 +14,6 @@ interface EvidenceFile {
 }
 
 interface AnalysisResult {
-  evidence_file_id: string;
   text: string;
   created_at: string;
 }
@@ -107,7 +105,7 @@ export function EvidenceFileList({
   refreshKey = 0,
 }: EvidenceFileListProps) {
   const [files, setFiles] = useState<EvidenceFile[]>([]);
-  const [analyses, setAnalyses] = useState<Map<string, AnalysisResult>>(new Map());
+  const [analyses, setAnalyses] = useState<Record<string, AnalysisResult>>({});
   const [loading, setLoading] = useState(true);
   const [expandedAnalyses, setExpandedAnalyses] = useState<Set<string>>(new Set());
 
@@ -116,63 +114,34 @@ export function EvidenceFileList({
     let pollTimer: NodeJS.Timeout | null = null;
 
     async function loadData() {
-      // Load files via Supabase client
-      const supabase = createClient();
-      const { data: fileData } = await supabase
-        .from("evidence_file")
-        .select("id, original_filename, mime_type, file_size_bytes, extraction_status, extraction_error, created_at")
-        .eq("capture_session_id", sessionId)
-        .eq("block_key", blockKey)
-        .order("created_at", { ascending: false });
-
-      // Load analyses via server API (avoids browser-side RLS/routing issues)
-      let analysisEvents: Array<{ event_type: string; payload: Record<string, unknown>; created_at: string }> = [];
       try {
         const res = await fetch(
-          `/api/capture/${sessionId}/events?blockKey=${blockKey}&questionId=_document_analysis`
+          `/api/capture/${sessionId}/evidence/list?blockKey=${encodeURIComponent(blockKey)}`
         );
-        if (res.ok) {
-          const data = await res.json();
-          analysisEvents = (data.events ?? []).filter(
-            (e: { event_type: string }) => e.event_type === "document_analysis"
+        if (!res.ok) return;
+        const data = await res.json();
+
+        if (!cancelled) {
+          const currentFiles: EvidenceFile[] = data.files ?? [];
+          setFiles(currentFiles);
+          setAnalyses(data.analyses ?? {});
+          setLoading(false);
+
+          // Poll if files are processing or recent files lack analysis
+          const hasProcessing = currentFiles.some(
+            (f) => f.extraction_status === "pending" || f.extraction_status === "extracting"
           );
-        }
-      } catch {
-        // Non-critical
-      }
+          const recentWithoutAnalysis = currentFiles.some((f) => {
+            const age = Date.now() - new Date(f.created_at).getTime();
+            return age < 3 * 60 * 1000 && !data.analyses?.[f.id];
+          });
 
-      if (!cancelled) {
-        const currentFiles = fileData ?? [];
-        setFiles(currentFiles);
-
-        // Map analyses by evidence_file_id
-        const analysisMap = new Map<string, AnalysisResult>();
-        for (const event of analysisEvents) {
-          const payload = event.payload;
-          const fileId = payload?.evidence_file_id as string;
-          if (fileId && payload?.text) {
-            analysisMap.set(fileId, {
-              evidence_file_id: fileId,
-              text: payload.text as string,
-              created_at: event.created_at,
-            });
+          if (hasProcessing || recentWithoutAnalysis) {
+            pollTimer = setTimeout(loadData, 5000);
           }
         }
-        setAnalyses(analysisMap);
-        setLoading(false);
-
-        // Poll if any files are pending extraction OR pending analysis
-        const hasProcessing = currentFiles.some(
-          (f) => f.extraction_status === "pending" || f.extraction_status === "extracting"
-        );
-        const recentWithoutAnalysis = currentFiles.some((f) => {
-          const age = Date.now() - new Date(f.created_at).getTime();
-          return age < 3 * 60 * 1000 && !analysisMap.has(f.id);
-        });
-
-        if (hasProcessing || recentWithoutAnalysis) {
-          pollTimer = setTimeout(loadData, 5000);
-        }
+      } catch {
+        if (!cancelled) setLoading(false);
       }
     }
 
@@ -213,7 +182,7 @@ export function EvidenceFileList({
       {files.map((file) => {
         const status = STATUS_CONFIG[file.extraction_status] ?? STATUS_CONFIG.pending;
         const { iconBg, iconLabel, isImage: isImageFile } = getFileTypeDisplay(file.original_filename, file.mime_type);
-        const analysis = analyses.get(file.id);
+        const analysis = analyses[file.id];
         const age = Date.now() - new Date(file.created_at).getTime();
         const isAnalysisPending = !analysis && age < 3 * 60 * 1000;
         const isExpanded = expandedAnalyses.has(file.id);
@@ -254,7 +223,7 @@ export function EvidenceFileList({
               </div>
             </div>
 
-            {/* KI Analysis pending indicator */}
+            {/* KI Analysis pending */}
             {isAnalysisPending && (
               <div className="ml-5 mt-1 flex items-center gap-2 rounded-lg border border-brand-primary/20 bg-brand-primary/5 px-3 py-2">
                 <Sparkles className="h-3.5 w-3.5 text-brand-primary animate-pulse flex-shrink-0" />
