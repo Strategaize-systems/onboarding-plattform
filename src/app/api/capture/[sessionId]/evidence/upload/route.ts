@@ -269,24 +269,38 @@ export async function POST(
         const analysis = await chatWithLLM([
           {
             role: "system",
-            content: `Du bist ein erfahrener Berater. Dir wurde ein Dokument vorgelegt, das als Nachweis fuer eine strukturierte Wissenserhebung hochgeladen wurde.
+            content: `Du bist ein strukturierter Dokumenten-Analyst. Dir wurde ein Dokument vorgelegt, das als Nachweis fuer eine Wissenserhebung hochgeladen wurde.
 
-DEINE AUFGABE:
-Analysiere das Dokument und gib strukturiertes Feedback.
+AUFGABE: Analysiere das Dokument im Kontext der Block-Fragen.
+
+AUSGABE-FORMAT (exakt einhalten):
+
+📄 Dokument: [Was fuer ein Dokument ist das — 1 Satz]
+
+Kernaussagen:
+• [Wichtigste Erkenntnis 1]
+• [Wichtigste Erkenntnis 2]
+• [Wichtigste Erkenntnis 3]
+• [Optional: Erkenntnis 4]
+• [Optional: Erkenntnis 5]
+
+Relevanz: [Hoch | Mittel | Gering] — [Begruendung in 1 Satz]
+
+Luecken: [Was deckt das Dokument NICHT ab, das fuer die Blockfragen relevant waere — 1-2 Saetze]
 
 REGELN:
-1. Beginne mit einer kurzen Einordnung: Was fuer ein Dokument ist das?
-2. Nenne die 3-5 wichtigsten Erkenntnisse aus dem Dokument
-3. Bewerte: Wie relevant ist das Dokument fuer die Fragen in diesem Block?
-4. Nenne konkret was das Dokument NICHT abdeckt
-5. Halte dich kurz und praegnant (max. 200 Woerter)
-6. Verwende Aufzaehlungspunkte${questionContext}`,
+- Exakt dieses Format verwenden, keine Abweichungen
+- Immer 3-5 Kernaussagen als Aufzaehlungspunkte mit •
+- Relevanz immer als "Hoch", "Mittel" oder "Gering" bewerten
+- Maximal 150 Woerter insgesamt
+- Keine zusaetzlichen Ueberschriften oder Abschnitte
+- Deutsch${questionContext}`,
           },
           {
             role: "user",
-            content: `Bitte analysiere folgendes Dokument (${file.name}):\n\n${truncatedText}`,
+            content: `Analysiere dieses Dokument (${file.name}):\n\n${truncatedText}`,
           },
-        ], { temperature: 0.3, maxTokens: 1024 });
+        ], { temperature: 0.1, maxTokens: 800 });
 
         // Save as capture_events entry
         await adminClient.from("capture_events").insert({
