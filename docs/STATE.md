@@ -9,14 +9,13 @@
 Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdichtung. Ermoeglicht mehrere Capture-Modi (Fragebogen, Meeting, Voice, etc.) und Template-basierte Produktvarianten (z.B. Exit-Readiness, Immobilien-Onboarding).
 
 ## Current State
-- High-Level State: requirements
-- Current Focus: V3 Dialogue-Mode Requirements abgeschlossen. 5 Features definiert (FEAT-017..021). Naechster Schritt: /architecture.
-- Current Phase: V3 Requirements
+- High-Level State: architecture
+- Current Focus: V3 Dialogue-Mode Architecture abgeschlossen. 6 neue DECs (DEC-025..030), 5 geplante Migrationen, 8 Slices vorgeschlagen. Naechster Schritt: /slice-planning.
+- Current Phase: V3 Architecture
 
 ## Immediate Next Steps
-1. /architecture fuer V3 (Jitsi-Deployment-Strategie, Datenmodell, Pipeline-Design, offene Fragen Q12-Q16)
-2. /slice-planning V3
-3. Implementation V3
+1. /slice-planning fuer V3 (8 Slices mit Micro-Tasks)
+2. Implementation V3 (SLC-025 Jitsi-Infra zuerst)
 
 ## Active Scope
 V3 — Dialogue-Mode (Strukturierte Wissenserhebung durch Gespraeche):
@@ -35,4 +34,4 @@ V2 — 12/12 Slices done, released (REL-004).
 - V2 — 2026-04-21 — released auf https://onboarding.strategaizetransition.com (REL-004).
 
 ## Notes
-V3 Discovery + Requirements am 2026-04-21 abgeschlossen. Kernentscheidungen: Eigene Jitsi-Instanz (kein Shared-Infra), Meeting-Guide Basic (Premium nur mit Intelligence Platform), Mid-Meeting-KI nicht in V3 (V3.1). Offene Architektur-Fragen: Speaker Diarization (Q12), Teilnehmer-Modell (Q13), Meeting-Guide KI-Stufe (Q14), Recording-Storage (Q15), Transkript-Persistence (Q16).
+V3 Discovery + Requirements + Architecture am 2026-04-21. Alle Architektur-Fragen beantwortet: Eigene Jitsi-Instanz (DEC-025), keine Speaker Diarization (DEC-026), Accounts fuer beide Teilnehmer (DEC-027), Recording in Supabase Storage (DEC-028), Transkript persistent (DEC-029), Meeting Guide als separate Tabelle (DEC-030). 8 Slices vorgeschlagen (SLC-025..032).

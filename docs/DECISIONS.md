@@ -121,3 +121,33 @@
 - Status: accepted
 - Reason: block_diagnosis.status = 'confirmed' ist ein ausreichender Gate-Mechanismus. Kein separater Gate-Mechanismus, kein Event-System, kein Trigger noetig. Der Debrief-Page laedt block_diagnosis ohnehin — ein einfacher Status-Check steuert die SOP-Button-Sichtbarkeit. KISS-Prinzip.
 - Consequence: Debrief Page laedt block_diagnosis neben sop. SOP-Sektion prueft diagnosisConfirmed-Flag. Gate ist UI-seitig in V2. API-Level-Gate (CHECK in rpc_create_sop) kann in V3 nachgeruestet werden, wenn externe API-Caller relevant werden. Bestehender SOP-Code bleibt unveraendert — nur Button-Sichtbarkeit wird bedingt.
+
+## DEC-025 — Eigene Jitsi+Jibri-Instanz auf Onboarding-Server (kein Shared-Infra)
+- Status: accepted
+- Reason: Die Onboarding-Plattform muss unabhaengig vom Business System laufen. Unterschiedliche Server (159.69.207.29 vs. 91.98.20.191), unabhaengiges Deployment, eigene JWT-Konfiguration. Plattformen als eigenstaendige Kauf-Einheiten erfordern eigenstaendige Infrastruktur.
+- Consequence: 5 neue Docker-Services (jitsi-web, prosody, jicofo, jvb, jibri) im Onboarding-Compose. Eigene Jitsi-Secrets. Eigene DNS-Subdomain. Server-RAM wird enger (CPX62 ~10.5 GB von 16 GB). Monitoring nach Deploy essential, Upgrade auf CPX72 moeglicherweise noetig.
+
+## DEC-026 — Keine Speaker Diarization in V3
+- Status: accepted
+- Reason: Undifferenziertes Transkript reicht fuer V3. KI-Processing mappt Inhalte auf Meeting-Guide-Themen, nicht auf Sprecher. Diarization (pyannote/NeMo) wuerde GPU oder signifikante CPU erfordern plus eine neue Dependency. Die bestehende Whisper-Installation liefert keinen built-in Speaker-Tag.
+- Consequence: Transkript ist ein Fliesstext ohne Sprecher-Kennzeichnung. KI-Extraktion arbeitet themenbasiert, nicht sprecherbasiert. V3.1-Enhancement wenn Sprecherzuordnung benoetigt wird.
+
+## DEC-027 — Beide Meeting-Teilnehmer brauchen Plattform-Accounts
+- Status: accepted
+- Reason: JWT-Auth fuer Jitsi erfordert User-Identitaet. RLS braucht Tenant-Zuordnung. Guest-Link-Mode (temporaerer JWT ohne Account) wuerde einen neuen Auth-Flow erfordern. Auftraggeber kann zweiten Teilnehmer als tenant_member anlegen — minimaler Overhead.
+- Consequence: Beide Teilnehmer werden per user_id in dialogue_session referenziert. JWT wird aus Plattform-User generiert. Guest-Link-Mode ist V3.1-Erweiterung.
+
+## DEC-028 — Recording-Storage via Supabase Storage Bucket 'recordings'
+- Status: accepted
+- Reason: Konsistent mit Evidence-Pattern (DEC-019). Jibri schreibt MP4 in Docker-Volume, Finalize-Script verschiebt in Supabase Storage. Vorteile: Tenant-Isolation per Pfad-Pattern, API-basierter Zugriff fuer Worker, zentrales Retention-Management, keine separaten Volume-Mounts zwischen Jibri und Worker noetig.
+- Consequence: Neuer Storage-Bucket 'recordings' (nicht public, 500 MB Limit, video/mp4 + audio/wav). Pfad-Pattern: {tenant_id}/{dialogue_session_id}/recording.mp4. Worker laedt per Service-Role aus Storage herunter. Finalize-Script nutzt Webhook an App fuer Upload-Trigger.
+
+## DEC-029 — Volles Transkript persistent gespeichert
+- Status: accepted
+- Reason: Audit-relevant (DSGVO-Nachweis was verarbeitet wurde). Ermoeglicht Re-Processing bei besseren Modellen. Basis fuer Cross-Meeting-Analyse in V3.1+. Quellen-Verifikation fuer extrahierte Knowledge Units.
+- Consequence: dialogue_session.transcript TEXT speichert den vollstaendigen Transkriptionstext. Transcript-Laenge bei 60min Meeting: ~17.000 Tokens / ~70 KB Text. Kein signifikanter Speicher-Impact.
+
+## DEC-030 — Meeting Guide als separate Tabelle (1:1 mit capture_session)
+- Status: accepted
+- Reason: Meeting Guide hat eigene CRUD-Logik (Editor, Drag-and-Drop Topics, KI-Vorschlaege) und eigene Lebenszyklus-Semantik (erstellt vor Meeting, referenziert waehrend Meeting, genutzt bei Extraktion). JSONB-Spalte auf capture_session wuerde die capture_session-Tabelle weiter aufblaehenund die Guide-Logik mit Session-Logik vermischen.
+- Consequence: Neue Tabelle meeting_guide mit UNIQUE(capture_session_id). Topics als JSONB-Array mit block_key fuer Template-Block-Zuordnung. RLS: tenant_admin Read+Write eigener Tenant, strategaize_admin Full.

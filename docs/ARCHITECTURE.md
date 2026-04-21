@@ -1301,3 +1301,654 @@ Ein einzelner LLM-Call soll 13 Bewertungsfelder pro Subtopic fuellen. Bei 5-8 Su
 ### Naechster Schritt FEAT-016
 
 `/slice-planning` fuer FEAT-016 (2 Slices mit Micro-Tasks).
+
+---
+
+## V3 Architecture Addendum — Dialogue-Mode
+
+### Status
+V3-Architektur festgelegt am 2026-04-21. Baut auf V2-Stack (stabil, released) auf.
+
+### Architektur-Zusammenfassung V3
+
+V3 fuegt dem bestehenden Stack eine **Video-Meeting-Infrastruktur** (Jitsi+Jibri) und eine **Post-Meeting-KI-Pipeline** hinzu. Die Kernprinzipien:
+
+1. **Eigene Jitsi-Instanz** — 5 neue Docker-Services auf dem Onboarding-Server (159.69.207.29). Kein Shared-Infra mit Business System (DEC-025). Vollstaendige Unabhaengigkeit.
+2. **Post-Meeting statt Live-KI** — V3 verarbeitet Recordings nach Meeting-Ende. Keine Echtzeit-Transkription, keine Live-Zusammenfassung. Haelt die Komplexitaet beherrschbar.
+3. **Dialogue als gleichwertiger Capture-Mode** — `capture_mode='dialogue'` neben `questionnaire` und `evidence`. KUs aus Gespraechen fliessen in dieselbe Pipeline (Diagnose, SOP, Debrief).
+4. **Meeting Guide Basic** — Basismässige Meeting-Vorbereitung in der Plattform. Volle KI-Vorbereitung nur mit Intelligence Platform (bewusster Produkt-Split).
+
+### Architektur-Entscheidungen (Q12-Q16 beantwortet)
+
+**Q12 → DEC-026: Keine Speaker Diarization in V3.**
+Undifferenziertes Transkript reicht fuer V3. KI-Processing mappt Inhalte auf Meeting-Guide-Themen, nicht auf Sprecher. Diarization (pyannote/NeMo) wuerde GPU oder signifikante CPU erfordern plus eine neue Dependency. V3.1-Enhancement.
+
+**Q13 → DEC-027: Beide Teilnehmer brauchen Plattform-Accounts.**
+JWT-Auth fuer Jitsi erfordert User-Identitaet. RLS braucht Tenant-Zuordnung. Mindest-Rolle: `tenant_member`. Guest-Link-Mode (temporaerer JWT ohne Account) ist V3.1. Pragmatisch: Auftraggeber legt zweiten User als tenant_member an.
+
+**Q14 → Meeting Guide Basic:**
+Manuelles Erstellen von Themen + Leitfragen + Zielen. Ein Button "Vorschlaege generieren" nutzt Template-Bloecke/-Fragen als Kontext. Wenn die Session bereits Questionnaire-Antworten hat, werden diese als zusaetzlicher Kontext genutzt. Keine Analyse bestehender KUs, keine luecken-basierte Fragen — das ist Intelligence Platform Scope.
+
+**Q15 → DEC-028: Recording-Storage via Supabase Storage.**
+Jibri schreibt MP4 in Docker-Volume. Ein Finalize-Script verschiebt die Datei in Supabase Storage Bucket `recordings` (tenant-isoliert, analog Evidence-Pattern). Worker laedt fuer Verarbeitung aus Storage herunter. Vorteile: Tenant-Isolation, API-Zugriff, Retention-Management, konsistent mit Evidence.
+
+**Q16 → DEC-029: Volles Transkript persistent gespeichert.**
+Auf `dialogue_session.transcript`. Gruende: Audit-Relevant (DSGVO-Nachweis was verarbeitet wurde), Re-Processing bei besseren Modellen, Cross-Meeting-Analyse in V3.1+, Quellen-Verifikation fuer Knowledge Units.
+
+### Service-Topologie V3
+
+5 neue Docker-Services (Jitsi-Stack), alle anderen unveraendert oder erweitert:
+
+| Service | V3-Aenderung | Neu/Erweitert |
+|---------|-------------|---------------|
+| `jitsi-web` | Jitsi Frontend, Traefik-exposed | **Neu** |
+| `jitsi-prosody` | XMPP-Hub mit Netzwerk-Aliases | **Neu** |
+| `jitsi-jicofo` | Konferenz-Fokus | **Neu** |
+| `jitsi-jvb` | Video-Bridge, UDP/10000 | **Neu** |
+| `jitsi-jibri` | Recording, shm_size: 2gb, /dev/snd | **Neu** |
+| `app` | Meeting-Guide-UI, Dialogue-Session-UI, JWT-Generator, Meeting-Summary-View, Jitsi-IFrame-Embed | Erweitert |
+| `worker` | 2 neue Job-Types: dialogue_transcription, dialogue_extraction | Erweitert |
+| `supabase-storage` | Neuer Bucket `recordings` (tenant-isoliert) | Erweitert |
+| `whisper` | Verarbeitet jetzt auch Meeting-MP4-Audio (laengere Dateien als Diktat) | Erweitert |
+| Alle anderen | Unveraendert | — |
+
+### Docker-Compose Jitsi-Block
+
+Referenz: Dev System Rule `.claude/rules/jitsi-jibri-deployment.md` (7 dokumentierte Blocker). Business System `docker-compose.yml` (Commits d0e6a9a..b01d3f2) als Template.
+
+```yaml
+# Jitsi-Services im bestehenden Docker-Compose
+jitsi-web:
+  image: jitsi/web:stable-9258
+  labels:
+    - "traefik.http.services.jitsi-web-svc.loadbalancer.server.port=80"
+    - "traefik.http.routers.https-0-<coolify-uuid>-jitsi-web.service=jitsi-web-svc"
+    - "traefik.http.routers.http-0-<coolify-uuid>-jitsi-web.service=jitsi-web-svc"
+    - "traefik.docker.network=<coolify-uuid>"
+  environment:
+    - ENABLE_AUTH=1
+    - AUTH_TYPE=jwt
+    - JWT_APP_ID=${JITSI_JWT_APP_ID}
+    - JWT_APP_SECRET=${JITSI_JWT_APP_SECRET}
+    - ENABLE_RECORDING=1  # Alle 3 Services brauchen das!
+  volumes:
+    - jitsi-web-config:/config
+  networks:
+    - <coolify-network>
+    - jitsi-net
+
+jitsi-prosody:
+  image: jitsi/prosody:stable-9258
+  environment:
+    - ENABLE_AUTH=1
+    - AUTH_TYPE=jwt
+    - JWT_APP_ID=${JITSI_JWT_APP_ID}
+    - JWT_APP_SECRET=${JITSI_JWT_APP_SECRET}
+    - ENABLE_RECORDING=1
+    - JICOFO_AUTH_PASSWORD=${JITSI_JICOFO_AUTH_PASSWORD}
+    - JIBRI_RECORDER_PASSWORD=${JITSI_JIBRI_RECORDER_PASSWORD}
+    - JIBRI_XMPP_PASSWORD=${JITSI_JIBRI_XMPP_PASSWORD}
+    - JVB_AUTH_PASSWORD=${JITSI_JVB_AUTH_PASSWORD}
+  networks:
+    jitsi-net:
+      aliases:
+        - meet.jitsi
+        - auth.meet.jitsi
+        - muc.meet.jitsi
+        - internal-muc.meet.jitsi
+        - recorder.meet.jitsi
+        - guest.meet.jitsi
+
+jitsi-jicofo:
+  image: jitsi/jicofo:stable-9258
+  environment:
+    - ENABLE_RECORDING=1  # Sonst: "No Jibri detector configured"
+    - JICOFO_AUTH_PASSWORD=${JITSI_JICOFO_AUTH_PASSWORD}
+    - JICOFO_COMPONENT_SECRET=${JITSI_JICOFO_COMPONENT_SECRET}
+  networks:
+    - jitsi-net
+
+jitsi-jvb:
+  image: jitsi/jvb:stable-9258
+  ports:
+    - "10000:10000/udp"
+  environment:
+    - JVB_AUTH_PASSWORD=${JITSI_JVB_AUTH_PASSWORD}
+  networks:
+    - jitsi-net
+
+jitsi-jibri:
+  image: jitsi/jibri:stable-9258
+  shm_size: 2gb
+  cap_add: [SYS_ADMIN]
+  devices:
+    - /dev/snd:/dev/snd
+  environment:
+    - JIBRI_RECORDER_PASSWORD=${JITSI_JIBRI_RECORDER_PASSWORD}
+    - JIBRI_XMPP_PASSWORD=${JITSI_JIBRI_XMPP_PASSWORD}
+    - PUBLIC_URL=https://meet.onboarding-domain.com  # NICHT weglassen!
+    - JIBRI_FINALIZE_RECORDING_SCRIPT_PATH=/scripts/finalize.sh
+  volumes:
+    - jitsi-recordings:/recordings
+    - ./scripts/jibri-finalize.sh:/scripts/finalize.sh:ro
+  networks:
+    - jitsi-net
+
+networks:
+  jitsi-net:
+    driver: bridge
+
+volumes:
+  jitsi-web-config:
+  jitsi-recordings:
+```
+
+### Host-Level-Setup (einmalig am Server)
+
+```bash
+# snd-aloop Kernel-Modul (Jibri braucht ALSA-Loopback)
+apt-get install -y linux-modules-extra-$(uname -r)
+modprobe snd_aloop
+echo 'snd-aloop' > /etc/modules-load.d/snd-aloop.conf
+
+# Hetzner Cloud Firewall: UDP/10000 eingehend oeffnen
+# DNS: A-Record meet.<domain> → 159.69.207.29
+```
+
+### Jibri Finalize-Script (Recording → Storage)
+
+Jibri ruft nach jeder Aufzeichnung ein Finalize-Script auf. Dieses verschiebt die MP4-Datei in Supabase Storage:
+
+```bash
+#!/bin/bash
+# scripts/jibri-finalize.sh
+# Wird von Jibri aufgerufen mit $1 = Recording-Verzeichnis
+RECORDING_DIR="$1"
+MP4_FILE=$(find "$RECORDING_DIR" -name "*.mp4" | head -1)
+
+if [ -z "$MP4_FILE" ]; then
+  echo "No MP4 found in $RECORDING_DIR" >&2
+  exit 0
+fi
+
+# Room-Name aus Verzeichnisname extrahieren (Jibri-Konvention)
+ROOM_NAME=$(basename "$RECORDING_DIR")
+
+# Webhook an App: "Recording fertig, bitte verarbeiten"
+curl -s -X POST "http://app:3000/api/dialogue/recording-ready" \
+  -H "Authorization: Bearer ${RECORDING_WEBHOOK_SECRET}" \
+  -H "Content-Type: application/json" \
+  -d "{\"room_name\": \"$ROOM_NAME\", \"file_path\": \"$MP4_FILE\"}"
+```
+
+App-API-Route empfaengt den Webhook, uploaded die Datei in Supabase Storage (Bucket `recordings`, Pfad `{tenant_id}/{dialogue_session_id}/{filename}`) und enqueued den `dialogue_transcription` Job.
+
+### Neue Tabellen V3
+
+#### `meeting_guide` (DEC-030)
+
+```sql
+CREATE TABLE meeting_guide (
+  id                    uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id             uuid        NOT NULL REFERENCES tenants ON DELETE CASCADE,
+  capture_session_id    uuid        NOT NULL REFERENCES capture_session ON DELETE CASCADE,
+  goal                  text,           -- Gesamtziel des Meetings
+  context_notes         text,           -- Hintergrund-Informationen
+  topics                jsonb       NOT NULL DEFAULT '[]',
+  -- topics: [{ key: string, title: string, description: string,
+  --            questions: string[], block_key: string|null, order: number }]
+  -- block_key: optional Zuordnung zu Template-Block (fuer KU-Mapping)
+  ai_suggestions_used   boolean     DEFAULT false,  -- KI-Vorschlaege genutzt?
+  created_by            uuid        REFERENCES auth.users,
+  created_at            timestamptz NOT NULL DEFAULT now(),
+  updated_at            timestamptz NOT NULL DEFAULT now(),
+  UNIQUE(capture_session_id)  -- 1:1 pro Session
+);
+```
+
+`topics` JSONB-Struktur:
+```json
+[
+  {
+    "key": "topic-1",
+    "title": "Nachfolgeregelung",
+    "description": "Aktueller Stand der Nachfolgeplanung",
+    "questions": [
+      "Gibt es einen designierten Nachfolger?",
+      "Welche Qualifikationen fehlen dem Nachfolger?"
+    ],
+    "block_key": "C",
+    "order": 1
+  }
+]
+```
+
+`block_key`-Zuordnung ist zentral: Damit werden extrahierte KUs den richtigen Template-Bloecken zugewiesen. Wenn null: KUs werden einem generischen "unzugeordnet"-Block zugewiesen.
+
+RLS: tenant_admin Read+Write eigener Tenant, strategaize_admin Full.
+
+#### `dialogue_session`
+
+```sql
+CREATE TABLE dialogue_session (
+  id                    uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id             uuid        NOT NULL REFERENCES tenants ON DELETE CASCADE,
+  capture_session_id    uuid        NOT NULL REFERENCES capture_session ON DELETE CASCADE,
+  meeting_guide_id      uuid        REFERENCES meeting_guide ON DELETE SET NULL,
+  jitsi_room_name       text        NOT NULL UNIQUE,
+  status                text        NOT NULL DEFAULT 'planned'
+                                    CHECK (status IN (
+                                      'planned',       -- Meeting erstellt, noch nicht gestartet
+                                      'in_progress',   -- Meeting laeuft
+                                      'recording',     -- Recording aktiv
+                                      'completed',     -- Meeting beendet, Recording vorhanden
+                                      'transcribing',  -- Whisper laeuft
+                                      'processing',    -- KI-Extraktion laeuft
+                                      'processed',     -- Fertig verarbeitet
+                                      'failed'         -- Fehler in Pipeline
+                                    )),
+  participant_a_user_id uuid        NOT NULL REFERENCES auth.users,
+  participant_b_user_id uuid        NOT NULL REFERENCES auth.users,
+  recording_storage_path text,      -- Pfad in Supabase Storage (recordings bucket)
+  recording_duration_s  integer,    -- Dauer in Sekunden
+  transcript            text,       -- Vollstaendiges Transkript (persistent, DEC-029)
+  transcript_model      text,       -- z.B. 'whisper-medium'
+  summary               jsonb,      -- Strukturierte Meeting-Summary
+  gaps                  jsonb,      -- Nicht besprochene Themen
+  -- summary: { topics: [{ key, title, highlights: string[], decisions: string[],
+  --            open_points: string[] }], overall: string }
+  -- gaps: [{ topic_key, topic_title, reason: string }]
+  extraction_model      text,       -- z.B. 'claude-sonnet-4-20250514'
+  extraction_cost_usd   numeric(10,6),
+  consent_a             boolean     DEFAULT false,  -- DSGVO: Aufnahme-Einwilligung
+  consent_b             boolean     DEFAULT false,
+  started_at            timestamptz,
+  ended_at              timestamptz,
+  created_by            uuid        NOT NULL REFERENCES auth.users,
+  created_at            timestamptz NOT NULL DEFAULT now(),
+  updated_at            timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_dialogue_session_capture ON dialogue_session(capture_session_id);
+CREATE INDEX idx_dialogue_session_status ON dialogue_session(status) WHERE status NOT IN ('processed', 'failed');
+```
+
+RLS: tenant_admin + tenant_member Read eigener Tenant (Teilnehmer muessen Summary sehen), strategaize_admin Full.
+
+### Schema-Erweiterungen bestehender Tabellen
+
+```sql
+-- capture_session: Neuer capture_mode-Wert
+ALTER TABLE capture_session
+  DROP CONSTRAINT IF EXISTS capture_session_capture_mode_check,
+  ADD CONSTRAINT capture_session_capture_mode_check
+    CHECK (capture_mode IS NULL OR capture_mode IN ('questionnaire', 'evidence', 'dialogue'));
+
+-- knowledge_unit: Neuer source-Wert
+ALTER TABLE knowledge_unit
+  DROP CONSTRAINT IF EXISTS knowledge_unit_source_check,
+  ADD CONSTRAINT knowledge_unit_source_check
+    CHECK (source IN ('questionnaire', 'exception', 'ai_draft', 'meeting_final', 'manual', 'evidence', 'dialogue'));
+```
+
+### Data Flows V3
+
+#### Flow 4 — Meeting Guide erstellen
+
+```
+Browser (strategaize_admin / tenant_admin)
+  → Meeting Guide Editor
+       → Themen/Leitfragen manuell eingeben
+       → Optional: Button "Vorschlaege generieren"
+            → POST /api/meeting-guide/suggest
+            → Bedrock: Template-Bloecke + Fragen + bestehende Antworten als Kontext
+            → Return: Vorgeschlagene Themen + Leitfragen
+       → Topics mit block_key verknuepfen (Template-Block-Zuordnung)
+       → Save via Server Action → INSERT/UPDATE meeting_guide
+```
+
+#### Flow 5 — Dialogue Session (Meeting + Recording)
+
+```
+1. Auftraggeber erstellt Dialogue Session
+     → dialogue_session.status = 'planned'
+     �� jitsi_room_name = UUID-basiert (z.B. 'onb-{session_id_short}')
+
+2. Teilnehmer treten bei
+     → Platform-UI: Jitsi IFrame API Embed
+     → JWT pro Teilnehmer: { room: room_name, sub: user_id, name: display_name,
+                              context: { user: { name, email } } }
+     → Consent-Screen vor Meeting-Start (DSGVO)
+     → consent_a / consent_b = true
+
+3. Meeting laeuft
+     → dialogue_session.status = 'in_progress'
+     → Meeting-Guide sichtbar als Seitenpanel
+     → Jibri-Recording startet (automatisch oder manuell)
+     → dialogue_session.status = 'recording'
+
+4. Meeting endet
+     → Jibri stoppt Recording → MP4 im Volume
+     → Finalize-Script → Webhook an App
+     → App uploaded MP4 in Supabase Storage (recordings/{tenant_id}/{dialogue_id}/recording.mp4)
+     → dialogue_session.recording_storage_path = Pfad
+     → dialogue_session.status = 'completed'
+     → Enqueue ai_job: dialogue_transcription
+```
+
+#### Flow 6 — Post-Meeting Pipeline
+
+```
+Job: dialogue_transcription
+  1. dialogue_session laden (recording_storage_path)
+  2. MP4 aus Supabase Storage herunterladen (Service-Role)
+  3. Audio extrahieren (ffmpeg -i input.mp4 -vn -acodec pcm_s16le -ar 16000 output.wav)
+  4. Whisper-Transkription (bestehender Whisper-Container, POST /asr mit Audio-Datei)
+  5. Transkript speichern: UPDATE dialogue_session SET transcript = text, transcript_model = 'whisper-medium'
+  6. dialogue_session.status = 'transcribing' → 'processing'
+  7. Enqueue ai_job: dialogue_extraction (automatischer Uebergang)
+  8. Temporaere Audio/Video-Dateien loeschen
+
+Job: dialogue_extraction
+  1. dialogue_session + meeting_guide laden
+  2. Prompt-Kontext aufbauen:
+     - System: "Du analysierst ein Meeting-Transkript..."
+     - User: Transkript + Meeting-Guide (Topics + Questions + block_keys)
+     - Instruktion: Pro Topic → KUs extrahieren + Gaps erkennen + Summary
+  3. Bedrock-Call (Claude Sonnet, temperature 0.3, maxTokens 16384)
+  4. Parse JSON-Output:
+     a) Knowledge Units: Pro Thema 1-3 KUs mit source='dialogue'
+        → rpc_bulk_import_knowledge_units (bestehender RPC)
+        → Block-Zuordnung via meeting_guide.topics[].block_key
+     b) Gaps: Topics die nicht/oberflaechlich besprochen wurden
+        → UPDATE dialogue_session SET gaps = [...]
+     c) Meeting-Summary: Strukturiert pro Topic
+        → UPDATE dialogue_session SET summary = {...}
+  5. Kosten loggen: ai_cost_ledger (feature='dialogue_extraction')
+  6. dialogue_session.status = 'processed'
+```
+
+### Worker-Erweiterung V3
+
+2 neue Job-Types im bestehenden Worker-Container:
+
+| Job-Type | Trigger | Input | Output |
+|----------|---------|-------|--------|
+| `dialogue_transcription` | Automatisch nach Recording-Upload | dialogue_session_id | transcript TEXT auf dialogue_session |
+| `dialogue_extraction` | Automatisch nach Transkription | dialogue_session_id | KUs (source='dialogue') + summary JSONB + gaps JSONB |
+
+Beide Jobs laufen sequentiell (Transkription muss vor Extraktion fertig sein). dialogue_transcription enqueued dialogue_extraction automatisch.
+
+#### Whisper-Aufruf fuer lange Recordings
+
+Bisherig (V2 Voice-Input): Kurze Audio-Clips (~5-30s Diktat).
+Neu (V3 Meeting): Lange Recordings (~15-60min Gespraech).
+
+Whisper verarbeitet lange Dateien intern in 30s-Segmenten. Fuer ein 60-Minuten-Meeting:
+- Audio-Groesse: ~60 MB WAV (16kHz, mono)
+- Verarbeitungsdauer (medium-Modell): ~3-8 Minuten auf CPX62
+- RAM-Bedarf: ~2 GB (unveraendert)
+
+Das bestehende Whisper-Container-Setup reicht. Der Worker wartet auf die Response (kein Timeout-Problem, Worker hat keinen HTTP-Proxy).
+
+### JWT-Generierung fuer Jitsi
+
+```typescript
+// src/lib/jitsi/jwt.ts
+import { createHmac } from 'node:crypto';
+
+export function generateJitsiJwt(params: {
+  roomName: string;
+  userId: string;
+  displayName: string;
+  email: string;
+  isModerator: boolean;
+}): string {
+  const header = { alg: 'HS256', typ: 'JWT' };
+  const payload = {
+    iss: process.env.JITSI_JWT_APP_ID,
+    room: params.roomName,
+    sub: '*',
+    aud: process.env.JITSI_JWT_APP_ID,
+    exp: Math.floor(Date.now() / 1000) + 3600, // 1h
+    context: {
+      user: {
+        id: params.userId,
+        name: params.displayName,
+        email: params.email,
+        moderator: params.isModerator
+      },
+      features: {
+        recording: params.isModerator  // Nur Moderator kann Recording starten
+      }
+    }
+  };
+
+  // HS256 Signing (analog Business System gen-test-jwt.mjs)
+  const segments = [
+    base64url(JSON.stringify(header)),
+    base64url(JSON.stringify(payload))
+  ];
+  const signature = createHmac('sha256', process.env.JITSI_JWT_APP_SECRET!)
+    .update(segments.join('.'))
+    .digest('base64url');
+
+  return [...segments, signature].join('.');
+}
+```
+
+### Meeting-Guide KI-Vorschlaege (Basic)
+
+```
+POST /api/meeting-guide/suggest
+  Input: { capture_session_id, template_id }
+  Logik:
+    1. Template laden (blocks + questions)
+    2. Optional: Bestehende Antworten aus capture_session.answers laden
+    3. Bedrock-Call:
+       System: "Du hilfst einem Knowledge Manager, ein Meeting vorzubereiten..."
+       User: Template-Bloecke + Fragen + (optional) bestehende Antworten
+       Instruktion: "Schlage 5-8 Gespraechsthemen mit je 2-3 Leitfragen vor.
+                     Ordne jedes Thema einem Template-Block zu."
+    4. Parse JSON-Output → Topics mit block_key
+  Output: { topics: [{ title, description, questions[], block_key }] }
+  Kosten: ~$0.02-$0.05 pro Aufruf (klein, kein kostenkritischer Flow)
+```
+
+### Supabase Storage Bucket `recordings`
+
+```sql
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES ('recordings', 'recordings', false, 524288000,  -- 500 MB
+  ARRAY['video/mp4', 'audio/wav', 'audio/webm']);
+
+-- Storage-Policies (analog Evidence-Pattern)
+-- INSERT: Auftraggeber + strategaize_admin
+-- SELECT: Tenant-Mitglieder + strategaize_admin
+-- DELETE: nur strategaize_admin
+```
+
+500 MB Limit pro Datei (1h Meeting in MP4 = ~100-200 MB bei Jibri-Standard-Qualitaet).
+
+### Jitsi IFrame API Integration
+
+```typescript
+// src/components/dialogue/JitsiMeeting.tsx
+'use client';
+
+import { useEffect, useRef } from 'react';
+
+interface JitsiMeetingProps {
+  roomName: string;
+  jwt: string;
+  displayName: string;
+  meetingGuideTopics: Topic[];
+  onMeetingEnd: () => void;
+}
+
+export function JitsiMeeting({ roomName, jwt, displayName, meetingGuideTopics, onMeetingEnd }: JitsiMeetingProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Jitsi IFrame API laden
+    const domain = process.env.NEXT_PUBLIC_JITSI_DOMAIN; // meet.onboarding-domain.com
+    const api = new JitsiMeetExternalAPI(domain, {
+      roomName,
+      jwt,
+      parentNode: containerRef.current,
+      configOverwrite: {
+        startWithAudioMuted: false,
+        startWithVideoMuted: false,
+        disableDeepLinking: true,
+      },
+      interfaceConfigOverwrite: {
+        SHOW_JITSI_WATERMARK: false,
+      },
+      userInfo: { displayName }
+    });
+
+    api.addEventListener('videoConferenceLeft', onMeetingEnd);
+    return () => api.dispose();
+  }, []);
+
+  return (
+    <div className="flex h-full">
+      <div ref={containerRef} className="flex-1" />
+      {/* Meeting Guide Seitenpanel */}
+      <MeetingGuideSidebar topics={meetingGuideTopics} />
+    </div>
+  );
+}
+```
+
+Fallback: Falls IFrame blockiert wird (Browser-Restriktionen), Link zum direkten Jitsi-Raum (`https://meet.domain.com/{roomName}?jwt={jwt}`).
+
+### DSGVO: Consent-Flow
+
+Vor Meeting-Beitritt:
+1. UI zeigt: "Dieses Meeting wird aufgezeichnet und transkribiert."
+2. Checkbox: "Ich stimme der Aufzeichnung zu"
+3. Erst nach Zustimmung wird der Jitsi-IFrame geladen
+4. `dialogue_session.consent_a` / `.consent_b` = true
+5. Ohne Consent beider Teilnehmer startet kein Recording
+
+### Pipeline-Integration (FEAT-021)
+
+#### capture_session erweitert
+
+capture_session bekommt eine optionale `capture_mode` Spalte (falls noch nicht vorhanden) mit den Werten: `questionnaire`, `evidence`, `dialogue`. Dashboard-UI zeigt Mode-Icon.
+
+Session-Erstellungs-Flow:
+```
+Auftraggeber waehlt Template → waehlt Capture-Mode:
+  - Fragebogen (questionnaire) → direkt zum Questionnaire
+  - Dokumente (evidence) → Evidence-Upload
+  - Gespraech (dialogue) → Meeting-Guide-Editor → Dialogue-Session
+```
+
+#### KU-Mapping auf Template-Bloecke
+
+Zentral fuer Pipeline-Integration: Meeting-Guide-Topics haben `block_key` (Zuordnung zu Template-Block). Bei der dialogue_extraction werden KUs dem entsprechenden Block zugewiesen. Diagnose-Layer und SOP-Generation arbeiten pro Block — sie sehen KUs aller Quellen (questionnaire + evidence + dialogue) gleichwertig.
+
+```
+Block "C: Nachfolge"
+  KU-1 (source=questionnaire) — aus Fragebogen-Antworten
+  KU-2 (source=evidence) — aus hochgeladenem Dokument
+  KU-3 (source=dialogue) — aus Meeting-Gespraech  ← NEU
+  → Diagnose-Generation nutzt alle 3 KUs
+  → SOP-Generation nutzt alle 3 KUs
+```
+
+### Kosten-Schaetzung V3
+
+| Operation | Tokens | Kosten/Meeting | Kosten/Session (3 Meetings) |
+|-----------|--------|---------------|----------------------------|
+| Meeting-Guide KI-Vorschlaege | ~2.000 in, ~1.500 out | ~$0.02 | ~$0.06 |
+| Whisper-Transkription (60min) | n/a (self-hosted) | $0.00 | $0.00 |
+| Dialogue-Extraction | ~20.000 in, ~4.000 out | ~$0.10-$0.20 | ~$0.30-$0.60 |
+| **V3-Zusatzkosten pro Session** | | | **~$0.36-$0.66** |
+
+Gesamtkosten pro Session (alle Features V1-V3):
+- V2 baseline: $2.57-$12.35
+- Mit V3 Dialogue: **$2.93-$13.01**
+
+Marginal — die Kosten fuer Dialogue-Processing sind gering im Vergleich zur Verdichtungs-Pipeline.
+
+### Security / Privacy V3
+
+Alle V1/V2-Regeln gelten weiter. Zusaetzlich:
+
+- **Meeting-Recording:** Besonders sensitiv (gesprochenes Unternehmenswissen). DSGVO-Consent vor Aufnahme mandatory. MP4 in tenant-isoliertem Storage. Kein Cross-Tenant-Zugriff.
+- **Transkript-Persistence (DEC-029):** Volles Transkript gespeichert. Audit-relevant aber auch sensitiv. Gleiche Schutzstufe wie KUs. Loeschen via Retention-Policy spaeter evaluieren.
+- **Jitsi JWT-Secrets:** 6 separate Secrets (JWT_APP_SECRET, 4 Auth-Passwords, 1 Recorder-Password). Alle in Coolify-ENV, nie im Code.
+- **Recording-Webhook:** Authentifiziert via RECORDING_WEBHOOK_SECRET (Shared Secret zwischen Jibri-Finalize-Script und App).
+- **Meeting-Video:** MP4 enthaelt Video + Audio. Fuer KI-Processing wird nur Audio gebraucht. Video bleibt als Backup in Storage, aber KI verarbeitet nur Audio-Extrakt.
+
+### ENV-Erweiterung V3
+
+```bash
+# Jitsi
+JITSI_JWT_APP_ID=onboarding
+JITSI_JWT_APP_SECRET=<generated>
+JITSI_JICOFO_AUTH_PASSWORD=<generated>
+JITSI_JICOFO_COMPONENT_SECRET=<generated>
+JITSI_JVB_AUTH_PASSWORD=<generated>
+JITSI_JIBRI_RECORDER_PASSWORD=<generated>
+JITSI_JIBRI_XMPP_PASSWORD=<generated>
+NEXT_PUBLIC_JITSI_DOMAIN=meet.onboarding-domain.com
+RECORDING_WEBHOOK_SECRET=<generated>
+```
+
+### Neue Dependencies V3
+
+| Dependency | Zweck | Wo |
+|-----------|-------|-----|
+| `@jitsi/react-sdk` oder IFrame API (CDN) | Jitsi-Embed in Next.js | App (Frontend) |
+| `fluent-ffmpeg` oder `node:child_process` + ffmpeg | Audio-Extraktion aus MP4 | Worker |
+
+ffmpeg ist bereits im Worker-Container verfuegbar (Node-Image hat ffmpeg via apt). Keine neuen externen Cloud-Provider.
+
+### Constraints und Tradeoffs V3
+
+#### Constraint — Eigene Jitsi-Instanz (DEC-025)
+5 neue Docker-Services auf dem Onboarding-Server.
+**Tradeoff:** Mehr RAM/CPU-Verbrauch. CPX62 (16 GB RAM) wird eng: App (~1 GB) + Worker (~0.5 GB) + Supabase (~3 GB) + Whisper (~2 GB) + Jitsi (~1 GB) + Jibri (~3 GB bei Recording) = ~10.5 GB. Monitoring nach Deploy essential. Server-Upgrade auf CPX72 (32 GB) moeglicherweise noetig.
+
+#### Constraint — Post-Meeting only (kein Live-KI)
+V3 verarbeitet erst nach Meeting-Ende.
+**Tradeoff:** Keine Live-Zusammenfassung, keine Echtzeit-Rueckfragen. Teilnehmer muessen sich auf den Meeting-Guide verlassen. V3.1 kann Streaming-Transkription + Live-Summaries ergaenzen.
+
+#### Constraint — Beide Teilnehmer brauchen Accounts (DEC-027)
+Kein Guest-Link-Mode in V3.
+**Tradeoff:** Auftraggeber muss zweiten Teilnehmer als tenant_member anlegen. Mehr Reibung bei externen Gespraechspartnern. V3.1 Guest-Mode reduziert das.
+
+#### Constraint — Keine Speaker Diarization (DEC-026)
+Transkript ist ein Fliesstext ohne Sprecher-Kennzeichnung.
+**Tradeoff:** KI-Extraktion kann nicht zwischen Sprecher A und B unterscheiden. Fuer themenbasiertes Mapping reicht das. Fuer sprecherbasierte Analyse (wer hat was gesagt) nicht. V3.1 Enhancement.
+
+### Geplante Migrationen V3
+
+| Nr. | Datei | Inhalt |
+|-----|-------|--------|
+| 058 | `058_meeting_guide.sql` | meeting_guide-Tabelle + RLS + Indexes + GRANTs + updated_at-Trigger |
+| 059 | `059_dialogue_session.sql` | dialogue_session-Tabelle + RLS + Indexes + GRANTs + updated_at-Trigger |
+| 060 | `060_capture_mode_dialogue.sql` | ALTER capture_session CHECK + ALTER knowledge_unit source CHECK fuer 'dialogue' |
+| 061 | `061_recordings_bucket.sql` | Supabase Storage Bucket 'recordings' + Policies |
+| 062 | `062_rpc_dialogue.sql` | RPCs: meeting_guide CRUD, dialogue_session Management, transcript/summary Persistierung |
+
+### Empfohlene Slice-Reihenfolge V3
+
+1. **SLC-025: Jitsi-Infrastructure** — Docker-Compose, Host-Setup, DNS, JWT-Generator, Smoke-Test (FEAT-017)
+2. **SLC-026: Meeting-Guide Backend** — meeting_guide-Tabelle + RLS + RPCs + KI-Suggest-API (FEAT-018 Backend)
+3. **SLC-027: Meeting-Guide UI** — Editor-UI, Themen-Verwaltung, Template-Block-Zuordnung, KI-Vorschlaege (FEAT-018 Frontend)
+4. **SLC-028: Dialogue Session Backend** — dialogue_session-Tabelle + RLS + capture_mode='dialogue' + Session-Management-API (FEAT-019 Backend)
+5. **SLC-029: Dialogue Session UI** — Jitsi-Embed, Consent-Flow, Meeting-Guide-Seitenpanel, Recording-Status (FEAT-019 Frontend)
+6. **SLC-030: Recording Pipeline** — Finalize-Script + Storage-Upload + dialogue_transcription Job + ffmpeg + Whisper (FEAT-020 Transkription)
+7. **SLC-031: Dialogue Extraction** — dialogue_extraction Job + Prompt + KU-Import + Summary + Gaps (FEAT-020 KI-Processing)
+8. **SLC-032: Pipeline Integration + Debrief** — Dashboard Dialogue-Sessions, Debrief-UI Erweiterung, Diagnose/SOP mit Dialogue-KUs (FEAT-021)
+
+8 Slices. Reihenfolge strikt sequentiell (jeder baut auf dem vorherigen auf). SLC-025 ist ein Infra-Slice (Deploy + Verifikation, kein App-Code). SLC-026-027 und SLC-028-029 koennen bei Bedarf leicht parallelisiert werden.
+
+### Naechster Schritt V3
+
+`/slice-planning` mit 8 Slices.
