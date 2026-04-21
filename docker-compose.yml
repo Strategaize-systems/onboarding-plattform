@@ -323,7 +323,7 @@ services:
   #     - strategaize-net
 
   # ============================================================
-  # WHISPER — Speech-to-Text (Whisper Large-v3, DSGVO-konform)
+  # WHISPER — Speech-to-Text (Self-hosted, DSGVO-konform, Default: medium)
   # ============================================================
   whisper:
     image: onerahmet/openai-whisper-asr-webservice:latest

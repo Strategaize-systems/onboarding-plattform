@@ -19,7 +19,7 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 3. /final-check → /go-live → /deploy V2
 
 ## Active Scope
-V2 — 12 Slices (11/12 done):
+V2 — 12 Slices (12/12 done):
 - SLC-013 Orchestrator-Integration (6 MTs) — done
 - SLC-014 Gap-Question-Backend (7 MTs) — done
 - SLC-015 Backspelling-UI (6 MTs) — done
