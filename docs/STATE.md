@@ -9,18 +9,18 @@
 Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdichtung. Ermoeglicht mehrere Capture-Modi (Fragebogen, Meeting, Voice, etc.) und Template-basierte Produktvarianten (z.B. Exit-Readiness, Immobilien-Onboarding).
 
 ## Current State
-- High-Level State: slice-planning
-- Current Focus: V3 Slice-Planning abgeschlossen. 8 Slices (SLC-025..032), 42 Micro-Tasks. Naechster Schritt: /backend SLC-025 (Jitsi-Infra).
-- Current Phase: V3 Slice-Planning
+- High-Level State: implementing
+- Current Focus: SLC-025 Jitsi Infrastructure done. Naechster Schritt: /qa SLC-025, dann /backend SLC-026 (Meeting Guide Backend).
+- Current Phase: V3 Implementation
 
 ## Immediate Next Steps
-1. /backend SLC-025 (Jitsi Infrastructure — Docker-Compose + Deploy + Smoke-Test)
-2. /qa SLC-025
-3. /backend SLC-026 (Meeting Guide Backend)
+1. /qa SLC-025 (Jitsi Infrastructure)
+2. /backend SLC-026 (Meeting Guide Backend)
+3. /qa SLC-026
 
 ## Active Scope
-V3 — Dialogue-Mode, 8 Slices (0/8 done):
-- SLC-025 Jitsi Infrastructure (5 MTs) — planned
+V3 — Dialogue-Mode, 8 Slices (1/8 done):
+- SLC-025 Jitsi Infrastructure (5 MTs) — done
 - SLC-026 Meeting Guide Backend (5 MTs) — planned
 - SLC-027 Meeting Guide UI (5 MTs) — planned
 - SLC-028 Dialogue Session Backend (7 MTs) — planned

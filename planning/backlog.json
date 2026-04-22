@@ -325,7 +325,7 @@
       "title": "Jitsi Meeting Infrastructure (eigene Instanz)",
       "type": "feature",
       "priority": "high",
-      "status": "open",
+      "status": "done",
       "version": "V3",
       "description": "Eigene Jitsi+Jibri-Instanz auf Onboarding-Server (159.69.207.29). Docker-Compose mit 5 Services, JWT-Auth, snd-aloop, Traefik-Integration, Recording-Faehigkeit. Unabhaengig von Business System. Basis fuer alle Dialogue-Features. Siehe FEAT-017.",
       "createdAt": "2026-04-21"

@@ -35,7 +35,7 @@
 
 | ID | Feature | Status | Spec | Created |
 |----|---------|--------|------|---------|
-| FEAT-017 | Jitsi Meeting Infrastructure | planned | [Spec](FEAT-017-jitsi-meeting-infrastructure.md) | 2026-04-21 |
+| FEAT-017 | Jitsi Meeting Infrastructure | done | [Spec](FEAT-017-jitsi-meeting-infrastructure.md) | 2026-04-21 |
 | FEAT-018 | Meeting Guide (Basic) | planned | [Spec](FEAT-018-meeting-guide.md) | 2026-04-21 |
 | FEAT-019 | Dialogue Session (Video-Call + Recording) | planned | [Spec](FEAT-019-dialogue-session.md) | 2026-04-21 |
 | FEAT-020 | Recording-to-Knowledge Pipeline | planned | [Spec](FEAT-020-recording-to-knowledge-pipeline.md) | 2026-04-21 |
