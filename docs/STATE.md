@@ -10,13 +10,13 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: SLC-032 Pipeline Integration + Debrief done (6 MTs). Naechster Schritt: /qa SLC-032.
+- Current Focus: SLC-032 QA PASS (RPT-064, 9/9 ACs). V3 komplett (8/8 Slices). Naechster Schritt: V3 Gesamt-QA.
 - Current Phase: V3 Implementation
 
 ## Immediate Next Steps
-1. /qa SLC-032 (Pipeline Integration + Debrief)
-2. V3 Gesamt-QA
-3. /final-check → /deploy
+1. V3 Gesamt-QA (alle 8 Slices + Cross-Feature)
+2. /final-check
+3. /deploy
 
 ## Active Scope
 V3 — Dialogue-Mode, 8 Slices (7/8 done):
