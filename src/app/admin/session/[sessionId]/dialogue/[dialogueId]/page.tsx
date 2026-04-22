@@ -65,6 +65,7 @@ export default async function DialogueMeetingPage({ params }: Props) {
     <DialogueMeetingView
       dialogueId={dialogueId}
       sessionId={sessionId}
+      jitsiRoomName={dialogue.jitsi_room_name}
       status={dialogue.status}
       hasConsent={hasConsent}
       displayName={displayName}

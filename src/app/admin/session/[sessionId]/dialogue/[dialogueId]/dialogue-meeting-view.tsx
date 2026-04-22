@@ -19,6 +19,7 @@ import type { DialogueSessionStatus } from "@/types/dialogue-session";
 interface Props {
   dialogueId: string;
   sessionId: string;
+  jitsiRoomName: string;
   status: string;
   hasConsent: boolean;
   displayName: string;
@@ -40,6 +41,7 @@ const STATUS_COLORS: Record<string, string> = {
 export function DialogueMeetingView({
   dialogueId,
   sessionId,
+  jitsiRoomName,
   status: initialStatus,
   hasConsent: initialConsent,
   displayName,
@@ -168,7 +170,7 @@ export function DialogueMeetingView({
       <div className="flex-1 flex overflow-hidden">
         <JitsiMeeting
           domain={jwtData.domain}
-          roomName={dialogueId}
+          roomName={jitsiRoomName}
           jwt={jwtData.jwt}
           displayName={displayName}
           onMeetingEnd={handleMeetingEnd}
