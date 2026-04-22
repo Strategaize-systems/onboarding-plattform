@@ -40,6 +40,8 @@ const sourceLabels: Record<string, string> = {
   manual: "Manuell",
   exception: "Ausnahme",
   meeting_final: "Meeting-Final",
+  evidence: "Evidenz",
+  dialogue: "Gespraech",
 };
 
 const confidenceColors: Record<string, string> = {
@@ -78,6 +80,8 @@ export function KnowledgeUnitList({
 
   const sourceOrder = [
     "questionnaire",
+    "dialogue",
+    "evidence",
     "ai_draft",
     "manual",
     "exception",

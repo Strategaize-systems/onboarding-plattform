@@ -13,6 +13,10 @@ import { updateSopContent, type SopRow } from "./sop-actions";
 import type { SopContent } from "@/workers/sop/types";
 import { type DiagnosisRow } from "./diagnosis-actions";
 import { DiagnosisWorkspace } from "./DiagnosisWorkspace";
+import { MeetingSummaryView } from "@/components/dialogue/meeting-summary-view";
+import { TranscriptViewer } from "@/components/dialogue/transcript-viewer";
+import { GapsList } from "@/components/dialogue/gaps-list";
+import type { DialogueSummary, DialogueGap } from "@/types/dialogue-session";
 
 interface KnowledgeUnit {
   id: string;
@@ -75,6 +79,10 @@ interface DebriefBlockClientProps {
   answersBySubtopic?: Record<string, AnswerData[]>;
   subtopicLabels?: Record<string, string>;
   evidenceFiles?: EvidenceFileData[];
+  // Dialogue data (SLC-032)
+  dialogueSummary?: DialogueSummary | null;
+  dialogueGaps?: DialogueGap[] | null;
+  dialogueTranscript?: string | null;
 }
 
 export function DebriefBlockClient({
@@ -92,6 +100,9 @@ export function DebriefBlockClient({
   answersBySubtopic = {},
   subtopicLabels = {},
   evidenceFiles = [],
+  dialogueSummary,
+  dialogueGaps,
+  dialogueTranscript,
 }: DebriefBlockClientProps) {
   const [isFinalized, setIsFinalized] = useState(initialFinalized);
   const [sop, setSop] = useState<SopRow | null>(initialSop ?? null);
@@ -154,6 +165,19 @@ export function DebriefBlockClient({
         isAlreadyFinalized={isFinalized}
         onSnapshotCreated={handleSnapshotCreated}
       />
+
+      {/* Dialogue Meeting Data (SLC-032) */}
+      {dialogueSummary && (
+        <MeetingSummaryView summary={dialogueSummary} />
+      )}
+
+      {dialogueGaps && dialogueGaps.length > 0 && (
+        <GapsList gaps={dialogueGaps} />
+      )}
+
+      {dialogueTranscript && (
+        <TranscriptViewer transcript={dialogueTranscript} />
+      )}
 
       {/* Backspelling Status */}
       {hasBackspelling && gapQuestionStats && (

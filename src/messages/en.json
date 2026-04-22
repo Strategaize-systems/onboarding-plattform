@@ -185,7 +185,10 @@
     "lastUpdated": "Last updated: {date}",
     "statusActive": "In Progress",
     "statusCompleted": "Completed",
-    "unknownTemplate": "Session"
+    "unknownTemplate": "Session",
+    "modeQuestionnaire": "Questionnaire",
+    "modeEvidence": "Documents",
+    "modeDialogue": "Dialogue"
   },
   "memory": {
     "title": "What the AI remembers",

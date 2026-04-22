@@ -185,7 +185,10 @@
     "lastUpdated": "Laatst bijgewerkt: {date}",
     "statusActive": "In bewerking",
     "statusCompleted": "Afgerond",
-    "unknownTemplate": "Sessie"
+    "unknownTemplate": "Sessie",
+    "modeQuestionnaire": "Vragenlijst",
+    "modeEvidence": "Documenten",
+    "modeDialogue": "Gesprek"
   },
   "memory": {
     "title": "Wat de AI heeft onthouden",

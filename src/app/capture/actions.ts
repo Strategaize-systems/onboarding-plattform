@@ -5,7 +5,12 @@ import { getTemplateBySlug } from "@/lib/db/template-queries";
 import { createCaptureSession } from "@/lib/db/capture-session-queries";
 import { redirect } from "next/navigation";
 
-export async function startCaptureSession(templateSlug: string) {
+export type CaptureMode = "questionnaire" | "evidence" | "dialogue";
+
+export async function startCaptureSession(
+  templateSlug: string,
+  captureMode: CaptureMode = "questionnaire"
+) {
   const supabase = await createClient();
 
   const {
@@ -37,7 +42,15 @@ export async function startCaptureSession(templateSlug: string) {
     template_id: template.id,
     template_version: template.version,
     owner_user_id: user.id,
+    capture_mode: captureMode,
   });
 
-  redirect(`/capture/${session.id}`);
+  // Redirect based on capture mode
+  if (captureMode === "dialogue") {
+    redirect(`/admin/session/${session.id}/dialogue/new`);
+  } else if (captureMode === "evidence") {
+    redirect(`/capture/${session.id}`);
+  } else {
+    redirect(`/capture/${session.id}`);
+  }
 }

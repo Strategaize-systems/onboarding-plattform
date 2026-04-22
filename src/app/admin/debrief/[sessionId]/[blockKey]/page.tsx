@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { DebriefBlockClient } from "./DebriefBlockClient";
 import type { SopContent } from "@/workers/sop/types";
 import type { DiagnosisContent } from "@/workers/diagnosis/types";
+import type { DialogueSummary, DialogueGap } from "@/types/dialogue-session";
 
 interface DebriefBlockPageProps {
   params: Promise<{ sessionId: string; blockKey: string }>;
@@ -17,12 +18,34 @@ export default async function DebriefBlockPage({
   // Session laden (strategaize_admin hat admin_full RLS -> cross-tenant)
   const { data: session, error: sessionError } = await supabase
     .from("capture_session")
-    .select("id, tenant_id, template_id, status")
+    .select("id, tenant_id, template_id, status, capture_mode")
     .eq("id", sessionId)
     .single();
 
   if (sessionError || !session) {
     notFound();
+  }
+
+  // Load dialogue session data if this is a dialogue capture
+  let dialogueSummary: DialogueSummary | null = null;
+  let dialogueGaps: DialogueGap[] = [];
+  let dialogueTranscript: string | null = null;
+
+  if ((session as Record<string, unknown>).capture_mode === "dialogue") {
+    const { data: dialogueSession } = await supabase
+      .from("dialogue_session")
+      .select("summary, gaps, transcript, status")
+      .eq("capture_session_id", sessionId)
+      .eq("status", "processed")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (dialogueSession) {
+      dialogueSummary = (dialogueSession.summary as DialogueSummary) ?? null;
+      dialogueGaps = (dialogueSession.gaps as DialogueGap[]) ?? [];
+      dialogueTranscript = dialogueSession.transcript;
+    }
   }
 
   // Template laden fuer Block-Titel + Diagnosis-Schema (fuer Subtopic→Frage-Mapping)
@@ -282,6 +305,9 @@ export default async function DebriefBlockPage({
           file_size_bytes: ef.file_size_bytes,
           extraction_status: ef.extraction_status,
         }))}
+        dialogueSummary={dialogueSummary}
+        dialogueGaps={dialogueGaps}
+        dialogueTranscript={dialogueTranscript}
       />
     </div>
   );

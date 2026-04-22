@@ -9,7 +9,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { FileText, Menu, X, Clock, PlayCircle, CheckCircle2, MessageSquare } from "lucide-react";
+import { FileText, Menu, X, Clock, PlayCircle, CheckCircle2, MessageSquare, ClipboardList, FileUp, Mic } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
 import { HelpButton } from "@/components/help-button";
 import { LearningCenterPanel } from "@/components/learning-center/learning-center-panel";
@@ -28,6 +28,7 @@ interface CaptureSession {
   status: string;
   started_at: string;
   updated_at: string;
+  capture_mode: string | null;
   template: { name: string; slug: string } | null;
 }
 
@@ -51,13 +52,14 @@ export function DashboardClient({ profile }: { profile: Profile }) {
         const supabase = createClient();
         const { data } = await supabase
           .from("capture_session")
-          .select("id, status, started_at, updated_at, template:template_id(name, slug)")
+          .select("id, status, started_at, updated_at, capture_mode, template:template_id(name, slug)")
           .order("updated_at", { ascending: false });
         const mapped: CaptureSession[] = (data ?? []).map((row) => ({
           id: row.id,
           status: row.status,
           started_at: row.started_at,
           updated_at: row.updated_at,
+          capture_mode: (row as Record<string, unknown>).capture_mode as string | null,
           template: Array.isArray(row.template) ? row.template[0] ?? null : row.template,
         }));
         setSessions(mapped);
@@ -153,16 +155,35 @@ export function DashboardClient({ profile }: { profile: Profile }) {
                     className: "bg-slate-50 text-slate-600 border-slate-200",
                   };
                   const StatusIcon = statusCfg.icon;
+                  const ModeIcon =
+                    session.capture_mode === "dialogue"
+                      ? Mic
+                      : session.capture_mode === "evidence"
+                        ? FileUp
+                        : ClipboardList;
+                  const modeLabel =
+                    session.capture_mode === "dialogue"
+                      ? t("dashboard.modeDialogue")
+                      : session.capture_mode === "evidence"
+                        ? t("dashboard.modeEvidence")
+                        : t("dashboard.modeQuestionnaire");
+                  const sessionHref =
+                    session.capture_mode === "dialogue"
+                      ? `/admin/session/${session.id}/dialogue`
+                      : `/capture/${session.id}`;
 
                   return (
-                    <Link key={session.id} href={`/capture/${session.id}`}>
+                    <Link key={session.id} href={sessionHref}>
                       <Card className="relative overflow-hidden cursor-pointer hover:shadow-md transition-shadow">
                         <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-brand-primary-dark to-brand-primary" />
                         <CardHeader className="pb-3 pt-5">
                           <div className="flex items-center justify-between">
-                            <CardTitle className="text-lg text-brand-primary-dark">
-                              {session.template?.name ?? t("dashboard.unknownTemplate")}
-                            </CardTitle>
+                            <div className="flex items-center gap-2">
+                              <ModeIcon className="h-4 w-4 text-slate-400" />
+                              <CardTitle className="text-lg text-brand-primary-dark">
+                                {session.template?.name ?? t("dashboard.unknownTemplate")}
+                              </CardTitle>
+                            </div>
                             <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${statusCfg.className}`}>
                               <StatusIcon className="h-3.5 w-3.5" />
                               {t(statusCfg.label)}
@@ -171,6 +192,9 @@ export function DashboardClient({ profile }: { profile: Profile }) {
                         </CardHeader>
                         <CardContent>
                           <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+                              {modeLabel}
+                            </span>
                             <span>
                               {t("dashboard.started", { date: new Date(session.started_at).toLocaleDateString(locale) })}
                             </span>

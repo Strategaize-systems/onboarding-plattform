@@ -64,6 +64,7 @@ export async function createCaptureSession(
     template_id: string;
     template_version: string;
     owner_user_id: string;
+    capture_mode?: string;
   }
 ): Promise<CaptureSessionRow> {
   const { data, error } = await client

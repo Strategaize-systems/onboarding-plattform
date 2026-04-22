@@ -45,6 +45,15 @@ const statusBadge: Record<string, { label: string; className: string }> = {
   rejected: { label: "Abgelehnt", className: "bg-red-100 text-red-800" },
 };
 
+const sourceBadge: Record<string, { label: string; className: string }> = {
+  questionnaire: { label: "Fragebogen", className: "bg-indigo-100 text-indigo-700" },
+  dialogue: { label: "Gespraech", className: "bg-blue-100 text-blue-700" },
+  evidence: { label: "Evidenz", className: "bg-teal-100 text-teal-700" },
+  ai_draft: { label: "KI-Entwurf", className: "bg-purple-100 text-purple-700" },
+  manual: { label: "Manuell", className: "bg-slate-100 text-slate-600" },
+  meeting_final: { label: "Meeting-Final", className: "bg-green-100 text-green-700" },
+};
+
 export function KnowledgeUnitEditor({
   ku,
   validationEntries,
@@ -119,6 +128,13 @@ export function KnowledgeUnitEditor({
           )}
         </div>
         <div className="ml-3 flex flex-shrink-0 items-center gap-2">
+          {sourceBadge[ku.source] && (
+            <span
+              className={`rounded-full px-2 py-0.5 text-xs font-medium ${sourceBadge[ku.source].className}`}
+            >
+              {sourceBadge[ku.source].label}
+            </span>
+          )}
           <span
             className={`rounded-full px-2 py-0.5 text-xs font-medium ${conf.className}`}
           >

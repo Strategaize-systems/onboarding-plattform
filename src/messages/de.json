@@ -185,7 +185,10 @@
     "lastUpdated": "Letzte Aenderung: {date}",
     "statusActive": "In Bearbeitung",
     "statusCompleted": "Abgeschlossen",
-    "unknownTemplate": "Erhebung"
+    "unknownTemplate": "Erhebung",
+    "modeQuestionnaire": "Fragebogen",
+    "modeEvidence": "Dokumente",
+    "modeDialogue": "Gespraech"
   },
   "memory": {
     "title": "Was die KI sich gemerkt hat",
