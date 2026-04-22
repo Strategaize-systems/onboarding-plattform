@@ -205,6 +205,18 @@ Der uebernommene Blueprint-Stand ist noch nicht auf einer Onboarding-Plattform-I
 - Risk: Gering — neue Tabelle, keine Aenderung an bestehenden Strukturen. NOTE: Expliziter `public.` Schema-Prefix erforderlich — search_path hat `storage` vor `public`.
 - Rollback Notes: `DROP TABLE IF EXISTS public.meeting_guide CASCADE;`
 
+### MIG-020 — SLC-028 Dialogue Session Backend (Migrationen 059-062)
+- Date: 2026-04-22
+- Scope:
+  - `059_dialogue_session.sql` — Neue Tabelle `public.dialogue_session` (22 Spalten: id, tenant_id, capture_session_id, meeting_guide_id FK, jitsi_room_name UNIQUE, status CHECK 8 Werte, participant_a/b_user_id, recording_storage_path, recording_duration_s, transcript, transcript_model, summary JSONB, gaps JSONB, extraction_model, extraction_cost_usd, consent_a/b, started_at, ended_at, created_by, timestamps). 4 RLS-Policies (admin_full, tenant_read fuer admin+member, tenant_write fuer admin, tenant_update fuer admin). 3 Indexes (capture, tenant, status partial). GRANTs authenticated + service_role. updated_at-Trigger.
+  - `060_capture_mode_dialogue.sql` — ALTER capture_session ADD capture_mode TEXT CHECK (NULL oder questionnaire/evidence/dialogue). ALTER knowledge_unit DROP+ADD source CHECK (7 Werte inkl. evidence + dialogue).
+  - `061_recordings_bucket.sql` — Supabase Storage Bucket 'recordings' (private, 500 MB, video/audio MIME). 3 Storage-Policies (tenant-isolated insert+select, admin-only delete).
+  - `062_rpc_dialogue.sql` — 5 RPCs: rpc_create_dialogue_session (Room-Name-Gen + Insert), rpc_update_dialogue_status (Transition-Validierung + Timestamps), rpc_save_dialogue_transcript, rpc_save_dialogue_extraction, rpc_update_dialogue_consent (Teilnehmer-spezifisch). Alle SECURITY DEFINER. GRANTs differenziert (transcript/extraction nur service_role).
+- Affected Areas: dialogue_session-Tabelle (neu), capture_session (neue Spalte), knowledge_unit (CHECK erweitert), Storage (neuer Bucket), 5 neue RPCs
+- Reason: SLC-028 Dialogue Session Backend (FEAT-019, DEC-025..030). Kompletttes Backend fuer Meeting-Session-Verwaltung, DSGVO-Consent, Recording-Storage und Pipeline-Vorbereitung.
+- Risk: Gering — neue Tabelle + neue Spalte + neue RPCs. Keine Aenderung an bestehenden Daten. capture_mode ist nullable, bestehende Sessions bleiben unberuehrt. NOTE: public. Prefix auf allen Migrationen wegen search_path (IMP-103).
+- Rollback Notes: `DROP TABLE IF EXISTS public.dialogue_session CASCADE; ALTER TABLE public.capture_session DROP COLUMN IF EXISTS capture_mode; ALTER TABLE public.knowledge_unit DROP CONSTRAINT knowledge_unit_source_check, ADD CONSTRAINT knowledge_unit_source_check CHECK (source IN ('questionnaire', 'exception', 'ai_draft', 'meeting_final', 'manual')); DELETE FROM storage.buckets WHERE id = 'recordings'; DROP FUNCTION IF EXISTS rpc_create_dialogue_session; DROP FUNCTION IF EXISTS rpc_update_dialogue_status; DROP FUNCTION IF EXISTS rpc_save_dialogue_transcript; DROP FUNCTION IF EXISTS rpc_save_dialogue_extraction; DROP FUNCTION IF EXISTS rpc_update_dialogue_consent;`
+
 ### MIG-017 — SLC-019 Evidence RPCs + Cost Ledger Update (Migration 054)
 - Date: 2026-04-20
 - Scope:
