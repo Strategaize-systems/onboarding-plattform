@@ -92,6 +92,12 @@ export function JitsiMeeting({
         onRecordingStatusChange?.(s.on === true);
       });
 
+      // Ensure iframe has camera/microphone permissions
+      const iframe = containerRef.current?.querySelector("iframe");
+      if (iframe) {
+        iframe.setAttribute("allow", "camera *; microphone *; display-capture *; autoplay *");
+      }
+
       apiRef.current = api;
     } catch {
       setIframeError(true);
