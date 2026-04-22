@@ -46,11 +46,11 @@ export default async function DialogueMeetingPage({ params }: Props) {
   // Get user profile for display name
   const { data: profile } = await supabase
     .from("profiles")
-    .select("display_name, email")
+    .select("email")
     .eq("id", user.id)
     .single();
 
-  const displayName = profile?.display_name ?? user.email ?? "Teilnehmer";
+  const displayName = profile?.email?.split("@")[0] ?? user.email ?? "Teilnehmer";
 
   // Determine if current user is participant A (moderator)
   const isParticipantA = dialogue.participant_a_user_id === user.id;

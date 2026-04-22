@@ -203,11 +203,11 @@ export async function generateDialogueJwt(
   // Get user display name
   const { data: profile } = await supabase
     .from("profiles")
-    .select("display_name, email")
+    .select("email")
     .eq("id", user.id)
     .single();
 
-  const displayName = profile?.display_name ?? user.email ?? "Teilnehmer";
+  const displayName = profile?.email?.split("@")[0] ?? user.email ?? "Teilnehmer";
   const email = profile?.email ?? user.email ?? "";
 
   // Participant A is moderator (initiator)

@@ -37,12 +37,26 @@ export default async function NewDialoguePage({ params }: Props) {
   if (!session) redirect("/admin");
 
   // Load tenant members for participant selection
+  // Also include strategaize_admin (no tenant_id) so they can join as participant
   const adminClient = createAdminClient();
-  const { data: members } = await adminClient
+  const { data: tenantMembers } = await adminClient
     .from("profiles")
-    .select("id, display_name, email, role")
+    .select("id, email, role")
     .eq("tenant_id", session.tenant_id)
-    .order("display_name");
+    .order("email");
+
+  const { data: adminMembers } = await adminClient
+    .from("profiles")
+    .select("id, email, role")
+    .eq("role", "strategaize_admin")
+    .order("email");
+
+  // Merge: tenant members first, then admins (deduplicated)
+  const tenantIds = new Set((tenantMembers ?? []).map((m) => m.id));
+  const members = [
+    ...(tenantMembers ?? []),
+    ...(adminMembers ?? []).filter((m) => !tenantIds.has(m.id)),
+  ];
 
   // Load meeting guide if exists
   const { data: meetingGuide } = await supabase
@@ -63,7 +77,7 @@ export default async function NewDialoguePage({ params }: Props) {
       <CreateDialogueForm
         sessionId={sessionId}
         currentUserId={user.id}
-        members={(members ?? []) as Array<{ id: string; display_name: string | null; email: string; role: string }>}
+        members={members as Array<{ id: string; display_name: string | null; email: string; role: string }>}
         meetingGuide={meetingGuide as { id: string; goal: string | null; topics: unknown[] } | null}
       />
     </div>
