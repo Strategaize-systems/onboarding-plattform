@@ -345,7 +345,7 @@
       "title": "Dialogue Session (Video-Call + Recording)",
       "type": "feature",
       "priority": "high",
-      "status": "in_progress",
+      "status": "done",
       "version": "V3",
       "description": "Jitsi-Embed in Plattform-UI, zwei Teilnehmer, Meeting-Raum-Management, Jibri-Recording, Meeting-Guide als Referenz im Call, DSGVO-Consent vor Aufnahme. Siehe FEAT-019.",
       "createdAt": "2026-04-21"

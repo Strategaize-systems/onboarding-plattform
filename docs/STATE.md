@@ -10,21 +10,21 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: SLC-028 Dialogue Session Backend done (7 MTs, 4 Migrationen, JWT, Server Actions, Webhook, Tests). Naechster Schritt: /qa SLC-028.
+- Current Focus: SLC-029 Dialogue Session UI done (6 MTs, Jitsi-Embed, Consent-Flow, Meeting-Guide-Sidebar, Recording-Indicator, i18n). Naechster Schritt: /qa SLC-029.
 - Current Phase: V3 Implementation
 
 ## Immediate Next Steps
-1. /qa SLC-028 (Dialogue Session Backend)
-2. /frontend SLC-029 (Dialogue Session UI)
-3. /qa SLC-029
+1. /qa SLC-029 (Dialogue Session UI)
+2. /backend SLC-030 (Recording Pipeline)
+3. /qa SLC-030
 
 ## Active Scope
-V3 — Dialogue-Mode, 8 Slices (4/8 done):
+V3 — Dialogue-Mode, 8 Slices (5/8 done):
 - SLC-025 Jitsi Infrastructure (5 MTs) — done
 - SLC-026 Meeting Guide Backend (5 MTs) — done
 - SLC-027 Meeting Guide UI (5 MTs) — done
 - SLC-028 Dialogue Session Backend (7 MTs) — done
-- SLC-029 Dialogue Session UI (6 MTs) — planned
+- SLC-029 Dialogue Session UI (6 MTs) — done
 - SLC-030 Recording Pipeline (6 MTs) — planned
 - SLC-031 Dialogue Extraction (4 MTs) — planned
 - SLC-032 Pipeline Integration + Debrief (6 MTs) — planned

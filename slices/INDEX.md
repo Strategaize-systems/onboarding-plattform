@@ -67,7 +67,7 @@
 | SLC-026 | [Meeting Guide Backend](SLC-026-meeting-guide-backend.md) | FEAT-018 | done | High | 2026-04-21 |
 | SLC-027 | [Meeting Guide UI](SLC-027-meeting-guide-ui.md) | FEAT-018 | done | High | 2026-04-21 |
 | SLC-028 | [Dialogue Session Backend](SLC-028-dialogue-session-backend.md) | FEAT-019 | done | High | 2026-04-21 |
-| SLC-029 | [Dialogue Session UI](SLC-029-dialogue-session-ui.md) | FEAT-019 | planned | High | 2026-04-21 |
+| SLC-029 | [Dialogue Session UI](SLC-029-dialogue-session-ui.md) | FEAT-019 | done | High | 2026-04-21 |
 | SLC-030 | [Recording Pipeline](SLC-030-recording-pipeline.md) | FEAT-020 | planned | Blocker | 2026-04-21 |
 | SLC-031 | [Dialogue Extraction](SLC-031-dialogue-extraction.md) | FEAT-020 | planned | Blocker | 2026-04-21 |
 | SLC-032 | [Pipeline Integration + Debrief](SLC-032-pipeline-integration.md) | FEAT-021 | planned | High | 2026-04-21 |
