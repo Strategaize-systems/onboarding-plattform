@@ -10,13 +10,13 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: SLC-032 QA PASS (RPT-064, 9/9 ACs). V3 komplett (8/8 Slices). Naechster Schritt: V3 Gesamt-QA.
+- Current Focus: V3 Gesamt-QA PASS (RPT-065). Alle 5 Features + 8 Slices verifiziert. Naechster Schritt: /final-check.
 - Current Phase: V3 Implementation
 
 ## Immediate Next Steps
-1. V3 Gesamt-QA (alle 8 Slices + Cross-Feature)
-2. /final-check
-3. /deploy
+1. /final-check (Pre-Release-Audit V3)
+2. /deploy V3
+3. /post-launch V3
 
 ## Active Scope
 V3 — Dialogue-Mode, 8 Slices (7/8 done):
