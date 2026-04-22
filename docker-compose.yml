@@ -17,6 +17,22 @@ volumes:
     driver: local
   storage-data:
     driver: local
+  jitsi-web-config:
+    driver: local
+  jitsi-web-transcripts:
+    driver: local
+  jitsi-prosody-config:
+    driver: local
+  jitsi-prosody-plugins:
+    driver: local
+  jitsi-jicofo-config:
+    driver: local
+  jitsi-jvb-config:
+    driver: local
+  jitsi-jibri-config:
+    driver: local
+  jitsi-recordings:
+    driver: local
 
 services:
 
@@ -333,5 +349,179 @@ services:
     environment:
       - ASR_MODEL=${WHISPER_MODEL:-medium}
       - ASR_ENGINE=openai_whisper
+    networks:
+      - strategaize-net
+
+  # ============================================================
+  # JITSI MEET — Video Conferencing (V3 Dialogue-Mode)
+  # Self-hosted, JWT-Auth, Recording via Jibri
+  # Referenz: Business System docker-compose.yml (stable-9258)
+  # Coolify-UUID: bwkg80w04wgccos48gcws8cs
+  # ============================================================
+
+  jitsi-web:
+    image: jitsi/web:stable-9258
+    restart: unless-stopped
+    expose:
+      - "80"
+    labels:
+      - "traefik.docker.network=bwkg80w04wgccos48gcws8cs"
+      - "traefik.http.services.jitsi-web-svc.loadbalancer.server.port=80"
+      - "traefik.http.routers.http-0-bwkg80w04wgccos48gcws8cs-jitsi-web.service=jitsi-web-svc"
+      - "traefik.http.routers.https-0-bwkg80w04wgccos48gcws8cs-jitsi-web.service=jitsi-web-svc"
+    environment:
+      ENABLE_AUTH: "1"
+      ENABLE_GUESTS: "0"
+      AUTH_TYPE: jwt
+      JWT_APP_ID: ${JITSI_JWT_APP_ID:-onboarding}
+      JWT_APP_SECRET: ${JITSI_JWT_APP_SECRET}
+      JWT_ACCEPTED_ISSUERS: ${JITSI_JWT_APP_ID:-onboarding}
+      JWT_ACCEPTED_AUDIENCES: ${JITSI_JWT_APP_ID:-onboarding}
+      PUBLIC_URL: https://${JITSI_DOMAIN:-meet-onboarding.strategaizetransition.com}
+      XMPP_DOMAIN: ${JITSI_XMPP_DOMAIN:-meet.jitsi}
+      XMPP_AUTH_DOMAIN: auth.${JITSI_XMPP_DOMAIN:-meet.jitsi}
+      XMPP_BOSH_URL_BASE: http://jitsi-prosody:5280
+      XMPP_GUEST_DOMAIN: guest.${JITSI_XMPP_DOMAIN:-meet.jitsi}
+      XMPP_MUC_DOMAIN: muc.${JITSI_XMPP_DOMAIN:-meet.jitsi}
+      XMPP_RECORDER_DOMAIN: recorder.${JITSI_XMPP_DOMAIN:-meet.jitsi}
+      ENABLE_LETSENCRYPT: "0"
+      ENABLE_XMPP_WEBSOCKET: "1"
+      ENABLE_RECORDING: "1"
+      ENABLE_FILE_RECORDING_SERVICE: "1"
+      ENABLE_FILE_RECORDING_SERVICE_SHARING: "0"
+      TZ: Europe/Berlin
+    volumes:
+      - jitsi-web-config:/config
+      - jitsi-web-transcripts:/usr/share/jitsi-meet/transcripts
+    depends_on:
+      - jitsi-prosody
+    networks:
+      - strategaize-net
+
+  jitsi-prosody:
+    image: jitsi/prosody:stable-9258
+    restart: unless-stopped
+    expose:
+      - "5222"
+      - "5269"
+      - "5280"
+      - "5347"
+    environment:
+      AUTH_TYPE: jwt
+      ENABLE_AUTH: "1"
+      ENABLE_GUESTS: "0"
+      ENABLE_RECORDING: "1"
+      JWT_APP_ID: ${JITSI_JWT_APP_ID:-onboarding}
+      JWT_APP_SECRET: ${JITSI_JWT_APP_SECRET}
+      JWT_ACCEPTED_ISSUERS: ${JITSI_JWT_APP_ID:-onboarding}
+      JWT_ACCEPTED_AUDIENCES: ${JITSI_JWT_APP_ID:-onboarding}
+      XMPP_DOMAIN: ${JITSI_XMPP_DOMAIN:-meet.jitsi}
+      XMPP_AUTH_DOMAIN: auth.${JITSI_XMPP_DOMAIN:-meet.jitsi}
+      XMPP_GUEST_DOMAIN: guest.${JITSI_XMPP_DOMAIN:-meet.jitsi}
+      XMPP_MUC_DOMAIN: muc.${JITSI_XMPP_DOMAIN:-meet.jitsi}
+      XMPP_INTERNAL_MUC_DOMAIN: internal-muc.${JITSI_XMPP_DOMAIN:-meet.jitsi}
+      XMPP_RECORDER_DOMAIN: recorder.${JITSI_XMPP_DOMAIN:-meet.jitsi}
+      JICOFO_AUTH_USER: focus
+      JICOFO_AUTH_PASSWORD: ${JITSI_JICOFO_AUTH_PASSWORD}
+      JICOFO_COMPONENT_SECRET: ${JITSI_JICOFO_COMPONENT_SECRET}
+      JVB_AUTH_USER: jvb
+      JVB_AUTH_PASSWORD: ${JITSI_JVB_AUTH_PASSWORD}
+      JIBRI_RECORDER_USER: recorder
+      JIBRI_RECORDER_PASSWORD: ${JITSI_JIBRI_RECORDER_PASSWORD}
+      JIBRI_XMPP_USER: jibri
+      JIBRI_XMPP_PASSWORD: ${JITSI_JIBRI_XMPP_PASSWORD}
+      TZ: Europe/Berlin
+    volumes:
+      - jitsi-prosody-config:/config
+      - jitsi-prosody-plugins:/prosody-plugins-custom
+    networks:
+      strategaize-net:
+        aliases:
+          - ${JITSI_XMPP_DOMAIN:-meet.jitsi}
+          - auth.${JITSI_XMPP_DOMAIN:-meet.jitsi}
+          - muc.${JITSI_XMPP_DOMAIN:-meet.jitsi}
+          - internal-muc.${JITSI_XMPP_DOMAIN:-meet.jitsi}
+          - recorder.${JITSI_XMPP_DOMAIN:-meet.jitsi}
+          - guest.${JITSI_XMPP_DOMAIN:-meet.jitsi}
+
+  jitsi-jicofo:
+    image: jitsi/jicofo:stable-9258
+    restart: unless-stopped
+    environment:
+      AUTH_TYPE: jwt
+      ENABLE_AUTH: "1"
+      ENABLE_RECORDING: "1"
+      XMPP_DOMAIN: ${JITSI_XMPP_DOMAIN:-meet.jitsi}
+      XMPP_AUTH_DOMAIN: auth.${JITSI_XMPP_DOMAIN:-meet.jitsi}
+      XMPP_INTERNAL_MUC_DOMAIN: internal-muc.${JITSI_XMPP_DOMAIN:-meet.jitsi}
+      XMPP_MUC_DOMAIN: muc.${JITSI_XMPP_DOMAIN:-meet.jitsi}
+      XMPP_RECORDER_DOMAIN: recorder.${JITSI_XMPP_DOMAIN:-meet.jitsi}
+      XMPP_SERVER: jitsi-prosody
+      JICOFO_COMPONENT_SECRET: ${JITSI_JICOFO_COMPONENT_SECRET}
+      JICOFO_AUTH_USER: focus
+      JICOFO_AUTH_PASSWORD: ${JITSI_JICOFO_AUTH_PASSWORD}
+      JVB_BREWERY_MUC: jvbbrewery
+      JIBRI_BREWERY_MUC: jibribrewery
+      JIBRI_PENDING_TIMEOUT: "90"
+      TZ: Europe/Berlin
+    volumes:
+      - jitsi-jicofo-config:/config
+    depends_on:
+      - jitsi-prosody
+    networks:
+      - strategaize-net
+
+  jitsi-jvb:
+    image: jitsi/jvb:stable-9258
+    restart: unless-stopped
+    ports:
+      - "10000:10000/udp"
+    environment:
+      XMPP_AUTH_DOMAIN: auth.${JITSI_XMPP_DOMAIN:-meet.jitsi}
+      XMPP_INTERNAL_MUC_DOMAIN: internal-muc.${JITSI_XMPP_DOMAIN:-meet.jitsi}
+      XMPP_SERVER: jitsi-prosody
+      JVB_AUTH_USER: jvb
+      JVB_AUTH_PASSWORD: ${JITSI_JVB_AUTH_PASSWORD}
+      JVB_BREWERY_MUC: jvbbrewery
+      JVB_PORT: "10000"
+      JVB_STUN_SERVERS: meet-jit-si-turnrelay.jitsi.net:443
+      TZ: Europe/Berlin
+    volumes:
+      - jitsi-jvb-config:/config
+    depends_on:
+      - jitsi-prosody
+    networks:
+      - strategaize-net
+
+  jitsi-jibri:
+    image: jitsi/jibri:stable-9258
+    restart: unless-stopped
+    shm_size: 2gb
+    cap_add:
+      - SYS_ADMIN
+    devices:
+      - /dev/snd:/dev/snd
+    environment:
+      PUBLIC_URL: https://${JITSI_DOMAIN:-meet-onboarding.strategaizetransition.com}
+      XMPP_AUTH_DOMAIN: auth.${JITSI_XMPP_DOMAIN:-meet.jitsi}
+      XMPP_INTERNAL_MUC_DOMAIN: internal-muc.${JITSI_XMPP_DOMAIN:-meet.jitsi}
+      XMPP_RECORDER_DOMAIN: recorder.${JITSI_XMPP_DOMAIN:-meet.jitsi}
+      XMPP_SERVER: jitsi-prosody
+      XMPP_DOMAIN: ${JITSI_XMPP_DOMAIN:-meet.jitsi}
+      JIBRI_RECORDER_USER: recorder
+      JIBRI_RECORDER_PASSWORD: ${JITSI_JIBRI_RECORDER_PASSWORD}
+      JIBRI_XMPP_USER: jibri
+      JIBRI_XMPP_PASSWORD: ${JITSI_JIBRI_XMPP_PASSWORD}
+      JIBRI_BREWERY_MUC: jibribrewery
+      JIBRI_RECORDING_DIR: /recordings
+      JIBRI_STRIP_DOMAIN_JID: muc
+      JIBRI_LOGS_DIR: /config/logs
+      DISPLAY: ":0"
+      TZ: Europe/Berlin
+    volumes:
+      - jitsi-jibri-config:/config
+      - jitsi-recordings:/recordings
+    depends_on:
+      - jitsi-prosody
     networks:
       - strategaize-net
