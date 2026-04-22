@@ -355,7 +355,7 @@
       "title": "Recording-to-Knowledge Pipeline",
       "type": "feature",
       "priority": "high",
-      "status": "open",
+      "status": "in_progress",
       "version": "V3",
       "description": "MP4 → Whisper-Transkription → KI-Verarbeitung gegen Meeting Guide → Knowledge Units + Meeting-Summary + Gap Detection. Neuer Job-Typ dialogue_extraction. Transkript persistent gespeichert. Siehe FEAT-020.",
       "createdAt": "2026-04-21"
