@@ -10,22 +10,23 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: SLC-030 Recording Pipeline done (6 MTs, Finalize-Script, Worker-Handler, ffmpeg, Whisper, Claim-Loop). Naechster Schritt: /qa SLC-030.
+- Current Focus: SLC-031 Dialogue Extraction done (4 MTs + 1 Migration, Prompt-Builder, KU-Import, Claim-Loop). Naechster Schritt: /qa SLC-031.
 - Current Phase: V3 Implementation
 
 ## Immediate Next Steps
-1. /qa SLC-030 (Recording Pipeline)
-2. /backend SLC-031 (Dialogue Extraction)
-3. /qa SLC-031
+1. /qa SLC-031 (Dialogue Extraction)
+2. /frontend SLC-032 (Pipeline Integration + Debrief)
+3. /qa SLC-032
 
 ## Active Scope
-V3 — Dialogue-Mode, 8 Slices (6/8 done):
+V3 — Dialogue-Mode, 8 Slices (7/8 done):
 - SLC-025 Jitsi Infrastructure (5 MTs) — done
 - SLC-026 Meeting Guide Backend (5 MTs) — done
 - SLC-027 Meeting Guide UI (5 MTs) — done
 - SLC-028 Dialogue Session Backend (7 MTs) — done
 - SLC-029 Dialogue Session UI (6 MTs) — done
 - SLC-030 Recording Pipeline (6 MTs) — done
+- SLC-031 Dialogue Extraction (4 MTs) — done
 - SLC-030 Recording Pipeline (6 MTs) — planned
 - SLC-031 Dialogue Extraction (4 MTs) — planned
 - SLC-032 Pipeline Integration + Debrief (6 MTs) — planned
