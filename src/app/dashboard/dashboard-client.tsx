@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import {
   Card,
@@ -14,7 +14,6 @@ import { useTranslations, useLocale } from "next-intl";
 import { HelpButton } from "@/components/help-button";
 import { LearningCenterPanel } from "@/components/learning-center/learning-center-panel";
 import { DashboardSidebar } from "@/components/dashboard-sidebar";
-import { createClient } from "@/lib/supabase/client";
 
 interface Profile {
   id: string;
@@ -37,52 +36,20 @@ const STATUS_CONFIG: Record<string, { label: string; icon: typeof Clock; classNa
   completed: { label: "dashboard.statusCompleted", icon: CheckCircle2, className: "bg-green-50 text-green-700 border-green-200" },
 };
 
-export function DashboardClient({ profile }: { profile: Profile }) {
+interface DashboardClientProps {
+  profile: Profile;
+  initialSessions?: CaptureSession[];
+  initialGapCounts?: Record<string, number>;
+}
+
+export function DashboardClient({ profile, initialSessions = [], initialGapCounts = {} }: DashboardClientProps) {
   const t = useTranslations();
   const locale = useLocale();
-  const [sessions, setSessions] = useState<CaptureSession[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [sessions] = useState<CaptureSession[]>(initialSessions);
+  const loading = false;
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [learningCenterOpen, setLearningCenterOpen] = useState(false);
-  const [gapCounts, setGapCounts] = useState<Record<string, number>>({});
-
-  useEffect(() => {
-    async function loadSessions() {
-      try {
-        const supabase = createClient();
-        const { data } = await supabase
-          .from("capture_session")
-          .select("id, status, started_at, updated_at, capture_mode, template:template_id(name, slug)")
-          .order("updated_at", { ascending: false });
-        const mapped: CaptureSession[] = (data ?? []).map((row) => ({
-          id: row.id,
-          status: row.status,
-          started_at: row.started_at,
-          updated_at: row.updated_at,
-          capture_mode: (row as Record<string, unknown>).capture_mode as string | null,
-          template: Array.isArray(row.template) ? row.template[0] ?? null : row.template,
-        }));
-        setSessions(mapped);
-
-        // Load pending gap question counts per session
-        const { data: pendingGaps } = await supabase
-          .from("gap_question")
-          .select("capture_session_id")
-          .eq("status", "pending");
-
-        if (pendingGaps && pendingGaps.length > 0) {
-          const counts: Record<string, number> = {};
-          for (const g of pendingGaps) {
-            counts[g.capture_session_id] = (counts[g.capture_session_id] ?? 0) + 1;
-          }
-          setGapCounts(counts);
-        }
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadSessions();
-  }, []);
+  const [gapCounts] = useState<Record<string, number>>(initialGapCounts);
 
   const sidebar = <DashboardSidebar profile={profile} activePage="capture" />;
 
