@@ -335,7 +335,7 @@
       "title": "Meeting Guide (Basic)",
       "type": "feature",
       "priority": "high",
-      "status": "in_progress",
+      "status": "done",
       "version": "V3",
       "description": "Auftraggeber erstellt strukturierte Gespraechsvorgabe (Themen, Leitfragen, Ziele). Basismässige KI-Unterstuetzung (Vorschlaege aus Template-Kontext). Bewusster Produkt-Split: volle KI-Vorbereitung nur mit Intelligence Platform. Siehe FEAT-018.",
       "createdAt": "2026-04-21"
