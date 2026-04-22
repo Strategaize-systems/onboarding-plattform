@@ -12,9 +12,13 @@ export default async function AdminTenantsPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("email")
+    .select("email, role")
     .eq("id", user.id)
     .single();
 
-  return <TenantsClient email={profile?.email ?? ""} />;
+  if (!profile || profile.role !== "strategaize_admin") {
+    redirect("/dashboard");
+  }
+
+  return <TenantsClient email={profile.email ?? ""} />;
 }

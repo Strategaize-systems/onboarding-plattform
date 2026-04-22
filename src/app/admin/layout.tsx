@@ -23,14 +23,16 @@ export default async function AdminLayout({
     .eq("id", user.id)
     .single();
 
-  if (!profile || profile.role !== "strategaize_admin") {
+  if (!profile || !["strategaize_admin", "tenant_admin"].includes(profile.role)) {
     redirect("/dashboard");
   }
 
+  const isFullAdmin = profile.role === "strategaize_admin";
+
   return (
     <div className="min-h-screen bg-slate-50">
-      <AdminSidebar email={user.email} />
-      <main className="lg:ml-64">
+      {isFullAdmin && <AdminSidebar email={user.email} />}
+      <main className={isFullAdmin ? "lg:ml-64" : ""}>
         <div className="mx-auto max-w-[1400px] p-6 lg:p-8">
           {children}
         </div>
