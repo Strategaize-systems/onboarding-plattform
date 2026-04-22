@@ -33,7 +33,7 @@ const nextConfig: NextConfig = {
           },
           {
             key: "Permissions-Policy",
-            value: "camera=(), microphone=(self), geolocation=()",
+            value: `camera=(self "https://${process.env.NEXT_PUBLIC_JITSI_DOMAIN ?? "meet-onboarding.strategaizetransition.com"}"), microphone=(self "https://${process.env.NEXT_PUBLIC_JITSI_DOMAIN ?? "meet-onboarding.strategaizetransition.com"}"), geolocation=()`,
           },
         ],
       },
