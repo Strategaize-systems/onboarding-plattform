@@ -226,3 +226,19 @@ Der uebernommene Blueprint-Stand ist noch nicht auf einer Onboarding-Plattform-I
 - Reason: SLC-019 Evidence-Extraction + Mapping braucht RPCs fuer Worker-seitige Chunk-Persistierung und User-seitige Mapping-Bestaetigung.
 - Risk: Gering — neue Funktionen + CHECK-Erweiterung, keine Aenderung an bestehenden Tabellen/Daten.
 - Rollback Notes: `DROP FUNCTION rpc_create_evidence_chunks; DROP FUNCTION rpc_confirm_evidence_mapping; DROP FUNCTION rpc_reject_evidence_mapping; DROP FUNCTION rpc_update_evidence_file_status;`
+
+### MIG-021 — SLC-031 Nullable Checkpoint fuer Dialogue KUs (Migration 063)
+- Date: 2026-04-22
+- Scope: `063_nullable_checkpoint_for_dialogue.sql` — ALTER TABLE public.knowledge_unit ALTER COLUMN block_checkpoint_id DROP NOT NULL. Dialogue-KUs haben keinen Checkpoint (source='dialogue'). FK + CASCADE bleibt fuer bestehende Questionnaire-KUs.
+- Affected Areas: knowledge_unit-Tabelle (Spalten-Constraint geaendert)
+- Reason: SLC-031 Dialogue Extraction braucht KU-Import ohne block_checkpoint_id (Dialogue hat keine Block-Checkpoints, nur block_keys).
+- Risk: Gering — nur NOT NULL wird entfernt, FK-Constraint bleibt. Bestehende KUs haben alle einen Checkpoint-Wert.
+- Rollback Notes: `ALTER TABLE public.knowledge_unit ALTER COLUMN block_checkpoint_id SET NOT NULL;` (nur moeglich wenn keine NULL-Werte existieren)
+
+### MIG-022 — SLC-031 QA Fix: Cost Ledger Dialogue Roles (Migration 064)
+- Date: 2026-04-22
+- Scope: `064_cost_ledger_dialogue_roles.sql` — ALTER ai_cost_ledger DROP+ADD CHECK constraint: 'dialogue_extractor' als neuer erlaubter Wert fuer role-Spalte.
+- Affected Areas: ai_cost_ledger (CHECK constraint erweitert)
+- Reason: SLC-031 QA deckte auf, dass der dialogue_extraction Worker mit role='dialogue_extractor' in ai_cost_ledger schreibt, aber der CHECK-Constraint diesen Wert nicht erlaubte. Ohne Fix wuerde jeder Extraction-Job nach KU-Import fehlschlagen.
+- Risk: Gering — nur CHECK-Erweiterung, keine Schema-Aenderung.
+- Rollback Notes: CHECK-Constraint auf vorherigen Stand zuruecksetzen (ohne 'dialogue_extractor').
