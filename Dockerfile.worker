@@ -32,6 +32,9 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
+# ffmpeg needed for dialogue_transcription (MP4 → WAV audio extraction)
+RUN apk add --no-cache ffmpeg
+
 # Create non-root user
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 worker

@@ -1,7 +1,7 @@
 // Audio Extraction Utility — MP4 → WAV via ffmpeg
 // SLC-030 MT-4 (FEAT-020)
 //
-// ffmpeg is available in the worker Docker image (node:20 base has it via apt).
+// ffmpeg is installed in the worker Docker image (node:22-alpine + apk add ffmpeg).
 // Extracts mono 16kHz PCM audio suitable for Whisper transcription.
 
 import { execFile } from "node:child_process";
