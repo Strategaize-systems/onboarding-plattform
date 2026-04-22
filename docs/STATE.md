@@ -10,13 +10,13 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: SLC-026 Meeting Guide Backend done. Naechster Schritt: /qa SLC-026, dann /frontend SLC-027 (Meeting Guide UI).
+- Current Focus: SLC-026 Meeting Guide Backend done + QA PASS (RPT-058). Naechster Schritt: /frontend SLC-027 (Meeting Guide UI).
 - Current Phase: V3 Implementation
 
 ## Immediate Next Steps
-1. /qa SLC-026 (Meeting Guide Backend)
-2. /frontend SLC-027 (Meeting Guide UI)
-3. /qa SLC-027
+1. /frontend SLC-027 (Meeting Guide UI)
+2. /qa SLC-027
+3. /backend SLC-028 (Dialogue Session Backend)
 
 ## Active Scope
 V3 — Dialogue-Mode, 8 Slices (2/8 done):
