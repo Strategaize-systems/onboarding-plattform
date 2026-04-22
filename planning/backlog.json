@@ -36,7 +36,7 @@
       "type": "feature",
       "priority": "medium",
       "status": "deferred",
-      "version": "V1",
+      "version": null,
       "description": "Freitext-Eintraege pro Block — REVERTED 2026-04-17. Kein Use-Case: kein Berater neben Teilnehmer im Onboarding-Modell. SLC-007 Code entfernt. FEAT-004 reverted.",
       "createdAt": "2026-04-14"
     },
@@ -166,7 +166,7 @@
       "type": "feature",
       "priority": "medium",
       "status": "deferred",
-      "version": "V1",
+      "version": null,
       "description": "REVERTED 2026-04-17. Exception-Feld + Tests + submit-action-Integration entfernt. Kein Berater neben Teilnehmer — Feature hat keinen Use-Case.",
       "createdAt": "2026-04-14"
     },
