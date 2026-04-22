@@ -10,18 +10,18 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: SLC-025 Jitsi Infrastructure done + QA PASS (RPT-057). Naechster Schritt: /backend SLC-026 (Meeting Guide Backend).
+- Current Focus: SLC-026 Meeting Guide Backend done. Naechster Schritt: /qa SLC-026, dann /frontend SLC-027 (Meeting Guide UI).
 - Current Phase: V3 Implementation
 
 ## Immediate Next Steps
-1. /backend SLC-026 (Meeting Guide Backend)
-2. /qa SLC-026
-3. /frontend SLC-027 (Meeting Guide UI)
+1. /qa SLC-026 (Meeting Guide Backend)
+2. /frontend SLC-027 (Meeting Guide UI)
+3. /qa SLC-027
 
 ## Active Scope
-V3 — Dialogue-Mode, 8 Slices (1/8 done):
+V3 — Dialogue-Mode, 8 Slices (2/8 done):
 - SLC-025 Jitsi Infrastructure (5 MTs) — done
-- SLC-026 Meeting Guide Backend (5 MTs) — planned
+- SLC-026 Meeting Guide Backend (5 MTs) — done
 - SLC-027 Meeting Guide UI (5 MTs) — planned
 - SLC-028 Dialogue Session Backend (7 MTs) — planned
 - SLC-029 Dialogue Session UI (6 MTs) — planned

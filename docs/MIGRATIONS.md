@@ -197,6 +197,14 @@ Der uebernommene Blueprint-Stand ist noch nicht auf einer Onboarding-Plattform-I
 - Risk: Gering — reiner INSERT, keine Schema-Aenderung
 - Rollback Notes: `DELETE FROM template WHERE slug = 'mitarbeiter_wissenserhebung';`
 
+### MIG-019 — SLC-026 Meeting Guide Schema (Migration 058)
+- Date: 2026-04-22
+- Scope: `058_meeting_guide.sql` — Neue Tabelle `public.meeting_guide` (10 Spalten: id, tenant_id, capture_session_id, goal, context_notes, topics JSONB, ai_suggestions_used, created_by, timestamps). UNIQUE(capture_session_id). 2 RLS-Policies (strategaize_admin Full, tenant_admin R+W eigener Tenant). 2 Indexes (session, tenant). GRANTs fuer authenticated + service_role. updated_at-Trigger.
+- Affected Areas: meeting_guide-Tabelle (neu), V3 Dialogue-Mode Infrastruktur
+- Reason: SLC-026 Meeting Guide Backend (FEAT-018, DEC-030). Basis fuer Meeting-Vorbereitung mit Themen, Leitfragen und Template-Block-Zuordnung.
+- Risk: Gering — neue Tabelle, keine Aenderung an bestehenden Strukturen. NOTE: Expliziter `public.` Schema-Prefix erforderlich — search_path hat `storage` vor `public`.
+- Rollback Notes: `DROP TABLE IF EXISTS public.meeting_guide CASCADE;`
+
 ### MIG-017 — SLC-019 Evidence RPCs + Cost Ledger Update (Migration 054)
 - Date: 2026-04-20
 - Scope:
