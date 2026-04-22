@@ -478,5 +478,33 @@
       "success": "{count} antwoorden succesvol overgenomen",
       "acceptError": "Overname mislukt. Probeer het opnieuw."
     }
+  },
+  "meetingGuide": {
+    "editorTitle": "Meeting-Guide Editor",
+    "goal": "Gespreksdoel",
+    "goalPlaceholder": "Wat moet er in dit gesprek bereikt worden?",
+    "contextNotes": "Contextnotities",
+    "contextPlaceholder": "Achtergrondinformatie voor het gesprek...",
+    "topics": "Onderwerpen",
+    "addTopic": "Onderwerp toevoegen",
+    "noTopics": "Nog geen onderwerpen. Voeg handmatig onderwerpen toe of gebruik AI-suggesties.",
+    "topicTitlePlaceholder": "Onderwerptitel invoeren...",
+    "descriptionPlaceholder": "Korte beschrijving van het onderwerp...",
+    "questions": "Leidende vragen",
+    "questionPlaceholder": "Leidende vraag invoeren...",
+    "addQuestion": "Vraag toevoegen",
+    "blockAssignment": "Bloktoewijzing",
+    "selectBlock": "Blok selecteren...",
+    "noBlock": "Niet toegewezen aan een blok",
+    "confirmDelete": "Verwijderen?",
+    "print": "Afdrukken",
+    "saved": "Opgeslagen",
+    "aiSuggestionsTitle": "AI-suggesties",
+    "generateSuggestions": "Suggesties genereren",
+    "generating": "Genereren...",
+    "acceptAll": "Alles overnemen",
+    "acceptTopic": "Overnemen",
+    "accepted": "Overgenomen",
+    "suggestError": "AI-suggesties konden niet worden geladen."
   }
 }

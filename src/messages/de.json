@@ -478,5 +478,33 @@
       "success": "{count} Antworten erfolgreich übernommen",
       "acceptError": "Übernahme fehlgeschlagen. Bitte erneut versuchen."
     }
+  },
+  "meetingGuide": {
+    "editorTitle": "Meeting-Guide Editor",
+    "goal": "Gesprächsziel",
+    "goalPlaceholder": "Was soll in diesem Gespräch erreicht werden?",
+    "contextNotes": "Kontext-Notizen",
+    "contextPlaceholder": "Hintergrundinformationen für das Gespräch...",
+    "topics": "Themen",
+    "addTopic": "Thema hinzufügen",
+    "noTopics": "Noch keine Themen angelegt. Fügen Sie Themen manuell hinzu oder nutzen Sie die KI-Vorschläge.",
+    "topicTitlePlaceholder": "Thementitel eingeben...",
+    "descriptionPlaceholder": "Kurze Beschreibung des Themas...",
+    "questions": "Leitfragen",
+    "questionPlaceholder": "Leitfrage eingeben...",
+    "addQuestion": "Frage hinzufügen",
+    "blockAssignment": "Block-Zuordnung",
+    "selectBlock": "Block wählen...",
+    "noBlock": "Keinem Block zugeordnet",
+    "confirmDelete": "Wirklich löschen?",
+    "print": "Drucken",
+    "saved": "Gespeichert",
+    "aiSuggestionsTitle": "KI-Vorschläge",
+    "generateSuggestions": "Vorschläge generieren",
+    "generating": "Generiere...",
+    "acceptAll": "Alle übernehmen",
+    "acceptTopic": "Übernehmen",
+    "accepted": "Übernommen",
+    "suggestError": "KI-Vorschläge konnten nicht geladen werden."
   }
 }

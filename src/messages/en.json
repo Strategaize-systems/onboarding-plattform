@@ -478,5 +478,33 @@
       "success": "{count} answers successfully accepted",
       "acceptError": "Acceptance failed. Please try again."
     }
+  },
+  "meetingGuide": {
+    "editorTitle": "Meeting Guide Editor",
+    "goal": "Meeting Goal",
+    "goalPlaceholder": "What should be achieved in this conversation?",
+    "contextNotes": "Context Notes",
+    "contextPlaceholder": "Background information for the meeting...",
+    "topics": "Topics",
+    "addTopic": "Add Topic",
+    "noTopics": "No topics yet. Add topics manually or use AI suggestions.",
+    "topicTitlePlaceholder": "Enter topic title...",
+    "descriptionPlaceholder": "Brief description of the topic...",
+    "questions": "Guiding Questions",
+    "questionPlaceholder": "Enter guiding question...",
+    "addQuestion": "Add Question",
+    "blockAssignment": "Block Assignment",
+    "selectBlock": "Select block...",
+    "noBlock": "Not assigned to a block",
+    "confirmDelete": "Delete?",
+    "print": "Print",
+    "saved": "Saved",
+    "aiSuggestionsTitle": "AI Suggestions",
+    "generateSuggestions": "Generate Suggestions",
+    "generating": "Generating...",
+    "acceptAll": "Accept All",
+    "acceptTopic": "Accept",
+    "accepted": "Accepted",
+    "suggestError": "AI suggestions could not be loaded."
   }
 }
