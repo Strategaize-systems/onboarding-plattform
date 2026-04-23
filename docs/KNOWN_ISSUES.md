@@ -128,3 +128,25 @@
 - Summary: transcribeRecording() in questionnaire-form.tsx war ein Stub — Audio wurde aufgenommen aber nie an den Whisper-Container gesendet. Der Whisper-Endpoint fuer Blueprint-Runs (/api/tenant/runs/[runId]/questions/[questionId]/transcribe) existiert, aber es gibt kein Aequivalent fuer Capture-Sessions. Mic-Button ist seit 2026-04-18 deaktiviert (whisperEnabled = false).
 - Impact: Kein Voice-Input in V1. Tastatureingabe funktioniert.
 - Resolution: SLC-022 (V2). Whisper-Adapter-Pattern (DEC-018) unter /src/lib/ai/whisper/ implementiert. Transkriptions-Endpoint POST /api/capture/[sessionId]/transcribe. Mic-Button via NEXT_PUBLIC_WHISPER_ENABLED aktiviert. Resolution Date: 2026-04-21.
+
+### ISSUE-015 — Kein Zurueck-Button in Sidebar auf Sub-Seiten
+- Status: open
+- Severity: Medium
+- Area: Frontend / UX
+- Summary: Auf Sub-Seiten (Dialogue-Listing, Meeting-Guide, /capture/new, Dialogue-New) hat die DashboardSidebar keinen Zurueck-Link zur vorherigen Seite. Die Sidebar zeigt nur "Assessment" und "Neue Erhebung", aber keinen Weg zurueck.
+- Impact: User muss Browser-Back verwenden, was nicht sauber ist. Abmelden-Button ist kein Ersatz.
+- Next Action: DashboardSidebar um kontextabhaengigen Zurueck-Link erweitern (z.B. "← Zurueck zur Session" oder Breadcrumb-Komponente).
+
+### ISSUE-016 — Sprachwechsel fehlt auf /admin-Seiten
+- Status: open
+- Severity: Low
+- Area: Frontend / i18n
+- Summary: Sprachwechsel ist nur auf Dashboard sichtbar, nicht auf /admin-Seiten wo tenant_admin jetzt auch die Sidebar sieht.
+- Next Action: Language-Switcher in DashboardSidebar integrieren.
+
+### ISSUE-017 — 25 Test-Sessions in Demo-Tenant DB
+- Status: open
+- Severity: Low
+- Area: Data / Demo
+- Summary: Der V3 Smoke-Test erzeugte 25 Test-Sessions (vorwiegend Dialogue-Mode) im Demo-Tenant. Diese sind fuer produktive Demo-Use nicht nuetzlich.
+- Next Action: Cleanup-Skript oder manuelle DELETE-Query vor Release.

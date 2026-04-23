@@ -151,3 +151,13 @@
 - Status: accepted
 - Reason: Meeting Guide hat eigene CRUD-Logik (Editor, Drag-and-Drop Topics, KI-Vorschlaege) und eigene Lebenszyklus-Semantik (erstellt vor Meeting, referenziert waehrend Meeting, genutzt bei Extraktion). JSONB-Spalte auf capture_session wuerde die capture_session-Tabelle weiter aufblaehenund die Guide-Logik mit Session-Logik vermischen.
 - Consequence: Neue Tabelle meeting_guide mit UNIQUE(capture_session_id). Topics als JSONB-Array mit block_key fuer Template-Block-Zuordnung. RLS: tenant_admin Read+Write eigener Tenant, strategaize_admin Full.
+
+## DEC-031 — Dashboard-Daten server-seitig laden statt client-seitig
+- Status: accepted
+- Reason: Browser-Supabase-Client konnte die interne Docker-URL `http://supabase-kong:8000` nicht erreichen. Der Next.js-Rewrite-Proxy `/supabase/:path*` funktioniert, hat aber Probleme mit Auth-Headers bei RLS-Queries (beobachtet im V3 Smoke-Test 2026-04-22). Server-seitiges Laden umgeht das komplett.
+- Consequence: Dashboard laedt Sessions server-seitig in page.tsx und uebergibt als Props an DashboardClient. Gilt als Pattern fuer alle zukuenftigen Seiten mit Supabase-Queries. Client-seitiges Supabase ist nur fuer Mutations (Server Actions) und Realtime zulaessig.
+
+## DEC-032 — /admin-Routing fuer tenant_admin geoeffnet
+- Status: accepted
+- Reason: Dialogue- und Meeting-Guide-Seiten liegen unter /admin/session/..., tenant_admin braucht aber Zugriff. Layout-Check auf beide Rollen oeffnen ist minimal-invasiv. Per-Page-Checks fuer strategaize_admin-only (Tenants, Debrief) sichern die weiter restriktiven Seiten ab.
+- Consequence: /admin-Layout akzeptiert tenant_admin + strategaize_admin. Tenant_admin sieht DashboardSidebar (via TenantAdminShell), strategaize_admin sieht AdminSidebar. Tenants-Page prueft zusaetzlich auf strategaize_admin, Debrief-Pages ebenfalls.
