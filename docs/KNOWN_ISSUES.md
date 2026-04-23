@@ -146,6 +146,22 @@
 - Summary: Sprachwechsel ist nur auf Dashboard sichtbar, nicht auf /admin-Seiten wo tenant_admin jetzt auch die Sidebar sieht.
 - Resolution: Wontfix — Tenant-Language wird bewusst pro Tenant in `tenants.language` gesetzt und von der Middleware (`src/lib/supabase/middleware.ts:53-83`) auf jedem Request erzwungen. Es gibt keinen User-Facing Language-Switcher — die Sprache wird vom Tenant-Admin zentral in `/admin/tenants` festgelegt, typischerweise beim Tenant-Onboarding. Ein User-Override wuerde die Auth/Session-Architektur brechen und ist fachlich nicht noetig (B2B-Kontext: User arbeiten konsistent in der Sprache ihres Tenants). Siehe DEC-033.
 
+### ISSUE-018 — admin-rls.test.ts: unfiltered SELECT mit Count-Assertion bricht gegen Live-DB mit Bestandsdaten
+- Status: open
+- Severity: Low
+- Area: Testing / Test-Design
+- Summary: `src/lib/db/__tests__/admin-rls.test.ts:199` und `:224` pruefen `SELECT tenant_id FROM public.validation_layer ORDER BY tenant_id` ohne Tenant-Filter und erwarten `rowCount === 2`. Sobald in der Live-DB vorhandene Bestandsdaten (z.B. Demo-Session 64ad04eb mit 5 knowledge_units) existieren, werden mehr Rows zurueckgegeben und die Assertion schlaegt fehl. Kein Code-Regression, sondern Test-Isolation-Flaw.
+- Impact: Nur Test-Reporting — 2 von 24 RLS-Tests false-failing. Funktionale Isolation der strategaize_admin-Rolle ist nicht betroffen, nur die Assertion-Formulierung ist brittle.
+- Next Action: Test-Fix in V3.1: Assertions per `WHERE tenant_id IN (tenantA, tenantB)` isolieren. Siehe RPT-066.
+
+### ISSUE-019 — npm audit: @xmldom/xmldom Transitive-Vuln via AWS-SDK SSO-Token-Providers
+- Status: open
+- Severity: Low
+- Area: Security / Dependencies
+- Summary: `npm audit --omit=dev` meldet 17 Vulnerabilities (16 Moderate, 1 High), alle in `@xmldom/xmldom` via `@aws-sdk/token-providers` (SSO-Pfad). Praxis-Exploit nicht erreichbar, weil Bedrock mit IAM-User-Credentials betrieben wird. Fix verfuegbar via Upgrade `@aws-sdk/client-bedrock-runtime` von 3.1024.0 auf 3.1035.0 (gleicher Major, im Caret-Range).
+- Impact: Kein Produktions-Risiko — SSO-Code-Pfad wird nicht durchlaufen.
+- Next Action: In V3.1-Wartungsrelease `npm update @aws-sdk/client-bedrock-runtime`. Vor Commit: Bedrock-Smoke-Test (condensation-worker-job).
+
 ### ISSUE-017 — 25 Test-Sessions in Demo-Tenant DB
 - Status: resolved
 - Resolution Date: 2026-04-23
