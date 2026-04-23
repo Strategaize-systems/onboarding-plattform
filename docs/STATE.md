@@ -10,14 +10,15 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: V3 Final-Check PASS (RPT-066) — Conditionally Ready. V3.1 als Maintenance-Release geplant (BL-038..040 fuer AWS-SDK, Test-Isolation, supabase-studio). Bereit fuer /go-live V3.
-- Current Phase: V3 Release-Readiness
+- Current Focus: V3 Go-Live approved (RPT-067) — GO. Warten auf User-Redeploy in Coolify auf Commit 3d2074a, dann /deploy V3 (formales Release, REL-005).
+- Current Phase: V3 Go-Live
 
 ## Immediate Next Steps
-1. /go-live V3 (formale Release-Entscheidung, REL-005-Entry)
-2. /deploy V3 (Code ist schon deployed seit Smoke-Test; Skill macht formales Versioning)
-3. /post-launch V3 (nach 1-2 Tagen Produktivbetrieb)
-4. V3.1 Maintenance (BL-038..040, ~60 min total) vor V4-Start
+1. Coolify-Redeploy (User, manuell) auf Commit 3d2074a — bringt Back-Button (ISSUE-015) live
+2. Browser-Smoke-Test — Back-Button auf Sub-Seiten, Dashboard zeigt 1 Session
+3. /deploy V3 — REL-005, roadmap.json V3 auf released, features/INDEX.md V3-Features auf deployed
+4. /post-launch V3 — nach 1-2 Tagen Produktivbetrieb
+5. V3.1 Maintenance (BL-038..040, ~60 min) vor V4-Start
 
 ## Active Scope
 V3 — Dialogue-Mode, 8 Slices (7/8 done):
