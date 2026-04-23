@@ -139,15 +139,17 @@
 - Resolution: DashboardSidebar um kontextabhaengigen Zurueck-Link erweitert. `getBackLink(pathname)` mappt die aktuelle Route auf die passende Parent-Route (z.B. `/capture/[sessionId]/block/[blockKey]` → `/capture/[sessionId]`). Back-Link wird nur gerendert, wenn pathname nicht `/dashboard` ist. i18n-Key `sidebar.back` in de/en/nl. Build PASS.
 
 ### ISSUE-016 — Sprachwechsel fehlt auf /admin-Seiten
-- Status: open
+- Status: wontfix
+- Resolution Date: 2026-04-23
 - Severity: Low
 - Area: Frontend / i18n
 - Summary: Sprachwechsel ist nur auf Dashboard sichtbar, nicht auf /admin-Seiten wo tenant_admin jetzt auch die Sidebar sieht.
-- Next Action: Language-Switcher in DashboardSidebar integrieren.
+- Resolution: Wontfix — Tenant-Language wird bewusst pro Tenant in `tenants.language` gesetzt und von der Middleware (`src/lib/supabase/middleware.ts:53-83`) auf jedem Request erzwungen. Es gibt keinen User-Facing Language-Switcher — die Sprache wird vom Tenant-Admin zentral in `/admin/tenants` festgelegt, typischerweise beim Tenant-Onboarding. Ein User-Override wuerde die Auth/Session-Architektur brechen und ist fachlich nicht noetig (B2B-Kontext: User arbeiten konsistent in der Sprache ihres Tenants). Siehe DEC-033.
 
 ### ISSUE-017 — 25 Test-Sessions in Demo-Tenant DB
-- Status: open
+- Status: resolved
+- Resolution Date: 2026-04-23
 - Severity: Low
 - Area: Data / Demo
 - Summary: Der V3 Smoke-Test erzeugte 25 Test-Sessions (vorwiegend Dialogue-Mode) im Demo-Tenant. Diese sind fuer produktive Demo-Use nicht nuetzlich.
-- Next Action: Cleanup-Skript oder manuelle DELETE-Query vor Release.
+- Resolution: 24 leere Sessions (0 checkpoints, 0 knowledge_units) via `DELETE FROM capture_session WHERE tenant_id = '00000000-...de' AND id NOT IN (SELECT DISTINCT capture_session_id FROM block_checkpoint)` geloescht. Die eine Session mit realen Demo-Daten (64ad04eb vom 2026-04-18, 2 checkpoints + 5 knowledge_units) bleibt erhalten als Zeigematerial. ON DELETE CASCADE auf block_checkpoint und knowledge_unit haelt die Referenzen sauber.

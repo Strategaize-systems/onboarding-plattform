@@ -10,15 +10,13 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: V3 Smoke-Test done (7 Bugs gefixt) + ISSUE-015 resolved (Back-Button in DashboardSidebar). Naechste UX-Polish: ISSUE-016 (Sprachwechsel auf Admin), ISSUE-017 (Test-Sessions Cleanup). Danach /final-check.
-- Current Phase: V3 UX-Polish
+- Current Focus: V3 UX-Polish abgeschlossen. ISSUE-015 resolved (Back-Button), ISSUE-016 wontfix (DEC-033), ISSUE-017 resolved (24 leere Demo-Sessions geloescht). Bereit fuer /final-check + Release.
+- Current Phase: V3 Release-Readiness
 
 ## Immediate Next Steps
-1. ISSUE-016 fixen (Sprachwechsel in DashboardSidebar)
-2. ISSUE-017 aufraeumen (25 Test-Sessions in Demo-Tenant loeschen)
-3. /final-check (Pre-Release-Audit V3)
-4. /deploy V3
-5. /post-launch V3
+1. /final-check (Pre-Release-Audit V3)
+2. /deploy V3 (formales Release; Code ist schon auf Staging deployed seit Smoke-Test)
+3. /post-launch V3 (nach 1-2 Tagen Produktivbetrieb)
 
 ## Active Scope
 V3 — Dialogue-Mode, 8 Slices (7/8 done):
