@@ -399,6 +399,86 @@
       "version": "V3.1",
       "description": "supabase-studio-Container zeigt seit V2 Status 'unhealthy'. Core-DB und Admin-Funktionalitaet nicht betroffen, aber der Healthcheck sollte entweder repariert oder als bewusster Skip dokumentiert werden. Scope ~20 min Untersuchung + Fix oder DEC.",
       "createdAt": "2026-04-23"
+    },
+    {
+      "id": "BL-041",
+      "title": "Employee Role + RBAC Extension",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V4",
+      "description": "Neue Rolle 'employee' im RBAC-Modell (parallel zu strategaize_admin / tenant_admin / tenant_member, kein Merge mit tenant_member). Mitarbeiter-Einladung vom tenant_admin per E-Mail, Auth-Flow (Magic-Link vs. Passwort offen, Q18). Eigenes Mitarbeiter-Dashboard. RLS-Policies erweitert + Test-Matrix (4 Rollen x relevante Tabellen) Pflicht. Siehe FEAT-022.",
+      "createdAt": "2026-04-23"
+    },
+    {
+      "id": "BL-042",
+      "title": "Blueprint-to-Employee Bridge Engine",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V4",
+      "description": "Bridge-Engine generiert aus GF-Blueprint-Output (KUs + Diagnose) automatisch Vorschlaege fuer Mitarbeiter-Capture-Aufgaben. tenant_admin reviewed/freigibt — kein Auto-Push. On-demand getriggert (Q20). Mechanismus (KI-Free-Form vs. Template-Mapping vs. Hybrid) offen, Q17. Cost-Logging pro Bridge-Aufruf Pflicht. Siehe FEAT-023.",
+      "createdAt": "2026-04-23"
+    },
+    {
+      "id": "BL-043",
+      "title": "Employee Capture Workflow",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V4",
+      "description": "Mitarbeiter-Dashboard mit zugewiesenen Capture-Sessions, Questionnaire-Mode (gleicher Code wie GF, eingeschraenkt auf eigenen Scope), Submit triggert Standard-Pipeline (Verdichtung + Diagnose). Strikte RLS-Sicht-Trennung: Mitarbeiter sieht nicht Blueprint, andere Mitarbeiter, Diagnose, SOP, Handbuch. Siehe FEAT-024.",
+      "createdAt": "2026-04-23"
+    },
+    {
+      "id": "BL-044",
+      "title": "Capture-Mode Extension Hooks (Walkthrough + Diary Architecture)",
+      "type": "feature",
+      "priority": "medium",
+      "status": "open",
+      "version": "V4",
+      "description": "capture_mode-Enum + Worker-Hook-Konvention + UI-Slot-Konvention dokumentiert + per Pseudo-Mode validiert. Bereitet V5 (Walkthrough) und V6 (Diary) ohne Schema-Aenderung vor. KEINE Implementation der Modi selbst. Hook-Granularitaet offen, Q23. Siehe FEAT-025.",
+      "createdAt": "2026-04-23"
+    },
+    {
+      "id": "BL-045",
+      "title": "Unternehmerhandbuch Foundation (Datenmodell + Markdown-Export)",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V4",
+      "description": "handbook_snapshot-Tabelle + Aggregations-Layer (verdichtet KUs/Diagnosen/SOPs aus E1+E2 in handbuch-strukturierte Sektionen) + Markdown-ZIP-Export. tenant_admin-only-Zugriff. KEINE In-App-Webview, KEIN Live-Editor (V4.1). Aggregations-Logik offen, Q21. Siehe FEAT-026.",
+      "createdAt": "2026-04-23"
+    },
+    {
+      "id": "BL-046",
+      "title": "Self-Service Status Cockpit Foundation",
+      "type": "feature",
+      "priority": "medium",
+      "status": "open",
+      "version": "V4",
+      "description": "Tenant-Status-View Minimum: 5 Metriken (Bloecke gesamt/submitted, Mitarbeiter eingeladen/Aufgaben offen/fertig) + regelbasierter naechster-Schritt-Hinweis. KEINE Wizards, KEINE Reminders, KEINE Hilfe-Texte (V4.2). Browser-Smoke-Test mit Nicht-Tech-User Pflicht. Siehe FEAT-027.",
+      "createdAt": "2026-04-23"
+    },
+    {
+      "id": "BL-047",
+      "title": "Unternehmerhandbuch In-App-Webview + Suche + Live-Editor",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V4.1",
+      "description": "Detail-Requirements werden mit eigenem /requirements V4.1 erstellt. Scope-Skizze: In-App-Webview (Sidebar-Navigation, Markdown-Render, Section-Anchors), Volltext-Suche, Live-Editor fuer KUs/SOPs in der Plattform, Cross-Links klickbar, versionierte Snapshots mit Diff-View.",
+      "createdAt": "2026-04-23"
+    },
+    {
+      "id": "BL-048",
+      "title": "Tenant Self-Service Onboarding (Wizard + Reminders + Hilfe)",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V4.2",
+      "description": "Detail-Requirements werden mit eigenem /requirements V4.2 erstellt. Scope-Skizze: Tenant-Onboarding-Wizard (Begruessung, Template-Wahl, erste Mitarbeiter), In-App-Hilfe pro Hauptansicht (Sidebar-Help, Tooltips), Capture-Reminders (E-Mail an Mitarbeiter, In-App-Badge), Status-Dashboards mit naechsten Schritten.",
+      "createdAt": "2026-04-23"
     }
   ]
 }

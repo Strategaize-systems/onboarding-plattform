@@ -402,3 +402,208 @@ Alle V1/V2-Constraints gelten weiter, zusaetzlich:
 - **Q14 — Meeting-Guide KI-Stufe:** Wie "basic" ist basic? Vorschlaege generieren aus bestehenden Template-Fragen und vorhandenen Antworten? Oder komplett manuell mit nur einem Textfeld? Entscheidung in /architecture.
 - **Q15 — Recording-Storage:** Jibri-MP4 im Docker-Volume oder in Supabase Storage (analog Evidence)? Entscheidung in /architecture.
 - **Q16 — Transkript-Persistence:** Volles Transkript persistent speichern (fuer spaetere Re-Analyse, Cross-Meeting-Verdichtung) oder nur KI-Verarbeitung? Empfehlung: persistent — Rohdaten sind Audit-relevant und ermoeglichen Re-Processing bei besseren Modellen.
+
+---
+
+## V4 — Zwei-Ebenen-Verschmelzung (Mitarbeiter-Capture + Unternehmerhandbuch)
+
+### Strategischer Rahmen
+Basis: SOFTWARE-EXECUTION-MAP 2026-04-23, Phase 1. Personal Strategic Model V1 (Vehikel-Modell, Business Enabler). V4 ist der erste Architektur-Sprung der Onboarding-Plattform vom reinen GF-Verdichtungs-Tool zum **Zwei-Ebenen-System**: Geschaeftsfuehrer-Blueprint (Ebene 1, existiert) **plus** Mitarbeiter-Capture mit Unternehmerhandbuch-Output (Ebene 2, neu).
+
+Re-Numerierung Roadmap (2026-04-23): Walkthrough (war V4) ist jetzt V5, Diary (war V5) ist jetzt V6, Queroptionen (war V6+) sind jetzt V7+. Walkthrough und Diary werden Capture-Modi **innerhalb** des Onboarding-Pfades — die Architektur-Hooks dafuer entstehen in V4, der Bau erfolgt spaeter.
+
+### Problem Statement (V4)
+V1-V3 erlauben einem Geschaeftsfuehrer (tenant_admin), strukturierte Wissenserhebung selbst durchzufuehren — Questionnaire, Evidence, Voice, Dialogue. Drei zentrale Limitierungen verhindern den Sprung zu einem nutzbaren Unternehmerhandbuch:
+
+1. **Es gibt keine Mitarbeiter als eigenstaendige Nutzerklasse.** Der GF muss alles Wissen selbst eintippen — auch das, was eigentlich nur seine Mitarbeiter haben (Prozesse, Tools, Routinen, taegliche Realitaet). Tenant_member existiert technisch, aber kein durchgaengiger Capture-Flow.
+2. **Es gibt keine Bruecke zwischen GF-Blueprint und Mitarbeiter-Wissen.** Aus den GF-Antworten lassen sich heute keine Mitarbeiter-Aufgaben automatisch ableiten. Der GF muesste fuer jeden Mitarbeiter manuell Capture-Sessions zusammenstellen — das macht niemand.
+3. **Es gibt keinen Output, den der Kunde anfassen kann.** Das System produziert Knowledge Units, Diagnosen und SOPs als Datenobjekte. Ein lesbares, durchsuchbares, exportierbares **Unternehmerhandbuch** existiert nicht. Der Kunde sieht keinen "fertigen Stand", den er aus der Plattform mitnehmen kann.
+
+V4 schliesst diese drei Luecken auf Architektur-Niveau. V4.1 baut den Unternehmerhandbuch-Output aus, V4.2 das Self-Service-Cockpit.
+
+### Goal (V4)
+Ein tenant_admin kann sein Unternehmen so onboarden, dass:
+- Mitarbeiter eigene Login-Accounts haben (Rolle `employee`),
+- aus seinem Blueprint-Output automatisch Mitarbeiter-Capture-Aufgaben generiert werden,
+- jeder Mitarbeiter seine zugewiesenen Aufgaben selbstaendig im Questionnaire-Mode durcharbeitet (gleiche Pipeline wie GF),
+- am Ende ein erstes lesbares Unternehmerhandbuch existiert (mindestens als Markdown-Export),
+- der Tenant einen einfachen Status-Ueberblick ("wo stehen wir?") sieht — ohne dass der Berater Haendchen halten muss.
+
+### Target Users (V4)
+
+#### Neu in V4
+- **Mitarbeiter (`employee`):** Eigener Plattform-Account. Erhaelt vom tenant_admin Capture-Aufgaben zugewiesen, durchlaeuft sie im Questionnaire-Mode selbstaendig. Sieht NUR eigene Aufgaben und eigene Beitraege (NICHT das Gesamthandbuch).
+
+#### Veraendert
+- **tenant_admin (Geschaeftsfuehrer):** Bekommt zusaetzlich (a) Mitarbeiter-Verwaltung (einladen, Rollen vergeben), (b) Bridge-Steuerung (welche Mitarbeiter-Aufgaben aus dem Blueprint generiert wurden, freigeben/bearbeiten), (c) Unternehmerhandbuch-Sicht + Export.
+- **strategaize_admin:** Bekommt Cross-Tenant-Sicht auf Mitarbeiter-Strukturen + Bridge-Output. Nutzt das Unternehmerhandbuch im Debrief.
+
+#### Unveraendert
+- **tenant_member:** Bleibt bestehen. Spaetere Mergung mit `employee` ist offen — ggf. werden die Rollen vereinheitlicht in V5+. Bewusst NICHT in V4 (Scope-Schutz).
+
+### V4 In Scope
+
+| ID | Feature | Zweck |
+|----|---------|-------|
+| FEAT-022 | Employee Role + RBAC Extension | Neue Rolle `employee`, Auth-Flow (Einladung per E-Mail, eigenes Passwort, eigenes Dashboard), RLS-Erweiterung fuer employee-Sicht |
+| FEAT-023 | Blueprint-to-Employee Bridge Engine | Aus GF-Blueprint-Output (Knowledge Units + Diagnose) generiert die Bridge automatisch Mitarbeiter-Capture-Aufgaben. tenant_admin kann sie reviewen/editieren/freigeben |
+| FEAT-024 | Employee Capture Workflow | Mitarbeiter-Dashboard (eigene Capture-Sessions), Questionnaire-Mode wie GF (gleiche Pipeline: Verdichtung, Diagnose), eigene Mitarbeiter-Sicht ohne Cross-Mitarbeiter-Zugriff |
+| FEAT-025 | Capture-Mode Extension Hooks (Walkthrough + Diary Architecture) | Strukturierte Erweiterungs-Schnittstelle fuer zusaetzliche Capture-Modi (capture_mode-Enum, Mode-spezifische Worker-Hooks, Mode-spezifische UI-Slots). KEIN Bau von Walkthrough/Diary — nur Vorbereitung |
+| FEAT-026 | Unternehmerhandbuch Foundation | Datenmodell `handbook_snapshot` + Aggregations-Layer (verdichtet KUs/Diagnosen/SOPs aus E1+E2 in handbuch-strukturierte Sektionen) + minimaler Markdown-Export (ZIP-Download). KEINE In-App-Webview, KEINE Live-Edit (V4.1) |
+| FEAT-027 | Self-Service Status Cockpit Foundation | Tenant-Status-View Minimum: Wo stehen wir, was fehlt, naechste Schritte. KEINE Wizards, KEINE Reminders, KEINE Hilfe-Texte (V4.2) |
+
+### V4 Out of Scope
+
+**Bewusst aus V4 ausgeschlossen — verschoben:**
+- Unternehmerhandbuch In-App-Webview, Browse, Suche → V4.1
+- Unternehmerhandbuch Live-Editor (Pflege in der Plattform) → V4.1
+- Versionierte Handbuch-Snapshots mit Diff → V4.1
+- Tenant-Onboarding-Wizard (Erste-Schritte, Hilfe-Texte) → V4.2
+- Capture-Reminders fuer Mitarbeiter (E-Mail / In-App) → V4.2
+- In-App-Hilfe und Tutorials → V4.2
+- Walkthrough-Mode Implementation (Screen-Capture) → V5 (nur Hooks in V4)
+- Diary-Mode Implementation (Mobile/PWA) → V6 (nur Hooks in V4)
+- Mergung von `employee` und `tenant_member` → spaeter (Erfahrung sammeln)
+- Tenant-Self-Service-Signup (Anlage neuer Tenants ohne strategaize_admin) → V4.2 oder spaeter
+- Multi-Mitarbeiter-Aufgaben (gleiche Aufgabe an mehrere) → spaeter (V4 = 1 Aufgabe : 1 Mitarbeiter)
+- Mitarbeiter-Mirror-Modus (Mitarbeiter beantworten dieselben Fragen wie GF, KI vergleicht) → bewusst NICHT V4. Fokus ist Mitarbeiter-EIGENE Wissensbereiche, nicht Mirror
+
+### Core Features (V4 — Detail siehe /features/FEAT-022..027)
+Sechs Features, jeweils als Spec-Skelett unter `/features/`. Detaillierte Spezifikation passiert in `/architecture` und `/slice-planning`.
+
+### Constraints (V4)
+
+Alle V1-V3-Constraints gelten weiter, zusaetzlich:
+
+- **Rollen-Modell-Disziplin:** `employee` ist eine NEUE Rolle, kein Override von `tenant_member`. RLS-Policies muessen explizit angepasst werden — schweigende Erweiterung von tenant_member-Policies ist verboten (Sicherheits-Risiko).
+- **Bridge-Determinismus:** Die Bridge-Engine darf KI-gestuetzt sein, aber jede generierte Mitarbeiter-Aufgabe MUSS vom tenant_admin freigegeben werden bevor sie dem Mitarbeiter sichtbar wird. Keine Auto-Push-Logik in V4 (Scope-Kontrolle, Vertrauensaufbau, DSGVO-Sauberkeit).
+- **Mitarbeiter-Sicht-Perimeter:** Ein Mitarbeiter sieht ausschliesslich eigene zugewiesene Aufgaben + eigene Beitraege. Kein Zugriff auf Blueprint-Output, Diagnose, SOP, Handbuch oder andere Mitarbeiter — RLS-getestet.
+- **Bedrock-Kosten:** Bridge-Engine nutzt LLM-Calls. Pro Mitarbeiter-Aufgaben-Generierung ein Logeintrag. tenant_admin sieht aggregierte Bridge-Kosten. On-demand, nicht auto-load.
+- **Multi-Use-Architektur:** Exit-Readiness ist ERSTER Template-Schnitt. Die V4-Architektur (Bridge, employee-Rolle, Handbuch-Output) muss ohne Schema-Aenderung fuer weitere Templates (Compliance-Readiness, KI-Readiness, Wachstums-Readiness) funktionieren. Template-Hardcoding ist verboten.
+- **Migration-Kompatibilitaet:** V4-Migrations duerfen V1-V3-Daten NICHT brechen. Bestehende Capture-Sessions, KUs, Diagnosen, SOPs bleiben unveraendert. Bridge-Output ist additiv.
+
+### Risks / Assumptions (V4)
+
+#### Risiken
+- **R15 — Bridge-Qualitaet:** Wenn die Bridge-Engine nutzlose Mitarbeiter-Aufgaben generiert, wird der tenant_admin sie alle ablehnen und stattdessen manuell zusammenstellen — V4 verfehlt sein Hauptziel. Mitigation: Bridge muss einen Template-Kontext-Layer haben (welche Wissensbereiche pro Template typischerweise mitarbeiterseitig sind), KI generiert nur Verfeinerung. Erste Version mit hoher User-Kontrolle (alles freigabepflichtig). Nach 2-3 Pilotkunden Bridge-Qualitaet evaluieren.
+- **R16 — RLS-Komplexitaet steigt:** Mit `employee` kommt eine vierte Rolle dazu. Cross-Tenant-Tests + Cross-Role-Tests werden erheblich komplexer. Mitigation: RLS-Test-Matrix als Pflicht-Bestandteil von /qa pro Slice. Mind. 4x4-Matrix (4 Rollen, 4 Datentypen).
+- **R17 — Mitarbeiter-Onboarding-UX:** Mitarbeiter sind keine Berater und keine Tech-Power-User. Wenn das Mitarbeiter-Dashboard verwirrt, wird der Tenant frustriert und der GF muss doch Haendchen halten — V4 verfehlt das "kein Haendchen-Halten"-Ziel. Mitigation: Mitarbeiter-UI radikal einfacher als GF-UI, ein Aufgaben-Strom, Pflicht-Browser-Smoke-Test mit Nicht-Tech-User vor Release.
+- **R18 — Unternehmerhandbuch-Erwartungshaltung:** Ein "Markdown-Export" als V4-Output kann den Kunden unterwhelmen ("das ist alles?"). Mitigation: V4-Kommunikation klar machen, dass V4.1 die Webview bringt. Markdown-Export muss aber sehr sauber sein (Struktur, Inhaltsverzeichnis, Cross-Links).
+- **R19 — V4 Scope-Inflation:** "Wenn wir das schon machen, koennten wir auch ..." — typischer Killer. Mitigation: Out-of-Scope-Liste oben ist verbindlich. Neue Wuensche → Backlog → V4.1/V4.2/V5.
+- **R20 — Re-Numerierung verwirrt zukuenftige Skills:** Walkthrough heisst jetzt V5 statt V4. Skills oder Doku, die "V4 Walkthrough" referenzieren, werden falsch lesen. Mitigation: roadmap.json + PRD V4-Sektion sind Source-of-Truth, alle Old-V4-Walkthrough-Referenzen werden nach und nach geupdated. Wo Konflikt auftritt, gilt PRD.
+
+#### Annahmen
+- Mehrere Mitarbeiter pro Tenant ist der Normalfall (5-50). Mitarbeiter-Verwaltung muss skalierbar sein, aber kein Dashboard fuer 1000 Mitarbeiter (Mittelstand-Fokus).
+- E-Mail-Versand fuer Mitarbeiter-Einladungen ist verfuegbar (Onboarding-Plattform hat schon Auth-E-Mails). Kein neuer Provider noetig.
+- Bedrock-Region Frankfurt + Claude Sonnet bleiben Standard-Provider — keine neuen LLM-Provider in V4.
+- Pilotkunden in Phase 2 (laut SOFTWARE-EXECUTION-MAP) liefern Feedback fuer V4.1/V4.2-Priorisierung.
+- AWS-Bedrock-Token-Kosten skalieren linear mit Mitarbeiter-Zahl. Bei grossen Tenants kann das spuerbar werden — Cost-Logging ist zwingend.
+
+### Success Criteria (V4)
+
+V4 ist erfolgreich, wenn ALLE folgenden Kriterien erfuellt sind:
+
+**SC-V4-1 — Mitarbeiter kann sich einloggen + zugewiesene Aufgabe machen**
+Ein vom tenant_admin eingeladener Mitarbeiter erhaelt eine Einladungs-E-Mail, setzt ein Passwort, loggt sich ein, sieht ein eigenes Dashboard mit zugewiesenen Capture-Sessions, oeffnet eine, durchlaeuft Questionnaire-Mode wie GF, submittet Block. Worker verarbeitet seinen Submit ueber dieselbe Pipeline (Verdichtung, Diagnose).
+
+**SC-V4-2 — Bridge generiert Mitarbeiter-Aufgaben aus Blueprint-Output**
+Ein tenant_admin mit fertigem Blueprint (mindestens 1 Block submitted, KUs vorhanden) loest die Bridge aus. Die Bridge generiert mindestens 3 konkrete Mitarbeiter-Aufgaben-Vorschlaege (Block-Vorschlag + Mitarbeiter-Zuordnungs-Vorschlag). tenant_admin kann sie reviewen, editieren, freigeben oder ablehnen. Nur freigegebene Aufgaben sind fuer Mitarbeiter sichtbar.
+
+**SC-V4-3 — Mitarbeiter-Sicht-Perimeter ist dicht**
+Ein Mitarbeiter sieht in keinem UI und keinem API-Endpoint:
+- Blueprint-Output des GF
+- Aufgaben anderer Mitarbeiter
+- Diagnose-Layer-Output
+- SOPs
+- Unternehmerhandbuch
+- Andere Tenants
+
+RLS-Test-Matrix in /qa bestaetigt das mit konkreten Failure-Tests.
+
+**SC-V4-4 — Unternehmerhandbuch-Export funktioniert**
+Ein tenant_admin kann das Unternehmerhandbuch als Markdown-ZIP herunterladen. Das ZIP enthaelt: Inhaltsverzeichnis, Sektionen pro Wissensbereich (aus E1+E2), KUs als strukturierte Markdown-Listen, Diagnose-Output, SOPs, Cross-Links zwischen Sektionen. Die Markdown-Files sind syntaktisch valide und in einem Standard-Markdown-Viewer lesbar.
+
+**SC-V4-5 — Self-Service-Status-Cockpit zeigt aktuellen Stand**
+Ein tenant_admin sieht ohne Berater-Hilfe: (a) wie viele Bloecke insgesamt, (b) wie viele submitted, (c) wie viele Mitarbeiter eingeladen, (d) wie viele Mitarbeiter-Aufgaben offen vs. fertig, (e) welcher naechste Schritt empfohlen ist. Pflicht-Browser-Smoke-Test mit User aus Nicht-Tech-Kontext.
+
+**SC-V4-6 — Capture-Mode-Hooks sind sauber strukturiert**
+`capture_mode`-Enum + Worker-Hook-Struktur + UI-Slot-Konvention sind so dokumentiert, dass V5 (Walkthrough) ohne Schema-Aenderung als zusaetzlicher Mode hinzugefuegt werden kann. Architektur-Spike in /architecture validiert das mit Pseudo-Walkthrough-Mode-Eintrag (kein UI noetig).
+
+**SC-V4-7 — Multi-Use-Architektur**
+V4-Schema funktioniert mit Exit-Readiness UND einem zweiten Test-Template ohne Schema-Aenderung (Smoke-Test, kein Produktions-Test). Bridge-Engine nutzt Template-Kontext, nicht Hardcode.
+
+**SC-V4-8 — Bridge-Kosten sichtbar**
+Pro Bridge-Aufruf entsteht ein Log-Eintrag mit Token-Verbrauch. tenant_admin sieht aggregierte Bridge-Kosten (Anzahl Aufrufe, geschaetzte Kosten in EUR).
+
+**SC-V4-9 — Keine V1-V3-Regression**
+Bestehende GF-Capture-Sessions, KUs, Diagnosen, SOPs, Dialogue-Sessions funktionieren unveraendert. Bestehende Bedrock-Kosten-Logs, Auth-Flows, RLS-Policies bleiben stabil.
+
+### Open Questions (V4)
+
+#### Offen, aufzuloesen in /architecture
+- **Q17 — Bridge-Engine Generierungs-Mechanismus:** KI-gestuetzte Free-Form-Generierung (LLM bekommt Blueprint-Output + Template-Kontext, generiert Aufgaben-Vorschlaege)? Oder Template-getriebenes Mapping (Template definiert pro Wissensbereich, welche Mitarbeiter-Aufgabe daraus folgen kann, KI verfeinert nur)? Hybrid? Entscheidung in /architecture mit DEC.
+- **Q18 — Mitarbeiter-Auth-Flow:** Einladung per Magic-Link (passwortlos, sicherer) oder klassisches Passwort? Auswirkung auf UX und Onboarding-Reibung. Entscheidung in /architecture.
+- **Q19 — `employee` vs. `tenant_member` Beziehung:** Sind das parallele Rollen? Erbt employee von tenant_member? Wird tenant_member langfristig durch employee ersetzt? V4 entscheidet: parallel, kein Merge. Spaetere Mergung offen.
+- **Q20 — Bridge-Trigger:** Wann darf die Bridge laufen? Nach jedem Block-Submit? Nach komplettem Blueprint? On-demand vom tenant_admin? Empfehlung: on-demand (Cost-Kontrolle, Vertrauen). Bestaetigung in /architecture.
+- **Q21 — Unternehmerhandbuch-Aggregation-Logik:** Wie werden KUs/Diagnosen/SOPs aus E1+E2 in eine kohaerente Handbuch-Struktur aggregiert? Template-Schablone definiert die Sektionen? KI generiert die Aggregation? Statisch nach Wissensbereich? Entscheidung in /architecture.
+- **Q22 — Mitarbeiter-Aufgaben-Re-Generierung:** Wenn der GF spaeter weitere Bloecke submittet — soll die Bridge automatisch neue Mitarbeiter-Aufgaben vorschlagen oder nur on-demand? Empfehlung: on-demand (Konsistenz mit Q20). Entscheidung in /architecture.
+- **Q23 — Capture-Mode-Hook-Granularitaet:** Wie tief muessen die Hooks gehen? Nur Worker-Pipeline-Slot? Oder auch UI-Layout-Slot, Routing-Slot, Permissions-Slot? Mindestumfang in /architecture festlegen, nicht ueber-engineeren.
+
+#### Wird in spaeteren Skills entschieden
+- Konkrete Migration-Reihenfolge: /architecture
+- Slice-Schnitte und Reihenfolge: /slice-planning
+- Konkrete Bridge-Prompts fuer Claude Sonnet: /backend
+- Konkrete Mitarbeiter-Dashboard-Layout: /frontend
+
+### Delivery Mode (V4)
+**Unveraendert: SaaS Product.** V4 fuegt eine Nutzerklasse hinzu (`employee`) und einen externen Output (Unternehmerhandbuch-Markdown). Multi-Tenant + RLS + Versionierung gelten weiter. SaaS-Level QA- und Release-Rigor.
+
+---
+
+## V4.1 — Unternehmerhandbuch ausgebaut
+
+### Problem Statement (V4.1)
+V4 liefert das Unternehmerhandbuch als Markdown-Export — der Kunde kann es herunterladen und lesen. Was fehlt:
+- **In-App-Lesen + Suche**: Kunde muss ZIP entpacken, in einen Markdown-Viewer laden, Suche selbst organisieren. Hohe Reibung.
+- **Pflege**: Wenn der Kunde einen KU/SOP korrigieren oder ergaenzen will, muss er ueber die Capture-Session re-entern. Direkte Pflege im Handbuch geht nicht.
+- **Versionierung**: Snapshots ueber Zeit hinweg sind nicht vergleichbar.
+
+V4.1 schliesst das.
+
+### Goal (V4.1)
+Das Unternehmerhandbuch ist in der Plattform direkt browse-, durchsuch- und pflegbar. Snapshots sind versioniert vergleichbar.
+
+### V4.1 In Scope (Skizze, Detail kommt mit eigenem /requirements V4.1)
+- In-App-Webview des Handbuchs (Sidebar-Navigation, Markdown-Render, Section-Anchors)
+- Volltext-Suche (mindestens client-seitig im aktuellen Snapshot)
+- Live-Editor fuer KUs und SOPs (Markdown-Editor in der Plattform)
+- Cross-Links zwischen Handbuch-Sektionen klickbar
+- Versionierte Handbuch-Snapshots mit Diff-View
+- Re-Export funktioniert weiter (V4-Funktionalitaet bleibt)
+
+### V4.1 Out of Scope (vorlaeufig)
+- Multi-User-Edit (gleichzeitiges Bearbeiten) → spaeter
+- Genehmigungs-Workflows (Editor → Approver) → spaeter
+- Externe Verlinkung / Sharing-Links → spaeter
+
+---
+
+## V4.2 — Self-Service-Cockpit ausgebaut
+
+### Problem Statement (V4.2)
+V4 liefert ein minimales Status-Cockpit ("wo stehen wir"). Wenn der Kunde tiefer einsteigen will, braucht er den Berater — V4 ist kein Self-Service-Werkzeug, sondern nur ein Status-Display. V4.2 macht es zum echten Self-Service-Cockpit.
+
+### Goal (V4.2)
+Ein neuer tenant_admin kann sich anmelden und ohne Berater-Hilfe das gesamte Onboarding starten und durchziehen. Mitarbeiter-Erinnerungen passieren automatisch. Hilfe ist im Tool, nicht im Kopf des Beraters.
+
+### V4.2 In Scope (Skizze, Detail kommt mit eigenem /requirements V4.2)
+- Tenant-Onboarding-Wizard (Erste-Schritte, Begruessung, Template-Auswahl, erste Mitarbeiter einladen)
+- In-App-Hilfe pro Hauptansicht (Sidebar-Help, Tooltips)
+- Capture-Reminders (E-Mail an Mitarbeiter, In-App-Badge fuer GF)
+- Status-Dashboards mit naechsten empfohlenen Schritten
+- Eventuell: Tenant-Self-Service-Signup (offene Frage, evtl. spaeter)
+
+### V4.2 Out of Scope (vorlaeufig)
+- AI-gestuetzte Hilfe (Chat-Bot im Tool) → spaeter
+- Mehrsprachige Hilfe → spaeter (Tenant-Language gilt)
+- Externe Onboarding-Videos / Tutorials-Hosting → spaeter

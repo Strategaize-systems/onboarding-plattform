@@ -25,7 +25,7 @@
       "id": "v3",
       "name": "V3",
       "status": "active",
-      "summary": "Dialogue-Mode: Strukturierte Wissenserhebung durch Gespraeche. Eigene Jitsi+Jibri-Instanz auf Onboarding-Server, Meeting-Guide (Basic) mit leichter KI-Unterstuetzung, Video-Call mit Recording, Post-Meeting KI-Pipeline (Transkript → Knowledge Units + Summary + Gap Detection), Pipeline-Integration in Diagnose/SOP/Debrief. 5 Features (FEAT-017..021). Requirements 2026-04-21.",
+      "summary": "Dialogue-Mode: Strukturierte Wissenserhebung durch Gespraeche. Eigene Jitsi+Jibri-Instanz auf Onboarding-Server, Meeting-Guide (Basic) mit leichter KI-Unterstuetzung, Video-Call mit Recording, Post-Meeting KI-Pipeline (Transkript -> Knowledge Units + Summary + Gap Detection), Pipeline-Integration in Diagnose/SOP/Debrief. 5 Features (FEAT-017..021). Requirements 2026-04-21.",
       "order": 4
     },
     {
@@ -38,23 +38,44 @@
     {
       "id": "v4",
       "name": "V4",
-      "status": "planned",
-      "summary": "Walkthrough-Mode (Screen-Capture + Think-Aloud). Benoetigt vorher Technologie-Entscheidungs-Spike (Browser-Extension vs. Electron vs. Native).",
+      "status": "active",
+      "summary": "Zwei-Ebenen-Verschmelzung: Geschaeftsfuehrer-Blueprint (Ebene 1) + Mitarbeiter-Capture (Ebene 2). Mitarbeiter wird zur eigenen Login-User-Klasse (Rolle 'employee'). Bridge-Engine generiert aus Blueprint-Output automatisch Mitarbeiter-Capture-Aufgaben. Mitarbeiter durchlaeuft Questionnaire-Mode wie GF, gleiche Pipeline (Verdichtung, Diagnose). Walkthrough + Diary nur als Architektur-Hooks vorbereitet (Bau in V5/V6). Unternehmerhandbuch-Output minimal (Datenmodell + Markdown-Export, Ausbau in V4.1). Self-Service-Cockpit minimal (Status-View, Ausbau in V4.2). Exit-Readiness als erster Template-Schnitt, Architektur multi-use fuer spaetere Templates (Compliance, KI-, Wachstums-Readiness). Strategischer Rahmen: SOFTWARE-EXECUTION-MAP Phase 1 (2026-04-23). 6 Features (FEAT-022..027).",
       "order": 6
+    },
+    {
+      "id": "v4-1",
+      "name": "V4.1",
+      "status": "planned",
+      "summary": "Unternehmerhandbuch-Output ausgebaut: In-App-Webview, browse-bar, durchsuchbar. Live-Editor zur Pflege des Handbuchs in der Plattform (statt nur Re-Export). Beziehungen zwischen KUs/SOPs/Diagnosen darstellen. Versionierung der Handbuch-Snapshots. Detail-Requirements werden mit eigenem /requirements V4.1 erstellt, sobald V4 ausgeliefert ist.",
+      "order": 7
+    },
+    {
+      "id": "v4-2",
+      "name": "V4.2",
+      "status": "planned",
+      "summary": "Self-Service-Cockpit ausgebaut: Tenant-Onboarding-Wizard (Erste-Schritte, Hilfe-Texte), Capture-Reminders pro Mitarbeiter, In-App-Hilfe und Tutorials, Status-Dashboards mit naechsten Schritten. Ziel: Kunde kommt ohne Haendchen-Halten durch das gesamte Onboarding. Detail-Requirements werden mit eigenem /requirements V4.2 erstellt.",
+      "order": 8
     },
     {
       "id": "v5",
       "name": "V5",
       "status": "planned",
-      "summary": "Diary-Mode (zeitlich verteilte In-Situ-Aufnahmen, Mobile/PWA).",
-      "order": 7
+      "summary": "Walkthrough-Mode (Screen-Capture + Think-Aloud) als zusaetzlicher Capture-Modus. Architektur-Hooks dafuer wurden in V4 vorbereitet (Capture-Mode-Erweiterungs-Schnittstelle). Benoetigt vorher Technologie-Entscheidungs-Spike (Browser-Extension vs. Electron vs. Native). Versionsnummer ehemals V4 (vor 2026-04-23 Re-Numerierung).",
+      "order": 9
     },
     {
       "id": "v6",
-      "name": "V6+",
+      "name": "V6",
       "status": "planned",
-      "summary": "Queroptionen: Process-Mining-Connector, kollaborative Annotation, Anomalie-Flagging, Prozess-Simulation.",
-      "order": 8
+      "summary": "Diary-Mode (zeitlich verteilte In-Situ-Aufnahmen, Mobile/PWA) als zusaetzlicher Capture-Modus. Architektur-Hooks dafuer wurden in V4 vorbereitet. Versionsnummer ehemals V5 (vor 2026-04-23 Re-Numerierung).",
+      "order": 10
+    },
+    {
+      "id": "v7",
+      "name": "V7+",
+      "status": "planned",
+      "summary": "Queroptionen: Process-Mining-Connector, kollaborative Annotation, Anomalie-Flagging, Prozess-Simulation. Versionsnummer ehemals V6+ (vor 2026-04-23 Re-Numerierung).",
+      "order": 11
     }
   ]
 }
