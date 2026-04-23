@@ -130,12 +130,13 @@
 - Resolution: SLC-022 (V2). Whisper-Adapter-Pattern (DEC-018) unter /src/lib/ai/whisper/ implementiert. Transkriptions-Endpoint POST /api/capture/[sessionId]/transcribe. Mic-Button via NEXT_PUBLIC_WHISPER_ENABLED aktiviert. Resolution Date: 2026-04-21.
 
 ### ISSUE-015 — Kein Zurueck-Button in Sidebar auf Sub-Seiten
-- Status: open
+- Status: resolved
+- Resolution Date: 2026-04-23
 - Severity: Medium
 - Area: Frontend / UX
 - Summary: Auf Sub-Seiten (Dialogue-Listing, Meeting-Guide, /capture/new, Dialogue-New) hat die DashboardSidebar keinen Zurueck-Link zur vorherigen Seite. Die Sidebar zeigt nur "Assessment" und "Neue Erhebung", aber keinen Weg zurueck.
 - Impact: User muss Browser-Back verwenden, was nicht sauber ist. Abmelden-Button ist kein Ersatz.
-- Next Action: DashboardSidebar um kontextabhaengigen Zurueck-Link erweitern (z.B. "← Zurueck zur Session" oder Breadcrumb-Komponente).
+- Resolution: DashboardSidebar um kontextabhaengigen Zurueck-Link erweitert. `getBackLink(pathname)` mappt die aktuelle Route auf die passende Parent-Route (z.B. `/capture/[sessionId]/block/[blockKey]` → `/capture/[sessionId]`). Back-Link wird nur gerendert, wenn pathname nicht `/dashboard` ist. i18n-Key `sidebar.back` in de/en/nl. Build PASS.
 
 ### ISSUE-016 — Sprachwechsel fehlt auf /admin-Seiten
 - Status: open

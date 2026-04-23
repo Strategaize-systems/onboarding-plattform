@@ -31,7 +31,8 @@
     "mirrorNominations": "Mirror-deelnemers",
     "mirrorNominationsDescription": "Voorstellen beheren",
     "expandAll": "Alles openen",
-    "collapseAll": "Alles sluiten"
+    "collapseAll": "Alles sluiten",
+    "back": "Terug"
   },
   "blocks": {
     "A": "Basiskennis",

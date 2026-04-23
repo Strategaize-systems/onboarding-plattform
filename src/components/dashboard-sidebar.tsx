@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { logout } from "@/app/login/actions";
-import { PlusCircle, LogOut } from "lucide-react";
+import { PlusCircle, LogOut, ArrowLeft } from "lucide-react";
 
 interface DashboardSidebarProps {
   profile: {
@@ -13,8 +14,36 @@ interface DashboardSidebarProps {
   activePage: "capture";
 }
 
+function getBackLink(pathname: string): string | null {
+  if (pathname === "/dashboard") return null;
+
+  if (pathname === "/capture/new") return "/dashboard";
+
+  const captureFinal = pathname.match(/^(\/capture\/[^/]+\/block\/[^/]+)\/final$/);
+  if (captureFinal) return captureFinal[1];
+
+  const captureBlock = pathname.match(/^(\/capture\/[^/]+)\/block\/[^/]+$/);
+  if (captureBlock) return captureBlock[1];
+
+  if (/^\/capture\/[^/]+$/.test(pathname)) return "/dashboard";
+
+  const dialogueNew = pathname.match(/^(\/admin\/session\/[^/]+\/dialogue)\/new$/);
+  if (dialogueNew) return dialogueNew[1];
+
+  const dialogueDetail = pathname.match(/^(\/admin\/session\/[^/]+\/dialogue)\/[^/]+$/);
+  if (dialogueDetail) return dialogueDetail[1];
+
+  if (/^\/admin\/session\/[^/]+\/dialogue$/.test(pathname)) return "/dashboard";
+
+  if (/^\/admin\/session\/[^/]+\/meeting-guide$/.test(pathname)) return "/dashboard";
+
+  return null;
+}
+
 export function DashboardSidebar({ profile, activePage }: DashboardSidebarProps) {
   const t = useTranslations();
+  const pathname = usePathname();
+  const backHref = getBackLink(pathname);
 
   async function handleLogout() {
     await logout();
@@ -35,6 +64,19 @@ export function DashboardSidebar({ profile, activePage }: DashboardSidebarProps)
         <div className="text-[11px] text-slate-500 mt-0.5">{t("sidebar.subtitle")}</div>
       </div>
       <div className="h-3" />
+
+      {/* Back link — context-dependent, hidden on dashboard */}
+      {backHref && (
+        <div className="px-3 pb-2">
+          <Link
+            href={backHref}
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold uppercase tracking-wider text-slate-400 transition-all hover:bg-white/[0.06] hover:text-white"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            {t("sidebar.back")}
+          </Link>
+        </div>
+      )}
 
       {/* Navigation */}
       <div className="flex-1 overflow-y-auto px-3 py-1 space-y-1.5">

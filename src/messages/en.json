@@ -31,7 +31,8 @@
     "mirrorNominations": "Mirror Participants",
     "mirrorNominationsDescription": "Manage suggestions",
     "expandAll": "Expand all",
-    "collapseAll": "Collapse all"
+    "collapseAll": "Collapse all",
+    "back": "Back"
   },
   "blocks": {
     "A": "Fundamentals",

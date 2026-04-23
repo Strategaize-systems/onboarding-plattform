@@ -31,7 +31,8 @@
     "mirrorNominations": "Mirror-Teilnehmer",
     "mirrorNominationsDescription": "Vorschläge verwalten",
     "expandAll": "Alle öffnen",
-    "collapseAll": "Alle schließen"
+    "collapseAll": "Alle schließen",
+    "back": "Zurück"
   },
   "blocks": {
     "A": "Grundverständnis",
