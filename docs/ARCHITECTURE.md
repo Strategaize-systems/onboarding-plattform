@@ -1952,3 +1952,621 @@ Transkript ist ein Fliesstext ohne Sprecher-Kennzeichnung.
 ### Naechster Schritt V3
 
 `/slice-planning` mit 8 Slices.
+
+---
+
+## V4 Architecture Addendum — Zwei-Ebenen-Verschmelzung (Mitarbeiter + Unternehmerhandbuch)
+
+### Status
+V4-Architektur festgelegt am 2026-04-23. Baut auf V3-Stack (Dialogue-Mode, deployed-pending) auf.
+
+### Architektur-Zusammenfassung V4
+
+V4 erweitert den bestehenden Stack ohne neue Docker-Services. Die vier Kernprinzipien:
+
+1. **Vierte Rolle, kein Merge** — `employee` wird parallele Rolle neben `strategaize_admin`, `tenant_admin`, `tenant_member`. Bewusst kein Merge mit tenant_member in V4 (Scope-Schutz, Erfahrung sammeln).
+2. **Bridge-Engine als Hybrid** — Template definiert Standard-Bridges fuer ~80% der Subtopics. KI verfeinert (Mitarbeiter-Auswahl + Wortlaut) plus max 3 Free-Form-Vorschlaege pro Lauf fuer unbekannte Themen.
+3. **Handbuch-Aggregation deterministisch ueber Template-Schablone** — `template.handbook_schema` definiert Sektions-Struktur und Quellen-Filter. Aggregation ist Code, kein LLM. Reproduzierbar, audit-faehig, multi-template-faehig.
+4. **Capture-Mode-Hook-Konvention statt Mode-Hardcoding** — Worker-Pipeline-Slot + UI-Slot-Konvention dokumentiert + via Pseudo-Mode `walkthrough_stub` validiert. V5/V6 docken ohne Schema-Aenderung an.
+
+### Architektur-Entscheidungen (Q17-Q23 beantwortet)
+
+**Q17 → DEC-034: Bridge-Engine ist Hybrid (Template-Standard + KI-Verfeinerung + max 3 Free-Form-Slots).**
+Begruendung: R15-Mitigation. 80% der Bridge-Vorschlaege deterministisch aus Template-Schablonen, KI nur fuer Mitarbeiter-Zuordnung und leichte Wortlaut-Anpassung. Free-Form-Slot fuer Themen, die das Template nicht kennt — begrenzt auf 3 Vorschlaege pro Lauf, damit Bridge-Output kontrollierbar bleibt.
+
+**Q18 → DEC-035: Klassisches Passwort fuer Mitarbeiter-Auth.**
+Einladung per E-Mail mit Token-Link. Mitarbeiter setzt beim ersten Login eigenes Passwort. Begruendung: robust gegen E-Mail-Probleme, vertraut fuer Nicht-Tech-User, konsistent zu bestehender tenant_admin-Auth. Magic-Link bleibt fuer V4.2 evaluiert.
+
+**Q19 → DEC-036: `employee` und `tenant_member` sind parallele Rollen, kein Merge in V4.**
+Beide existieren nebeneinander. employee hat dedizierten Capture-Flow, tenant_member bleibt fuer bestehende Anwendungsfaelle. Mergung wird nach 2-3 Pilotkunden evaluiert.
+
+**Q20 → DEC-037: Bridge-Trigger ist on-demand (tenant_admin loest aus).**
+Konsistent mit DEC-020 (SOP) und DEC-022 (Diagnose). Cost-Kontrolle, Vertrauensaufbau. Kein Auto-Trigger nach Block-Submit.
+
+**Q21 → DEC-038: Handbuch-Aggregation ueber `template.handbook_schema`-Schablone (deterministischer Code).**
+Analog zu DEC-023 (diagnosis_schema). Pro Template eine Schablone, die Sektions-Struktur und Filter definiert. Aggregation ist deterministischer Markdown-Render-Code. Kein LLM-Call in V4 (R18-Mitigation: reproduzierbarer Output). Optional KI-Polish-Layer fuer Sektion-Intros in V4.1.
+
+**Q22 → DEC-039: Mitarbeiter-Aufgaben-Re-Generierung ist on-demand mit "Bridge-Lauf veraltet"-Hinweis.**
+`bridge_run.status='stale'` sobald neue `block_checkpoint`-Eintraege nach `bridge_run.created_at` existieren. UI zeigt Hinweis im Bridge-Review. Konsistent mit Q20 — kein KI-Auto-Push.
+
+**Q23 → DEC-040: Capture-Mode-Hook-Granularitaet = Worker-Pipeline-Slot + UI-Slot-Konvention.**
+Kein Routing-Slot, kein Permissions-Slot in V4. Mode-Worker registrieren sich ueber Job-Type-Naming-Konvention (`{mode}_processing`). Mode-UI-Komponenten leben unter `src/components/capture-modes/{mode}/`. Per Pseudo-Mode `walkthrough_stub` validiert.
+
+### Service-Topologie V4
+
+Keine neuen Docker-Services. Aenderungen an bestehenden:
+
+| Service | V4-Aenderung |
+|---------|-------------|
+| `app` | Mitarbeiter-Verwaltungs-UI (tenant_admin), Mitarbeiter-Dashboard (employee), Bridge-Review-UI, Handbuch-Generieren-UI + Download, Self-Service-Cockpit-View, /accept-invitation-Flow |
+| `worker` | 2 neue Job-Types: `bridge_generation`, `handbook_snapshot_generation` |
+| `supabase-storage` | Neuer Bucket `handbook` (tenant-isoliert, ZIP-Storage) |
+| Alle anderen | Unveraendert |
+
+### Neue Tabellen V4
+
+#### `employee_invitation` (FEAT-022)
+
+```sql
+CREATE TABLE public.employee_invitation (
+  id                    uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id             uuid        NOT NULL REFERENCES tenants ON DELETE CASCADE,
+  email                 text        NOT NULL,
+  display_name          text,
+  role_hint             text,           -- z.B. "Operations Manager" (informational, nicht sicherheitsrelevant)
+  invitation_token      text        NOT NULL UNIQUE,
+  invited_by_user_id    uuid        NOT NULL REFERENCES auth.users,
+  status                text        NOT NULL DEFAULT 'pending'
+                                    CHECK (status IN ('pending', 'accepted', 'revoked', 'expired')),
+  accepted_user_id      uuid        REFERENCES auth.users,   -- gesetzt bei Annahme
+  expires_at            timestamptz NOT NULL DEFAULT (now() + interval '14 days'),
+  accepted_at           timestamptz,
+  created_at            timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE UNIQUE INDEX idx_employee_invitation_pending_email
+  ON public.employee_invitation (tenant_id, lower(email))
+  WHERE status = 'pending';
+CREATE INDEX idx_employee_invitation_tenant ON public.employee_invitation(tenant_id);
+```
+
+RLS: `strategaize_admin` Full, `tenant_admin` R+W eigener Tenant, `employee` kein Zugriff, `tenant_member` kein Zugriff.
+
+#### `bridge_run` (FEAT-023)
+
+```sql
+CREATE TABLE public.bridge_run (
+  id                    uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id             uuid        NOT NULL REFERENCES tenants ON DELETE CASCADE,
+  capture_session_id    uuid        NOT NULL REFERENCES capture_session ON DELETE CASCADE,  -- die GF-Session, aus der die Bridge gespeist wird
+  template_id           uuid        NOT NULL REFERENCES template,
+  template_version      text        NOT NULL,
+  status                text        NOT NULL DEFAULT 'running'
+                                    CHECK (status IN ('running', 'completed', 'failed', 'stale')),
+  triggered_by_user_id  uuid        NOT NULL REFERENCES auth.users,
+  source_checkpoint_ids uuid[]      NOT NULL DEFAULT '{}',   -- welche Checkpoints flossen ein
+  proposal_count        integer     NOT NULL DEFAULT 0,
+  cost_usd              numeric(10,6),
+  generated_by_model    text,
+  error_message         text,
+  created_at            timestamptz NOT NULL DEFAULT now(),
+  completed_at          timestamptz
+);
+
+CREATE INDEX idx_bridge_run_session ON public.bridge_run(capture_session_id);
+CREATE INDEX idx_bridge_run_tenant_status ON public.bridge_run(tenant_id, status);
+```
+
+RLS: `strategaize_admin` Full, `tenant_admin` R+W eigener Tenant. `employee`, `tenant_member` kein Zugriff.
+
+`status='stale'` wird via Trigger gesetzt, sobald nach `bridge_run.created_at` neue `block_checkpoint`-Eintraege fuer `capture_session_id` entstehen — UI zeigt "Bridge-Lauf veraltet" (DEC-039).
+
+#### `bridge_proposal` (FEAT-023)
+
+```sql
+CREATE TABLE public.bridge_proposal (
+  id                       uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id                uuid        NOT NULL REFERENCES tenants ON DELETE CASCADE,
+  bridge_run_id            uuid        NOT NULL REFERENCES bridge_run ON DELETE CASCADE,
+  proposal_mode            text        NOT NULL
+                                       CHECK (proposal_mode IN ('template', 'free_form')),
+  source_subtopic_key      text,           -- bei mode=template: matcht diagnosis_schema.subtopics[].key
+  proposed_block_title     text        NOT NULL,
+  proposed_block_description text,
+  proposed_questions       jsonb       NOT NULL DEFAULT '[]'::jsonb,
+                                       -- [{ id, text, hint, required }]
+  proposed_employee_user_id uuid       REFERENCES auth.users,   -- KI-Vorschlag, tenant_admin kann editieren
+  proposed_employee_role_hint text,        -- "Operations Manager" wenn keine konkrete Person passt
+  status                   text        NOT NULL DEFAULT 'proposed'
+                                       CHECK (status IN ('proposed', 'edited', 'approved', 'rejected', 'spawned')),
+  approved_capture_session_id uuid     REFERENCES capture_session,   -- gesetzt bei status=spawned
+  reviewed_by_user_id      uuid        REFERENCES auth.users,
+  reviewed_at              timestamptz,
+  reject_reason            text,
+  created_at               timestamptz NOT NULL DEFAULT now(),
+  updated_at               timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_bridge_proposal_run ON public.bridge_proposal(bridge_run_id);
+CREATE INDEX idx_bridge_proposal_tenant_status ON public.bridge_proposal(tenant_id, status);
+```
+
+RLS: `strategaize_admin` Full, `tenant_admin` R+W eigener Tenant. `employee`, `tenant_member` kein Zugriff.
+
+Status-Lifecycle: `proposed` → (Edit:) `edited` → (Genehmigen:) `approved` → (capture_session erstellt:) `spawned`. Oder `proposed` → `rejected` (Endzustand).
+
+#### `handbook_snapshot` (FEAT-026)
+
+```sql
+CREATE TABLE public.handbook_snapshot (
+  id                    uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id             uuid        NOT NULL REFERENCES tenants ON DELETE CASCADE,
+  capture_session_id    uuid        NOT NULL REFERENCES capture_session ON DELETE CASCADE,
+  template_id           uuid        NOT NULL REFERENCES template,
+  template_version      text        NOT NULL,
+  status                text        NOT NULL DEFAULT 'generating'
+                                    CHECK (status IN ('generating', 'ready', 'failed')),
+  storage_path          text,           -- Pfad in Bucket 'handbook' nach Erfolg
+  storage_size_bytes    integer,
+  section_count         integer,
+  knowledge_unit_count  integer,
+  diagnosis_count       integer,
+  sop_count             integer,
+  generated_by_user_id  uuid        NOT NULL REFERENCES auth.users,
+  error_message         text,
+  created_at            timestamptz NOT NULL DEFAULT now(),
+  completed_at          timestamptz
+);
+
+CREATE INDEX idx_handbook_snapshot_session ON public.handbook_snapshot(capture_session_id);
+CREATE INDEX idx_handbook_snapshot_tenant ON public.handbook_snapshot(tenant_id);
+```
+
+RLS: `strategaize_admin` Full, `tenant_admin` R+W eigener Tenant. `employee`, `tenant_member` kein Zugriff.
+
+V4 hat keine Versionierungs-Logik (V4.1) — `handbook_snapshot` wird einfach pro Generierungs-Lauf eingefuegt. Mehrere Snapshots pro Session sind erlaubt; UI zeigt nur den juengsten.
+
+### Schema-Erweiterungen V4
+
+#### `profiles.role` CHECK erweitert
+
+```sql
+ALTER TABLE public.profiles
+  DROP CONSTRAINT profiles_role_check;
+ALTER TABLE public.profiles
+  ADD CONSTRAINT profiles_role_check
+  CHECK (role IN ('strategaize_admin', 'tenant_admin', 'tenant_member', 'employee'));
+```
+
+#### `auth.user_role()` Helper unveraendert
+Liefert weiterhin den `role`-Wert aus profiles. Neue Rolle wird automatisch erkannt.
+
+#### `capture_session.capture_mode` CHECK erweitert
+
+```sql
+ALTER TABLE public.capture_session
+  DROP CONSTRAINT capture_session_capture_mode_check;
+ALTER TABLE public.capture_session
+  ADD CONSTRAINT capture_session_capture_mode_check
+  CHECK (capture_mode IS NULL OR capture_mode IN (
+    'questionnaire',
+    'evidence',
+    'voice',
+    'dialogue',
+    'employee_questionnaire',   -- NEU V4
+    'walkthrough_stub'          -- NEU V4 (Spike, kein produktiver Mode)
+  ));
+```
+
+`walkthrough` (V5) und `diary` (V6) werden in spaeteren Migrations additiv hinzugefuegt — ohne strukturelle Aenderung. Das ist die zentrale SC-V4-6-Validierung.
+
+#### `knowledge_unit.source` CHECK erweitert
+
+```sql
+ALTER TABLE public.knowledge_unit
+  DROP CONSTRAINT knowledge_unit_source_check;
+ALTER TABLE public.knowledge_unit
+  ADD CONSTRAINT knowledge_unit_source_check
+  CHECK (source IN (
+    'questionnaire', 'exception', 'ai_draft', 'meeting_final', 'manual',
+    'evidence', 'dialogue',
+    'employee_questionnaire'    -- NEU V4
+  ));
+```
+
+#### `template` neue JSONB-Spalten (DEC-034 + DEC-038)
+
+```sql
+ALTER TABLE public.template
+  ADD COLUMN employee_capture_schema jsonb DEFAULT NULL,
+  ADD COLUMN handbook_schema         jsonb DEFAULT NULL;
+```
+
+`template`-Tabelle hat damit jetzt 7 JSONB-Spalten: `blocks`, `sop_prompt`, `owner_fields`, `diagnosis_schema`, `diagnosis_prompt`, `employee_capture_schema`, `handbook_schema`. Akzeptabel — wenige Templates (<10 in V4-Horizont), keine Performance-Relevanz.
+
+#### `template.employee_capture_schema` Struktur (Q17-Detail)
+
+```json
+{
+  "subtopic_bridges": [
+    {
+      "subtopic_key": "kernlogik",
+      "block_template": {
+        "title": "Mitarbeiter-Sicht: Kernlogik im Tagesgeschaeft",
+        "description": "Wie fuehlt sich das Geschaeftsmodell aus operativer Sicht an?",
+        "questions": [
+          { "id": "EM-A1", "text": "Was sind die 3 wichtigsten Schritte in deinem typischen Tag?", "required": true },
+          { "id": "EM-A2", "text": "Wo verlierst du am haeufigsten Zeit?", "required": false }
+        ]
+      },
+      "typical_employee_role_hints": ["Operations Manager", "Vertriebsmitarbeiter", "Projektleiter"],
+      "skip_if": null
+    }
+  ],
+  "free_form_slot": {
+    "max_proposals": 3,
+    "system_prompt_addendum": "Generiere bis zu 3 zusaetzliche Mitarbeiter-Aufgaben fuer Themen, die das Template nicht abdeckt. Nur wenn die GF-Antworten klare Hinweise auf operative Bereiche geben, die nicht in den subtopic_bridges enthalten sind."
+  }
+}
+```
+
+#### `template.handbook_schema` Struktur (Q21-Detail)
+
+```json
+{
+  "sections": [
+    {
+      "key": "geschaeftsmodell_und_markt",
+      "title": "Geschaeftsmodell & Markt",
+      "order": 1,
+      "sources": [
+        { "type": "knowledge_unit", "filter": { "block_keys": ["A"], "exclude_source": ["employee_questionnaire"] } },
+        { "type": "diagnosis", "filter": { "block_keys": ["A"], "min_status": "confirmed" } },
+        { "type": "sop", "filter": { "block_keys": ["A"] } }
+      ],
+      "render": {
+        "subsections_by": "subtopic",   // gruppiert nach diagnosis_schema.subtopics
+        "intro_template": "Dieser Abschnitt beschreibt das Geschaeftsmodell aus Sicht der Geschaeftsfuehrung."
+      }
+    },
+    {
+      "key": "operatives_tagesgeschaeft",
+      "title": "Operatives Tagesgeschaeft (Mitarbeiter-Perspektive)",
+      "order": 5,
+      "sources": [
+        { "type": "knowledge_unit", "filter": { "source_in": ["employee_questionnaire"] } }
+      ],
+      "render": {
+        "subsections_by": "block_key",
+        "intro_template": "Dieser Abschnitt fasst die Sicht der Mitarbeiter auf das operative Tagesgeschaeft zusammen."
+      }
+    }
+  ],
+  "cross_links": [
+    {
+      "from_section": "operatives_tagesgeschaeft",
+      "to_section": "geschaeftsmodell_und_markt",
+      "anchor_match": "subtopic_key"
+    }
+  ]
+}
+```
+
+`handbook_schema` ist deklarativ: Render-Code interpretiert die Struktur, kein LLM-Call. Cross-Links verweisen ueber Subtopic-Keys zwischen Sektionen.
+
+### Worker-Erweiterung V4
+
+Der Worker bleibt ein einzelner Container mit Polling-Loop. 2 neue Job-Types werden im bestehenden Dispatcher registriert.
+
+| Job-Type | Trigger | Input | Output |
+|----------|---------|-------|--------|
+| `bridge_generation` | On-demand (Bridge-Button) | bridge_run_id | bridge_proposal-Rows + bridge_run.status='completed' |
+| `handbook_snapshot_generation` | On-demand (Handbuch-Button) | handbook_snapshot_id | ZIP in Storage + handbook_snapshot.status='ready' |
+
+#### Bridge-Generation-Flow (Hybrid, DEC-034)
+
+```
+Job: bridge_generation
+  1. Lade bridge_run + Tenant + Template (mit employee_capture_schema)
+  2. Lade alle block_checkpoint (status submitted/finalized) der Quell-Session
+  3. Lade KUs (status accepted/proposed) + Diagnose (status confirmed) der Quell-Session
+  4. Lade aktive employees des Tenants (profiles.role='employee', auch ohne aktuelle Sessions)
+  5. Pro subtopic_bridge im employee_capture_schema:
+       a. Pruefe skip_if-Bedingung (z.B. "diagnosis.ampel == green") -> skip falls true
+       b. Pruefe ob Subtopic in Diagnose vorkommt -> wenn nicht, skip
+       c. Bedrock-Call (klein, ~$0.01-$0.03):
+          Input: subtopic-KUs + subtopic-Diagnose + Mitarbeiter-Liste + block_template
+          Output: { proposed_employee_user_id | role_hint, leichte_wortlaut_anpassung }
+       d. INSERT bridge_proposal mit mode='template', proposed_questions = Template-Schablone, KI-Output appliziert
+  6. Free-Form-Slot:
+       a. Bedrock-Call (~$0.05-$0.10):
+          Input: alle KUs + alle Diagnosen + bestehende subtopic_bridges + Mitarbeiter-Liste + free_form_slot.system_prompt_addendum
+          Output: max 3 Vorschlaege [{ block_title, description, questions[], proposed_employee }]
+       b. Pro Vorschlag: INSERT bridge_proposal mit mode='free_form'
+  7. UPDATE bridge_run.status='completed', proposal_count, cost_usd
+  8. Log ai_cost_ledger pro Bedrock-Call (feature='bridge_template_refine' oder 'bridge_free_form')
+  9. rpc_complete_ai_job
+```
+
+Approval-Pfad (separater RPC, kein Worker-Job):
+
+```
+RPC: rpc_approve_bridge_proposal(proposal_id)
+  - Pruefe tenant_admin-Rolle
+  - UPDATE bridge_proposal SET status='approved', reviewed_by_user_id, reviewed_at
+  - INSERT capture_session (capture_mode='employee_questionnaire',
+                            owner_user_id=proposed_employee_user_id,
+                            template_id=Tenant-Template,
+                            status='open',
+                            answers={})
+  - Optional: INSERT block_checkpoint nicht noetig (kommt mit erstem Submit)
+  - UPDATE bridge_proposal SET status='spawned', approved_capture_session_id
+  - Return capture_session_id
+```
+
+#### Handbook-Snapshot-Generation-Flow (Deterministisch, DEC-038)
+
+```
+Job: handbook_snapshot_generation
+  1. Lade handbook_snapshot + Tenant + Template (mit handbook_schema)
+  2. Pro section in handbook_schema.sections (sortiert nach order):
+       a. Pro source in section.sources:
+          - knowledge_unit: SELECT knowledge_unit WHERE filter applied
+          - diagnosis: SELECT block_diagnosis WHERE filter applied
+          - sop: SELECT sop WHERE filter applied
+       b. Render Markdown (Code, deterministisch):
+          - Section-Header (#)
+          - intro_template (statisch aus Schema)
+          - Subsections gruppiert nach render.subsections_by (subtopic | block_key)
+          - KU-Listen, Diagnose-Tabellen, SOP-Steps
+          - Cross-Link-Anchors fuer cross_links
+  3. Render INDEX.md (Inhaltsverzeichnis)
+  4. ZIP erstellen mit Standard-Library:
+     /handbuch/
+       INDEX.md
+       01_geschaeftsmodell_und_markt.md
+       02_*.md
+       ...
+  5. Upload ZIP in Storage Bucket 'handbook' unter {tenant_id}/{snapshot_id}.zip
+  6. UPDATE handbook_snapshot SET status='ready', storage_path, storage_size_bytes, section_count, ku_count, ...
+  7. rpc_complete_ai_job
+```
+
+Kein Bedrock-Call in V4. Kosten = $0 fuer Aggregation. Render-Performance: bei ~500 KUs + 9 Diagnosen + 9 SOPs erwartet <2 Sekunden pro Snapshot.
+
+### Capture-Mode Hooks Spike (FEAT-025, SC-V4-6)
+
+#### Worker-Pipeline-Hook-Konvention
+
+Neue Capture-Modes registrieren sich ueber Job-Type-Naming-Konvention `{mode}_processing`. Der bestehende Dispatcher (siehe DEC-017) routed Jobs anhand des `job_type` automatisch:
+
+```
+src/workers/
+  capture-modes/
+    questionnaire/handle.ts       — handler fuer job_type='questionnaire_processing'
+    evidence/handle.ts            — handler fuer job_type='evidence_extraction' (V2 bestehend)
+    dialogue/handle.ts            — handler fuer job_type='dialogue_extraction' (V3 bestehend)
+    employee-questionnaire/handle.ts — handler fuer job_type='employee_questionnaire_processing' (V4 neu, identisch zu questionnaire)
+    walkthrough-stub/handle.ts    — Pseudo-Handler fuer Spike (V4)
+    walkthrough/handle.ts         — V5 spaeter
+    diary/handle.ts               — V6 spaeter
+```
+
+V4-Wert: `employee_questionnaire`-Worker ist 1:1 der bestehende `questionnaire`-Pfad — eingebunden ueber denselben Bedrock-Client, dieselbe Verdichtungs-Pipeline (Analyst+Challenger Loop, Diagnose, SOP). Block-Submit eines Mitarbeiters erzeugt einen `block_checkpoint` und enqueued `knowledge_unit_condensation`-Job (unveraendert) — der Mode steuert nur die UI und die Sicht-Filter, nicht die Verdichtung.
+
+#### UI-Slot-Konvention
+
+Neue Capture-Modes liefern eine UI-Komponente unter:
+
+```
+src/components/capture-modes/
+  questionnaire/QuestionnaireMode.tsx
+  evidence/EvidenceMode.tsx
+  dialogue/DialogueMode.tsx
+  employee-questionnaire/EmployeeQuestionnaireMode.tsx (V4 neu, wrapped QuestionnaireMode)
+  walkthrough-stub/WalkthroughStubMode.tsx (V4)
+  walkthrough/...   (V5 spaeter)
+  diary/...         (V6 spaeter)
+```
+
+`/capture/[sessionId]/page.tsx` lookup'd `capture_session.capture_mode` und delegiert:
+
+```typescript
+const ModeComponent = CAPTURE_MODE_REGISTRY[session.capture_mode] ?? QuestionnaireMode;
+return <ModeComponent session={session} ... />;
+```
+
+Registry ist eine simple Map in `src/components/capture-modes/registry.ts`. Neue Modes werden durch Eintrag in der Registry registriert — keine Routing-Aenderung, keine Schema-Aenderung.
+
+#### Spike: `walkthrough_stub` Pseudo-Mode
+
+Validiert SC-V4-6: Ein neuer Mode kann ohne Schema-Aenderung registriert werden.
+
+V4 liefert konkret:
+1. `capture_mode='walkthrough_stub'` ist im CHECK-Constraint erlaubt
+2. `src/workers/capture-modes/walkthrough-stub/handle.ts` mit minimal-Handler (loggt nur "stub mode")
+3. `src/components/capture-modes/walkthrough-stub/WalkthroughStubMode.tsx` rendert Platzhalter-Box "Walkthrough-Mode wird in V5 implementiert"
+4. Eintrag in CAPTURE_MODE_REGISTRY
+5. Keine Migration noetig fuer V5 — nur Registry-Eintrag, Worker-Handler, UI-Komponente. Migration `070_walkthrough_v5.sql` (V5-Zukunft) wird nur den CHECK-Constraint um `'walkthrough'` erweitern, nichts anderes.
+
+Die Stub-Komponente wird im Self-Service-Cockpit nicht beworben — sie existiert nur fuer den Architektur-Spike und die Doku.
+
+#### Was NICHT zur Hook-Granularitaet gehoert (DEC-040)
+
+Bewusst ausgelassen, weil V5/V6 das nicht brauchen:
+
+- **Routing-Slot:** Alle Capture-Modes laufen unter `/capture/[sessionId]`. Kein per-Mode-Sub-Routing. Wenn ein zukuenftiger Mode eigene Routes braucht (z.B. Mobile-First Diary), wird das in V6 entschieden.
+- **Permissions-Slot:** Mode-spezifische RLS-Policies sind nicht vorgesehen — Sichtbarkeit folgt der Rollen-Matrix (employee sieht nur eigene Sessions, etc.). Wenn ein Mode neue Tabellen braucht (z.B. Walkthrough-Screen-Captures), bekommt diese Tabelle eigene Standard-RLS-Policies.
+
+### Self-Service Status Cockpit Foundation (FEAT-027)
+
+Server-Component-basiertes Dashboard auf `/dashboard` (nur tenant_admin). Lade alle Daten server-seitig (DEC-031).
+
+#### Status-Daten
+
+```typescript
+// dashboard/page.tsx (Server Component)
+const sessionId = await getCurrentTenantCaptureSessionId();
+const blocksTotal = template.blocks.length;
+const blocksSubmitted = await countCheckpoints(sessionId, 'questionnaire_submit');
+const employeesInvited = await countEmployeesByTenant(tenantId);
+const employeeTasksOpen = await countEmployeeCaptureSessions(tenantId, ['open', 'in_progress']);
+const employeeTasksDone = await countEmployeeCaptureSessions(tenantId, ['submitted', 'finalized']);
+const lastBridgeRun = await getLatestBridgeRun(sessionId);
+const lastHandbookSnapshot = await getLatestHandbookSnapshot(sessionId);
+const recommendedNextStep = computeRecommendedNextStep({ ... });
+```
+
+#### Empfohlener Naechster Schritt (regelbasiert, kein LLM in V4)
+
+```
+if (blocksSubmitted === 0) -> "Block A starten"
+else if (blocksSubmitted < blocksTotal) -> "Block ${nextOpenBlock} fortsetzen"
+else if (!lastBridgeRun || lastBridgeRun.status === 'stale')
+  -> "Bridge ausfuehren / aktualisieren"
+else if (employeesInvited === 0) -> "Mitarbeiter einladen"
+else if (employeeTasksOpen > 0) -> "Mitarbeiter erinnern (manuell)"
+else if (!lastHandbookSnapshot) -> "Unternehmerhandbuch generieren"
+else -> "Onboarding abgeschlossen — Handbuch herunterladen"
+```
+
+Reminders sind in V4.2. UI zeigt nur "Mitarbeiter erinnern (manuell)" als statischen Hinweis ohne Aktion.
+
+### RPCs V4
+
+| RPC | Rolle | Zweck |
+|-----|-------|-------|
+| `rpc_create_employee_invitation` | tenant_admin | Erzeugt Invitation-Token, schickt E-Mail (via Server-Action) |
+| `rpc_accept_employee_invitation(token, password)` | anonymous (Token-validiert) | Erzeugt auth.users + profiles.role='employee' + setzt invitation status='accepted' |
+| `rpc_revoke_employee_invitation(invitation_id)` | tenant_admin | Setzt invitation status='revoked' |
+| `rpc_trigger_bridge_run(capture_session_id)` | tenant_admin | Erzeugt bridge_run + enqueued ai_jobs |
+| `rpc_approve_bridge_proposal(proposal_id, edited_payload)` | tenant_admin | Approve + spawned capture_session fuer employee |
+| `rpc_reject_bridge_proposal(proposal_id, reason)` | tenant_admin | Reject |
+| `rpc_trigger_handbook_snapshot(capture_session_id)` | tenant_admin | Erzeugt handbook_snapshot + enqueued ai_job |
+| `rpc_get_handbook_download_url(snapshot_id)` | tenant_admin | Signierte Storage-URL (5 Min Gueltigkeit) |
+| Trigger `bridge_run_set_stale` | system | Markiert bridge_run als stale wenn neue Checkpoints |
+
+Alle RPCs SECURITY DEFINER mit explizitem Rollencheck. GRANTs: `authenticated` (Rolle intern geprueft). `rpc_accept_employee_invitation` ist explizit fuer `anon` (Token validiert die Berechtigung).
+
+### Storage Bucket V4
+
+```sql
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES ('handbook', 'handbook', false, 52428800, ARRAY['application/zip']);
+```
+
+Pfad-Pattern: `{tenant_id}/{snapshot_id}.zip`. Tenant-Isolation per Storage-Policy:
+
+```sql
+CREATE POLICY handbook_select_tenant_admin ON storage.objects
+  FOR SELECT USING (
+    bucket_id = 'handbook'
+    AND (
+      auth.user_role() = 'strategaize_admin'
+      OR (auth.user_role() = 'tenant_admin' AND auth.user_tenant_id()::text = (storage.foldername(name))[1])
+    )
+  );
+
+-- INSERT/DELETE nur via service_role (Worker)
+```
+
+50 MB Limit pro Snapshot. Bei realistischem Datenvolumen (~500 KUs + Markdown-Render) erwartet 200KB-2MB pro Snapshot.
+
+### ENV-Erweiterung V4
+
+```bash
+# Mitarbeiter-Einladungs-E-Mails (nutzen bestehenden SMTP aus V1)
+EMPLOYEE_INVITATION_FROM=onboarding@strategaizetransition.com
+EMPLOYEE_INVITATION_BASE_URL=https://onboarding.strategaizetransition.com   # bereits vorhanden via NEXT_PUBLIC_APP_URL
+EMPLOYEE_INVITATION_EXPIRY_DAYS=14   # Default in DB, ENV optional override
+```
+
+Keine neuen Provider, keine neuen Secrets.
+
+### Geplante Migrationen V4
+
+| Nr. | Datei | Inhalt |
+|-----|-------|--------|
+| 065 | `065_employee_role.sql` | ALTER profiles.role CHECK erweitert um 'employee'; sql/schema.sql Init-Script Parity |
+| 066 | `066_employee_invitation.sql` | employee_invitation-Tabelle + RLS (admin_full + tenant_admin_rw) + Indexes + GRANTs |
+| 067 | `067_capture_mode_v4.sql` | ALTER capture_session.capture_mode CHECK erweitert um 'employee_questionnaire' + 'walkthrough_stub'; ALTER knowledge_unit.source CHECK erweitert um 'employee_questionnaire' |
+| 068 | `068_bridge_tables.sql` | bridge_run + bridge_proposal Tabellen + RLS + Indexes + GRANTs + updated_at-Trigger; bridge_run_set_stale Trigger-Funktion |
+| 069 | `069_template_v4_fields.sql` | ALTER template ADD employee_capture_schema + handbook_schema JSONB; UPDATE exit_readiness mit initialem employee_capture_schema (3-5 subtopic_bridges) + handbook_schema (8-10 sections) |
+| 070 | `070_handbook_snapshot.sql` | handbook_snapshot-Tabelle + RLS + Indexes + GRANTs + updated_at-Trigger |
+| 071 | `071_handbook_storage_bucket.sql` | Supabase Storage Bucket 'handbook' + 3 Policies (insert via service_role, select tenant_admin/strategaize_admin, delete strategaize_admin) |
+| 072 | `072_rpc_employee_invite.sql` | 3 RPCs: rpc_create_employee_invitation, rpc_accept_employee_invitation, rpc_revoke_employee_invitation |
+| 073 | `073_rpc_bridge.sql` | 3 RPCs: rpc_trigger_bridge_run, rpc_approve_bridge_proposal, rpc_reject_bridge_proposal |
+| 074 | `074_rpc_handbook.sql` | 2 RPCs: rpc_trigger_handbook_snapshot, rpc_get_handbook_download_url |
+| 075 | `075_rls_employee_perimeter.sql` | RLS-Policies fuer alle bestehenden Tabellen so erweitert, dass `employee` ausschliesslich eigene Capture-Sessions, eigene Checkpoints, eigene KUs, eigene validation_layer-Eintraege sieht — und NICHT block_diagnosis, sop, handbook_snapshot, bridge_*, employee_invitation, andere Tenants, andere Mitarbeiter |
+
+Pflicht-Verifikation in /qa: 4×N RLS-Test-Matrix (4 Rollen × N Tabellen) — strategaize_admin/tenant_admin/tenant_member/employee × capture_session/knowledge_unit/block_diagnosis/sop/handbook_snapshot/bridge_run/bridge_proposal/employee_invitation. Mindestens 32 Failure-Tests fuer employee-Sichtperimeter (R16, SC-V4-3).
+
+### Kosten-Schaetzung V4
+
+| Operation | Tokens | Kosten/Lauf | Notiz |
+|-----------|--------|-------------|-------|
+| Bridge — Template-Verfeinerung pro Subtopic | ~1.500 in, ~500 out | $0.01-$0.03 | typisch 4-6 Subtopics pro Bridge |
+| Bridge — Free-Form-Slot | ~5.000 in, ~2.000 out | $0.05-$0.10 | ein Call pro Bridge |
+| **Bridge gesamt pro Lauf** | | **$0.10-$0.30** | abhaengig von Subtopic-Anzahl |
+| Handbuch-Snapshot | n/a | **$0.00** | rein deterministisch |
+| Mitarbeiter-Block-Verdichtung | wie GF | wie GF | identische Pipeline |
+
+Bei einem Pilotkunden mit 5 Mitarbeitern, 1 Bridge-Lauf und 1 Handbuch-Snapshot pro Onboarding-Zyklus: ~$0.20-$0.30 zusaetzliche V4-Kosten je Onboarding (oben auf $2.93-$13.01 V3-Baseline).
+
+### Security / Privacy V4
+
+Alle V1-V3-Regeln gelten weiter. Zusaetzlich:
+
+- **Mitarbeiter-Sicht-Perimeter (R16, SC-V4-3):** RLS muss garantieren, dass `employee` keine Cross-Mitarbeiter-, Cross-Tenant-, Bridge-, Diagnose-, SOP- oder Handbuch-Daten sehen kann. Test-Matrix ist Pflicht-Bestandteil von /qa.
+- **Invitation-Tokens:** Sind 32 Bytes random (`gen_random_bytes(32) :: text`), unique, nicht erratbar. 14 Tage Gueltigkeit. Token-Re-Use nach Annahme ausgeschlossen (status-Lifecycle).
+- **Bridge-Ergebnisse:** Enthalten potenziell sensitive Hinweise auf Mitarbeiter-Beobachtungen. Tenant-isoliert. Mitarbeiter sehen nie ihre eigenen Bridge-Proposals (auch nicht spawned-State).
+- **Handbuch-Snapshots:** Enthalten alle KUs/Diagnosen/SOPs des Tenants — also auch employee-Beitraege. Mitarbeiter haben KEINEN Zugriff (Sichtperimeter-Constraint). tenant_admin und strategaize_admin haben Zugriff. ZIP-Downloads ueber signierte URLs (max 5 Min Gueltigkeit), nicht ueber direkte Storage-Links.
+- **employee_questionnaire-KUs:** Bekommen `source='employee_questionnaire'` Tag. Im Debrief und Handbuch klar als Mitarbeiter-Beitrag erkennbar (UI-Badge).
+
+### Constraints und Tradeoffs V4
+
+#### Constraint — Hybrid-Bridge mit Free-Form-Limit (DEC-034)
+KI generiert max 3 Free-Form-Vorschlaege pro Lauf zusaetzlich zu Template-Verfeinerungen.
+**Tradeoff:** Die Bridge findet nicht alle moeglichen Wissensbereiche, nur die im Template + 3 Free-Form. Akzeptiert, weil R15 (nutzlose Aufgaben) das groessere Risiko ist. Spaetere Bridge-Tuning-UI (V4.2+) kann Free-Form-Limit konfigurierbar machen.
+
+#### Constraint — Handbuch deterministisch, kein LLM (DEC-038)
+Aggregation ist Code, kein narrativer KI-Text in V4.
+**Tradeoff:** Markdown-Output liest sich strukturiert, aber nicht "weich". R18 (Erwartungshaltung) erfuellt durch sauberen Aufbau (Inhaltsverzeichnis, Cross-Links, Sektion-Intros). KI-Polish kommt in V4.1 nur fuer kurze Sektion-Intros, nicht fuer Inhaltsumformulierung.
+
+#### Constraint — Klassisches Passwort statt Magic-Link (DEC-035)
+Mitarbeiter setzen Passwort beim ersten Login.
+**Tradeoff:** Mehr Schritte beim ersten Login (Token-Link → Passwort setzen → Login), aber robuster gegen E-Mail-Probleme. Magic-Link bleibt fuer V4.2 evaluiert.
+
+#### Constraint — Keine Mergung von employee und tenant_member (DEC-036)
+4 parallele Rollen.
+**Tradeoff:** Doppelte RLS-Policies an einigen Stellen. RLS-Test-Matrix wird komplexer (4 statt 3 Rollen). Akzeptiert fuer V4 (Erfahrung sammeln, dann V5+ Mergung evaluieren).
+
+#### Constraint — Auto-Approval ist explizit ausgeschlossen
+Jeder Bridge-Proposal braucht tenant_admin-Freigabe.
+**Tradeoff:** Mehr UI-Aufwand fuer tenant_admin. Akzeptiert wegen R15 (Bridge-Qualitaet) und Vertrauensaufbau in der ersten V4-Generation.
+
+### Open Technical Questions V4
+
+- **Q24 — Bridge-Re-Run-Verhalten bei stale-Lauf:** Wenn der GF nach Bridge-Lauf weitere Bloecke submittet und neuen Bridge-Lauf startet — sollen alte rejected/edited Proposals als "Vorgeschichte" angezeigt werden oder hart verworfen? V4: hart verworfen (keine Diff-View). V4.1 kann Diff-View ergaenzen.
+- **Q25 — Mitarbeiter-Re-Assignment:** Wenn der GF einen Mitarbeiter aus dem Tenant entfernt, der noch offene Aufgaben hat — was passiert? V4: tenant_admin muss Aufgaben manuell auf anderen Mitarbeiter umhaengen oder loeschen. Auto-Re-Assignment in V4.2.
+- **Q26 — Handbuch-Output-Sprache:** Folgt `tenants.language` (DEC-033). Multi-language Handbuecher sind nicht V4.
+- **Q27 — Mitarbeiter-Block-Submit ohne Diagnose:** Mitarbeiter-KUs durchlaufen die Standard-Verdichtungs-Pipeline. Sollen Mitarbeiter-Bloecke auch eine Diagnose bekommen, oder werden sie nur in den Handbuch-Aggregations-Layer eingespeist? V4-Empfehlung: Diagnose laeuft fuer alle Bloecke (Standard-Pipeline), aber tenant_admin sieht im Debrief Mitarbeiter-Diagnose mit Badge. Wird in /backend SLC-037 final entschieden.
+
+### Empfohlene Slice-Reihenfolge V4
+
+1. **SLC-033: V4 Schema-Fundament** — Migrations 065-071 (employee-Rolle + capture_mode-Enum + bridge/handbook Tabellen + Storage-Bucket + RLS-Erweiterung 075). RLS-Test-Matrix Skelett.
+2. **SLC-034: Employee-Auth + Invitation-Flow** — RPCs (Migration 072) + Server-Action `inviteEmployee` mit E-Mail-Versand + tenant_admin Mitarbeiter-Verwaltungs-UI + /accept-invitation/[token] Page.
+3. **SLC-035: Bridge-Engine Backend** — UPDATE exit_readiness Template mit employee_capture_schema (Migration 069) + Worker `bridge_generation` Job-Type + RPCs (Migration 073) + ai_cost_ledger feature='bridge_*'.
+4. **SLC-036: Bridge-Review-UI** — tenant_admin Bridge-Review-Page + Edit-Form pro Proposal + Approve/Reject + Spawn-Verifikation.
+5. **SLC-037: Employee Capture-UI + Sicht-Perimeter** — Mitarbeiter-Dashboard + EmployeeQuestionnaireMode (wrapped QuestionnaireMode mit RLS-Sichtfilter) + RLS-Test-Matrix Pflicht-Pass.
+6. **SLC-038: Capture-Mode-Hooks Spike** — `walkthrough_stub` Worker-Handler-Stub + UI-Komponente + CAPTURE_MODE_REGISTRY + Architektur-Doku-Update "How to add a new Capture-Mode".
+7. **SLC-039: Handbuch-Snapshot Backend** — UPDATE exit_readiness Template mit handbook_schema + Worker `handbook_snapshot_generation` Job-Type + ZIP-Builder + RPCs (Migration 074).
+8. **SLC-040: Handbuch-UI + Self-Service-Cockpit Foundation** — tenant_admin Handbuch-Generieren-Button + Download (signierte URL) + Self-Service-Cockpit auf /dashboard mit 5 Metriken + regelbasierter "Naechster Schritt".
+
+8 Slices. SLC-033 ist Schema-only-Slice (Backend-Setup ohne UI). SLC-035→036, SLC-037→038, SLC-039→040 sind Backend→Frontend-Paare. Reihenfolge: Schema → Auth → Bridge-Backend → Bridge-Frontend → Employee-Flow → Hooks-Spike → Handbuch-Backend → Handbuch+Cockpit-Frontend.
+
+Pflicht-Browser-Smoke-Test mit Nicht-Tech-User vor V4-Release (R17, SC-V4-5) ist Bestandteil von /qa SLC-040 und der Gesamt-V4-QA.
+
+### Naechster Schritt V4
+
+`/slice-planning` mit 8 Slices.
