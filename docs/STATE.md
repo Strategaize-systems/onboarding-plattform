@@ -10,13 +10,14 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: V3 Final-Check PASS (RPT-066) — Conditionally Ready. 0 Blocker, 1 High akzeptabel, 2 Medium dokumentiert. Bereit fuer /go-live + formales Release.
+- Current Focus: V3 Final-Check PASS (RPT-066) — Conditionally Ready. V3.1 als Maintenance-Release geplant (BL-038..040 fuer AWS-SDK, Test-Isolation, supabase-studio). Bereit fuer /go-live V3.
 - Current Phase: V3 Release-Readiness
 
 ## Immediate Next Steps
 1. /go-live V3 (formale Release-Entscheidung, REL-005-Entry)
 2. /deploy V3 (Code ist schon deployed seit Smoke-Test; Skill macht formales Versioning)
 3. /post-launch V3 (nach 1-2 Tagen Produktivbetrieb)
+4. V3.1 Maintenance (BL-038..040, ~60 min total) vor V4-Start
 
 ## Active Scope
 V3 — Dialogue-Mode, 8 Slices (7/8 done):

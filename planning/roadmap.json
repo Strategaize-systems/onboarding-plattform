@@ -29,25 +29,32 @@
       "order": 4
     },
     {
+      "id": "v3-1",
+      "name": "V3.1",
+      "status": "planned",
+      "summary": "Maintenance Release nach V3 Final-Check (RPT-066). Behebt Test-Design-Flaw in admin-rls.test.ts (ISSUE-018), upgraded AWS-SDK fuer @xmldom/xmldom Transitive-Vuln (ISSUE-019), und prueft supabase-studio Healthcheck. Keine neuen Features.",
+      "order": 5
+    },
+    {
       "id": "v4",
       "name": "V4",
       "status": "planned",
       "summary": "Walkthrough-Mode (Screen-Capture + Think-Aloud). Benoetigt vorher Technologie-Entscheidungs-Spike (Browser-Extension vs. Electron vs. Native).",
-      "order": 5
+      "order": 6
     },
     {
       "id": "v5",
       "name": "V5",
       "status": "planned",
       "summary": "Diary-Mode (zeitlich verteilte In-Situ-Aufnahmen, Mobile/PWA).",
-      "order": 6
+      "order": 7
     },
     {
       "id": "v6",
       "name": "V6+",
       "status": "planned",
       "summary": "Queroptionen: Process-Mining-Connector, kollaborative Annotation, Anomalie-Flagging, Prozess-Simulation.",
-      "order": 7
+      "order": 8
     }
   ]
 }
