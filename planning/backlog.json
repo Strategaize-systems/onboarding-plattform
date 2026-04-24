@@ -405,9 +405,9 @@
       "title": "Employee Role + RBAC Extension",
       "type": "feature",
       "priority": "high",
-      "status": "open",
+      "status": "in_progress",
       "version": "V4",
-      "description": "Neue Rolle 'employee' im RBAC-Modell (parallel zu strategaize_admin / tenant_admin / tenant_member, kein Merge mit tenant_member). Mitarbeiter-Einladung vom tenant_admin per E-Mail, Auth-Flow (Magic-Link vs. Passwort offen, Q18). Eigenes Mitarbeiter-Dashboard. RLS-Policies erweitert + Test-Matrix (4 Rollen x relevante Tabellen) Pflicht. Siehe FEAT-022.",
+      "description": "Neue Rolle 'employee' im RBAC-Modell (parallel zu strategaize_admin / tenant_admin / tenant_member, kein Merge mit tenant_member, DEC-036). Mitarbeiter-Einladung vom tenant_admin per E-Mail, Auth-Flow klassisches Passwort (DEC-035). Eigenes Mitarbeiter-Dashboard. RLS-Policies erweitert + 4x8 Test-Matrix Pflicht (32 Pflicht-Faelle). Siehe FEAT-022. Slices: SLC-033 (Schema), SLC-034 (Auth+Invitation), SLC-037 (RLS-Perimeter-Abschluss).",
       "createdAt": "2026-04-23"
     },
     {
@@ -415,9 +415,9 @@
       "title": "Blueprint-to-Employee Bridge Engine",
       "type": "feature",
       "priority": "high",
-      "status": "open",
+      "status": "in_progress",
       "version": "V4",
-      "description": "Bridge-Engine generiert aus GF-Blueprint-Output (KUs + Diagnose) automatisch Vorschlaege fuer Mitarbeiter-Capture-Aufgaben. tenant_admin reviewed/freigibt — kein Auto-Push. On-demand getriggert (Q20). Mechanismus (KI-Free-Form vs. Template-Mapping vs. Hybrid) offen, Q17. Cost-Logging pro Bridge-Aufruf Pflicht. Siehe FEAT-023.",
+      "description": "Bridge-Engine generiert aus GF-Blueprint-Output (KUs + Diagnose) automatisch Vorschlaege fuer Mitarbeiter-Capture-Aufgaben. tenant_admin reviewed/freigibt — kein Auto-Push. On-demand (DEC-037). Hybrid-Mechanismus: Template-Schablone + KI-Verfeinerung + max 3 Free-Form (DEC-034). Cost-Logging pro Bridge-Aufruf Pflicht. Stale-Trigger bei neuem Block-Submit (DEC-039). Siehe FEAT-023. Slices: SLC-035 (Backend+RPCs+Worker), SLC-036 (Review-UI).",
       "createdAt": "2026-04-23"
     },
     {
@@ -425,9 +425,9 @@
       "title": "Employee Capture Workflow",
       "type": "feature",
       "priority": "high",
-      "status": "open",
+      "status": "in_progress",
       "version": "V4",
-      "description": "Mitarbeiter-Dashboard mit zugewiesenen Capture-Sessions, Questionnaire-Mode (gleicher Code wie GF, eingeschraenkt auf eigenen Scope), Submit triggert Standard-Pipeline (Verdichtung + Diagnose). Strikte RLS-Sicht-Trennung: Mitarbeiter sieht nicht Blueprint, andere Mitarbeiter, Diagnose, SOP, Handbuch. Siehe FEAT-024.",
+      "description": "Mitarbeiter-Dashboard mit zugewiesenen Capture-Sessions, Questionnaire-Mode (gleicher Code wie GF, eingeschraenkt auf eigenen Scope via RLS), Submit triggert Standard-Pipeline (Verdichtung + Diagnose). Strikte RLS-Sicht-Trennung: Mitarbeiter sieht nicht Blueprint, andere Mitarbeiter, Diagnose, SOP, Handbuch, Bridge-Proposals. Siehe FEAT-024. Slice: SLC-037.",
       "createdAt": "2026-04-23"
     },
     {
@@ -435,9 +435,9 @@
       "title": "Capture-Mode Extension Hooks (Walkthrough + Diary Architecture)",
       "type": "feature",
       "priority": "medium",
-      "status": "open",
+      "status": "in_progress",
       "version": "V4",
-      "description": "capture_mode-Enum + Worker-Hook-Konvention + UI-Slot-Konvention dokumentiert + per Pseudo-Mode validiert. Bereitet V5 (Walkthrough) und V6 (Diary) ohne Schema-Aenderung vor. KEINE Implementation der Modi selbst. Hook-Granularitaet offen, Q23. Siehe FEAT-025.",
+      "description": "Worker-Pipeline-Slot + UI-Slot-Konvention (DEC-040). Pseudo-Mode walkthrough_stub validiert SC-V4-6 (neuer Mode ohne Schema-Aenderung einfuehrbar). CAPTURE_MODE_REGISTRY konsolidiert. Dokumentation 'How to add a new Capture-Mode' in ARCHITECTURE.md Anhang A. KEINE Implementation von Walkthrough (V5) oder Diary (V6). Siehe FEAT-025. Slice: SLC-038.",
       "createdAt": "2026-04-23"
     },
     {
@@ -445,9 +445,9 @@
       "title": "Unternehmerhandbuch Foundation (Datenmodell + Markdown-Export)",
       "type": "feature",
       "priority": "high",
-      "status": "open",
+      "status": "in_progress",
       "version": "V4",
-      "description": "handbook_snapshot-Tabelle + Aggregations-Layer (verdichtet KUs/Diagnosen/SOPs aus E1+E2 in handbuch-strukturierte Sektionen) + Markdown-ZIP-Export. tenant_admin-only-Zugriff. KEINE In-App-Webview, KEIN Live-Editor (V4.1). Aggregations-Logik offen, Q21. Siehe FEAT-026.",
+      "description": "handbook_snapshot-Tabelle + deterministischer Aggregations-Layer ueber template.handbook_schema (DEC-038, kein LLM in V4) + Markdown-ZIP-Export in Storage-Bucket 'handbook'. tenant_admin-only-Zugriff ueber signierte Download-URLs (5 Min). KEINE In-App-Webview, KEIN Live-Editor (V4.1). Siehe FEAT-026. Slices: SLC-039 (Backend+Worker+ZIP), SLC-040 (UI+Download).",
       "createdAt": "2026-04-23"
     },
     {
@@ -455,9 +455,9 @@
       "title": "Self-Service Status Cockpit Foundation",
       "type": "feature",
       "priority": "medium",
-      "status": "open",
+      "status": "in_progress",
       "version": "V4",
-      "description": "Tenant-Status-View Minimum: 5 Metriken (Bloecke gesamt/submitted, Mitarbeiter eingeladen/Aufgaben offen/fertig) + regelbasierter naechster-Schritt-Hinweis. KEINE Wizards, KEINE Reminders, KEINE Hilfe-Texte (V4.2). Browser-Smoke-Test mit Nicht-Tech-User Pflicht. Siehe FEAT-027.",
+      "description": "Tenant-Status-View Minimum: 5 Metriken (Bloecke gesamt/submitted, Mitarbeiter eingeladen/Aufgaben offen/fertig) + regelbasierter naechster-Schritt-Hinweis. KEINE Wizards, KEINE Reminders, KEINE Hilfe-Texte (V4.2). Browser-Smoke-Test mit Nicht-Tech-User Pflicht-Gate (R17, SC-V4-5). Siehe FEAT-027. Slice: SLC-040.",
       "createdAt": "2026-04-23"
     },
     {

@@ -80,3 +80,34 @@
 - **SLC-031:** Dialogue Extraction (braucht SLC-030 + SLC-026)
 - **SLC-032:** Pipeline Integration (braucht SLC-031 + SLC-027 + SLC-029)
 - **Parallelisierbar:** SLC-026+027 kann parallel zu SLC-028+029 laufen (beide brauchen nur SLC-025). SLC-030+031 sind strikt sequentiell.
+
+## V4 Slices (Zwei-Ebenen-Verschmelzung)
+
+| ID | Slice | Feature | Status | Priority | Created |
+|----|-------|---------|--------|----------|---------|
+| SLC-033 | [V4 Schema-Fundament](SLC-033-v4-schema-fundament.md) | FEAT-022 | planned | Blocker | 2026-04-24 |
+| SLC-034 | [Employee-Auth + Invitation-Flow](SLC-034-employee-auth-invitation.md) | FEAT-022 | planned | Blocker | 2026-04-24 |
+| SLC-035 | [Bridge-Engine Backend](SLC-035-bridge-engine-backend.md) | FEAT-023 | planned | High | 2026-04-24 |
+| SLC-036 | [Bridge-Review-UI](SLC-036-bridge-review-ui.md) | FEAT-023 | planned | High | 2026-04-24 |
+| SLC-037 | [Employee Capture-UI + Sicht-Perimeter](SLC-037-employee-capture-ui.md) | FEAT-022, FEAT-024 | planned | Blocker | 2026-04-24 |
+| SLC-038 | [Capture-Mode-Hooks Spike](SLC-038-capture-mode-hooks-spike.md) | FEAT-025 | planned | Medium | 2026-04-24 |
+| SLC-039 | [Handbuch-Snapshot Backend](SLC-039-handbuch-snapshot-backend.md) | FEAT-026 | planned | High | 2026-04-24 |
+| SLC-040 | [Handbuch-UI + Cockpit Foundation](SLC-040-handbuch-ui-cockpit.md) | FEAT-026, FEAT-027 | planned | High | 2026-04-24 |
+
+### V4 Execution Order
+- **SLC-033:** V4 Schema-Fundament (Migrations 065-071 + 075, RLS-Test-Matrix-Skelett) — Blocker fuer alle weiteren V4-Slices.
+- **SLC-034:** Employee-Auth (Migration 072 + Invitation-UI + /accept-invitation + /employee Skelett) — braucht SLC-033.
+- **SLC-035 → SLC-036:** Bridge-Backend (Migration 073 + Worker) → Bridge-Review-UI — strikt sequentiell.
+- **SLC-037:** Employee Capture-UI + vollstaendige 4×8 RLS-Test-Matrix — braucht SLC-033 + SLC-034 + SLC-036. **RLS-Matrix-Gruen-Gate.**
+- **SLC-038:** Capture-Mode-Hooks Spike (walkthrough_stub) — braucht SLC-037 (Registry-Etablierung). Low-Risk, kann parallel zu SLC-039 laufen.
+- **SLC-039:** Handbuch-Backend (Migration 074 + Worker + ZIP-Builder) — braucht SLC-037 (employee-KUs).
+- **SLC-040:** Handbuch-UI + Cockpit + **Nicht-Tech-User-Smoke-Test** — letzter V4-Slice, braucht SLC-039.
+
+**Parallelisierbar:**
+- SLC-038 kann parallel zu SLC-039 laufen, sobald SLC-037 done ist.
+- Alle anderen Ketten strikt sequentiell (Schema-Fundament-Blocker, RLS-Gruen-Gate).
+
+**Pflicht-Gates fuer V4:**
+- SLC-033 + SLC-037: 4×8 RLS-Test-Matrix (32 Pflicht-Faelle, vollstaendig gruen am Ende von SLC-037).
+- SLC-038: SC-V4-6-Beweis (neuer Mode ohne Migration eingefuehrt).
+- SLC-040: Nicht-Tech-User-Smoke-Test (R17, SC-V4-5).

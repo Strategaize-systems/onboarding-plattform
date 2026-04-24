@@ -9,25 +9,28 @@
 Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdichtung. Ermoeglicht mehrere Capture-Modi (Fragebogen, Meeting, Voice, etc.) und Template-basierte Produktvarianten (z.B. Exit-Readiness, Immobilien-Onboarding). Ab V4: Zwei-Ebenen-Verschmelzung (GF-Blueprint + Mitarbeiter-Capture + Unternehmerhandbuch-Output).
 
 ## Current State
-- High-Level State: stable
-- Current Focus: V3 released (REL-005, 2026-04-24) + V4-Architektur abgeschlossen. V3 Dialogue-Mode ist live auf https://onboarding.strategaizetransition.com mit allen 5 Features deployed. V4 7 DECs (DEC-034..040), 11 Migrationen und 8 Slices empfohlen, wartet auf /slice-planning. V3.1 Maintenance (3 Items) parallel moeglich.
-- Current Phase: V3 Released / V4 Architecture done
+- High-Level State: slice-planning
+- Current Focus: V4 Slice-Planning abgeschlossen (2026-04-24) — 8 Slice-Files SLC-033..040 unter /slices/ dokumentiert, mit Micro-Tasks, Migrations-Zuordnung, Pflicht-QA-Vorgaben (RLS-Matrix 32 Faelle, Nicht-Tech-User-Smoke-Test, walkthrough_stub Spike). Naechster Schritt: /backend SLC-033 (V4 Schema-Fundament). V3 released + live, V3.1 Maintenance parallel moeglich.
+- Current Phase: V4 Slice-Planning done
 
 ## Immediate Next Steps
-1. /post-launch V3 — nach 1-2 Tagen Produktivbetrieb Stabilitaetscheck
-2. /slice-planning V4 — 8 Slices (SLC-033..040) auf Basis ARCHITECTURE.md V4-Sektion und FEAT-022..027 detailliert ausarbeiten
-3. V3.1 Maintenance (BL-038..040, ~60 min) vor V4-Implementation einplanen
+1. /backend SLC-033 — V4 Schema-Fundament (Migrations 065-071 + 075 + RLS-Test-Matrix-Skelett). Blocker fuer alle weiteren V4-Slices.
+2. /post-launch V3 — nach 1-2 Tagen Produktivbetrieb Stabilitaetscheck (parallel moeglich).
+3. V3.1 Maintenance (BL-038..040, ~60 min) parallel einplanen.
 
 ## Active Scope
-**V4 — Zwei-Ebenen-Verschmelzung, 6 Features (planned), 8 Slices empfohlen:**
-- FEAT-022 Employee Role + RBAC Extension
-- FEAT-023 Blueprint-to-Employee Bridge Engine (Hybrid: Template-Schablone + KI-Verfeinerung + max 3 Free-Form-Vorschlaege, DEC-034)
-- FEAT-024 Employee Capture Workflow
-- FEAT-025 Capture-Mode Extension Hooks (Worker-Slot + UI-Slot, validiert per `walkthrough_stub` Spike, DEC-040)
-- FEAT-026 Unternehmerhandbuch Foundation (deterministische Aggregation ueber `template.handbook_schema`, kein LLM in V4, DEC-038)
-- FEAT-027 Self-Service Status Cockpit Foundation (regelbasierter "Naechster Schritt", kein LLM in V4)
+**V4 — Zwei-Ebenen-Verschmelzung, 6 Features (planned), 8 Slices planned:**
+- FEAT-022 Employee Role + RBAC Extension — SLC-033 + SLC-034 + SLC-037
+- FEAT-023 Blueprint-to-Employee Bridge Engine — SLC-035 + SLC-036
+- FEAT-024 Employee Capture Workflow — SLC-037
+- FEAT-025 Capture-Mode Extension Hooks — SLC-038 (walkthrough_stub Spike)
+- FEAT-026 Unternehmerhandbuch Foundation — SLC-039 + SLC-040
+- FEAT-027 Self-Service Status Cockpit Foundation — SLC-040
 
-V4 plant 11 Migrationen (065-075) und 8 Slices (SLC-033..040). Detail in /docs/ARCHITECTURE.md V4-Sektion und /docs/MIGRATIONS.md MIG-023.
+V4 plant 11 Migrationen (065-075) und 8 Slices (SLC-033..040). Alle 8 Slice-Files unter /slices/ dokumentiert (2026-04-24). Detail in /docs/ARCHITECTURE.md V4-Sektion und /docs/MIGRATIONS.md MIG-023.
+
+**V4-Execution-Reihenfolge:** 033 → 034 → 035 → 036 → 037 → 038 ∥ 039 → 040.
+Pflicht-Gates: 033/037 RLS-Matrix 32 Faelle gruen, 038 SC-V4-6-Beweis, 040 Nicht-Tech-User-Smoke-Test.
 
 V4.1 (Unternehmerhandbuch ausgebaut) und V4.2 (Self-Service-Cockpit ausgebaut) sind als Folge-Versionen in Roadmap; Detail-Requirements je in eigenem /requirements V4.1 / V4.2 wenn dran.
 
