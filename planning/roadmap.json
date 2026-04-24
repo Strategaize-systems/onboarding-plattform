@@ -31,8 +31,8 @@
     {
       "id": "v3-1",
       "name": "V3.1",
-      "status": "planned",
-      "summary": "Maintenance Release nach V3 Final-Check (RPT-066). Behebt Test-Design-Flaw in admin-rls.test.ts (ISSUE-018), upgraded AWS-SDK fuer @xmldom/xmldom Transitive-Vuln (ISSUE-019), und prueft supabase-studio Healthcheck. Keine neuen Features.",
+      "status": "released",
+      "summary": "Maintenance Release released 2026-04-24 (REL-006, Deploy-Commit cffc639). Behob Test-Design-Flaw in admin-rls.test.ts (ISSUE-018 resolved via BL-039), upgraded AWS-SDK 3.1024->3.1036 + npm-Override @xmldom/xmldom@^0.8.13 (ISSUE-019 resolved via BL-038, prod-Vulns=0), supabase-studio Healthcheck disabled (DEC-041, ISSUE-020 wontfix via BL-040). Keine neuen Features. V4-Schema (SLC-033) im selben Deploy dormant mitgekommen.",
       "order": 5
     },
     {

@@ -10,14 +10,13 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: V4 SLC-033 V4 Schema-Fundament DONE 2026-04-24 (Code + Hetzner-Deploy + /qa PASS via RPT-073). Alle 8 Migrationen (065-071+075) idempotent auf Coolify-DB appliziert, RLS-Perimeter-Policies aktiv, bridge_run_set_stale-Trigger verifiziert, Test-Suite 130 passed | 34 todo | 0 failed. Ein in-QA-Blocker (Migration 065 `handle_new_user()` Schema-Duplicate) sofort gefixt (Commit d83c9a9). 1/8 V4-Slices done. Naechste Skill-Arbeit: /backend SLC-034.
+- Current Focus: V3.1 Maintenance Release released 2026-04-24 (REL-006, Deploy-Commit cffc639). V4 SLC-033 Schema-Fundament DONE und im selben Deploy dormant mitgekommen. Alle Verifikationen PASS: Container healthy, BL-038 (AWS-SDK 3.1036 + xmldom 0.8.13 override), BL-039 (admin-rls-Test 2/2 PASS gegen Coolify-DB), BL-040 (supabase-studio ohne Healthcheck, DEC-041 wirksam), SLC-033 RLS-Matrix-Skelett gruen (RPT-073), Worker Bedrock-Config eu-central-1 + Claude Sonnet 4. 1/8 V4-Slices done. Naechste Skill-Arbeit: /backend SLC-034.
 - Current Phase: V4 Implementation — 1/8 Slices done
 
 ## Immediate Next Steps
-1. User deployt V3.1 manuell ueber Coolify (Hetzner 159.69.207.29). Nach Deploy: Bedrock-Smoke-Test + REL-006 + roadmap V3.1 auf `released`.
-2. /backend SLC-034 — Employee-Auth + Invitation-Flow (Migration 072 RPCs + Server-Action inviteEmployee mit E-Mail-Versand + tenant_admin Mitarbeiter-Verwaltungs-UI + /accept-invitation/[token] Page).
-3. /qa SLC-034 — Pflicht nach /backend; muss End-to-End Invitation-Flow zeigen (Employee signup via Token-Link + handle_new_user-Trigger akzeptiert 'employee'-Rolle).
-4. /post-launch V3 — nach 1-2 Tagen Produktivbetrieb Stabilitaetscheck (parallel moeglich).
+1. /backend SLC-034 — Employee-Auth + Invitation-Flow (Migration 072 RPCs + Server-Action inviteEmployee mit E-Mail-Versand + tenant_admin Mitarbeiter-Verwaltungs-UI + /accept-invitation/[token] Page).
+2. /qa SLC-034 — Pflicht nach /backend; muss End-to-End Invitation-Flow zeigen (Employee signup via Token-Link + handle_new_user-Trigger akzeptiert 'employee'-Rolle). Erste echte Runtime-Verifikation der V4-Migrations-Produktionsnutzung.
+3. /post-launch V3 — nach 1-2 Tagen Produktivbetrieb Stabilitaetscheck (parallel moeglich).
 
 ## Active Scope
 **V4 — Zwei-Ebenen-Verschmelzung, 6 Features (planned), 8 Slices planned:**
@@ -45,7 +44,8 @@ V2 — 12/12 Slices done, released (REL-004).
 - aktuell keine
 
 ## Last Stable Version
-- V3 — 2026-04-24 — released auf https://onboarding.strategaizetransition.com (REL-005), Deploy-Commit e775ff0.
+- V3.1 — 2026-04-24 — released auf https://onboarding.strategaizetransition.com (REL-006), Deploy-Commit cffc639. Maintenance-Release + dormant V4-Schema.
+- V3 — 2026-04-24 — released (REL-005), Deploy-Commit e775ff0.
 - V2 — 2026-04-21 — released (REL-004).
 
 ## Notes
