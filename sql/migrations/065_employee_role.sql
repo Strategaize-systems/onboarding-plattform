@@ -47,8 +47,15 @@ ALTER TABLE public.profiles
 -- 2. handle_new_user() Whitelist additiv erweitern
 --    CREATE OR REPLACE ist idempotent. Funktions-Body identisch zu functions.sql,
 --    nur die Whitelist-Pruefung ist um 'employee' erweitert.
+--    IMP-103: Explicit public. prefix erforderlich — search_path hat storage vor public,
+--    sonst wird die Funktion in storage.handle_new_user angelegt (der Trigger ruft
+--    aber public.handle_new_user auf → Update greift nicht).
 -- =============================================
-CREATE OR REPLACE FUNCTION handle_new_user()
+-- Defensive Cleanup: eine ggf. in storage.handle_new_user entstandene Duplicate-Funktion
+-- (Erstapplikation dieser Migration ohne public.-Prefix) entfernen.
+DROP FUNCTION IF EXISTS storage.handle_new_user() CASCADE;
+
+CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
