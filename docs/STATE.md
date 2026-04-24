@@ -10,12 +10,14 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: SLC-034 RELEASED 2026-04-24 als REL-007 (Deploy-Commit `82c987e`). Browser-End-to-End durch User bestaetigt (Einladung → echte E-Mail → Passwort-Set → Auto-Login → /employee-Dashboard → tenant_admin sieht Mitarbeiter in /admin/team). Bug-Fix 82c987e nach erstem Redeploy: Mitarbeiter-Link in tenant_admin-Sidebar ergaenzt (war in MT-5 uebersehen). 2/8 V4-Slices released. Naechste Skill-Arbeit: /backend SLC-035 (Bridge-Engine Backend).
-- Current Phase: V4 Implementation — 2/8 Slices released
+- Current Focus: SLC-035 MT-1..MT-3 implementiert (Backend-Kern): Migration 073 (3 Bridge-RPCs) + 073b (ai_cost_ledger.role-CHECK um bridge_engine) live auf Hetzner, Prompt-Builder (Template+FreeForm), Worker-Handler mit Dependency-Injection fuer BedrockCaller. 34 neue Bridge-Unit-Tests + 19 neue RPC-Integration-Tests (53 neu, Suite 197/197 PASS). Slice SLC-035 ist in_progress — MT-4 (Dispatcher-Registrierung), MT-5 (Stale-E2E-Test), MT-7 (Record-Updates) stehen vor /qa aus.
+- Current Phase: V4 Implementation — 2/8 Slices released, SLC-035 Backend-Kern committed (3226068+5c3f5ff+26086b8)
 
 ## Immediate Next Steps
-1. **/backend SLC-035** — Bridge-Engine Backend. Migration 073 (3 RPCs: rpc_trigger_bridge_run, rpc_approve_bridge_proposal, rpc_reject_bridge_proposal) + neuer Worker-Job `bridge_generation` (Hybrid-Pattern DEC-034: Template-Standard + KI-Verfeinerung ueber Bedrock + max 3 Free-Form-Slots). Dependency: SLC-034 released (DONE). Naechster Slice nach /qa: SLC-036 Bridge-Review-UI.
-2. Begleitend: `/post-launch` fuer SLC-034 nach 1-2 Tagen Produktivbetrieb (optional, low-risk bei aktuellem Nutzungsstand).
+1. **MT-4: Worker-Dispatcher-Registrierung** — `src/workers/condensation/claim-loop.ts` um `bridge_generation` Job-Type erweitern und Handler in `src/workers/run.ts` registrieren. Kleinschritt, keine Architekturaenderung.
+2. **MT-5: Stale-Trigger E2E-Test** — `src/__tests__/integration/bridge-stale-flow.test.ts` als Pflicht-Verifikation DEC-039.
+3. **/qa SLC-035** — End-to-End gegen real gefuellte capture_session (GF-Blueprint ≥1 Checkpoint + Diagnose), echter Bedrock-Call eu-central-1, Cost-Ledger-Verifikation, Bridge-Proposal-Struktur-Review.
+4. Begleitend: `/post-launch` fuer SLC-034 nach 1-2 Tagen Produktivbetrieb (optional, low-risk).
 
 ## Active Scope
 **V4 — Zwei-Ebenen-Verschmelzung, 6 Features (planned), 8 Slices planned:**
