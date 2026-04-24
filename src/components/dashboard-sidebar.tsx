@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { logout } from "@/app/login/actions";
-import { PlusCircle, LogOut, ArrowLeft } from "lucide-react";
+import { PlusCircle, LogOut, ArrowLeft, Users } from "lucide-react";
 
 interface DashboardSidebarProps {
   profile: {
@@ -81,24 +81,47 @@ export function DashboardSidebar({ profile, activePage }: DashboardSidebarProps)
       {/* Navigation */}
       <div className="flex-1 overflow-y-auto px-3 py-1 space-y-1.5">
         {/* Neue Erhebung — primary action for V1 */}
-        {profile.role === "tenant_admin" && (
-          <Link
-            href="/capture/new"
-            className={`flex w-full items-center gap-3 rounded-xl px-4 py-3.5 text-left transition-all duration-200 ${
-              activePage === "capture"
-                ? "bg-gradient-to-r from-brand-primary to-brand-primary-dark text-white shadow-[0_8px_16px_-4px_rgba(68,84,184,0.35)]"
-                : "text-slate-300 hover:bg-white/[0.06]"
-            }`}
-          >
-            <PlusCircle className="h-4 w-4" />
-            <div className="min-w-0 flex-1">
-              <div className="text-sm font-bold leading-snug">Neue Erhebung</div>
-              <div className={`text-[10px] uppercase tracking-wider font-semibold mt-0.5 ${activePage === "capture" ? "text-white/50" : "text-slate-500"}`}>
-                Session starten
-              </div>
-            </div>
-          </Link>
-        )}
+        {profile.role === "tenant_admin" && (() => {
+          const isTeamActive = pathname.startsWith("/admin/team");
+          const isCaptureActive = activePage === "capture" && !isTeamActive;
+          return (
+            <>
+              <Link
+                href="/capture/new"
+                className={`flex w-full items-center gap-3 rounded-xl px-4 py-3.5 text-left transition-all duration-200 ${
+                  isCaptureActive
+                    ? "bg-gradient-to-r from-brand-primary to-brand-primary-dark text-white shadow-[0_8px_16px_-4px_rgba(68,84,184,0.35)]"
+                    : "text-slate-300 hover:bg-white/[0.06]"
+                }`}
+              >
+                <PlusCircle className="h-4 w-4" />
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-bold leading-snug">Neue Erhebung</div>
+                  <div className={`text-[10px] uppercase tracking-wider font-semibold mt-0.5 ${isCaptureActive ? "text-white/50" : "text-slate-500"}`}>
+                    Session starten
+                  </div>
+                </div>
+              </Link>
+              {/* Mitarbeiter — SLC-034 (V4) */}
+              <Link
+                href="/admin/team"
+                className={`flex w-full items-center gap-3 rounded-xl px-4 py-3.5 text-left transition-all duration-200 ${
+                  isTeamActive
+                    ? "bg-gradient-to-r from-brand-primary to-brand-primary-dark text-white shadow-[0_8px_16px_-4px_rgba(68,84,184,0.35)]"
+                    : "text-slate-300 hover:bg-white/[0.06]"
+                }`}
+              >
+                <Users className="h-4 w-4" />
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-bold leading-snug">Mitarbeiter</div>
+                  <div className={`text-[10px] uppercase tracking-wider font-semibold mt-0.5 ${isTeamActive ? "text-white/50" : "text-slate-500"}`}>
+                    Einladungen & Team
+                  </div>
+                </div>
+              </Link>
+            </>
+          );
+        })()}
         {/* Legacy Blueprint Runs — hidden for V1, will be replaced by capture session list */}
         {/* Legacy Mirror-Teilnehmer — hidden for V1, concept preserved for V2+ */}
       </div>
