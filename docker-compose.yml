@@ -318,6 +318,15 @@ services:
         condition: service_started
     networks:
       - strategaize-net
+    # V3.1 BL-040: Image-Default-Healthcheck ruft ENV-abhaengig einen
+    # internen Platform-Profile-Endpoint an, der in unserer Konfiguration
+    # nicht stabil erreichbar ist -> Container laeuft faktisch, meldet aber
+    # 'unhealthy'. Kein Production-Pfad (Studio ist internes Admin-Tool via
+    # SSH-Tunnel, nicht oeffentlich). Healthcheck bewusst deaktiviert, um
+    # false-positive Restart-Loops und irrefuehrende Coolify-Status zu
+    # vermeiden. Siehe DEC-041.
+    healthcheck:
+      disable: true
 
   # ============================================================
   # OPTIONAL: DIFY (deaktiviert in MVP-1)

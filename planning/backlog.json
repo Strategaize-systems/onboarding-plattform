@@ -375,9 +375,9 @@
       "title": "AWS-SDK Upgrade fuer @xmldom/xmldom Transitive-Vuln",
       "type": "fix",
       "priority": "medium",
-      "status": "open",
+      "status": "done",
       "version": "V3.1",
-      "description": "npm audit meldet 17 Vulnerabilities (1 High, 16 Moderate), alle in @xmldom/xmldom via @aws-sdk/token-providers (SSO-Pfad, nicht erreichbar mit IAM-Auth). Fix: npm update @aws-sdk/client-bedrock-runtime von 3.1024 auf 3.1035+. Vor Commit: Bedrock-Smoke-Test im Worker. Loest ISSUE-019. Scope ~15 min.",
+      "description": "Done 2026-04-24 (RPT-072). `npm update @aws-sdk/client-bedrock-runtime` 3.1024.0 -> 3.1036.0 (Caret, loest fast-xml-parser-Kette via @aws-sdk/xml-builder). Zusaetzlich npm-Override `@xmldom/xmldom: ^0.8.13` in package.json, weil verbleibender xmldom-Vuln via mammoth (Evidence DOCX-Extraction, Prod-Pfad) kam, nicht nur ueber SSO. `npm audit --omit=dev` = 0 Vulnerabilities. Build gruen. 6 moderate in devDeps (vitest/vite/esbuild-Chain) sind Dev-Server-Advisory und bleiben out-of-V3.1-Scope (vitest@4 = Breaking Change). Loest ISSUE-019. Runtime-Bedrock-Smoke nach User-Deploy auf Hetzner.",
       "createdAt": "2026-04-23"
     },
     {
@@ -385,9 +385,9 @@
       "title": "Test-Isolation Fix fuer admin-rls.test.ts",
       "type": "fix",
       "priority": "medium",
-      "status": "open",
+      "status": "done",
       "version": "V3.1",
-      "description": "admin-rls.test.ts:199 und :224 prueft unfiltered `SELECT tenant_id FROM validation_layer` mit Assertion rowCount === 2. Schlaegt fehl sobald Bestandsdaten in der DB existieren (Demo-Session 64ad04eb). Fix: Assertions per WHERE tenant_id IN (test-tenants) isolieren. Loest ISSUE-018. Scope ~30 min.",
+      "description": "Done 2026-04-24 (RPT-072). Drei Assertions in src/lib/db/__tests__/admin-rls.test.ts (Zeilen 88, 100, 197) per `WHERE tenant_id IN ($1, $2)` mit Test-Tenant-Parametern isoliert. Tsc --noEmit gruen. Integration-Test-Verifikation gegen Coolify-DB erfolgt nach Deploy. Loest ISSUE-018.",
       "createdAt": "2026-04-23"
     },
     {
@@ -395,9 +395,9 @@
       "title": "supabase-studio Healthcheck untersuchen",
       "type": "fix",
       "priority": "low",
-      "status": "open",
+      "status": "done",
       "version": "V3.1",
-      "description": "supabase-studio-Container zeigt seit V2 Status 'unhealthy'. Core-DB und Admin-Funktionalitaet nicht betroffen, aber der Healthcheck sollte entweder repariert oder als bewusster Skip dokumentiert werden. Scope ~20 min Untersuchung + Fix oder DEC.",
+      "description": "Done 2026-04-24 (RPT-072). Image-Default-Healthcheck ruft internen Platform-Profile-Endpoint, der in self-hosted Setup nicht stabil antwortet. Container laeuft funktional. Entscheidung: Healthcheck via `healthcheck: disable: true` in docker-compose.yml abschalten, Grund in DEC-041 dokumentiert. Falls kuenftig anderer Service Studio-Health braucht, eigener Check nachruestbar. ISSUE-020 als wontfix geschlossen (bewusster Skip).",
       "createdAt": "2026-04-23"
     },
     {

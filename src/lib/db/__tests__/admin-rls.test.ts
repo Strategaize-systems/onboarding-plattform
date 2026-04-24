@@ -82,10 +82,13 @@ describe("Admin RLS — Cross-Tenant Knowledge Unit Access", () => {
         ]
       );
 
-      // strategaize_admin sieht BEIDE KUs
+      // strategaize_admin sieht BEIDE KUs — Filter auf Test-Tenants, damit Bestandsdaten die Assertion nicht brechen (ISSUE-018)
       await withJwtContext(client, adminUserId, async () => {
         const result = await client.query<{ title: string; tenant_id: string }>(
-          `SELECT title, tenant_id FROM public.knowledge_unit ORDER BY title`
+          `SELECT title, tenant_id FROM public.knowledge_unit
+           WHERE tenant_id IN ($1, $2)
+           ORDER BY title`,
+          [tenantA, tenantB]
         );
         expect(result.rowCount).toBe(2);
         expect(result.rows[0].title).toBe("KU-A");
@@ -94,10 +97,12 @@ describe("Admin RLS — Cross-Tenant Knowledge Unit Access", () => {
         expect(result.rows[1].tenant_id).toBe(tenantB);
       });
 
-      // tenant_admin von A sieht NUR KU-A
+      // tenant_admin von A sieht NUR KU-A — Filter auf Test-Tenants (ISSUE-018)
       await withJwtContext(client, userA, async () => {
         const result = await client.query<{ title: string }>(
-          `SELECT title FROM public.knowledge_unit`
+          `SELECT title FROM public.knowledge_unit
+           WHERE tenant_id IN ($1, $2)`,
+          [tenantA, tenantB]
         );
         expect(result.rowCount).toBe(1);
         expect(result.rows[0].title).toBe("KU-A");
@@ -191,18 +196,23 @@ describe("Admin RLS — Cross-Tenant Knowledge Unit Access", () => {
         [tenantA, kuA.rows[0].id, userA, tenantB, kuB.rows[0].id, userB]
       );
 
-      // strategaize_admin sieht BEIDE validation_layer-Eintraege
+      // strategaize_admin sieht BEIDE validation_layer-Eintraege — Filter auf Test-Tenants (ISSUE-018)
       await withJwtContext(client, adminUserId, async () => {
         const result = await client.query<{ tenant_id: string }>(
-          `SELECT tenant_id FROM public.validation_layer ORDER BY tenant_id`
+          `SELECT tenant_id FROM public.validation_layer
+           WHERE tenant_id IN ($1, $2)
+           ORDER BY tenant_id`,
+          [tenantA, tenantB]
         );
         expect(result.rowCount).toBe(2);
       });
 
-      // tenant_admin von A sieht nur eigene
+      // tenant_admin von A sieht nur eigene — Filter auf Test-Tenants (ISSUE-018)
       await withJwtContext(client, userA, async () => {
         const result = await client.query<{ tenant_id: string }>(
-          `SELECT tenant_id FROM public.validation_layer`
+          `SELECT tenant_id FROM public.validation_layer
+           WHERE tenant_id IN ($1, $2)`,
+          [tenantA, tenantB]
         );
         expect(result.rowCount).toBe(1);
         expect(result.rows[0].tenant_id).toBe(tenantA);

@@ -10,13 +10,13 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: slice-planning
-- Current Focus: V4 Slice-Planning abgeschlossen (2026-04-24) — 8 Slice-Files SLC-033..040 unter /slices/ dokumentiert, mit Micro-Tasks, Migrations-Zuordnung, Pflicht-QA-Vorgaben (RLS-Matrix 32 Faelle, Nicht-Tech-User-Smoke-Test, walkthrough_stub Spike). Naechster Schritt: /backend SLC-033 (V4 Schema-Fundament). V3 released + live, V3.1 Maintenance parallel moeglich.
-- Current Phase: V4 Slice-Planning done
+- Current Focus: V3.1 Maintenance code-seitig abgeschlossen (2026-04-24, 3 Backlog-Items done: BL-038 AWS-SDK+mammoth-Vulns auf 0 prod, BL-039 admin-rls.test-Isolation, BL-040 supabase-studio Healthcheck-Skip + DEC-041). Wartet auf User-Deploy nach Coolify-Hetzner fuer Runtime-Bedrock-Smoke. V4 Slice-Planning (8 Slices SLC-033..040) done. Naechste Skill-Arbeit: V3.1 Deploy + dann /backend SLC-033.
+- Current Phase: V3.1 Maintenance Code Done / V4 Slice-Planning done
 
 ## Immediate Next Steps
-1. /backend SLC-033 — V4 Schema-Fundament (Migrations 065-071 + 075 + RLS-Test-Matrix-Skelett). Blocker fuer alle weiteren V4-Slices.
-2. /post-launch V3 — nach 1-2 Tagen Produktivbetrieb Stabilitaetscheck (parallel moeglich).
-3. V3.1 Maintenance (BL-038..040, ~60 min) parallel einplanen.
+1. User deployt V3.1 manuell ueber Coolify (Hetzner 159.69.207.29). Nach Deploy: Bedrock-Smoke-Test via Worker-Run (Condensation-Job) + Coolify-Status von supabase-studio (sollte `healthy` oder ohne Check laufen).
+2. /backend SLC-033 — V4 Schema-Fundament (Migrations 065-071 + 075 + RLS-Test-Matrix-Skelett). Blocker fuer alle weiteren V4-Slices.
+3. /post-launch V3 — nach 1-2 Tagen Produktivbetrieb Stabilitaetscheck (parallel moeglich).
 
 ## Active Scope
 **V4 — Zwei-Ebenen-Verschmelzung, 6 Features (planned), 8 Slices planned:**
@@ -36,7 +36,7 @@ V4.1 (Unternehmerhandbuch ausgebaut) und V4.2 (Self-Service-Cockpit ausgebaut) s
 
 **V3 — Dialogue-Mode, 8 Slices done, released 2026-04-24 (REL-005).** Alle 5 Features live. Smoke-Test PASS, Gesamt-QA PASS (RPT-065), Final-Check PASS (RPT-066), Go-Live GO (RPT-067), Deploy done (RPT-070).
 
-**V3.1 — Maintenance (3 Items, planned, nicht blockierend).** BL-038 AWS-SDK-Vuln, BL-039 admin-rls.test.ts Test-Isolation, BL-040 supabase-studio Healthcheck.
+**V3.1 — Maintenance (3 Items, code done 2026-04-24, wartet auf Deploy).** BL-038 AWS-SDK Upgrade 3.1024→3.1036 + npm-Override `@xmldom/xmldom@^0.8.13` via mammoth → `npm audit --omit=dev` = 0 Vulns. BL-039 admin-rls.test.ts drei Assertions mit `WHERE tenant_id IN ($1,$2)` isoliert → ISSUE-018 resolved. BL-040 supabase-studio Healthcheck in docker-compose.yml deaktiviert → DEC-041, ISSUE-020 als `wontfix` geschlossen. Runtime-Verification: Bedrock-Smoke via Condensation-Worker nach User-Deploy.
 
 V2 — 12/12 Slices done, released (REL-004).
 

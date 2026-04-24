@@ -60,6 +60,9 @@
     "tailwind-merge": "^2.2.0",
     "zod": "^4.3.5"
   },
+  "overrides": {
+    "@xmldom/xmldom": "^0.8.13"
+  },
   "devDependencies": {
     "@types/archiver": "^7.0.0",
     "@types/node": "^20",

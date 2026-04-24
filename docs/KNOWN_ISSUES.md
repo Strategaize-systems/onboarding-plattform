@@ -147,20 +147,29 @@
 - Resolution: Wontfix — Tenant-Language wird bewusst pro Tenant in `tenants.language` gesetzt und von der Middleware (`src/lib/supabase/middleware.ts:53-83`) auf jedem Request erzwungen. Es gibt keinen User-Facing Language-Switcher — die Sprache wird vom Tenant-Admin zentral in `/admin/tenants` festgelegt, typischerweise beim Tenant-Onboarding. Ein User-Override wuerde die Auth/Session-Architektur brechen und ist fachlich nicht noetig (B2B-Kontext: User arbeiten konsistent in der Sprache ihres Tenants). Siehe DEC-033.
 
 ### ISSUE-018 — admin-rls.test.ts: unfiltered SELECT mit Count-Assertion bricht gegen Live-DB mit Bestandsdaten
-- Status: open
+- Status: resolved
+- Resolution Date: 2026-04-24
 - Severity: Low
 - Area: Testing / Test-Design
-- Summary: `src/lib/db/__tests__/admin-rls.test.ts:199` und `:224` pruefen `SELECT tenant_id FROM public.validation_layer ORDER BY tenant_id` ohne Tenant-Filter und erwarten `rowCount === 2`. Sobald in der Live-DB vorhandene Bestandsdaten (z.B. Demo-Session 64ad04eb mit 5 knowledge_units) existieren, werden mehr Rows zurueckgegeben und die Assertion schlaegt fehl. Kein Code-Regression, sondern Test-Isolation-Flaw.
-- Impact: Nur Test-Reporting — 2 von 24 RLS-Tests false-failing. Funktionale Isolation der strategaize_admin-Rolle ist nicht betroffen, nur die Assertion-Formulierung ist brittle.
-- Next Action: Test-Fix in V3.1: Assertions per `WHERE tenant_id IN (tenantA, tenantB)` isolieren. Siehe RPT-066.
+- Summary: `src/lib/db/__tests__/admin-rls.test.ts` Zeilen 88, 100 und 197 pruefen unfiltered SELECT-Queries mit `rowCount === 2` bzw. `=== 1`. Sobald in der Live-DB Bestandsdaten existieren, brechen die Assertions. Kein Code-Regression, sondern Test-Isolation-Flaw.
+- Resolution: V3.1 BL-039 — drei Assertions per `WHERE tenant_id IN ($1, $2)` mit Test-Tenant-Parametern isoliert. Type-Check gruen. Integration-Test gegen Coolify-DB folgt nach Deploy.
 
 ### ISSUE-019 — npm audit: @xmldom/xmldom Transitive-Vuln via AWS-SDK SSO-Token-Providers
-- Status: open
+- Status: resolved
+- Resolution Date: 2026-04-24
 - Severity: Low
 - Area: Security / Dependencies
-- Summary: `npm audit --omit=dev` meldet 17 Vulnerabilities (16 Moderate, 1 High), alle in `@xmldom/xmldom` via `@aws-sdk/token-providers` (SSO-Pfad). Praxis-Exploit nicht erreichbar, weil Bedrock mit IAM-User-Credentials betrieben wird. Fix verfuegbar via Upgrade `@aws-sdk/client-bedrock-runtime` von 3.1024.0 auf 3.1035.0 (gleicher Major, im Caret-Range).
-- Impact: Kein Produktions-Risiko — SSO-Code-Pfad wird nicht durchlaufen.
-- Next Action: In V3.1-Wartungsrelease `npm update @aws-sdk/client-bedrock-runtime`. Vor Commit: Bedrock-Smoke-Test (condensation-worker-job).
+- Summary: `npm audit --omit=dev` meldete Vulnerabilities im `@xmldom/xmldom`- und `fast-xml-parser`-Pfad via `@aws-sdk/*`. Praxis-Exploit fuer SSO-Pfad nicht erreichbar, aber `@xmldom/xmldom`-High-Severity zusaetzlich via `mammoth` (DOCX-Extraktion im Evidence-Mode, Production-Pfad).
+- Resolution: V3.1 BL-038 — `npm update @aws-sdk/client-bedrock-runtime` 3.1024.0 → 3.1036.0 (Caret-Range; behob fast-xml-parser-Kette). Zusaetzlich npm-Override `@xmldom/xmldom: ^0.8.13` in package.json, damit mammoth die patched 0.8.x-Version verwendet. `npm audit --omit=dev` → 0 Vulnerabilities. 6 verbleibende Moderate in devDependencies (vitest/vite/esbuild-Chain, Dev-Server-Advisory, kein Prod-Risiko) sind als separate Wartungs-Schicht belassen (`vitest@4`-Upgrade = Breaking Change, out-of-V3.1-Scope).
+
+### ISSUE-020 — supabase-studio Container meldet dauerhaft 'unhealthy'
+- Status: wontfix
+- Resolution Date: 2026-04-24
+- Severity: Low
+- Area: Infrastructure / Container-Health
+- Summary: Image-Default-Healthcheck von `supabase/studio:20241028-a265374` ruft internen Platform-Profile-Endpoint, der in unserer self-hosted Konfiguration nicht stabil antwortet. Container laeuft funktional (SSH-Tunnel erreichbar, Admin-Aktionen klappen), meldet aber `unhealthy` an Docker und Coolify.
+- Impact: Keine Produktions-Auswirkung — Studio ist internes Admin-Tool ueber SSH-Tunnel, kein oeffentliches Port-Mapping, kein anderer Service wartet per `condition: service_healthy`. Falschmeldung stoert Coolify-Dashboard-Optik.
+- Resolution: V3.1 BL-040 — `docker-compose.yml` Service `supabase-studio` bekommt `healthcheck: disable: true`. Entscheidung in DEC-041 dokumentiert. Falls kuenftig ein anderer Service Studio-Health abhaengig braucht, ist ein eigener Healthcheck nachzuruesten (aktuell keine Notwendigkeit).
 
 ### ISSUE-017 — 25 Test-Sessions in Demo-Tenant DB
 - Status: resolved
