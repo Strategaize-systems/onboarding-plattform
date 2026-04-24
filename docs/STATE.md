@@ -10,14 +10,12 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: SLC-034 Employee-Auth + Invitation-Flow CODE DONE + /qa PASS + Post-Deploy Phase 1 PASS 2026-04-24 (RPT-075 + RPT-076 + RPT-077). Deploy auf `18c6f61` live, alle 16 Container healthy, RPCs persistent, 4/4 Token-Page-Szenarien rendern korrekt (valid + expired + revoked + already_accepted via curl verifiziert). **Wartet auf User-Phase-2 (Browser-Interaktiv):** echte E-Mail-Zustellung, echter Passwort-Set-Flow + Auto-Login auf /employee, Audit-Log-Check nach Accept, Konflikt-Fall "E-Mail existiert bereits", Double-Accept. 5 Szenarien detailliert in RPT-077 §7. Bei Phase-2 PASS → SLC-034 released als REL-007, dann /backend SLC-035.
-- Current Phase: V4 Implementation — 2/8 Slices code-done + in Produktion, Browser-Runtime pending
+- Current Focus: SLC-034 RELEASED 2026-04-24 als REL-007 (Deploy-Commit `82c987e`). Browser-End-to-End durch User bestaetigt (Einladung → echte E-Mail → Passwort-Set → Auto-Login → /employee-Dashboard → tenant_admin sieht Mitarbeiter in /admin/team). Bug-Fix 82c987e nach erstem Redeploy: Mitarbeiter-Link in tenant_admin-Sidebar ergaenzt (war in MT-5 uebersehen). 2/8 V4-Slices released. Naechste Skill-Arbeit: /backend SLC-035 (Bridge-Engine Backend).
+- Current Phase: V4 Implementation — 2/8 Slices released
 
 ## Immediate Next Steps
-1. **Coolify-Redeploy auf d7f2cfd** — User-Aktion. Deploy-Commit + Health-Check nach 2min. Bringt /admin/team, /accept-invitation/[token], /employee und Migration-072-RPCs in Produktion.
-2. **Post-Deploy Browser-Smoke (5 Szenarien aus RPT-076 §4.1):** Login als tenant_admin → /admin/team → Einladung an echte Inbox → Link oeffnen (Inkognito) → Passwort setzen → /employee-Landing. Plus Negative-Tests (Expired/Revoked/Invalid/Double-Accept) + Audit-Log-Check + Konflikt-Fall "E-Mail existiert bereits".
-3. Bei Browser-PASS: SLC-034 als `released` markieren, REL-007 eintragen, MIG-023-Progress-Zeile um Produktions-Rollout-Datum ergaenzen.
-4. **/backend SLC-035** — Bridge-Engine Backend (Migration 073 + Worker-Job `bridge_generation`). Voraussetzung: SLC-034 released.
+1. **/backend SLC-035** — Bridge-Engine Backend. Migration 073 (3 RPCs: rpc_trigger_bridge_run, rpc_approve_bridge_proposal, rpc_reject_bridge_proposal) + neuer Worker-Job `bridge_generation` (Hybrid-Pattern DEC-034: Template-Standard + KI-Verfeinerung ueber Bedrock + max 3 Free-Form-Slots). Dependency: SLC-034 released (DONE). Naechster Slice nach /qa: SLC-036 Bridge-Review-UI.
+2. Begleitend: `/post-launch` fuer SLC-034 nach 1-2 Tagen Produktivbetrieb (optional, low-risk bei aktuellem Nutzungsstand).
 
 ## Active Scope
 **V4 — Zwei-Ebenen-Verschmelzung, 6 Features (planned), 8 Slices planned:**
@@ -45,7 +43,8 @@ V2 — 12/12 Slices done, released (REL-004).
 - aktuell keine
 
 ## Last Stable Version
-- V3.1 — 2026-04-24 — released auf https://onboarding.strategaizetransition.com (REL-006), Deploy-Commit cffc639. Maintenance-Release + dormant V4-Schema.
+- V4-SLC-034 — 2026-04-24 — released auf https://onboarding.strategaizetransition.com (REL-007), Deploy-Commit 82c987e. Erster echter V4-Feature-Release: Employee-Auth + Invitation-Flow, Mitarbeiter-Verwaltung, /accept-invitation, /employee-Dashboard-Skelett. User-Browser-Smoke bestaetigt.
+- V3.1 — 2026-04-24 — released (REL-006), Deploy-Commit cffc639. Maintenance-Release + dormant V4-Schema.
 - V3 — 2026-04-24 — released (REL-005), Deploy-Commit e775ff0.
 - V2 — 2026-04-21 — released (REL-004).
 
