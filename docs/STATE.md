@@ -10,13 +10,14 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: SLC-034 Employee-Auth + Invitation-Flow CODE DONE 2026-04-24. Migration 072 mit 3 RPCs (create/revoke/accept_finalize) auf Hetzner appliziert und als public.-Schema verifiziert (IMP-120-konform). Server-Actions inviteEmployee + resendEmployeeInvitation + revokeEmployeeInvitation colocated in `/admin/team/actions.ts`. acceptEmployeeInvitation via DEC-011-Pattern (Auth-Admin-API + Finalize-RPC + Rollback-on-Fail) in `/accept-invitation/[token]/actions.ts`. E-Mail-Template DE/EN/NL in src/lib/email.ts ergaenzt. UI: /accept-invitation/[token] (Server+Client), /admin/team (Liste+Dialog+Revoke+Resend), /employee Dashboard-Skelett. Middleware um /accept-invitation als public path und role-aware Login-Redirect erweitert. TypeScript-Check clean. 2/8 V4-Slices done. Pending: /qa SLC-034 + Test-Run auf Server.
-- Current Phase: V4 Implementation — 2/8 Slices done
+- Current Focus: SLC-034 Employee-Auth + Invitation-Flow CODE DONE + /qa PASS 2026-04-24 (RPT-075 + RPT-076). Migration 072 auf Hetzner live, 14/14 RPC-Tests gruen auf Server, Gesamt-Suite 144/178 (34 todo, 0 failed). TypeScript clean, Stub-Detection clean, Wiring statisch verifiziert. 10/11 ACs PASS (AC-11 RLS-Matrix-Erweiterung planmaessig auf SLC-037 verschoben). **Wartet auf Coolify-Redeploy (User-Aktion, commit d7f2cfd) + Post-Deploy-Browser-Smoke (5 Szenarien inkl. echte E-Mail-Inbox, Audit-Log-Check, Konflikt-Fall).** Nach Browser-PASS → SLC-034 released als REL-007, dann /backend SLC-035.
+- Current Phase: V4 Implementation — 2/8 Slices code-done, 1/8 released
 
 ## Immediate Next Steps
-1. /qa SLC-034 — PFLICHT nach /backend. Muss abdecken: RPC-Tests gegen Coolify-DB gruen (13 Testfaelle in src/__tests__/rpc/employee-invitation-rpc.test.ts, Server-seitige Ausfuehrung per `docker run --rm --network ...` Pattern), End-to-End Browser-Smoke (tenant_admin laedt ein → E-Mail an echte Adresse → Link oeffnen → Passwort setzen → Redirect /employee), Negative-Tests (Expired/Revoked/Already-Accepted/Invalid Token), Audit-Log-Check (auth.users + profiles.role='employee' konsistent, kein verwaister Auth-User bei Finalize-Fail).
-2. Coolify-Redeploy mit SLC-034-Commit nach /qa PASS (User triggert manuell, dann Runtime-Check im Prod).
-3. /backend SLC-035 — Bridge-Engine Backend (Migration 073 + Worker-Job bridge_generation). Voraussetzung: SLC-034 released.
+1. **Coolify-Redeploy auf d7f2cfd** — User-Aktion. Deploy-Commit + Health-Check nach 2min. Bringt /admin/team, /accept-invitation/[token], /employee und Migration-072-RPCs in Produktion.
+2. **Post-Deploy Browser-Smoke (5 Szenarien aus RPT-076 §4.1):** Login als tenant_admin → /admin/team → Einladung an echte Inbox → Link oeffnen (Inkognito) → Passwort setzen → /employee-Landing. Plus Negative-Tests (Expired/Revoked/Invalid/Double-Accept) + Audit-Log-Check + Konflikt-Fall "E-Mail existiert bereits".
+3. Bei Browser-PASS: SLC-034 als `released` markieren, REL-007 eintragen, MIG-023-Progress-Zeile um Produktions-Rollout-Datum ergaenzen.
+4. **/backend SLC-035** — Bridge-Engine Backend (Migration 073 + Worker-Job `bridge_generation`). Voraussetzung: SLC-034 released.
 
 ## Active Scope
 **V4 — Zwei-Ebenen-Verschmelzung, 6 Features (planned), 8 Slices planned:**
