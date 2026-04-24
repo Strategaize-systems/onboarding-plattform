@@ -10,15 +10,14 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: V4 SLC-033 V4 Schema-Fundament code-seitig abgeschlossen (2026-04-24, 8 Migrationen 065-071+075 geschrieben, sql/schema.sql + functions.sql Parity-Update fuer 'employee'-Rolle, RLS-Test-Matrix-Skelett in src/__tests__/rls/ mit 32 Matrix-Todo-Faellen + 10 direkten PASS-Faellen + 1 Trigger-Test fuer bridge_run_set_stale, V4-Fixtures mit 7 Usern und 4 Sessions pro Matrix-Lauf). Wartet auf Hetzner-Deploy der 8 Migrationen via base64 + psql -U postgres. Naechste Skill-Arbeit nach Deploy: /qa SLC-033.
-- Current Phase: V4 Implementation — SLC-033 Code Done
+- Current Focus: V4 SLC-033 V4 Schema-Fundament DONE 2026-04-24 (Code + Hetzner-Deploy + /qa PASS via RPT-073). Alle 8 Migrationen (065-071+075) idempotent auf Coolify-DB appliziert, RLS-Perimeter-Policies aktiv, bridge_run_set_stale-Trigger verifiziert, Test-Suite 130 passed | 34 todo | 0 failed. Ein in-QA-Blocker (Migration 065 `handle_new_user()` Schema-Duplicate) sofort gefixt (Commit d83c9a9). 1/8 V4-Slices done. Naechste Skill-Arbeit: /backend SLC-034.
+- Current Phase: V4 Implementation — 1/8 Slices done
 
 ## Immediate Next Steps
 1. User deployt V3.1 manuell ueber Coolify (Hetzner 159.69.207.29). Nach Deploy: Bedrock-Smoke-Test + REL-006 + roadmap V3.1 auf `released`.
-2. SLC-033 Migrations auf Hetzner applizieren (8 Files, base64 + `docker exec ... psql -U postgres`, sql-migration-hetzner.md-Pattern).
-3. /qa SLC-033 — Pflicht-Verifikation: Idempotenz aller 8 Migrationen, RLS-Matrix-Skelett gruen, `sql/schema.sql` Parity, `bridge_run_set_stale` Trigger-Test, `npm run test` insgesamt gruen.
-4. /backend SLC-034 — Employee-Auth + Invitation-Flow (Migration 072 RPCs + /accept-invitation/[token] Page).
-5. /post-launch V3 — nach 1-2 Tagen Produktivbetrieb Stabilitaetscheck (parallel moeglich).
+2. /backend SLC-034 — Employee-Auth + Invitation-Flow (Migration 072 RPCs + Server-Action inviteEmployee mit E-Mail-Versand + tenant_admin Mitarbeiter-Verwaltungs-UI + /accept-invitation/[token] Page).
+3. /qa SLC-034 — Pflicht nach /backend; muss End-to-End Invitation-Flow zeigen (Employee signup via Token-Link + handle_new_user-Trigger akzeptiert 'employee'-Rolle).
+4. /post-launch V3 — nach 1-2 Tagen Produktivbetrieb Stabilitaetscheck (parallel moeglich).
 
 ## Active Scope
 **V4 — Zwei-Ebenen-Verschmelzung, 6 Features (planned), 8 Slices planned:**
