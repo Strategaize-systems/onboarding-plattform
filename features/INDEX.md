@@ -35,11 +35,11 @@
 
 | ID | Feature | Status | Spec | Created |
 |----|---------|--------|------|---------|
-| FEAT-017 | Jitsi Meeting Infrastructure | done | [Spec](FEAT-017-jitsi-meeting-infrastructure.md) | 2026-04-21 |
-| FEAT-018 | Meeting Guide (Basic) | done | [Spec](FEAT-018-meeting-guide.md) | 2026-04-21 |
-| FEAT-019 | Dialogue Session (Video-Call + Recording) | done | [Spec](FEAT-019-dialogue-session.md) | 2026-04-21 |
-| FEAT-020 | Recording-to-Knowledge Pipeline | done | [Spec](FEAT-020-recording-to-knowledge-pipeline.md) | 2026-04-21 |
-| FEAT-021 | Dialogue Pipeline Integration | done | [Spec](FEAT-021-dialogue-pipeline-integration.md) | 2026-04-21 |
+| FEAT-017 | Jitsi Meeting Infrastructure | deployed | [Spec](FEAT-017-jitsi-meeting-infrastructure.md) | 2026-04-21 |
+| FEAT-018 | Meeting Guide (Basic) | deployed | [Spec](FEAT-018-meeting-guide.md) | 2026-04-21 |
+| FEAT-019 | Dialogue Session (Video-Call + Recording) | deployed | [Spec](FEAT-019-dialogue-session.md) | 2026-04-21 |
+| FEAT-020 | Recording-to-Knowledge Pipeline | deployed | [Spec](FEAT-020-recording-to-knowledge-pipeline.md) | 2026-04-21 |
+| FEAT-021 | Dialogue Pipeline Integration | deployed | [Spec](FEAT-021-dialogue-pipeline-integration.md) | 2026-04-21 |
 
 ## V4 Features (Zwei-Ebenen-Verschmelzung — Mitarbeiter + Unternehmerhandbuch)
 

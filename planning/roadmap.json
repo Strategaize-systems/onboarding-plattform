@@ -24,8 +24,8 @@
     {
       "id": "v3",
       "name": "V3",
-      "status": "active",
-      "summary": "Dialogue-Mode: Strukturierte Wissenserhebung durch Gespraeche. Eigene Jitsi+Jibri-Instanz auf Onboarding-Server, Meeting-Guide (Basic) mit leichter KI-Unterstuetzung, Video-Call mit Recording, Post-Meeting KI-Pipeline (Transkript -> Knowledge Units + Summary + Gap Detection), Pipeline-Integration in Diagnose/SOP/Debrief. 5 Features (FEAT-017..021). Requirements 2026-04-21.",
+      "status": "released",
+      "summary": "Dialogue-Mode: Strukturierte Wissenserhebung durch Gespraeche. Eigene Jitsi+Jibri-Instanz auf Onboarding-Server, Meeting-Guide (Basic) mit leichter KI-Unterstuetzung, Video-Call mit Recording, Post-Meeting KI-Pipeline (Transkript -> Knowledge Units + Summary + Gap Detection), Pipeline-Integration in Diagnose/SOP/Debrief. 5 Features (FEAT-017..021). Released 2026-04-24 (REL-005).",
       "order": 4
     },
     {

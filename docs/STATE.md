@@ -9,16 +9,14 @@
 Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdichtung. Ermoeglicht mehrere Capture-Modi (Fragebogen, Meeting, Voice, etc.) und Template-basierte Produktvarianten (z.B. Exit-Readiness, Immobilien-Onboarding). Ab V4: Zwei-Ebenen-Verschmelzung (GF-Blueprint + Mitarbeiter-Capture + Unternehmerhandbuch-Output).
 
 ## Current State
-- High-Level State: architecture
-- Current Focus: V4-Architektur abgeschlossen. 7 Architektur-Entscheidungen DEC-034..040 dokumentiert (Bridge-Hybrid Q17, Passwort-Auth Q18, parallele Rollen Q19, on-demand Bridge Q20, Template-Schablone Handbuch Q21, on-demand Re-Run mit stale-Hinweis Q22, Hook-Granularitaet Worker+UI-Slot Q23). MIG-023 mit 11 Migrationen geplant. Capture-Mode-Hooks-Spike (walkthrough_stub) als SC-V4-6-Validierung im Architektur-Plan. 8 V4-Slices empfohlen. Naechster Schritt: /slice-planning V4. Parallel offen: V3 Go-Live + V3.1 Maintenance.
-- Current Phase: V4 Architecture done
+- High-Level State: stable
+- Current Focus: V3 released (REL-005, 2026-04-24) + V4-Architektur abgeschlossen. V3 Dialogue-Mode ist live auf https://onboarding.strategaizetransition.com mit allen 5 Features deployed. V4 7 DECs (DEC-034..040), 11 Migrationen und 8 Slices empfohlen, wartet auf /slice-planning. V3.1 Maintenance (3 Items) parallel moeglich.
+- Current Phase: V3 Released / V4 Architecture done
 
 ## Immediate Next Steps
-1. /slice-planning V4 — 8 Slices (SLC-033..040) auf Basis ARCHITECTURE.md V4-Sektion und FEAT-022..027 detailliert ausarbeiten
-2. Coolify-Redeploy V3 (User, manuell) auf Commit 3d2074a — bringt Back-Button (ISSUE-015) live
-3. /deploy V3 nach Redeploy — REL-005, roadmap V3 auf released, V3-Features auf deployed
-4. /post-launch V3 — nach 1-2 Tagen Produktivbetrieb
-5. V3.1 Maintenance (BL-038..040, ~60 min) parallel zu V4-Planung moeglich
+1. /post-launch V3 — nach 1-2 Tagen Produktivbetrieb Stabilitaetscheck
+2. /slice-planning V4 — 8 Slices (SLC-033..040) auf Basis ARCHITECTURE.md V4-Sektion und FEAT-022..027 detailliert ausarbeiten
+3. V3.1 Maintenance (BL-038..040, ~60 min) vor V4-Implementation einplanen
 
 ## Active Scope
 **V4 — Zwei-Ebenen-Verschmelzung, 6 Features (planned), 8 Slices empfohlen:**
@@ -33,7 +31,7 @@ V4 plant 11 Migrationen (065-075) und 8 Slices (SLC-033..040). Detail in /docs/A
 
 V4.1 (Unternehmerhandbuch ausgebaut) und V4.2 (Self-Service-Cockpit ausgebaut) sind als Folge-Versionen in Roadmap; Detail-Requirements je in eigenem /requirements V4.1 / V4.2 wenn dran.
 
-**V3 — Dialogue-Mode, 8 Slices done.** Go-Live approved (RPT-067). Wartet auf Coolify-Redeploy + /deploy V3 (formales Release, REL-005).
+**V3 — Dialogue-Mode, 8 Slices done, released 2026-04-24 (REL-005).** Alle 5 Features live. Smoke-Test PASS, Gesamt-QA PASS (RPT-065), Final-Check PASS (RPT-066), Go-Live GO (RPT-067), Deploy done (RPT-070).
 
 **V3.1 — Maintenance (3 Items, planned, nicht blockierend).** BL-038 AWS-SDK-Vuln, BL-039 admin-rls.test.ts Test-Isolation, BL-040 supabase-studio Healthcheck.
 
@@ -43,8 +41,8 @@ V2 — 12/12 Slices done, released (REL-004).
 - aktuell keine
 
 ## Last Stable Version
-- V2 — 2026-04-21 — released auf https://onboarding.strategaizetransition.com (REL-004).
-- V3 — Go-Live approved (RPT-067), wartet auf Coolify-Redeploy + /deploy fuer formales REL-005.
+- V3 — 2026-04-24 — released auf https://onboarding.strategaizetransition.com (REL-005), Deploy-Commit e775ff0.
+- V2 — 2026-04-21 — released (REL-004).
 
 ## Notes
 V4 wurde am 2026-04-23 in Planungs-Session auf Basis Personal Strategic Model V1 + SOFTWARE-EXECUTION-MAP definiert. Strategischer Rahmen: SOFTWARE-EXECUTION-MAP Phase 1 (8 Wochen) — Track A (V3 abschliessen) + Track B (V4 Requirements done) + Track C (V4 Implementation 3-4 Wochen).
