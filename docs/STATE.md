@@ -10,8 +10,8 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: SLC-034 Employee-Auth + Invitation-Flow CODE DONE + /qa PASS 2026-04-24 (RPT-075 + RPT-076). Migration 072 auf Hetzner live, 14/14 RPC-Tests gruen auf Server, Gesamt-Suite 144/178 (34 todo, 0 failed). TypeScript clean, Stub-Detection clean, Wiring statisch verifiziert. 10/11 ACs PASS (AC-11 RLS-Matrix-Erweiterung planmaessig auf SLC-037 verschoben). **Wartet auf Coolify-Redeploy (User-Aktion, commit d7f2cfd) + Post-Deploy-Browser-Smoke (5 Szenarien inkl. echte E-Mail-Inbox, Audit-Log-Check, Konflikt-Fall).** Nach Browser-PASS → SLC-034 released als REL-007, dann /backend SLC-035.
-- Current Phase: V4 Implementation — 2/8 Slices code-done, 1/8 released
+- Current Focus: SLC-034 Employee-Auth + Invitation-Flow CODE DONE + /qa PASS + Post-Deploy Phase 1 PASS 2026-04-24 (RPT-075 + RPT-076 + RPT-077). Deploy auf `18c6f61` live, alle 16 Container healthy, RPCs persistent, 4/4 Token-Page-Szenarien rendern korrekt (valid + expired + revoked + already_accepted via curl verifiziert). **Wartet auf User-Phase-2 (Browser-Interaktiv):** echte E-Mail-Zustellung, echter Passwort-Set-Flow + Auto-Login auf /employee, Audit-Log-Check nach Accept, Konflikt-Fall "E-Mail existiert bereits", Double-Accept. 5 Szenarien detailliert in RPT-077 §7. Bei Phase-2 PASS → SLC-034 released als REL-007, dann /backend SLC-035.
+- Current Phase: V4 Implementation — 2/8 Slices code-done + in Produktion, Browser-Runtime pending
 
 ## Immediate Next Steps
 1. **Coolify-Redeploy auf d7f2cfd** — User-Aktion. Deploy-Commit + Health-Check nach 2min. Bringt /admin/team, /accept-invitation/[token], /employee und Migration-072-RPCs in Produktion.
