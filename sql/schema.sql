@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   id          uuid        PRIMARY KEY REFERENCES auth.users ON DELETE CASCADE,
   tenant_id   uuid        REFERENCES tenants ON DELETE CASCADE,
   email       text        NOT NULL,
-  role        text        NOT NULL CHECK (role IN ('strategaize_admin', 'tenant_admin', 'tenant_member')),
+  role        text        NOT NULL CHECK (role IN ('strategaize_admin', 'tenant_admin', 'tenant_member', 'employee')),
   created_at  timestamptz NOT NULL DEFAULT now()
 );
 

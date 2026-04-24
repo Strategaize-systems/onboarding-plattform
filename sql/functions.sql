@@ -52,12 +52,12 @@ BEGIN
     'tenant_admin'
   );
 
-  IF v_role NOT IN ('strategaize_admin', 'tenant_admin', 'tenant_member') THEN
+  IF v_role NOT IN ('strategaize_admin', 'tenant_admin', 'tenant_member', 'employee') THEN
     RAISE EXCEPTION 'handle_new_user: invalid role: %', v_role
       USING ERRCODE = 'P0400';
   END IF;
 
-  IF v_role IN ('tenant_admin', 'tenant_member') THEN
+  IF v_role IN ('tenant_admin', 'tenant_member', 'employee') THEN
     IF v_tenant_id IS NULL THEN
       RAISE EXCEPTION 'handle_new_user: tenant_id required for role %', v_role
         USING ERRCODE = 'P0422';
