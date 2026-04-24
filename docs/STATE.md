@@ -10,13 +10,13 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: V3.1 Maintenance Release released 2026-04-24 (REL-006, Deploy-Commit cffc639). V4 SLC-033 Schema-Fundament DONE und im selben Deploy dormant mitgekommen. Alle Verifikationen PASS: Container healthy, BL-038 (AWS-SDK 3.1036 + xmldom 0.8.13 override), BL-039 (admin-rls-Test 2/2 PASS gegen Coolify-DB), BL-040 (supabase-studio ohne Healthcheck, DEC-041 wirksam), SLC-033 RLS-Matrix-Skelett gruen (RPT-073), Worker Bedrock-Config eu-central-1 + Claude Sonnet 4. 1/8 V4-Slices done. Naechste Skill-Arbeit: /backend SLC-034.
-- Current Phase: V4 Implementation — 1/8 Slices done
+- Current Focus: SLC-034 Employee-Auth + Invitation-Flow CODE DONE 2026-04-24. Migration 072 mit 3 RPCs (create/revoke/accept_finalize) auf Hetzner appliziert und als public.-Schema verifiziert (IMP-120-konform). Server-Actions inviteEmployee + resendEmployeeInvitation + revokeEmployeeInvitation colocated in `/admin/team/actions.ts`. acceptEmployeeInvitation via DEC-011-Pattern (Auth-Admin-API + Finalize-RPC + Rollback-on-Fail) in `/accept-invitation/[token]/actions.ts`. E-Mail-Template DE/EN/NL in src/lib/email.ts ergaenzt. UI: /accept-invitation/[token] (Server+Client), /admin/team (Liste+Dialog+Revoke+Resend), /employee Dashboard-Skelett. Middleware um /accept-invitation als public path und role-aware Login-Redirect erweitert. TypeScript-Check clean. 2/8 V4-Slices done. Pending: /qa SLC-034 + Test-Run auf Server.
+- Current Phase: V4 Implementation — 2/8 Slices done
 
 ## Immediate Next Steps
-1. /backend SLC-034 — Employee-Auth + Invitation-Flow (Migration 072 RPCs + Server-Action inviteEmployee mit E-Mail-Versand + tenant_admin Mitarbeiter-Verwaltungs-UI + /accept-invitation/[token] Page).
-2. /qa SLC-034 — Pflicht nach /backend; muss End-to-End Invitation-Flow zeigen (Employee signup via Token-Link + handle_new_user-Trigger akzeptiert 'employee'-Rolle). Erste echte Runtime-Verifikation der V4-Migrations-Produktionsnutzung.
-3. /post-launch V3 — nach 1-2 Tagen Produktivbetrieb Stabilitaetscheck (parallel moeglich).
+1. /qa SLC-034 — PFLICHT nach /backend. Muss abdecken: RPC-Tests gegen Coolify-DB gruen (13 Testfaelle in src/__tests__/rpc/employee-invitation-rpc.test.ts, Server-seitige Ausfuehrung per `docker run --rm --network ...` Pattern), End-to-End Browser-Smoke (tenant_admin laedt ein → E-Mail an echte Adresse → Link oeffnen → Passwort setzen → Redirect /employee), Negative-Tests (Expired/Revoked/Already-Accepted/Invalid Token), Audit-Log-Check (auth.users + profiles.role='employee' konsistent, kein verwaister Auth-User bei Finalize-Fail).
+2. Coolify-Redeploy mit SLC-034-Commit nach /qa PASS (User triggert manuell, dann Runtime-Check im Prod).
+3. /backend SLC-035 — Bridge-Engine Backend (Migration 073 + Worker-Job bridge_generation). Voraussetzung: SLC-034 released.
 
 ## Active Scope
 **V4 — Zwei-Ebenen-Verschmelzung, 6 Features (planned), 8 Slices planned:**

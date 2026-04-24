@@ -202,3 +202,101 @@ export async function sendInviteEmail({
     `,
   });
 }
+
+// ─── Employee invitation templates (SLC-034, DEC-035) ────────────────────────
+
+const EMPLOYEE_INVITE_TEMPLATES = {
+  de: {
+    subject: (tenantName: string) => `Einladung als Mitarbeiter bei ${tenantName}`,
+    heading: (tenantName: string) => `Einladung als Mitarbeiter bei ${tenantName}`,
+    intro: (tenantName: string, displayName: string | null) =>
+      displayName
+        ? `Hallo ${displayName}, du wurdest eingeladen, als Mitarbeiter bei <strong>${tenantName}</strong> auf der StrategAIze-Plattform teilzunehmen.`
+        : `Du wurdest eingeladen, als Mitarbeiter bei <strong>${tenantName}</strong> auf der StrategAIze-Plattform teilzunehmen.`,
+    role: (roleHint: string) => `Vorgesehene Rolle: <strong>${roleHint}</strong>.`,
+    cta: "Klicke auf den folgenden Link, um deine Einladung anzunehmen und dein Passwort zu setzen:",
+    button: "Einladung annehmen",
+    expiry: (date: string) => `Dieser Link ist bis zum <strong>${date}</strong> gültig.`,
+    fallback: "Falls der Button nicht funktioniert, kopiere diesen Link in deinen Browser:",
+    closing: "Mit freundlichen Grüßen,<br>Dein StrategAIze-Team",
+  },
+  en: {
+    subject: (tenantName: string) => `Employee invitation to ${tenantName}`,
+    heading: (tenantName: string) => `Employee invitation to ${tenantName}`,
+    intro: (tenantName: string, displayName: string | null) =>
+      displayName
+        ? `Hello ${displayName}, you have been invited to join <strong>${tenantName}</strong> as an employee on the StrategAIze platform.`
+        : `You have been invited to join <strong>${tenantName}</strong> as an employee on the StrategAIze platform.`,
+    role: (roleHint: string) => `Intended role: <strong>${roleHint}</strong>.`,
+    cta: "Click the following link to accept your invitation and set your password:",
+    button: "Accept invitation",
+    expiry: (date: string) => `This link is valid until <strong>${date}</strong>.`,
+    fallback: "If the button doesn't work, copy this link into your browser:",
+    closing: "Kind regards,<br>Your StrategAIze team",
+  },
+  nl: {
+    subject: (tenantName: string) => `Uitnodiging als medewerker bij ${tenantName}`,
+    heading: (tenantName: string) => `Uitnodiging als medewerker bij ${tenantName}`,
+    intro: (tenantName: string, displayName: string | null) =>
+      displayName
+        ? `Hallo ${displayName}, je bent uitgenodigd om als medewerker deel te nemen aan <strong>${tenantName}</strong> op het StrategAIze-platform.`
+        : `Je bent uitgenodigd om als medewerker deel te nemen aan <strong>${tenantName}</strong> op het StrategAIze-platform.`,
+    role: (roleHint: string) => `Beoogde rol: <strong>${roleHint}</strong>.`,
+    cta: "Klik op de volgende link om je uitnodiging te accepteren en je wachtwoord in te stellen:",
+    button: "Uitnodiging accepteren",
+    expiry: (date: string) => `Deze link is geldig tot <strong>${date}</strong>.`,
+    fallback: "Als de knop niet werkt, kopieer dan deze link in je browser:",
+    closing: "Met vriendelijke groet,<br>Je StrategAIze-team",
+  },
+} as const;
+
+interface SendEmployeeInvitationEmailParams {
+  to: string;
+  tenantName: string;
+  inviteUrl: string;
+  expiresAt: Date;
+  displayName?: string | null;
+  roleHint?: string | null;
+  locale?: string;
+}
+
+export async function sendEmployeeInvitationEmail({
+  to,
+  tenantName,
+  inviteUrl,
+  expiresAt,
+  displayName,
+  roleHint,
+  locale,
+}: SendEmployeeInvitationEmailParams): Promise<void> {
+  const from = `StrategAIze <${process.env.SMTP_FROM || process.env.SMTP_USER}>`;
+  const lang = (locale && locale in EMPLOYEE_INVITE_TEMPLATES
+    ? locale
+    : "de") as keyof typeof EMPLOYEE_INVITE_TEMPLATES;
+  const t = EMPLOYEE_INVITE_TEMPLATES[lang];
+
+  const expiryStr = expiresAt.toLocaleDateString(
+    lang === "de" ? "de-DE" : lang === "nl" ? "nl-NL" : "en-GB",
+    { year: "numeric", month: "long", day: "numeric" }
+  );
+
+  const roleHtml = roleHint ? `<p>${t.role(roleHint)}</p>` : "";
+
+  await transporter.sendMail({
+    from,
+    to,
+    subject: t.subject(tenantName),
+    html: `
+      <h2>${t.heading(tenantName)}</h2>
+      <p>${t.intro(tenantName, displayName ?? null)}</p>
+      ${roleHtml}
+      <p>${t.cta}</p>
+      <p><a href="${inviteUrl}" style="display:inline-block;padding:12px 24px;background:#120774;color:#ffffff;text-decoration:none;border-radius:6px;">${t.button}</a></p>
+      <p style="margin-top:16px;font-size:13px;color:#666;">${t.expiry(expiryStr)}</p>
+      <p style="margin-top:16px;font-size:13px;color:#666;">${t.fallback}</p>
+      <p style="font-size:13px;word-break:break-all;">${inviteUrl}</p>
+      <br>
+      <p>${t.closing}</p>
+    `,
+  });
+}

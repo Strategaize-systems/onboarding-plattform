@@ -32,7 +32,12 @@ export async function updateSession(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Public routes that don't require auth
-  const publicPaths = ["/login", "/auth/callback", "/auth/set-password"];
+  const publicPaths = [
+    "/login",
+    "/auth/callback",
+    "/auth/set-password",
+    "/accept-invitation", // SLC-034: Employee accepts invitation without being logged in
+  ];
   const isPublicPath = publicPaths.some((p) => pathname.startsWith(p));
   const isApiHealth = pathname === "/api/health";
 
@@ -43,10 +48,21 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Logged in → redirect away from login
+  // Logged in → redirect away from login (role-aware, SLC-034 MT-7)
   if (user && pathname === "/login") {
     const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
+    const { data: loginProfile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+    if (loginProfile?.role === "employee") {
+      url.pathname = "/employee";
+    } else if (loginProfile?.role === "strategaize_admin") {
+      url.pathname = "/admin/tenants";
+    } else {
+      url.pathname = "/dashboard";
+    }
     return NextResponse.redirect(url);
   }
 
