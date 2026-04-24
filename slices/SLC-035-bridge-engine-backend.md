@@ -18,14 +18,14 @@ FEAT-023
   - Pro subtopic_bridge: evaluiert skip_if, prueft ob Subtopic in Diagnose vorkommt. Bei Match: Bedrock-Call (~$0.01-$0.03) fuer Mitarbeiter-Auswahl + minimale Wortlaut-Verfeinerung. INSERT bridge_proposal mit mode='template'.
   - Free-Form-Slot: ein Bedrock-Call (~$0.05-$0.10) mit max 3 Vorschlaegen. INSERT bridge_proposal mit mode='free_form'.
   - UPDATE bridge_run SET status='completed', proposal_count, cost_usd, generated_by_model, completed_at.
-  - ai_cost_ledger per Bedrock-Call: feature='bridge_template_refine' oder 'bridge_free_form', role='bridge_engine'.
+  - ai_cost_ledger per Bedrock-Call: feature='bridge_template_refine' oder 'bridge_free_form', role='bridge_engine'. (`feature` existiert seit Migration 040 und hat keinen CHECK — frei waehlbar. `role` hat CHECK — Migration 073b PFLICHT.)
   - Bei Fehler: UPDATE bridge_run SET status='failed', error_message.
 - Prompt-Builder `src/workers/bridge/prompts.ts`:
   - `buildTemplatePromptForSubtopic(subtopic_bridge, subtopic_context, employees)` → System+User-Prompt.
   - `buildFreeFormPrompt(all_kus, all_diagnoses, existing_subtopic_keys, employees, system_prompt_addendum)` → System+User-Prompt.
   - JSON-Output-Schema enforced (Claude Sonnet JSON Mode).
 - Worker-Registrierung in `src/workers/run.ts` (Dispatcher nach job_type, DEC-017 Pattern).
-- Cost-Ledger CHECK-Erweiterung falls noetig (feature-Werte pruefen — bestehender `ai_cost_ledger.feature` CHECK ggf. um `bridge_template_refine` und `bridge_free_form` erweitern; falls CHECK bereits frei definiert ist, keine Migration noetig).
+- Cost-Ledger CHECK-Erweiterung PFLICHT (Migration 073b): bestehender `ai_cost_ledger.role` CHECK (zuletzt Migration 064) um `bridge_template_refine` und `bridge_free_form` erweitern. Ohne diese Erweiterung schlagen Cost-Ledger-INSERTs waehrend der Bridge-Ausfuehrung fehl.
 - Unit-Tests `src/workers/bridge/__tests__/handle-bridge-job.test.ts`:
   - Mock-Bedrock + Fixture-Session-Snapshot → erwartete Proposal-Anzahl und -Struktur.
   - Edge-Cases: Keine Employees → Proposals mit role_hint statt user_id. Keine Diagnose → Proposal nur aus KU-Basis. skip_if true → Subtopic uebersprungen.
