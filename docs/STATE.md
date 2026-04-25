@@ -10,14 +10,13 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: SLC-036 Code done + /qa PASS-mit-Caveats (4/8 V4 Slices done). Bridge-Review-UI fuer tenant_admin: /admin/bridge Page, RunList mit Vorgaenger-Toggle, StaleBanner, ProposalCard, EditDialog mit Array-Editor + Mitarbeiter-Dropdown, 3 Server-Actions ueber SLC-035-RPCs, Sidebar-Link "Bridge". /qa: 1 Live-Bug inline gefixt (404-Link auf nicht existente Route entfernt), 2 Medium-Issues dokumentiert (ISSUE-021 Edit-only-Pfad fehlt, ISSUE-022 strategaize_admin kann Page nicht nutzen). 8 ACs PASS statisch, 2 DEFERRED auf Browser-Smoke (AC-10 console-errors + Mobile), 1 PARTIAL (AC-3 Edit-only). 24 Helper-Tests gruen, npm run build gruen. RPT-080 Frontend-Completion + RPT-081 QA-Completion. Naechster Schritt: User-Coolify-Redeploy + Browser-Smoke nach RPT-081 Test-Skript.
-- Current Phase: V4 Implementation — 4/8 Slices done, 2/8 released (SLC-033 + SLC-034). SLC-035 deployed-not-released, SLC-036 code-done + qa-pass-static.
+- Current Focus: FEAT-023 Bridge Engine **released und live verifiziert** (4/8 V4 Slices done). SLC-036 Browser-Smoke gegen Demo-Tenant durch (Trigger, Edit-Dialog mit Array-Editor + Mitarbeiter-Dropdown, Approve, Direct-Approve, Reject mit/ohne Reason, Console clean, Toast-Feedback). 7 Live-Bugs in der QA-Phase entdeckt und gefixt: 1 capture_mode-NULL-Filter, 2 Session-Priorisierung mit Bridge-Runs, 3 RLS-Policy-Gap (MIG-024), 4 Schema-USAGE-Grant (MIG-025), 5 Type-Re-Export aus use-server-File, 6 Toaster nicht im Layout gemounted, 7 Hydration-Mismatch durch TZ-Diskrepanz. RPT-080 Frontend-Completion + RPT-081 statische QA + RPT-082 Live-Smoke. ISSUE-023 (RLS-Doppel-Root-Cause) resolved + 2 Medium offen (ISSUE-021 Edit-only-Pfad, ISSUE-022 strategaize_admin-Pfad). Naechster Schritt: /backend SLC-037 Employee Capture-UI (RLS-Matrix-Pflicht-Gate, 32 Faelle).
+- Current Phase: V4 Implementation — 4/8 Slices done (SLC-033 + SLC-034 released, SLC-035 + SLC-036 deployed-and-smoked). FEAT-022+023 jeweils mit allen Slices abgeschlossen.
 
 ## Immediate Next Steps
-1. **User-Coolify-Redeploy** mit aktuellem main-HEAD inkl. SLC-036-Code + 404-Link-Fix.
-2. **Browser-Smoke nach Deploy** (siehe RPT-081 Test-Skript): Trigger → Wait → Edit → Approve → Spawn → Reject → Stale + Cross-Tenant-Isolation + Mobile-Viewport. Bei PASS: BL-042 → done, FEAT-023 → deployed, RPT-082 Smoke-Report.
-3. **/backend SLC-037** — Employee Capture-UI + Sicht-Perimeter (RLS-Matrix-Pflicht-Gate, 32 Faelle).
-4. **/post-launch** fuer SLC-034 nach 1-2 Tagen Produktivbetrieb (optional, low-risk).
+1. **/backend SLC-037** — Employee Capture-UI + Sicht-Perimeter (RLS-Matrix-Pflicht-Gate, 32 Faelle). Voraussetzung: Mitarbeiter-Sicht der spawned capture_session (capture_mode='employee_questionnaire'). Aktuell existieren 2 Test-Sessions im Demo-Tenant (richard@bellaerts.de Owner) als Live-Vorlage.
+2. **Mobile-Viewport-Smoke fuer SLC-036** (deferred): wenn Zeit, im DevTools Mobile-Mode pruefen, dass Karten + Edit-Dialog auf <400px sauber rendern.
+3. **/post-launch** fuer SLC-034 + SLC-036 nach 1-2 Tagen Produktivbetrieb (optional, low-risk).
 
 ## Active Scope
 **V4 — Zwei-Ebenen-Verschmelzung, 6 Features (planned), 8 Slices planned:**
@@ -45,6 +44,7 @@ V2 — 12/12 Slices done, released (REL-004).
 - aktuell keine
 
 ## Last Stable Version
+- V4-FEAT-023 — 2026-04-25 — Bridge Engine deployed + Live-Smoke PASS (Demo-Tenant). Deploy-Commits 82c987e..89836b4 (SLC-035 + SLC-036). 2 Mitarbeiter-Sessions live spawned (Kundenbetreuung + Operative -> richard@bellaerts.de), 1 Reject-Test (Produktentwicklung), Cost-Audit $0.0153 fuer Live-Bridge-Run. 7 In-Phase-Bugs in /qa entdeckt + gefixt (siehe Current Focus). 2 Migrations live (076 RLS-Policy + 077 Schema-USAGE).
 - V4-SLC-034 — 2026-04-24 — released auf https://onboarding.strategaizetransition.com (REL-007), Deploy-Commit 82c987e. Erster echter V4-Feature-Release: Employee-Auth + Invitation-Flow, Mitarbeiter-Verwaltung, /accept-invitation, /employee-Dashboard-Skelett. User-Browser-Smoke bestaetigt.
 - V3.1 — 2026-04-24 — released (REL-006), Deploy-Commit cffc639. Maintenance-Release + dormant V4-Schema.
 - V3 — 2026-04-24 — released (REL-005), Deploy-Commit e775ff0.

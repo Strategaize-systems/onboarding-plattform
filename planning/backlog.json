@@ -415,7 +415,7 @@
       "title": "Blueprint-to-Employee Bridge Engine",
       "type": "feature",
       "priority": "high",
-      "status": "in_progress",
+      "status": "done",
       "version": "V4",
       "description": "Bridge-Engine generiert aus GF-Blueprint-Output (KUs + Diagnose) automatisch Vorschlaege fuer Mitarbeiter-Capture-Aufgaben. tenant_admin reviewed/freigibt — kein Auto-Push. On-demand (DEC-037). Hybrid-Mechanismus: Template-Schablone + KI-Verfeinerung + max 3 Free-Form (DEC-034). Cost-Logging pro Bridge-Aufruf Pflicht. Stale-Trigger bei neuem Block-Submit (DEC-039). Siehe FEAT-023. Slices: SLC-035 (Backend+RPCs+Worker), SLC-036 (Review-UI).",
       "createdAt": "2026-04-23"
