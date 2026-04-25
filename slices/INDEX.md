@@ -88,7 +88,7 @@
 | SLC-033 | [V4 Schema-Fundament](SLC-033-v4-schema-fundament.md) | FEAT-022 | done | Blocker | 2026-04-24 |
 | SLC-034 | [Employee-Auth + Invitation-Flow](SLC-034-employee-auth-invitation.md) | FEAT-022 | done | Blocker | 2026-04-24 |
 | SLC-035 | [Bridge-Engine Backend](SLC-035-bridge-engine-backend.md) | FEAT-023 | done | High | 2026-04-24 |
-| SLC-036 | [Bridge-Review-UI](SLC-036-bridge-review-ui.md) | FEAT-023 | planned | High | 2026-04-24 |
+| SLC-036 | [Bridge-Review-UI](SLC-036-bridge-review-ui.md) | FEAT-023 | done | High | 2026-04-24 |
 | SLC-037 | [Employee Capture-UI + Sicht-Perimeter](SLC-037-employee-capture-ui.md) | FEAT-022, FEAT-024 | planned | Blocker | 2026-04-24 |
 | SLC-038 | [Capture-Mode-Hooks Spike](SLC-038-capture-mode-hooks-spike.md) | FEAT-025 | planned | Medium | 2026-04-24 |
 | SLC-039 | [Handbuch-Snapshot Backend](SLC-039-handbuch-snapshot-backend.md) | FEAT-026 | planned | High | 2026-04-24 |

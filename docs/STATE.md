@@ -10,12 +10,13 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: SLC-035 done und deployed (3/8 V4 Slices, Worker-Bundle mit MT-4-Code seit 2026-04-25 live). Bridge-Engine Backend komplett: Migration 073 + 073b live, Prompt-Builder, Worker-Handler + Pure-Logic, Dispatcher-Wiring, Stale-Trigger E2E-Test (7 Tests), zwei Live-Bedrock-Smokes gegen Demo-Tenant PASS — Skript-Pfad ($0.014, bridge_run b2848649) + Worker-Polling-Pfad ($0.015, bridge_run 3cfe4e2f, autonomes Claimen + Verarbeiten verifiziert). 60 neue Bridge-Tests, Suite 204/204 PASS. Naechster Schritt: SLC-036 Bridge-Review-UI.
-- Current Phase: V4 Implementation — 2/8 Slices released, SLC-035 deployed (Worker-Bundle live, RPC-Pfad funktional)
+- Current Focus: SLC-036 Code done (4/8 V4 Slices done). Bridge-Review-UI fuer tenant_admin: /admin/bridge Page mit Trigger-Button, RunList (mit Vorgaenger-Toggle), StaleBanner, ProposalCard (3 Buttons: Edit/Approve/Reject), EditDialog (Array-Editor + Mitarbeiter-Dropdown), 3 Server-Actions (trigger/approve/reject) ueber RPCs aus SLC-035, Sidebar-Link "Bridge". 24 Action-Helper-Tests gruen, npm run build gruen. Browser-Smoke + RLS-Cross-Tenant-Verifikation kommen in /qa.
+- Current Phase: V4 Implementation — 4/8 Slices done, 2/8 released (SLC-033 + SLC-034). SLC-035 deployed-not-released, SLC-036 code-only.
 
 ## Immediate Next Steps
-1. **/backend SLC-036** — Bridge-Review-UI (tenant_admin reviewed/approved/rejected Proposals). Ruft `rpc_approve_bridge_proposal` + `rpc_reject_bridge_proposal`. Ohne UI sind Proposals nur ueber DB-Inspect zugaenglich.
-2. **/post-launch** fuer SLC-034 nach 1-2 Tagen Produktivbetrieb (optional, low-risk).
+1. **/qa SLC-036** — statisch (Code-Review, AC-1..AC-11) + npm run build + Helper-Tests + Browser-Smoke gegen Live-URL nach User-Deploy. Cross-Tenant-Isolation pruefen (2 Tenants parallel). Nicht-Tech-User-Smoke fuer Edit-Dialog. Bei PASS: BL-042 → done, FEAT-023 → deployed, RPT-XXX QA-Report.
+2. **/backend SLC-037** — Employee Capture-UI + Sicht-Perimeter (RLS-Matrix-Pflicht-Gate, 32 Faelle).
+3. **/post-launch** fuer SLC-034 nach 1-2 Tagen Produktivbetrieb (optional, low-risk).
 
 ## Active Scope
 **V4 — Zwei-Ebenen-Verschmelzung, 6 Features (planned), 8 Slices planned:**
