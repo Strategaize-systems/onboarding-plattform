@@ -14,7 +14,7 @@ export interface ClaimedJob {
 
 export type JobHandler = (job: ClaimedJob) => Promise<void>;
 
-const JOB_TYPES = ["knowledge_unit_condensation", "recondense_with_gaps", "sop_generation", "diagnosis_generation", "evidence_extraction", "dialogue_transcription", "dialogue_extraction"] as const;
+const JOB_TYPES = ["knowledge_unit_condensation", "recondense_with_gaps", "sop_generation", "diagnosis_generation", "evidence_extraction", "dialogue_transcription", "dialogue_extraction", "bridge_generation"] as const;
 
 /**
  * Start the polling claim-loop.
@@ -28,7 +28,8 @@ export async function startClaimLoop(
   diagnosisHandler?: JobHandler,
   evidenceHandler?: JobHandler,
   dialogueTranscriptionHandler?: JobHandler,
-  dialogueExtractionHandler?: JobHandler
+  dialogueExtractionHandler?: JobHandler,
+  bridgeHandler?: JobHandler
 ): Promise<never> {
   const pollMs = parseInt(process.env.AI_WORKER_POLL_MS || "2000", 10);
   const adminClient = createAdminClient();
@@ -84,6 +85,8 @@ export async function startClaimLoop(
           await dialogueTranscriptionHandler(job);
         } else if (job.job_type === "dialogue_extraction" && dialogueExtractionHandler) {
           await dialogueExtractionHandler(job);
+        } else if (job.job_type === "bridge_generation" && bridgeHandler) {
+          await bridgeHandler(job);
         } else {
           await handler(job);
         }
