@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import Link from "next/link";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -156,12 +155,9 @@ export function BridgeProposalCard({ proposal, employees }: Props) {
         </div>
 
         {proposal.status === "spawned" && proposal.approved_capture_session_id && (
-          <Link
-            href={`/admin/session/${proposal.approved_capture_session_id}`}
-            className="text-xs text-brand-primary underline"
-          >
-            Zur Mitarbeiter-Aufgabe →
-          </Link>
+          <p className="text-xs text-emerald-700">
+            Aufgabe erstellt. Der Mitarbeiter sieht sie nach Login in seinem Dashboard.
+          </p>
         )}
 
         {proposal.status === "rejected" && proposal.reject_reason && (

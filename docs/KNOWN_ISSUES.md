@@ -178,3 +178,21 @@
 - Area: Data / Demo
 - Summary: Der V3 Smoke-Test erzeugte 25 Test-Sessions (vorwiegend Dialogue-Mode) im Demo-Tenant. Diese sind fuer produktive Demo-Use nicht nuetzlich.
 - Resolution: 24 leere Sessions (0 checkpoints, 0 knowledge_units) via `DELETE FROM capture_session WHERE tenant_id = '00000000-...de' AND id NOT IN (SELECT DISTINCT capture_session_id FROM block_checkpoint)` geloescht. Die eine Session mit realen Demo-Daten (64ad04eb vom 2026-04-18, 2 checkpoints + 5 knowledge_units) bleibt erhalten als Zeigematerial. ON DELETE CASCADE auf block_checkpoint und knowledge_unit haelt die Referenzen sauber.
+
+### ISSUE-021 — Bridge-Proposal Edit-only-Pfad fehlt
+- Status: open
+- Severity: Medium
+- Area: Frontend / Bridge-UI
+- Summary: SLC-036 Slice nennt fuer den Edit-Dialog: "Save → Proposal-Status=edited oder approved (bei Save+Approve)". Implementiert ist nur "Save & Approve" — der reine Edit-Pfad (Aenderungen speichern, Status=edited, ohne Approve+Spawn) existiert nicht. Grund: rpc_approve_bridge_proposal akzeptiert edited_payload und macht edited→approved+spawn atomar in einem Schritt; ein RPC fuer "edit only" wurde in SLC-035 nicht angelegt.
+- Impact: tenant_admin kann Vorschlaege nicht zwischenspeichern und spaeter approven. Jeder Edit erzeugt sofort eine Mitarbeiter-Aufgabe. Falls der User unsicher ist und nur "Notiz speichern" will, ist das nicht moeglich.
+- Workaround: Edit + spaeter rejecten falls die Aufgabe nicht behalten werden soll. Oder Edit-Werte ausserhalb des Tools notieren bis Approve-Entscheidung steht.
+- Next Action: Folge-Slice oder V4.1: rpc_save_edited_proposal(p_proposal_id, p_edited_payload) → status='edited' + UPDATE bridge_proposal mit gemergten Feldern, ohne capture_session-INSERT.
+
+### ISSUE-022 — strategaize_admin kann /admin/bridge nicht nutzen
+- Status: open
+- Severity: Medium
+- Area: Frontend / Authorization
+- Summary: SLC-036 Slice erlaubt strategaize_admin als Reviewer ("tenant_admin oder strategaize_admin"). Implementiert ist /admin/bridge so, dass strategaize_admin durch den `!profile.tenant_id` Check zu /dashboard redirected wird. Grund: strategaize_admin hat keine tenant_id im profile — die Page laedt aber tenant-spezifische Daten ueber `eq("tenant_id", profile.tenant_id)`. Konsistent mit team/page.tsx.
+- Impact: Owner kann kein Bridge-Review im Production-Flow durchfuehren, ohne sich als tenant_admin eines spezifischen Tenants einzuloggen. Bei Self-Use im Owner-Account-Tenant aber kein Problem.
+- Workaround: Owner nutzt seinen Tenant-Admin-Account fuer Bridge-Review.
+- Next Action: Falls Owner regelmaessig Cross-Tenant-Bridge-Review braucht: Tenant-Switch-UI bauen (eigener Mini-Slice) ODER /admin/bridge mit Tenant-Picker fuer strategaize_admin erweitern.

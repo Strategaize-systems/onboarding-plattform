@@ -10,13 +10,14 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: SLC-036 Code done (4/8 V4 Slices done). Bridge-Review-UI fuer tenant_admin: /admin/bridge Page mit Trigger-Button, RunList (mit Vorgaenger-Toggle), StaleBanner, ProposalCard (3 Buttons: Edit/Approve/Reject), EditDialog (Array-Editor + Mitarbeiter-Dropdown), 3 Server-Actions (trigger/approve/reject) ueber RPCs aus SLC-035, Sidebar-Link "Bridge". 24 Action-Helper-Tests gruen, npm run build gruen. Browser-Smoke + RLS-Cross-Tenant-Verifikation kommen in /qa.
-- Current Phase: V4 Implementation — 4/8 Slices done, 2/8 released (SLC-033 + SLC-034). SLC-035 deployed-not-released, SLC-036 code-only.
+- Current Focus: SLC-036 Code done + /qa PASS-mit-Caveats (4/8 V4 Slices done). Bridge-Review-UI fuer tenant_admin: /admin/bridge Page, RunList mit Vorgaenger-Toggle, StaleBanner, ProposalCard, EditDialog mit Array-Editor + Mitarbeiter-Dropdown, 3 Server-Actions ueber SLC-035-RPCs, Sidebar-Link "Bridge". /qa: 1 Live-Bug inline gefixt (404-Link auf nicht existente Route entfernt), 2 Medium-Issues dokumentiert (ISSUE-021 Edit-only-Pfad fehlt, ISSUE-022 strategaize_admin kann Page nicht nutzen). 8 ACs PASS statisch, 2 DEFERRED auf Browser-Smoke (AC-10 console-errors + Mobile), 1 PARTIAL (AC-3 Edit-only). 24 Helper-Tests gruen, npm run build gruen. RPT-080 Frontend-Completion + RPT-081 QA-Completion. Naechster Schritt: User-Coolify-Redeploy + Browser-Smoke nach RPT-081 Test-Skript.
+- Current Phase: V4 Implementation — 4/8 Slices done, 2/8 released (SLC-033 + SLC-034). SLC-035 deployed-not-released, SLC-036 code-done + qa-pass-static.
 
 ## Immediate Next Steps
-1. **/qa SLC-036** — statisch (Code-Review, AC-1..AC-11) + npm run build + Helper-Tests + Browser-Smoke gegen Live-URL nach User-Deploy. Cross-Tenant-Isolation pruefen (2 Tenants parallel). Nicht-Tech-User-Smoke fuer Edit-Dialog. Bei PASS: BL-042 → done, FEAT-023 → deployed, RPT-XXX QA-Report.
-2. **/backend SLC-037** — Employee Capture-UI + Sicht-Perimeter (RLS-Matrix-Pflicht-Gate, 32 Faelle).
-3. **/post-launch** fuer SLC-034 nach 1-2 Tagen Produktivbetrieb (optional, low-risk).
+1. **User-Coolify-Redeploy** mit aktuellem main-HEAD inkl. SLC-036-Code + 404-Link-Fix.
+2. **Browser-Smoke nach Deploy** (siehe RPT-081 Test-Skript): Trigger → Wait → Edit → Approve → Spawn → Reject → Stale + Cross-Tenant-Isolation + Mobile-Viewport. Bei PASS: BL-042 → done, FEAT-023 → deployed, RPT-082 Smoke-Report.
+3. **/backend SLC-037** — Employee Capture-UI + Sicht-Perimeter (RLS-Matrix-Pflicht-Gate, 32 Faelle).
+4. **/post-launch** fuer SLC-034 nach 1-2 Tagen Produktivbetrieb (optional, low-risk).
 
 ## Active Scope
 **V4 — Zwei-Ebenen-Verschmelzung, 6 Features (planned), 8 Slices planned:**
