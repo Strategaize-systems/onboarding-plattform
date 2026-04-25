@@ -51,19 +51,36 @@ export default async function AdminBridgePage() {
     redirect("/dashboard");
   }
 
-  // Juengste GF-capture_session des aktuellen Admins.
-  // capture_mode kann NULL sein (Legacy-Sessions vor V4) — `!= 'employee_questionnaire'`
-  // alleine wuerde NULL-Rows herausfiltern (Postgres NULL-Vergleich ist UNKNOWN).
-  // Daher .or() mit explizitem IS NULL als Inklusion.
-  const { data: sessionData } = await supabase
+  // GF-capture_session des aktuellen Admins.
+  // Priorisierung: wenn eine eigene Session bereits bridge_runs hat, ist DAS die
+  // relevante Bridge-Session — auch wenn juengere "leere" GF-Sessions existieren.
+  // Sonst Fallback auf die juengste eigene Session.
+  // capture_mode kann NULL sein (Legacy vor V4) — daher .or() mit IS NULL Inklusion.
+  const { data: allOwnSessions } = await supabase
     .from("capture_session")
     .select("id, capture_mode, status, started_at")
     .eq("tenant_id", profile.tenant_id)
     .eq("owner_user_id", user.id)
     .or("capture_mode.is.null,capture_mode.neq.employee_questionnaire")
-    .order("started_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .order("started_at", { ascending: false });
+
+  const ownSessions = allOwnSessions ?? [];
+  let sessionData: (typeof ownSessions)[number] | null = null;
+
+  if (ownSessions.length > 0) {
+    const ownIds = ownSessions.map((s) => s.id);
+    const { data: priorRuns } = await supabase
+      .from("bridge_run")
+      .select("capture_session_id")
+      .in("capture_session_id", ownIds)
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    const priorSessionId = priorRuns?.[0]?.capture_session_id ?? null;
+    sessionData = priorSessionId
+      ? ownSessions.find((s) => s.id === priorSessionId) ?? ownSessions[0]
+      : ownSessions[0];
+  }
 
   if (!sessionData) {
     return (
