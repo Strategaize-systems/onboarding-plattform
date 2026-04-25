@@ -197,11 +197,14 @@
 - Workaround: Owner nutzt seinen Tenant-Admin-Account fuer Bridge-Review.
 - Next Action: Falls Owner regelmaessig Cross-Tenant-Bridge-Review braucht: Tenant-Switch-UI bauen (eigener Mini-Slice) ODER /admin/bridge mit Tenant-Picker fuer strategaize_admin erweitern.
 
-### ISSUE-023 — RLS-Gap auf public.profiles: tenant_admin sah Mitarbeiter nicht
+### ISSUE-023 — RLS-Gap auf public.profiles: tenant_admin sah Mitarbeiter nicht (Doppel-Root-Cause)
 - Status: resolved
 - Resolution Date: 2026-04-25
 - Severity: High
 - Area: Database / RLS
-- Summary: Vor Migration 076 hatte public.profiles nur 2 Policies: `admin_full_profiles` (nur strategaize_admin) und `user_select_own_profile` (jeder User nur sich selbst). tenant_admin konnte die Profile-Rows seiner Mitarbeiter NICHT lesen. Folgen: /admin/team Aktive-Mitarbeiter-Liste war stillschweigend leer, /admin/bridge Edit-Dialog Mitarbeiter-Dropdown leer, ProposalCards zeigten "Noch nicht zugeordnet" auch wenn proposed_employee_user_id gesetzt war (Match auf employees-Liste fand nichts).
-- Resolution: Migration 076 fuegt Policy `tenant_admin_select_tenant_profiles` hinzu (FOR SELECT, USING auth.user_role()='tenant_admin' AND tenant_id=auth.user_tenant_id()). Tenant-isoliert read-only. Identisch zum Pattern von bridge_run_tenant_admin_rw. Live deployed auf Onboarding-Server 2026-04-25 (Live-Smoke SLC-036).
-- Impact: Pre-Fix konnte SLC-034 Aktive-Mitarbeiter-Listing nicht funktioniert haben (silent empty result), wurde dort aber nicht entdeckt weil im Smoke nur die Invitation-Seite geprueft wurde. SLC-036 hat es aufgedeckt durch Live-Inspect der Bridge-UI mit gesetzten proposed_employee_user_id.
+- Summary: tenant_admin konnte unter /admin/team Aktive-Mitarbeiter-Liste und /admin/bridge Edit-Dialog Mitarbeiter-Dropdown keine Mitarbeiter sehen. Bridge-ProposalCards zeigten "Noch nicht zugeordnet" trotz gesetzter proposed_employee_user_id.
+- Resolution (Doppel-Fix in zwei Migrations):
+  - **Migration 076** (`tenant_admin_select_tenant_profiles`): Neue RLS-Policy auf public.profiles. FOR SELECT TO authenticated, USING auth.user_role()='tenant_admin' AND tenant_id=auth.user_tenant_id(). Tenant-isoliert, read-only.
+  - **Migration 077** (`GRANT USAGE ON SCHEMA auth TO authenticated, anon`): Aufgefallen erst nach 076 — die Policy konnte stillschweigend FALSE evaluieren, weil `authenticated` kein USAGE-Grant auf das auth-Schema hatte. Postgres konnte die Cross-Schema-Function-Calls (`auth.user_role()`/`auth.user_tenant_id()`) in der Policy-Expression nicht aufloesen. Das ist Standard-Supabase-Setup, war auf der Onboarding-DB aber nicht gesetzt.
+- Impact: Pre-Fix konnte SLC-034 Aktive-Mitarbeiter-Listing nicht funktioniert haben (silent empty result), wurde dort aber nicht entdeckt weil im Smoke nur die Invitation-Seite geprueft wurde. SLC-036 hat es aufgedeckt durch Live-Inspect der Bridge-UI mit gesetzten proposed_employee_user_id. Andere Funktions-Pfade ueber `auth.uid()` funktionierten weiterhin, weil `auth.uid()` direkt im EXECUTE-Privilege aufgeloest wird ohne Schema-USAGE-Check — RLS-Policy-Expressions mit auth.user_role() haben den Check aber benoetigt.
+- Lesson learned: Bei Self-hosted-Supabase muss explizit verifiziert werden, dass `nspacl` auf `auth` mindestens `authenticated=U/supabase_auth_admin` enthaelt. Sonst greifen viele RLS-Policies still nicht. Pruefen mit `SELECT nspacl FROM pg_namespace WHERE nspname='auth';`.

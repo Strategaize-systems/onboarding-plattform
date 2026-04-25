@@ -274,3 +274,13 @@ Der uebernommene Blueprint-Stand ist noch nicht auf einer Onboarding-Plattform-I
 - Risk: Niedrig. Additive Policy, READ-ONLY, tenant-isoliert. Kein Datenleck-Risiko.
 - Rollback Notes: `DROP POLICY IF EXISTS tenant_admin_select_tenant_profiles ON public.profiles;` — danach faellt Mitarbeiter-Listing in tenant_admin-UIs zurueck auf "leer".
 - Live-Deploy: 2026-04-25 via base64-pipe + `psql -U postgres` auf Onboarding-Server (159.69.207.29). Verifiziert via pg_policy-Inspect.
+
+### MIG-025 — auth-Schema USAGE-Grant fuer authenticated/anon (Migration 077)
+- Date: 2026-04-25
+- Scope: `GRANT USAGE ON SCHEMA auth TO authenticated, anon` (idempotent). Standard-Supabase-Setup, das auf der Onboarding-DB nicht gesetzt war.
+- Reason: Direkt nach MIG-024 Live-Smoke deutete das Symptom auf einen RLS-Bug hin — der Test als authenticated-Role + JWT-Claims konnte `auth.user_role()` nicht aufrufen ("permission denied for schema auth"). Verifiziert: `SELECT nspacl FROM pg_namespace WHERE nspname='auth'` ergab `{supabase_auth_admin=UC/supabase_auth_admin}` ohne authenticated/anon. Ohne USAGE konnten Cross-Schema-Function-Calls in Policy-Expressions stillschweigend FALSE evaluieren, was die MIG-024-Policy effektiv lahm legte. Nach GRANT USAGE: Test-Pfad als authenticated demo-admin liefert `auth.user_role()='tenant_admin'` und neue Policy greift, employee-Liste sichtbar.
+- Affected Areas: Alle RLS-Policies, die `auth.user_role()` oder `auth.user_tenant_id()` aufrufen. Indirect: `/admin/team` Aktive-Mitarbeiter, `/admin/bridge` Edit-Dialog Mitarbeiter-Dropdown, ProposalCard Mitarbeiter-Anzeige.
+- Risk: Niedrig. USAGE auf Schema ist read-only-Reference und Standard-Supabase-Konfiguration. EXECUTE-Privileges auf einzelne Funktionen waren bereits gesetzt (`auth.uid`, `auth.user_role`, `auth.user_tenant_id`).
+- Rollback Notes: `REVOKE USAGE ON SCHEMA auth FROM anon, authenticated;` — bricht alle Auth-abhaengigen RLS-Policies wieder. NICHT empfohlen.
+- Live-Deploy: 2026-04-25 direkt im Diagnose-Pfad applied + danach als idempotente Migration 077 nachgeschrieben (sql/migrations/077_grant_auth_schema_usage.sql). Verifiziert via `SELECT nspacl FROM pg_namespace`.
+- Lesson learned: Bei Self-hosted-Supabase Onboarding pruefen, ob `nspacl` auf `auth` `authenticated=U/...` enthaelt. Andernfalls funktionieren RLS-Policies mit Cross-Schema-Function-Calls still nicht. Sollte Teil eines Bootstrap-Health-Checks werden.
