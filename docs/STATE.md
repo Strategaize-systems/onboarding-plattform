@@ -10,14 +10,13 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: SLC-035 MT-1..MT-3 implementiert (Backend-Kern): Migration 073 (3 Bridge-RPCs) + 073b (ai_cost_ledger.role-CHECK um bridge_engine) live auf Hetzner, Prompt-Builder (Template+FreeForm), Worker-Handler mit Dependency-Injection fuer BedrockCaller. 34 neue Bridge-Unit-Tests + 19 neue RPC-Integration-Tests (53 neu, Suite 197/197 PASS). Slice SLC-035 ist in_progress — MT-4 (Dispatcher-Registrierung), MT-5 (Stale-E2E-Test), MT-7 (Record-Updates) stehen vor /qa aus.
-- Current Phase: V4 Implementation — 2/8 Slices released, SLC-035 Backend-Kern committed (3226068+5c3f5ff+26086b8)
+- Current Focus: SLC-035 done (3/8 V4 Slices). Bridge-Engine Backend komplett: Migration 073 + 073b live, Prompt-Builder, Worker-Handler + Pure-Logic, Dispatcher-Wiring, Stale-Trigger E2E-Test (7 Tests), Live-Bedrock-Smoke gegen Demo-Tenant PASS (3 Free-Form-Proposals, 1 Cost-Ledger-Eintrag, $0.014 fuer 10.3s). 60 neue Bridge-Tests, Suite 204/204 PASS. SLC-035 wartet auf User-Coolify-Redeploy (Worker-Bundle mit MT-4-Code), dann SLC-036 (Bridge-Review-UI).
+- Current Phase: V4 Implementation — 2/8 Slices released, SLC-035 done (Code-only, Deploy ausstehend)
 
 ## Immediate Next Steps
-1. **MT-4: Worker-Dispatcher-Registrierung** — `src/workers/condensation/claim-loop.ts` um `bridge_generation` Job-Type erweitern und Handler in `src/workers/run.ts` registrieren. Kleinschritt, keine Architekturaenderung.
-2. **MT-5: Stale-Trigger E2E-Test** — `src/__tests__/integration/bridge-stale-flow.test.ts` als Pflicht-Verifikation DEC-039.
-3. **/qa SLC-035** — End-to-End gegen real gefuellte capture_session (GF-Blueprint ≥1 Checkpoint + Diagnose), echter Bedrock-Call eu-central-1, Cost-Ledger-Verifikation, Bridge-Proposal-Struktur-Review.
-4. Begleitend: `/post-launch` fuer SLC-034 nach 1-2 Tagen Produktivbetrieb (optional, low-risk).
+1. **User-Deploy** — Coolify-Redeploy fuer Worker-Bundle (claim-loop.ts + run.ts mit `bridge_generation`). Ohne Deploy ist nur der Skript-Pfad lauffaehig, RPC-getriggerte Bridge-Runs warten auf Worker-Polling.
+2. **/backend SLC-036** — Bridge-Review-UI (tenant_admin reviewed/approved/rejected Proposals). Ruft `rpc_approve_bridge_proposal` + `rpc_reject_bridge_proposal`. Ohne UI sind Proposals nur ueber DB-Inspect zugaenglich.
+3. **/post-launch** fuer SLC-034 nach 1-2 Tagen Produktivbetrieb (optional, low-risk).
 
 ## Active Scope
 **V4 — Zwei-Ebenen-Verschmelzung, 6 Features (planned), 8 Slices planned:**
