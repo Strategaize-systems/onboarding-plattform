@@ -36,6 +36,12 @@ export type BridgeRunRow = {
   generated_by_model: string | null;
   created_at: string;
   completed_at: string | null;
+  /**
+   * Server-seitig vorformatierter created_at-String in Europe/Berlin.
+   * Verhindert Hydration-Mismatch (React #418): Server-TZ (UTC) vs Browser-TZ
+   * (Berlin) wuerden bei toLocaleString() unterschiedliche Strings produzieren.
+   */
+  formattedCreatedAt: string;
 };
 
 export type EmployeeRow = {

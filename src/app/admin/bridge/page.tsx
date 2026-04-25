@@ -123,7 +123,20 @@ export default async function AdminBridgePage() {
     .eq("capture_session_id", captureSessionId)
     .order("created_at", { ascending: false });
 
-  const runs = (runsData ?? []) as BridgeRunRow[];
+  // Datums-Vorformatierung server-seitig mit fixer TZ verhindert Hydration-Mismatch
+  // (React #418): Server-TZ vs Browser-TZ wuerden sonst unterschiedliche Strings
+  // produzieren.
+  const dateFormatter = new Intl.DateTimeFormat("de-DE", {
+    dateStyle: "short",
+    timeStyle: "short",
+    timeZone: "Europe/Berlin",
+  });
+  const runs = ((runsData ?? []) as Array<Omit<BridgeRunRow, "formattedCreatedAt">>).map(
+    (r) => ({
+      ...r,
+      formattedCreatedAt: dateFormatter.format(new Date(r.created_at)),
+    })
+  ) as BridgeRunRow[];
   const latestRun = runs[0] ?? null;
 
   // Proposals des juengsten Runs

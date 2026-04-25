@@ -44,13 +44,6 @@ function statusLabel(status: BridgeRunRow["status"]): string {
   }
 }
 
-function formatDate(value: string): string {
-  return new Date(value).toLocaleString("de-DE", {
-    dateStyle: "short",
-    timeStyle: "short",
-  });
-}
-
 function formatCost(usd: number | null): string {
   if (usd === null || usd === undefined) return "–";
   return `$${usd.toFixed(4)}`;
@@ -107,7 +100,7 @@ export function BridgeRunList({ runs }: Props) {
                   )}
                 </TableCell>
                 <TableCell className="text-slate-600">
-                  {formatDate(run.created_at)}
+                  {run.formattedCreatedAt}
                 </TableCell>
                 <TableCell className="text-right">{run.proposal_count}</TableCell>
                 <TableCell className="text-right text-slate-500">
