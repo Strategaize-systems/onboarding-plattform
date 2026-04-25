@@ -25,9 +25,12 @@ import {
  *   - rpc_reject_bridge_proposal(p_proposal_id, p_reason).
  *
  * Validierungs- und Whitelist-Logik liegt in action-helpers.ts (testbar ohne Supabase).
+ *
+ * EditedProposalPayload-Type wird DIREKT aus action-helpers importiert, nicht
+ * von hier re-exportiert: Next.js "use server"-Files duerfen nur async-function-
+ * Exports haben, type-Re-Exports brechen die Server-Action-Compilation
+ * (ReferenceError: ... is not defined zur Laufzeit).
  */
-
-export type { EditedProposalPayload };
 
 type ActionResult<T = Record<string, unknown>> =
   | ({ ok: true } & T)

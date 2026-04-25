@@ -22,7 +22,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { approveBridgeProposal, type EditedProposalPayload } from "./actions";
+import { approveBridgeProposal } from "./actions";
+import type { EditedProposalPayload } from "./action-helpers";
 import type {
   BridgeProposalQuestion,
   BridgeProposalRow,
