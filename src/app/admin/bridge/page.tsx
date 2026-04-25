@@ -51,13 +51,16 @@ export default async function AdminBridgePage() {
     redirect("/dashboard");
   }
 
-  // Juengste GF-capture_session des aktuellen Admins
+  // Juengste GF-capture_session des aktuellen Admins.
+  // capture_mode kann NULL sein (Legacy-Sessions vor V4) — `!= 'employee_questionnaire'`
+  // alleine wuerde NULL-Rows herausfiltern (Postgres NULL-Vergleich ist UNKNOWN).
+  // Daher .or() mit explizitem IS NULL als Inklusion.
   const { data: sessionData } = await supabase
     .from("capture_session")
     .select("id, capture_mode, status, started_at")
     .eq("tenant_id", profile.tenant_id)
     .eq("owner_user_id", user.id)
-    .neq("capture_mode", "employee_questionnaire")
+    .or("capture_mode.is.null,capture_mode.neq.employee_questionnaire")
     .order("started_at", { ascending: false })
     .limit(1)
     .maybeSingle();
