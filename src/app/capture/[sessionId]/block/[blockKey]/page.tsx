@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCaptureSession } from "@/lib/db/capture-session-queries";
 import { getTemplateById } from "@/lib/db/template-queries";
 import { QuestionnaireWorkspace } from "./questionnaire-form";
+import { resolveCaptureMode } from "@/components/capture-modes/registry";
 
 export default async function BlockDetailPage({
   params,
@@ -39,6 +40,14 @@ export default async function BlockDetailPage({
 
   if (session.tenant_id !== profile.tenant_id) {
     notFound();
+  }
+
+  // SLC-038 — Capture-Mode-Hook: Stub-Modes (z.B. walkthrough_stub) rendern
+  // ihre eigene Komponente und ueberspringen den klassischen Block-Pfad.
+  const { meta: modeMeta } = resolveCaptureMode(session.capture_mode);
+  if (modeMeta.StubComponent) {
+    const StubComponent = modeMeta.StubComponent;
+    return <StubComponent />;
   }
 
   const template = await getTemplateById(supabase, session.template_id);

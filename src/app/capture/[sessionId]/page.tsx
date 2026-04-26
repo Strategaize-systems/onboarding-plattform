@@ -5,6 +5,7 @@ import { getCaptureSession } from "@/lib/db/capture-session-queries";
 import { getTemplateById } from "@/lib/db/template-queries";
 import { BlockList } from "./block-list";
 import type { BlockCheckpointInput } from "@/lib/capture/derive-block-status";
+import { resolveCaptureMode } from "@/components/capture-modes/registry";
 
 export default async function CaptureSessionPage({
   params,
@@ -41,6 +42,17 @@ export default async function CaptureSessionPage({
   // RLS handles cross-tenant isolation, but explicit check for defense-in-depth
   if (session.tenant_id !== profile.tenant_id) {
     notFound();
+  }
+
+  // SLC-038 — Capture-Mode-Hook: wenn der Mode eine eigene Stub-Komponente
+  // bringt (z.B. walkthrough_stub), uebergeben wir das Rendering komplett an
+  // sie und ueberspringen Template/Block-Listen-Lookup. Klassische Modes
+  // (questionnaire/evidence/dialogue/employee_questionnaire) haben
+  // StubComponent=null und durchlaufen den Default-Pfad weiter unten.
+  const { meta: modeMeta } = resolveCaptureMode(session.capture_mode);
+  if (modeMeta.StubComponent) {
+    const StubComponent = modeMeta.StubComponent;
+    return <StubComponent />;
   }
 
   const template = await getTemplateById(supabase, session.template_id);
