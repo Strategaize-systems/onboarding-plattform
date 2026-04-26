@@ -51,13 +51,20 @@ export async function handleCondensationJob(job: ClaimedJob): Promise<void> {
   // 2. Load template for this session
   const { data: session, error: sessError } = await adminClient
     .from("capture_session")
-    .select("template_id, template_version")
+    .select("template_id, template_version, capture_mode")
     .eq("id", checkpoint.capture_session_id)
     .single();
 
   if (sessError || !session) {
     throw new Error(`Failed to load session ${checkpoint.capture_session_id}: ${sessError?.message}`);
   }
+
+  // SLC-037 MT-5 — Source-Tag aus capture_mode ableiten.
+  // - 'employee_questionnaire' → KU.source = 'employee_questionnaire' (CHECK aus MIG-067)
+  // - sonst (questionnaire, dialogue, evidence, NULL/Legacy) → 'ai_draft' (Default)
+  const captureMode = (session as { capture_mode: string | null }).capture_mode;
+  const kuSource =
+    captureMode === "employee_questionnaire" ? "employee_questionnaire" : "ai_draft";
 
   const { data: template, error: tmplError } = await adminClient
     .from("template")
@@ -133,7 +140,7 @@ export async function handleCondensationJob(job: ClaimedJob): Promise<void> {
       block_checkpoint_id: checkpoint.id,
       block_key: checkpoint.block_key,
       unit_type: item.unit_type,
-      source: "ai_draft",
+      source: kuSource,
       title: item.title,
       body: buildKuBody(item),
       confidence: item.confidence,

@@ -69,12 +69,29 @@ export async function updateSession(request: NextRequest) {
   // Sync NEXT_LOCALE cookie with tenant language on every page load.
   // Always re-check — the cookie may be stale from a previous session
   // (e.g. admin tested EN invite, then NL user logs in).
+  // SLC-037 MT-8 — Role-based routing block for employee.
   if (user && !isApiHealth && !pathname.startsWith("/api/")) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("tenant_id")
+      .select("tenant_id, role")
       .eq("id", user.id)
       .single();
+
+    // SLC-037 MT-8 — Employee darf NUR /employee/*, /accept-invitation und /auth/* sehen.
+    // Direkter Zugriff auf /admin/*, /dashboard/*, /capture/* → Redirect zu /employee.
+    // R16-Mitigation: Mitarbeiter-Sicht-Perimeter auf Routing-Ebene.
+    if (profile?.role === "employee") {
+      const employeeBlocked =
+        pathname.startsWith("/admin") ||
+        pathname.startsWith("/dashboard") ||
+        pathname.startsWith("/capture");
+      if (employeeBlocked) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/employee";
+        url.search = "";
+        return NextResponse.redirect(url);
+      }
+    }
 
     let expectedLocale = "de"; // Default for admin (no tenant)
 
