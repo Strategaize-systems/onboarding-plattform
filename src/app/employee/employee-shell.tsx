@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { Menu, X } from "lucide-react";
+import { usePathname } from "next/navigation";
 import { EmployeeSidebar } from "@/components/employee-sidebar";
 
 interface Props {
@@ -12,41 +11,24 @@ interface Props {
 /**
  * SLC-037 — Employee-Shell (analog TenantAdminShell).
  *
- * Persistent linke Sidebar (`lg:relative` + 280px) plus scrollbarer Main-Bereich.
- * Mobile: Sidebar als Overlay mit Toggle-Button.
- *
- * Children sind die Page-Inhalte. Listen-Pages wrappen sich selbst in einen
- * max-w-Container; das Block-Detail rendert die fullscreen QuestionnaireWorkspace
- * direkt — beide funktionieren innerhalb der `flex-1`-Main-Spalte.
+ * Persistent linke Sidebar auf den Listen-Routen (`lg:relative` + 280px) plus
+ * scrollbarer Main-Bereich. Auf Block-Detail-Routen wird die Shell komplett
+ * uebersprungen — der QuestionnaireWorkspace rendert fullscreen mit eigener
+ * Sidebar und eigener "Zurueck zur Uebersicht"-Navigation. Das vermeidet
+ * Doppel-Sidebar-Optik und gibt dem Workspace den vollen Viewport.
  */
 export function EmployeeShell({ email, children }: Props) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const pathname = usePathname();
+  const isBlockDetail = /^\/employee\/capture\/[^/]+\/block\/[^/]+/.test(pathname);
+
+  if (isBlockDetail) {
+    return <>{children}</>;
+  }
 
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden">
-      {/* Mobile toggle */}
-      <button
-        onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="fixed left-4 top-4 z-50 rounded-lg bg-white p-2 shadow-md lg:hidden"
-        aria-label={sidebarOpen ? "Sidebar schliessen" : "Sidebar oeffnen"}
-      >
-        {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-      </button>
-
-      {/* Mobile overlay */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/30 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* Sidebar */}
-      <aside
-        className={`fixed inset-y-0 left-0 z-40 w-[280px] transform transition-transform duration-300 lg:relative lg:translate-x-0 ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
-      >
+      {/* Sidebar (always visible at lg+, never on this app variant) */}
+      <aside className="hidden lg:block w-[280px] flex-shrink-0">
         <EmployeeSidebar email={email} />
       </aside>
 
