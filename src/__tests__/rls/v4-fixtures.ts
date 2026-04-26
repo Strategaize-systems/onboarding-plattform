@@ -18,6 +18,26 @@ export interface V4Fixtures {
   sessionAdminB: string;
   sessionEmployeeA: string;
   sessionEmployeeB: string;
+  // SLC-037 MT-7 — RLS-Matrix (32 Pflicht-Faelle): zusaetzliche Rows pro Tenant
+  // damit jede Rolle eine erwartete Sichtbarkeit gegen reale Daten testen kann.
+  blockCheckpointA: string;
+  blockCheckpointB: string;
+  knowledgeUnitA: string;
+  knowledgeUnitB: string;
+  validationLayerA: string;
+  validationLayerB: string;
+  blockDiagnosisA: string;
+  blockDiagnosisB: string;
+  sopA: string;
+  sopB: string;
+  handbookSnapshotA: string;
+  handbookSnapshotB: string;
+  bridgeRunA: string;
+  bridgeRunB: string;
+  bridgeProposalA: string;
+  bridgeProposalB: string;
+  employeeInvitationA: string;
+  employeeInvitationB: string;
 }
 
 /**
@@ -28,6 +48,9 @@ export interface V4Fixtures {
  *   - 1 Template
  *   - 7 User (1 strategaize_admin + 3 pro Tenant: admin, member, employee)
  *   - 4 capture_sessions (1 admin-owned + 1 employee-owned pro Tenant)
+ *   - SLC-037 MT-7: je 1 Row pro Tenant in:
+ *     block_checkpoint, knowledge_unit, validation_layer, block_diagnosis, sop,
+ *     handbook_snapshot, bridge_run, bridge_proposal, employee_invitation.
  *
  * Muss innerhalb einer Transaktion laufen (siehe `withTestDb`). Nach ROLLBACK
  * sind alle Rows weg.
@@ -98,21 +121,212 @@ export async function seedV4Fixtures(client: Client): Promise<V4Fixtures> {
   const employeeBUserId = await mkUser("v4-emp-b", "employee", tenantB);
 
   // capture_sessions
-  const mkSession = async (tenantId: string, ownerUserId: string): Promise<string> => {
+  const mkSession = async (
+    tenantId: string,
+    ownerUserId: string,
+    captureMode: "questionnaire" | "employee_questionnaire" = "questionnaire"
+  ): Promise<string> => {
     const res = await client.query<{ id: string }>(
       `INSERT INTO public.capture_session
-         (tenant_id, template_id, template_version, owner_user_id, status)
-       VALUES ($1, $2, $3, $4, 'open')
+         (tenant_id, template_id, template_version, owner_user_id, status, capture_mode)
+       VALUES ($1, $2, $3, $4, 'open', $5)
        RETURNING id`,
-      [tenantId, templateId, templateVersion, ownerUserId]
+      [tenantId, templateId, templateVersion, ownerUserId, captureMode]
     );
     return res.rows[0].id;
   };
 
-  const sessionAdminA = await mkSession(tenantA, tenantAdminAUserId);
-  const sessionAdminB = await mkSession(tenantB, tenantAdminBUserId);
-  const sessionEmployeeA = await mkSession(tenantA, employeeAUserId);
-  const sessionEmployeeB = await mkSession(tenantB, employeeBUserId);
+  const sessionAdminA = await mkSession(tenantA, tenantAdminAUserId, "questionnaire");
+  const sessionAdminB = await mkSession(tenantB, tenantAdminBUserId, "questionnaire");
+  const sessionEmployeeA = await mkSession(tenantA, employeeAUserId, "employee_questionnaire");
+  const sessionEmployeeB = await mkSession(tenantB, employeeBUserId, "employee_questionnaire");
+
+  // ============================================================
+  // SLC-037 MT-7 — Zusaetzliche Rows pro Tenant fuer RLS-Matrix
+  // ============================================================
+
+  // block_checkpoint (eines pro employee-Session, damit employee SELECT eine Row hat)
+  const mkBlockCheckpoint = async (
+    tenantId: string,
+    sessionId: string,
+    userId: string,
+    hashSuffix: string
+  ): Promise<string> => {
+    const res = await client.query<{ id: string }>(
+      `INSERT INTO public.block_checkpoint
+         (tenant_id, capture_session_id, block_key, checkpoint_type,
+          content, content_hash, created_by)
+       VALUES ($1, $2, 'A', 'questionnaire_submit', '{}'::jsonb, $3, $4)
+       RETURNING id`,
+      [tenantId, sessionId, `hash-v4-mat-${hashSuffix}`, userId]
+    );
+    return res.rows[0].id;
+  };
+  const blockCheckpointA = await mkBlockCheckpoint(
+    tenantA,
+    sessionEmployeeA,
+    employeeAUserId,
+    "a-" + Math.random().toString(36).slice(2, 10)
+  );
+  const blockCheckpointB = await mkBlockCheckpoint(
+    tenantB,
+    sessionEmployeeB,
+    employeeBUserId,
+    "b-" + Math.random().toString(36).slice(2, 10)
+  );
+
+  // knowledge_unit (eines pro employee-Session mit source='employee_questionnaire')
+  const mkKnowledgeUnit = async (
+    tenantId: string,
+    sessionId: string,
+    checkpointId: string
+  ): Promise<string> => {
+    const res = await client.query<{ id: string }>(
+      `INSERT INTO public.knowledge_unit
+         (tenant_id, capture_session_id, block_checkpoint_id, block_key,
+          unit_type, source, title, body, confidence, evidence_refs, status)
+       VALUES ($1, $2, $3, 'A',
+               'finding', 'employee_questionnaire', 'V4-Matrix-KU', 'Body', 'medium',
+               '[]'::jsonb, 'proposed')
+       RETURNING id`,
+      [tenantId, sessionId, checkpointId]
+    );
+    return res.rows[0].id;
+  };
+  const knowledgeUnitA = await mkKnowledgeUnit(tenantA, sessionEmployeeA, blockCheckpointA);
+  const knowledgeUnitB = await mkKnowledgeUnit(tenantB, sessionEmployeeB, blockCheckpointB);
+
+  // validation_layer (eines pro KU). reviewer_role CHECK: nur 'strategaize_admin'
+  // oder 'tenant_admin' erlaubt (siehe Migration 021). action CHECK: accept|edit|reject|comment.
+  const mkValidationLayer = async (
+    tenantId: string,
+    kuId: string,
+    reviewerUserId: string
+  ): Promise<string> => {
+    const res = await client.query<{ id: string }>(
+      `INSERT INTO public.validation_layer
+         (tenant_id, knowledge_unit_id, reviewer_user_id, reviewer_role,
+          action, previous_status, new_status, note)
+       VALUES ($1, $2, $3, 'tenant_admin', 'comment', NULL, 'proposed', 'V4-Matrix-Test')
+       RETURNING id`,
+      [tenantId, kuId, reviewerUserId]
+    );
+    return res.rows[0].id;
+  };
+  const validationLayerA = await mkValidationLayer(tenantA, knowledgeUnitA, tenantAdminAUserId);
+  const validationLayerB = await mkValidationLayer(tenantB, knowledgeUnitB, tenantAdminBUserId);
+
+  // block_diagnosis
+  const mkBlockDiagnosis = async (
+    tenantId: string,
+    sessionId: string,
+    checkpointId: string
+  ): Promise<string> => {
+    const res = await client.query<{ id: string }>(
+      `INSERT INTO public.block_diagnosis
+         (tenant_id, capture_session_id, block_checkpoint_id, block_key, content, status)
+       VALUES ($1, $2, $3, 'A', '{}'::jsonb, 'draft')
+       RETURNING id`,
+      [tenantId, sessionId, checkpointId]
+    );
+    return res.rows[0].id;
+  };
+  const blockDiagnosisA = await mkBlockDiagnosis(tenantA, sessionEmployeeA, blockCheckpointA);
+  const blockDiagnosisB = await mkBlockDiagnosis(tenantB, sessionEmployeeB, blockCheckpointB);
+
+  // sop
+  const mkSop = async (
+    tenantId: string,
+    sessionId: string,
+    checkpointId: string
+  ): Promise<string> => {
+    const res = await client.query<{ id: string }>(
+      `INSERT INTO public.sop
+         (tenant_id, capture_session_id, block_checkpoint_id, block_key, content)
+       VALUES ($1, $2, $3, 'A', '{}'::jsonb)
+       RETURNING id`,
+      [tenantId, sessionId, checkpointId]
+    );
+    return res.rows[0].id;
+  };
+  const sopA = await mkSop(tenantA, sessionEmployeeA, blockCheckpointA);
+  const sopB = await mkSop(tenantB, sessionEmployeeB, blockCheckpointB);
+
+  // handbook_snapshot
+  const mkHandbookSnapshot = async (
+    tenantId: string,
+    sessionId: string,
+    userId: string
+  ): Promise<string> => {
+    const res = await client.query<{ id: string }>(
+      `INSERT INTO public.handbook_snapshot
+         (tenant_id, capture_session_id, template_id, template_version, status, generated_by_user_id)
+       VALUES ($1, $2, $3, $4, 'generating', $5)
+       RETURNING id`,
+      [tenantId, sessionId, templateId, templateVersion, userId]
+    );
+    return res.rows[0].id;
+  };
+  const handbookSnapshotA = await mkHandbookSnapshot(tenantA, sessionEmployeeA, tenantAdminAUserId);
+  const handbookSnapshotB = await mkHandbookSnapshot(tenantB, sessionEmployeeB, tenantAdminBUserId);
+
+  // bridge_run
+  const mkBridgeRun = async (
+    tenantId: string,
+    sessionId: string,
+    userId: string
+  ): Promise<string> => {
+    const res = await client.query<{ id: string }>(
+      `INSERT INTO public.bridge_run
+         (tenant_id, capture_session_id, template_id, template_version, status, triggered_by_user_id)
+       VALUES ($1, $2, $3, $4, 'completed', $5)
+       RETURNING id`,
+      [tenantId, sessionId, templateId, templateVersion, userId]
+    );
+    return res.rows[0].id;
+  };
+  const bridgeRunA = await mkBridgeRun(tenantA, sessionAdminA, tenantAdminAUserId);
+  const bridgeRunB = await mkBridgeRun(tenantB, sessionAdminB, tenantAdminBUserId);
+
+  // bridge_proposal
+  const mkBridgeProposal = async (
+    tenantId: string,
+    runId: string
+  ): Promise<string> => {
+    const res = await client.query<{ id: string }>(
+      `INSERT INTO public.bridge_proposal
+         (tenant_id, bridge_run_id, proposal_mode, proposed_block_title, status)
+       VALUES ($1, $2, 'free_form', 'V4-Matrix-Proposal', 'proposed')
+       RETURNING id`,
+      [tenantId, runId]
+    );
+    return res.rows[0].id;
+  };
+  const bridgeProposalA = await mkBridgeProposal(tenantA, bridgeRunA);
+  const bridgeProposalB = await mkBridgeProposal(tenantB, bridgeRunB);
+
+  // employee_invitation
+  const mkEmployeeInvitation = async (
+    tenantId: string,
+    inviterUserId: string,
+    suffix: string
+  ): Promise<string> => {
+    const res = await client.query<{ id: string }>(
+      `INSERT INTO public.employee_invitation
+         (tenant_id, email, invitation_token, invited_by_user_id, status)
+       VALUES ($1, $2, $3, $4, 'pending')
+       RETURNING id`,
+      [
+        tenantId,
+        `inv-v4-${suffix}@onboarding.test`,
+        `tok-v4-${suffix}-${Math.random().toString(36).slice(2, 10)}`,
+        inviterUserId,
+      ]
+    );
+    return res.rows[0].id;
+  };
+  const employeeInvitationA = await mkEmployeeInvitation(tenantA, tenantAdminAUserId, "a");
+  const employeeInvitationB = await mkEmployeeInvitation(tenantB, tenantAdminBUserId, "b");
 
   return {
     tenantA,
@@ -130,5 +344,23 @@ export async function seedV4Fixtures(client: Client): Promise<V4Fixtures> {
     sessionAdminB,
     sessionEmployeeA,
     sessionEmployeeB,
+    blockCheckpointA,
+    blockCheckpointB,
+    knowledgeUnitA,
+    knowledgeUnitB,
+    validationLayerA,
+    validationLayerB,
+    blockDiagnosisA,
+    blockDiagnosisB,
+    sopA,
+    sopB,
+    handbookSnapshotA,
+    handbookSnapshotB,
+    bridgeRunA,
+    bridgeRunB,
+    bridgeProposalA,
+    bridgeProposalB,
+    employeeInvitationA,
+    employeeInvitationB,
   };
 }

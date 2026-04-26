@@ -4,26 +4,38 @@ import { withJwtContext } from "@/test/auth-context";
 import { seedV4Fixtures } from "./v4-fixtures";
 
 /**
- * V4 RLS-Perimeter-Matrix (SLC-033 MT-9 Skelett, Vervollstaendigung in SLC-037)
- * =============================================================================
+ * V4 RLS-Perimeter-Matrix (SLC-033 MT-9 Skelett, Vervollstaendigung in SLC-037 MT-7)
+ * =================================================================================
  *
  * 4 Rollen (strategaize_admin, tenant_admin, tenant_member, employee)
- * x 8 Tabellen (capture_session, block_checkpoint, knowledge_unit, validation_layer,
- *                block_diagnosis, sop, handbook_snapshot,
- *                bridge_run, bridge_proposal, employee_invitation)
- * = 32 Pflicht-Matrix-Faelle (hier als test.todo skizziert).
+ * x 8 Tabellen (capture_session, knowledge_unit, block_diagnosis, sop,
+ *                handbook_snapshot, bridge_run, bridge_proposal,
+ *                employee_invitation)
+ * = 32 Pflicht-Matrix-Faelle.
  *
- * Zusaetzlich: 8 direkte Pflicht-PASS-Faelle fuer R16 (employee-Sichtperimeter).
- * Diese sind als `it(...)` mit echten Assertions implementiert, damit das Skelett
- * bereits jetzt ein belastbares Sicherheitsnetz spannt.
- *
- * Vollstaendige Ausformulierung (RW-Verhalten, CRUD-Matrix, Cross-Tenant-Tests):
- * SLC-037 (Employee Capture-UI + Sicht-Perimeter).
+ * Zusaetzlich:
+ *   - 8 direkte PASS-Faelle fuer R16 (employee-Sichtperimeter, capture_session
+ *     + 6 no-access-Tabellen + strategaize_admin-Kontrolle).
+ *   - 2 Bonus-Aktiv-Faelle (employee block_checkpoint INSERT eigene/fremde Session,
+ *     employee validation_layer SELECT).
  *
  * HINWEIS
  * -------
  * Dieses Modul erfordert TEST_DATABASE_URL mit angewendeten V4-Migrationen
- * (065-071, 075). Ohne V4-Schema faellt `seedV4Fixtures` schon beim Setup.
+ * (065-073, 075). Ohne V4-Schema faellt `seedV4Fixtures` schon beim Setup.
+ *
+ * ERWARTUNGS-MATRIX (alle Counts beziehen sich auf die 2-Tenant-Fixtures)
+ * --------------------------------------------------------------------
+ * | Tabelle              | sa | ta-A   | tm-A          | emp-A         |
+ * |----------------------|----|--------|---------------|---------------|
+ * | capture_session      | 4  | 2 (A)  | 2 (A)         | 1 (eigene)    |
+ * | knowledge_unit       | 2  | 1 (A)  | 1 (A)         | 1 (own session)|
+ * | block_diagnosis      | 2  | 1 (A)  | 0 (no policy) | 0             |
+ * | sop                  | 2  | 1 (A)  | 0             | 0             |
+ * | handbook_snapshot    | 2  | 1 (A)  | 0             | 0             |
+ * | bridge_run           | 2  | 1 (A)  | 0             | 0             |
+ * | bridge_proposal      | 2  | 1 (A)  | 0             | 0             |
+ * | employee_invitation  | 2  | 1 (A)  | 0             | 0             |
  */
 
 const TABLES_WITHOUT_EMPLOYEE_ACCESS = [
@@ -111,67 +123,598 @@ describe("V4 RLS-Perimeter-Matrix — employee-Sichtperimeter (R16)", () => {
       });
     });
   });
+});
 
-  // ============================================================
-  // MATRIX-SKELETT (32 Pflicht-Faelle = 4 Rollen x 8 Tabellen)
-  // Tabellen laut SLC-033: capture_session, knowledge_unit, block_diagnosis,
-  //                         sop, handbook_snapshot, bridge_run, bridge_proposal,
-  //                         employee_invitation. Vervollstaendigung in SLC-037.
-  // Die 8 direkten PASS-Faelle oben decken den employee-Sichtperimeter bereits
-  // jetzt ab (capture_session + 6 "no-access"-Tabellen + strategaize_admin).
-  // ============================================================
+// ================================================================
+// MATRIX (32 Pflicht-Faelle): 4 Rollen x 8 Tabellen
+// SLC-037 MT-7 — Vervollstaendigung
+// ================================================================
 
-  // capture_session (4)
-  it.todo("matrix: strategaize_admin — capture_session cross-tenant R/W");
-  it.todo("matrix: tenant_admin — capture_session eigener Tenant R/W, fremder: 0 rows");
-  it.todo("matrix: tenant_member — capture_session eigener Tenant read, kein write");
-  it.todo("matrix: employee — capture_session update eigener session, fremde blockiert");
+describe("V4 RLS-Matrix — capture_session", () => {
+  it("strategaize_admin sieht alle 4 capture_sessions cross-tenant", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV4Fixtures(client);
+      await withJwtContext(client, f.strategaizeAdminUserId, async () => {
+        const res = await client.query<{ c: string }>(
+          `SELECT count(*)::text AS c FROM public.capture_session
+            WHERE id IN ($1, $2, $3, $4)`,
+          [f.sessionAdminA, f.sessionAdminB, f.sessionEmployeeA, f.sessionEmployeeB]
+        );
+        expect(res.rows[0].c).toBe("4");
+      });
+    });
+  });
 
-  // knowledge_unit (4)
-  it.todo("matrix: strategaize_admin — knowledge_unit cross-tenant R/W");
-  it.todo("matrix: tenant_admin — knowledge_unit eigener Tenant R/W");
-  it.todo("matrix: tenant_member — knowledge_unit eigener Tenant read");
-  it.todo("matrix: employee — knowledge_unit SELECT nur zu eigenen sessions");
+  it("tenant_admin sieht 2 capture_sessions im eigenen Tenant, 0 cross-tenant", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV4Fixtures(client);
+      await withJwtContext(client, f.tenantAdminAUserId, async () => {
+        const own = await client.query<{ c: string }>(
+          `SELECT count(*)::text AS c FROM public.capture_session
+            WHERE id IN ($1, $2)`,
+          [f.sessionAdminA, f.sessionEmployeeA]
+        );
+        expect(own.rows[0].c).toBe("2");
 
-  // block_diagnosis (4)
-  it.todo("matrix: strategaize_admin — block_diagnosis cross-tenant R/W");
-  it.todo("matrix: tenant_admin — block_diagnosis eigener Tenant R");
-  it.todo("matrix: tenant_member — block_diagnosis KEIN Zugriff (per Default keine Policy)");
-  it.todo("matrix: employee — block_diagnosis KEIN Zugriff (0 rows)");
+        const cross = await client.query<{ c: string }>(
+          `SELECT count(*)::text AS c FROM public.capture_session
+            WHERE id IN ($1, $2)`,
+          [f.sessionAdminB, f.sessionEmployeeB]
+        );
+        expect(cross.rows[0].c).toBe("0");
+      });
+    });
+  });
 
-  // sop (4)
-  it.todo("matrix: strategaize_admin — sop cross-tenant R/W");
-  it.todo("matrix: tenant_admin — sop eigener Tenant R");
-  it.todo("matrix: tenant_member — sop eigener Tenant R (je nach Policy)");
-  it.todo("matrix: employee — sop KEIN Zugriff");
+  it("tenant_member sieht 2 capture_sessions im eigenen Tenant (read-only), 0 cross-tenant", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV4Fixtures(client);
+      await withJwtContext(client, f.tenantMemberAUserId, async () => {
+        const own = await client.query<{ c: string }>(
+          `SELECT count(*)::text AS c FROM public.capture_session
+            WHERE id IN ($1, $2)`,
+          [f.sessionAdminA, f.sessionEmployeeA]
+        );
+        expect(own.rows[0].c).toBe("2");
 
-  // handbook_snapshot (4)
-  it.todo("matrix: strategaize_admin — handbook_snapshot cross-tenant R/W");
-  it.todo("matrix: tenant_admin — handbook_snapshot eigener Tenant R/W");
-  it.todo("matrix: tenant_member — handbook_snapshot KEIN Zugriff");
-  it.todo("matrix: employee — handbook_snapshot KEIN Zugriff");
+        const cross = await client.query<{ c: string }>(
+          `SELECT count(*)::text AS c FROM public.capture_session
+            WHERE id IN ($1, $2)`,
+          [f.sessionAdminB, f.sessionEmployeeB]
+        );
+        expect(cross.rows[0].c).toBe("0");
+      });
+    });
+  });
 
-  // bridge_run (4)
-  it.todo("matrix: strategaize_admin — bridge_run cross-tenant R/W");
-  it.todo("matrix: tenant_admin — bridge_run eigener Tenant R/W");
-  it.todo("matrix: tenant_member — bridge_run KEIN Zugriff");
-  it.todo("matrix: employee — bridge_run KEIN Zugriff");
+  it("employee sieht NUR die eigene capture_session, fremder owner + cross-tenant blockiert", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV4Fixtures(client);
+      await withJwtContext(client, f.employeeAUserId, async () => {
+        const own = await client.query<{ c: string }>(
+          `SELECT count(*)::text AS c FROM public.capture_session
+            WHERE id = $1`,
+          [f.sessionEmployeeA]
+        );
+        expect(own.rows[0].c).toBe("1");
 
-  // bridge_proposal (4)
-  it.todo("matrix: strategaize_admin — bridge_proposal cross-tenant R/W");
-  it.todo("matrix: tenant_admin — bridge_proposal eigener Tenant R/W");
-  it.todo("matrix: tenant_member — bridge_proposal KEIN Zugriff");
-  it.todo("matrix: employee — bridge_proposal KEIN Zugriff");
+        const others = await client.query<{ c: string }>(
+          `SELECT count(*)::text AS c FROM public.capture_session
+            WHERE id IN ($1, $2, $3)`,
+          [f.sessionAdminA, f.sessionAdminB, f.sessionEmployeeB]
+        );
+        expect(others.rows[0].c).toBe("0");
+      });
+    });
+  });
+});
 
-  // employee_invitation (4)
-  it.todo("matrix: strategaize_admin — employee_invitation cross-tenant R/W");
-  it.todo("matrix: tenant_admin — employee_invitation eigener Tenant R/W, cross-tenant INSERT blockiert");
-  it.todo("matrix: tenant_member — employee_invitation KEIN Zugriff");
-  it.todo("matrix: employee — employee_invitation KEIN Zugriff");
+describe("V4 RLS-Matrix — knowledge_unit", () => {
+  it("strategaize_admin sieht beide knowledge_units cross-tenant", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV4Fixtures(client);
+      await withJwtContext(client, f.strategaizeAdminUserId, async () => {
+        const res = await client.query<{ c: string }>(
+          `SELECT count(*)::text AS c FROM public.knowledge_unit
+            WHERE id IN ($1, $2)`,
+          [f.knowledgeUnitA, f.knowledgeUnitB]
+        );
+        expect(res.rows[0].c).toBe("2");
+      });
+    });
+  });
 
-  // BONUS: block_checkpoint + validation_layer (nicht in Slice-8 aber R16-relevant)
-  it.todo("bonus: employee — block_checkpoint INSERT fuer eigene session OK, fremde blockiert");
-  it.todo("bonus: employee — validation_layer SELECT nur zu eigenen KUs");
+  it("tenant_admin sieht eigene knowledge_unit, fremde blockiert", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV4Fixtures(client);
+      await withJwtContext(client, f.tenantAdminAUserId, async () => {
+        const own = await client.query<{ c: string }>(
+          `SELECT count(*)::text AS c FROM public.knowledge_unit WHERE id = $1`,
+          [f.knowledgeUnitA]
+        );
+        expect(own.rows[0].c).toBe("1");
+
+        const cross = await client.query<{ c: string }>(
+          `SELECT count(*)::text AS c FROM public.knowledge_unit WHERE id = $1`,
+          [f.knowledgeUnitB]
+        );
+        expect(cross.rows[0].c).toBe("0");
+      });
+    });
+  });
+
+  it("tenant_member sieht eigene knowledge_unit (read), fremde blockiert", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV4Fixtures(client);
+      await withJwtContext(client, f.tenantMemberAUserId, async () => {
+        const own = await client.query<{ c: string }>(
+          `SELECT count(*)::text AS c FROM public.knowledge_unit WHERE id = $1`,
+          [f.knowledgeUnitA]
+        );
+        expect(own.rows[0].c).toBe("1");
+
+        const cross = await client.query<{ c: string }>(
+          `SELECT count(*)::text AS c FROM public.knowledge_unit WHERE id = $1`,
+          [f.knowledgeUnitB]
+        );
+        expect(cross.rows[0].c).toBe("0");
+      });
+    });
+  });
+
+  it("employee sieht knowledge_unit NUR zur eigenen Session, andere blockiert", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV4Fixtures(client);
+      await withJwtContext(client, f.employeeAUserId, async () => {
+        const own = await client.query<{ c: string }>(
+          `SELECT count(*)::text AS c FROM public.knowledge_unit WHERE id = $1`,
+          [f.knowledgeUnitA]
+        );
+        expect(own.rows[0].c).toBe("1");
+
+        const cross = await client.query<{ c: string }>(
+          `SELECT count(*)::text AS c FROM public.knowledge_unit WHERE id = $1`,
+          [f.knowledgeUnitB]
+        );
+        expect(cross.rows[0].c).toBe("0");
+      });
+    });
+  });
+});
+
+describe("V4 RLS-Matrix — block_diagnosis", () => {
+  it("strategaize_admin sieht beide block_diagnosis cross-tenant", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV4Fixtures(client);
+      await withJwtContext(client, f.strategaizeAdminUserId, async () => {
+        const res = await client.query<{ c: string }>(
+          `SELECT count(*)::text AS c FROM public.block_diagnosis
+            WHERE id IN ($1, $2)`,
+          [f.blockDiagnosisA, f.blockDiagnosisB]
+        );
+        expect(res.rows[0].c).toBe("2");
+      });
+    });
+  });
+
+  it("tenant_admin sieht eigene block_diagnosis (read), fremde blockiert", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV4Fixtures(client);
+      await withJwtContext(client, f.tenantAdminAUserId, async () => {
+        const own = await client.query<{ c: string }>(
+          `SELECT count(*)::text AS c FROM public.block_diagnosis WHERE id = $1`,
+          [f.blockDiagnosisA]
+        );
+        expect(own.rows[0].c).toBe("1");
+
+        const cross = await client.query<{ c: string }>(
+          `SELECT count(*)::text AS c FROM public.block_diagnosis WHERE id = $1`,
+          [f.blockDiagnosisB]
+        );
+        expect(cross.rows[0].c).toBe("0");
+      });
+    });
+  });
+
+  it("tenant_member sieht KEINE block_diagnosis (no member-policy)", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV4Fixtures(client);
+      await withJwtContext(client, f.tenantMemberAUserId, async () => {
+        const res = await client.query<{ c: string }>(
+          `SELECT count(*)::text AS c FROM public.block_diagnosis
+            WHERE id IN ($1, $2)`,
+          [f.blockDiagnosisA, f.blockDiagnosisB]
+        );
+        expect(res.rows[0].c).toBe("0");
+      });
+    });
+  });
+
+  it("employee sieht KEINE block_diagnosis (no employee-policy)", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV4Fixtures(client);
+      await withJwtContext(client, f.employeeAUserId, async () => {
+        const res = await client.query<{ c: string }>(
+          `SELECT count(*)::text AS c FROM public.block_diagnosis
+            WHERE id IN ($1, $2)`,
+          [f.blockDiagnosisA, f.blockDiagnosisB]
+        );
+        expect(res.rows[0].c).toBe("0");
+      });
+    });
+  });
+});
+
+describe("V4 RLS-Matrix — sop", () => {
+  it("strategaize_admin sieht beide sops cross-tenant", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV4Fixtures(client);
+      await withJwtContext(client, f.strategaizeAdminUserId, async () => {
+        const res = await client.query<{ c: string }>(
+          `SELECT count(*)::text AS c FROM public.sop WHERE id IN ($1, $2)`,
+          [f.sopA, f.sopB]
+        );
+        expect(res.rows[0].c).toBe("2");
+      });
+    });
+  });
+
+  it("tenant_admin sieht eigene sop (read), fremde blockiert", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV4Fixtures(client);
+      await withJwtContext(client, f.tenantAdminAUserId, async () => {
+        const own = await client.query<{ c: string }>(
+          `SELECT count(*)::text AS c FROM public.sop WHERE id = $1`,
+          [f.sopA]
+        );
+        expect(own.rows[0].c).toBe("1");
+
+        const cross = await client.query<{ c: string }>(
+          `SELECT count(*)::text AS c FROM public.sop WHERE id = $1`,
+          [f.sopB]
+        );
+        expect(cross.rows[0].c).toBe("0");
+      });
+    });
+  });
+
+  it("tenant_member sieht KEINE sop (no member-policy)", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV4Fixtures(client);
+      await withJwtContext(client, f.tenantMemberAUserId, async () => {
+        const res = await client.query<{ c: string }>(
+          `SELECT count(*)::text AS c FROM public.sop WHERE id IN ($1, $2)`,
+          [f.sopA, f.sopB]
+        );
+        expect(res.rows[0].c).toBe("0");
+      });
+    });
+  });
+
+  it("employee sieht KEINE sop (no employee-policy)", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV4Fixtures(client);
+      await withJwtContext(client, f.employeeAUserId, async () => {
+        const res = await client.query<{ c: string }>(
+          `SELECT count(*)::text AS c FROM public.sop WHERE id IN ($1, $2)`,
+          [f.sopA, f.sopB]
+        );
+        expect(res.rows[0].c).toBe("0");
+      });
+    });
+  });
+});
+
+describe("V4 RLS-Matrix — handbook_snapshot", () => {
+  it("strategaize_admin sieht beide handbook_snapshots cross-tenant", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV4Fixtures(client);
+      await withJwtContext(client, f.strategaizeAdminUserId, async () => {
+        const res = await client.query<{ c: string }>(
+          `SELECT count(*)::text AS c FROM public.handbook_snapshot WHERE id IN ($1, $2)`,
+          [f.handbookSnapshotA, f.handbookSnapshotB]
+        );
+        expect(res.rows[0].c).toBe("2");
+      });
+    });
+  });
+
+  it("tenant_admin sieht eigene handbook_snapshot (RW), fremde blockiert", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV4Fixtures(client);
+      await withJwtContext(client, f.tenantAdminAUserId, async () => {
+        const own = await client.query<{ c: string }>(
+          `SELECT count(*)::text AS c FROM public.handbook_snapshot WHERE id = $1`,
+          [f.handbookSnapshotA]
+        );
+        expect(own.rows[0].c).toBe("1");
+
+        const cross = await client.query<{ c: string }>(
+          `SELECT count(*)::text AS c FROM public.handbook_snapshot WHERE id = $1`,
+          [f.handbookSnapshotB]
+        );
+        expect(cross.rows[0].c).toBe("0");
+      });
+    });
+  });
+
+  it("tenant_member sieht KEINE handbook_snapshot (no member-policy)", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV4Fixtures(client);
+      await withJwtContext(client, f.tenantMemberAUserId, async () => {
+        const res = await client.query<{ c: string }>(
+          `SELECT count(*)::text AS c FROM public.handbook_snapshot WHERE id IN ($1, $2)`,
+          [f.handbookSnapshotA, f.handbookSnapshotB]
+        );
+        expect(res.rows[0].c).toBe("0");
+      });
+    });
+  });
+
+  it("employee sieht KEINE handbook_snapshot (no employee-policy)", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV4Fixtures(client);
+      await withJwtContext(client, f.employeeAUserId, async () => {
+        const res = await client.query<{ c: string }>(
+          `SELECT count(*)::text AS c FROM public.handbook_snapshot WHERE id IN ($1, $2)`,
+          [f.handbookSnapshotA, f.handbookSnapshotB]
+        );
+        expect(res.rows[0].c).toBe("0");
+      });
+    });
+  });
+});
+
+describe("V4 RLS-Matrix — bridge_run", () => {
+  it("strategaize_admin sieht beide bridge_runs cross-tenant", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV4Fixtures(client);
+      await withJwtContext(client, f.strategaizeAdminUserId, async () => {
+        const res = await client.query<{ c: string }>(
+          `SELECT count(*)::text AS c FROM public.bridge_run WHERE id IN ($1, $2)`,
+          [f.bridgeRunA, f.bridgeRunB]
+        );
+        expect(res.rows[0].c).toBe("2");
+      });
+    });
+  });
+
+  it("tenant_admin sieht eigene bridge_run (RW), fremde blockiert", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV4Fixtures(client);
+      await withJwtContext(client, f.tenantAdminAUserId, async () => {
+        const own = await client.query<{ c: string }>(
+          `SELECT count(*)::text AS c FROM public.bridge_run WHERE id = $1`,
+          [f.bridgeRunA]
+        );
+        expect(own.rows[0].c).toBe("1");
+
+        const cross = await client.query<{ c: string }>(
+          `SELECT count(*)::text AS c FROM public.bridge_run WHERE id = $1`,
+          [f.bridgeRunB]
+        );
+        expect(cross.rows[0].c).toBe("0");
+      });
+    });
+  });
+
+  it("tenant_member sieht KEINE bridge_run (no member-policy)", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV4Fixtures(client);
+      await withJwtContext(client, f.tenantMemberAUserId, async () => {
+        const res = await client.query<{ c: string }>(
+          `SELECT count(*)::text AS c FROM public.bridge_run WHERE id IN ($1, $2)`,
+          [f.bridgeRunA, f.bridgeRunB]
+        );
+        expect(res.rows[0].c).toBe("0");
+      });
+    });
+  });
+
+  it("employee sieht KEINE bridge_run (no employee-policy)", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV4Fixtures(client);
+      await withJwtContext(client, f.employeeAUserId, async () => {
+        const res = await client.query<{ c: string }>(
+          `SELECT count(*)::text AS c FROM public.bridge_run WHERE id IN ($1, $2)`,
+          [f.bridgeRunA, f.bridgeRunB]
+        );
+        expect(res.rows[0].c).toBe("0");
+      });
+    });
+  });
+});
+
+describe("V4 RLS-Matrix — bridge_proposal", () => {
+  it("strategaize_admin sieht beide bridge_proposals cross-tenant", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV4Fixtures(client);
+      await withJwtContext(client, f.strategaizeAdminUserId, async () => {
+        const res = await client.query<{ c: string }>(
+          `SELECT count(*)::text AS c FROM public.bridge_proposal WHERE id IN ($1, $2)`,
+          [f.bridgeProposalA, f.bridgeProposalB]
+        );
+        expect(res.rows[0].c).toBe("2");
+      });
+    });
+  });
+
+  it("tenant_admin sieht eigene bridge_proposal (RW), fremde blockiert", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV4Fixtures(client);
+      await withJwtContext(client, f.tenantAdminAUserId, async () => {
+        const own = await client.query<{ c: string }>(
+          `SELECT count(*)::text AS c FROM public.bridge_proposal WHERE id = $1`,
+          [f.bridgeProposalA]
+        );
+        expect(own.rows[0].c).toBe("1");
+
+        const cross = await client.query<{ c: string }>(
+          `SELECT count(*)::text AS c FROM public.bridge_proposal WHERE id = $1`,
+          [f.bridgeProposalB]
+        );
+        expect(cross.rows[0].c).toBe("0");
+      });
+    });
+  });
+
+  it("tenant_member sieht KEINE bridge_proposal (no member-policy)", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV4Fixtures(client);
+      await withJwtContext(client, f.tenantMemberAUserId, async () => {
+        const res = await client.query<{ c: string }>(
+          `SELECT count(*)::text AS c FROM public.bridge_proposal WHERE id IN ($1, $2)`,
+          [f.bridgeProposalA, f.bridgeProposalB]
+        );
+        expect(res.rows[0].c).toBe("0");
+      });
+    });
+  });
+
+  it("employee sieht KEINE bridge_proposal (no employee-policy)", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV4Fixtures(client);
+      await withJwtContext(client, f.employeeAUserId, async () => {
+        const res = await client.query<{ c: string }>(
+          `SELECT count(*)::text AS c FROM public.bridge_proposal WHERE id IN ($1, $2)`,
+          [f.bridgeProposalA, f.bridgeProposalB]
+        );
+        expect(res.rows[0].c).toBe("0");
+      });
+    });
+  });
+});
+
+describe("V4 RLS-Matrix — employee_invitation", () => {
+  it("strategaize_admin sieht beide employee_invitations cross-tenant", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV4Fixtures(client);
+      await withJwtContext(client, f.strategaizeAdminUserId, async () => {
+        const res = await client.query<{ c: string }>(
+          `SELECT count(*)::text AS c FROM public.employee_invitation WHERE id IN ($1, $2)`,
+          [f.employeeInvitationA, f.employeeInvitationB]
+        );
+        expect(res.rows[0].c).toBe("2");
+      });
+    });
+  });
+
+  it("tenant_admin sieht eigene employee_invitation (RW), fremde blockiert", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV4Fixtures(client);
+      await withJwtContext(client, f.tenantAdminAUserId, async () => {
+        const own = await client.query<{ c: string }>(
+          `SELECT count(*)::text AS c FROM public.employee_invitation WHERE id = $1`,
+          [f.employeeInvitationA]
+        );
+        expect(own.rows[0].c).toBe("1");
+
+        const cross = await client.query<{ c: string }>(
+          `SELECT count(*)::text AS c FROM public.employee_invitation WHERE id = $1`,
+          [f.employeeInvitationB]
+        );
+        expect(cross.rows[0].c).toBe("0");
+      });
+    });
+  });
+
+  it("tenant_member sieht KEINE employee_invitation (no member-policy)", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV4Fixtures(client);
+      await withJwtContext(client, f.tenantMemberAUserId, async () => {
+        const res = await client.query<{ c: string }>(
+          `SELECT count(*)::text AS c FROM public.employee_invitation WHERE id IN ($1, $2)`,
+          [f.employeeInvitationA, f.employeeInvitationB]
+        );
+        expect(res.rows[0].c).toBe("0");
+      });
+    });
+  });
+
+  it("employee sieht KEINE employee_invitation (no employee-policy)", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV4Fixtures(client);
+      await withJwtContext(client, f.employeeAUserId, async () => {
+        const res = await client.query<{ c: string }>(
+          `SELECT count(*)::text AS c FROM public.employee_invitation WHERE id IN ($1, $2)`,
+          [f.employeeInvitationA, f.employeeInvitationB]
+        );
+        expect(res.rows[0].c).toBe("0");
+      });
+    });
+  });
+});
+
+// ================================================================
+// BONUS: Aktiv-Tests (employee block_checkpoint INSERT, validation_layer SELECT)
+// SLC-037 MT-7 — R16 Aktiv-Faelle
+// ================================================================
+
+describe("V4 RLS-Bonus — employee block_checkpoint INSERT", () => {
+  it("employee kann block_checkpoint INSERT fuer eigene Session", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV4Fixtures(client);
+      await withJwtContext(client, f.employeeAUserId, async () => {
+        const res = await client.query<{ id: string }>(
+          `INSERT INTO public.block_checkpoint
+             (tenant_id, capture_session_id, block_key, checkpoint_type,
+              content, content_hash, created_by)
+           VALUES ($1, $2, 'A', 'questionnaire_submit', '{}'::jsonb, $3, $4)
+           RETURNING id`,
+          [
+            f.tenantA,
+            f.sessionEmployeeA,
+            "hash-emp-own-" + Math.random().toString(36).slice(2, 10),
+            f.employeeAUserId,
+          ]
+        );
+        expect(res.rows[0].id).toBeTruthy();
+      });
+    });
+  });
+
+  it("employee kann KEIN block_checkpoint INSERT fuer FREMDE Session (Permission-Error)", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV4Fixtures(client);
+      await withJwtContext(client, f.employeeAUserId, async () => {
+        await expect(
+          client.query(
+            `INSERT INTO public.block_checkpoint
+               (tenant_id, capture_session_id, block_key, checkpoint_type,
+                content, content_hash, created_by)
+             VALUES ($1, $2, 'A', 'questionnaire_submit', '{}'::jsonb, $3, $4)`,
+            [
+              f.tenantA,
+              f.sessionAdminA,
+              "hash-emp-foreign-" + Math.random().toString(36).slice(2, 10),
+              f.employeeAUserId,
+            ]
+          )
+        ).rejects.toThrow(/row-level security|permission denied|new row violates/i);
+      });
+    });
+  });
+});
+
+describe("V4 RLS-Bonus — employee validation_layer SELECT", () => {
+  it("employee sieht validation_layer NUR zu eigenen KUs, fremde blockiert", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV4Fixtures(client);
+      await withJwtContext(client, f.employeeAUserId, async () => {
+        const own = await client.query<{ c: string }>(
+          `SELECT count(*)::text AS c FROM public.validation_layer WHERE id = $1`,
+          [f.validationLayerA]
+        );
+        expect(own.rows[0].c).toBe("1");
+
+        const cross = await client.query<{ c: string }>(
+          `SELECT count(*)::text AS c FROM public.validation_layer WHERE id = $1`,
+          [f.validationLayerB]
+        );
+        expect(cross.rows[0].c).toBe("0");
+      });
+    });
+  });
 });
 
 describe("V4 Trigger — bridge_run_set_stale", () => {
