@@ -677,8 +677,12 @@ describe("V4 RLS-Bonus — employee block_checkpoint INSERT", () => {
     await withTestDb(async (client) => {
       const f = await seedV4Fixtures(client);
       await withJwtContext(client, f.employeeAUserId, async () => {
-        await expect(
-          client.query(
+        // SAVEPOINT-Pattern (IMP-044): erwartete RLS-Rejection bringt die Tx
+        // sonst in Abort-Status, wodurch RESET ROLE im finally crasht.
+        await client.query("SAVEPOINT before_foreign_insert");
+        let errorMessage = "";
+        try {
+          await client.query(
             `INSERT INTO public.block_checkpoint
                (tenant_id, capture_session_id, block_key, checkpoint_type,
                 content, content_hash, created_by)
@@ -689,8 +693,12 @@ describe("V4 RLS-Bonus — employee block_checkpoint INSERT", () => {
               "hash-emp-foreign-" + Math.random().toString(36).slice(2, 10),
               f.employeeAUserId,
             ]
-          )
-        ).rejects.toThrow(/row-level security|permission denied|new row violates/i);
+          );
+        } catch (e) {
+          errorMessage = (e as Error).message;
+        }
+        await client.query("ROLLBACK TO SAVEPOINT before_foreign_insert");
+        expect(errorMessage).toMatch(/row-level security|permission denied|new row violates/i);
       });
     });
   });
