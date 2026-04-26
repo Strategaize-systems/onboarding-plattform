@@ -36,9 +36,13 @@ export default async function EmployeeLayout({
   if (profile.role === "tenant_member") redirect("/dashboard");
   if (profile.role !== "employee") redirect("/login");
 
+  // SLC-037 MT-3 — Layout liefert nur den Mitarbeiter-Header.
+  // Container/Width/Padding wird von der jeweiligen Page gesetzt, damit die
+  // Block-Detail-Page (QuestionnaireWorkspace fullscreen) ohne max-w-5xl
+  // funktioniert. Listen-Pages wrappen sich in einen eigenen 5xl-Container.
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="border-b bg-white">
+    <div className="min-h-screen bg-slate-50 flex flex-col">
+      <header className="border-b bg-white flex-shrink-0">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
           <div className="flex items-center gap-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -52,7 +56,7 @@ export default async function EmployeeLayout({
           </form>
         </div>
       </header>
-      <main className="mx-auto max-w-5xl px-6 py-10">{children}</main>
+      <main className="flex-1 flex flex-col min-h-0">{children}</main>
     </div>
   );
 }

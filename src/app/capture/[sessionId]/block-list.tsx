@@ -21,6 +21,11 @@ interface Props {
   checkpointsByBlock: Record<string, BlockCheckpointInput[]>;
   kuBlockKeys: string[];
   sessionId: string;
+  /**
+   * SLC-037 MT-2 — Pfad-Praefix fuer Block-Links.
+   * GF-Flow: '/capture' (Default). Employee-Flow: '/employee/capture'.
+   */
+  basePath?: string;
 }
 
 const STATUS_CONFIG: Record<
@@ -54,6 +59,7 @@ export function BlockList({
   checkpointsByBlock,
   kuBlockKeys,
   sessionId,
+  basePath = "/capture",
 }: Props) {
   const locale = useLocale();
   const sortedBlocks = [...blocks].sort((a, b) => a.order - b.order);
@@ -75,7 +81,7 @@ export function BlockList({
         return (
           <Link
             key={block.id}
-            href={`/capture/${sessionId}/block/${block.key}`}
+            href={`${basePath}/${sessionId}/block/${block.key}`}
             className="block"
           >
             <Card className="hover:border-primary/30 hover:shadow-md transition-all cursor-pointer">

@@ -61,6 +61,12 @@ interface Props {
   savedAnswers: Record<string, string>;
   locale: string;
   existingCheckpoints: CheckpointInfo[];
+  /**
+   * SLC-037 MT-1 — Pfad-Praefix fuer interne Links.
+   * GF-Flow: '/capture' (Default). Employee-Flow: '/employee/capture'.
+   * Beeinflusst: Sidebar Block-Switch, "Zurueck zur Uebersicht", Submit-Redirect.
+   */
+  basePath?: string;
 }
 
 export function QuestionnaireWorkspace({
@@ -72,6 +78,7 @@ export function QuestionnaireWorkspace({
   savedAnswers,
   locale,
   existingCheckpoints,
+  basePath = "/capture",
 }: Props) {
   const router = useRouter();
   // All questions from all blocks — flattened for counting
@@ -242,7 +249,7 @@ export function QuestionnaireWorkspace({
 
       setBlockSubmitted(true);
       setTimeout(() => {
-        router.push(`/capture/${sessionId}`);
+        router.push(`${basePath}/${sessionId}`);
         router.refresh();
       }, 800);
     } catch {
@@ -611,7 +618,7 @@ export function QuestionnaireWorkspace({
                             key={q.id}
                             onClick={() => {
                               if (block.key !== activeBlockKey) {
-                                window.location.href = `/capture/${sessionId}/block/${block.key}`;
+                                window.location.href = `${basePath}/${sessionId}/block/${block.key}`;
                               } else {
                                 selectQuestion(q);
                               }
@@ -649,7 +656,7 @@ export function QuestionnaireWorkspace({
       {/* Back to overview */}
       <div className="border-t border-white/[0.06] px-4 py-4">
         <Link
-          href={`/capture/${sessionId}`}
+          href={`${basePath}/${sessionId}`}
           className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-primary/20 to-brand-primary-dark/20 px-3 py-3 text-sm font-semibold text-slate-300 transition-all hover:from-brand-primary/30 hover:to-brand-primary-dark/30 hover:text-white"
         >
           Zurück zur Übersicht
