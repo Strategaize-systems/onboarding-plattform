@@ -1,16 +1,23 @@
-import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { logout } from "../login/actions";
-import { Button } from "@/components/ui/button";
+import { createClient } from "@/lib/supabase/server";
+import { EmployeeShell } from "./employee-shell";
 
 /**
- * SLC-034 MT-6 — Employee-Layout mit Rollen-Guard.
+ * SLC-034 MT-6 + SLC-037 — Employee-Layout mit Rollen-Guard und Sidebar.
  *
  * Nur role='employee' darf diese Seiten sehen. Andere Rollen werden auf
  * ihre eigene Landing-Page umgeleitet. Unauthenticated landet via Middleware
  * schon auf /login.
+ *
+ * Layout-Struktur (analog AdminSidebar / TenantAdminShell):
+ *   EmployeeShell (flex h-screen overflow-hidden)
+ *     ├── EmployeeSidebar (persistent left, 280px, dark gradient)
+ *     └── main (flex-1, scrollable) — children werden hier gerendert
+ *
+ * Listen-Pages wrappen sich in `mx-auto max-w-5xl px-6 py-10`. Block-Detail
+ * rendert QuestionnaireWorkspace fullscreen — der nimmt seinen flex-1-Slot
+ * korrekt ein.
  */
-
 export default async function EmployeeLayout({
   children,
 }: {
@@ -36,27 +43,5 @@ export default async function EmployeeLayout({
   if (profile.role === "tenant_member") redirect("/dashboard");
   if (profile.role !== "employee") redirect("/login");
 
-  // SLC-037 MT-3 — Layout liefert nur den Mitarbeiter-Header.
-  // Container/Width/Padding wird von der jeweiligen Page gesetzt, damit die
-  // Block-Detail-Page (QuestionnaireWorkspace fullscreen) ohne max-w-5xl
-  // funktioniert. Listen-Pages wrappen sich in einen eigenen 5xl-Container.
-  return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
-      <header className="border-b bg-white flex-shrink-0">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/brand/logo-full.png" alt="StrategAIze" className="h-8 w-auto" />
-            <span className="text-sm text-slate-500">Mitarbeiter</span>
-          </div>
-          <form action={logout}>
-            <Button type="submit" variant="outline" size="sm">
-              Abmelden
-            </Button>
-          </form>
-        </div>
-      </header>
-      <main className="flex-1 flex flex-col min-h-0">{children}</main>
-    </div>
-  );
+  return <EmployeeShell email={profile.email}>{children}</EmployeeShell>;
 }

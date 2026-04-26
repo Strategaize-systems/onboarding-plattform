@@ -93,7 +93,7 @@ export default async function EmployeeCaptureSessionPage({
   ).size;
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto w-full max-w-5xl px-6 py-10 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <Link

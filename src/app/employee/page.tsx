@@ -60,7 +60,6 @@ export default async function EmployeePage() {
   } = await supabase.auth.getUser();
 
   // Layout stellt sicher dass user existiert und role='employee'
-  const email = user?.email ?? "";
   const { data: profile } = user
     ? await supabase
         .from("profiles")
@@ -134,7 +133,6 @@ export default async function EmployeePage() {
         <h1 className="text-2xl font-semibold text-slate-900">
           Willkommen bei {tenantName}
         </h1>
-        <p className="mt-1 text-sm text-slate-500">{email}</p>
       </div>
 
       {tasks.length === 0 ? (
