@@ -42,6 +42,14 @@ const sourceLabels: Record<string, string> = {
   meeting_final: "Meeting-Final",
   evidence: "Evidenz",
   dialogue: "Gespraech",
+  employee_questionnaire: "Mitarbeiter",
+};
+
+// SLC-037 MT-6 — Badge-Style fuer source-Gruppe in Debrief-UI.
+// employee_questionnaire bekommt eine eigene Akzentfarbe (teal) damit
+// tenant_admin sofort sieht, dass diese KUs aus einem Mitarbeiter-Block kommen.
+const sourceBadgeStyles: Record<string, string> = {
+  employee_questionnaire: "bg-teal-100 text-teal-800 border border-teal-200",
 };
 
 const confidenceColors: Record<string, string> = {
@@ -80,6 +88,7 @@ export function KnowledgeUnitList({
 
   const sourceOrder = [
     "questionnaire",
+    "employee_questionnaire",
     "dialogue",
     "evidence",
     "ai_draft",
@@ -167,8 +176,18 @@ export function KnowledgeUnitList({
       {/* KU groups by source */}
       {sortedSources.map((source) => (
         <div key={source}>
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
-            {sourceLabels[source] ?? source} ({grouped[source].length})
+          <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
+            <span>
+              {sourceLabels[source] ?? source} ({grouped[source].length})
+            </span>
+            {sourceBadgeStyles[source] && (
+              <span
+                className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${sourceBadgeStyles[source]}`}
+                title="Quelle: Mitarbeiter-Fragebogen (Bridge-Spawn)"
+              >
+                Mitarbeiter
+              </span>
+            )}
           </h2>
           <div className="space-y-3">
             {grouped[source].map((ku) => (
