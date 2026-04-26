@@ -405,9 +405,9 @@
       "title": "Employee Role + RBAC Extension",
       "type": "feature",
       "priority": "high",
-      "status": "in_progress",
+      "status": "done",
       "version": "V4",
-      "description": "Neue Rolle 'employee' im RBAC-Modell (parallel zu strategaize_admin / tenant_admin / tenant_member, kein Merge mit tenant_member, DEC-036). Mitarbeiter-Einladung vom tenant_admin per E-Mail, Auth-Flow klassisches Passwort (DEC-035). Eigenes Mitarbeiter-Dashboard. RLS-Policies erweitert + 4x8 Test-Matrix Pflicht (32 Pflicht-Faelle). Siehe FEAT-022. Slices: SLC-033 (Schema), SLC-034 (Auth+Invitation), SLC-037 (RLS-Perimeter-Abschluss).",
+      "description": "Done 2026-04-26 (RPT-084). Neue Rolle 'employee' im RBAC-Modell (DEC-036), Invitation-Flow (DEC-035), /employee-Dashboard mit Aufgaben-Liste, Middleware-Block fuer /admin /dashboard /capture, vollstaendige 4x8 RLS-Test-Matrix (46 Tests gegen Coolify-DB gruen nach MIG-078 R16-Vervollstaendigung). Slices: SLC-033 + SLC-034 + SLC-037 alle done. AC-11 Browser-Smoke pending User-Coolify-Deploy.",
       "createdAt": "2026-04-23"
     },
     {
@@ -425,9 +425,9 @@
       "title": "Employee Capture Workflow",
       "type": "feature",
       "priority": "high",
-      "status": "in_progress",
+      "status": "done",
       "version": "V4",
-      "description": "Mitarbeiter-Dashboard mit zugewiesenen Capture-Sessions, Questionnaire-Mode (gleicher Code wie GF, eingeschraenkt auf eigenen Scope via RLS), Submit triggert Standard-Pipeline (Verdichtung + Diagnose). Strikte RLS-Sicht-Trennung: Mitarbeiter sieht nicht Blueprint, andere Mitarbeiter, Diagnose, SOP, Handbuch, Bridge-Proposals. Siehe FEAT-024. Slice: SLC-037.",
+      "description": "Done 2026-04-26 (RPT-084). Mitarbeiter-Dashboard mit eigenen Aufgaben (RLS-gefiltert), EmployeeQuestionnaireMode-Wrapper um QuestionnaireWorkspace mit basePath='/employee/capture', Block-Submit triggert Standard-Pipeline mit source='employee_questionnaire' im Worker, KU-Badge 'Mitarbeiter' im Debrief-UI. Strikte RLS-Sicht-Trennung verifiziert (46 RLS-Tests + MIG-078 R16-Mitigation). Slice SLC-037 done. AC-11 Browser-Smoke pending User-Coolify-Deploy.",
       "createdAt": "2026-04-23"
     },
     {

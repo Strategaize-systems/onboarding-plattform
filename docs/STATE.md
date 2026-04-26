@@ -10,13 +10,15 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: SLC-037 Employee Capture-UI + Sicht-Perimeter — **Backend implementiert, /qa offen**. Alle 9 Micro-Tasks abgeschlossen: EmployeeQuestionnaireMode-Wrapper + Mode-Registry, /employee Aufgaben-Liste mit Status-Badges, /employee/capture/[sessionId] + /block/[blockKey] Routes mit owner_user_id-Check, Worker-Side capture_mode→source-Tag in handleCondensationJob, Middleware-Block fuer employee auf /admin /dashboard /capture, Debrief-Badge "Mitarbeiter" mit teal-Akzent, RLS-Perimeter-Matrix (43 Tests: 32 Pflicht + 8 PASS + 2 Bonus + 1 Trigger). `npm run build` 7.3s gruen, alle 3 neuen Routes kompiliert. RPT-083 Backend-Completion. Naechster Schritt: /qa SLC-037 Phase 1 (statisch) + Phase 2 (Live-Smoke gegen Demo-Tenant), beide Pflicht (IMP-139). 2 Test-Sessions im Demo-Tenant (richard@bellaerts.de, capture_mode='employee_questionnaire') stehen bereit.
-- Current Phase: V4 Implementation — 4/8 Slices done + SLC-037 Backend done, /qa offen. FEAT-022 + FEAT-024 erwartete Done nach /qa.
+- Current Focus: SLC-037 Employee Capture-UI + Sicht-Perimeter — **QA done, AC-11 Browser-Smoke pending Coolify-Deploy**. Alle 9 Micro-Tasks + 11 ACs verifiziert. /qa Phase 2 hat 4 In-Phase-Bugs gefixt: B1 capture_session.created_at→started_at (Page haette leere Aufgaben-Liste gezeigt), B2 Test-Fixtures generated_by_model NOT NULL, B3 R16-Perimeter-Leak block_diagnosis+sop tenant_read zu permissiv → MIG-078 (in Live-DB applied), M1 SAVEPOINT-Pattern in RLS-Test. Test-Score: 46/46 RLS-Matrix gruen + 263/263 Gesamt-Suite gruen. RPT-084 QA-Completion. **Naechster Schritt: User Coolify-Deploy** der commits 32613df + 9ad4c8c + 8be74d1 (MIG-078 ist bereits in DB, kein Migration-Lauf noetig), dann 6-Schritt Browser-Smoke (richard@bellaerts.de + Cross-Tenant + Direkt-URL-Block).
+- Current Phase: V4 Implementation — 5/8 Slices done (033, 034, 035, 036, 037), SLC-037 wartet auf Browser-Smoke nach Deploy. FEAT-022 + FEAT-024 done.
 
 ## Immediate Next Steps
-1. **/qa SLC-037** — Phase 1 (statisch) + Phase 2 (Live-Smoke), kein deferred (IMP-139). AC-1..AC-11. Inkl. Cross-Tenant-Smoke + Browser-Klick als Mitarbeiter (richard@bellaerts.de) auf 2 Test-Sessions + RLS-Tests gegen Coolify-DB (`TEST_DATABASE_URL=... npm run test -- v4-perimeter-matrix` → 43 PASS erwartet).
-2. **Mobile-Viewport-Smoke fuer SLC-036** (deferred): wenn Zeit, im DevTools Mobile-Mode pruefen, dass Karten + Edit-Dialog auf <400px sauber rendern.
-3. **/post-launch** fuer SLC-034 + SLC-036 nach 1-2 Tagen Produktivbetrieb (optional, low-risk).
+1. **User Coolify-Deploy** SLC-037-Commits (32613df + 9ad4c8c + 8be74d1) auf https://onboarding.strategaizetransition.com. MIG-078 ist bereits in Live-DB applied — kein DB-Schritt noetig.
+2. **Browser-Smoke (User)** als richard@bellaerts.de — 2 Aufgaben sichtbar, Block-Submit funktioniert, tenant_admin sieht KU-Badge "Mitarbeiter". Cross-Tenant + Direkt-URL-Block als employee.
+3. **Bei PASS:** Entscheidung /final-check V4-Halbzeit ODER /backend SLC-038 ODER /backend SLC-039.
+4. **Mobile-Viewport-Smoke fuer SLC-036** (deferred): wenn Zeit, im DevTools Mobile-Mode pruefen, dass Karten + Edit-Dialog auf <400px sauber rendern.
+5. **/post-launch** fuer SLC-034 + SLC-036 nach 1-2 Tagen Produktivbetrieb (optional, low-risk).
 
 ## Active Scope
 **V4 — Zwei-Ebenen-Verschmelzung, 6 Features (planned), 8 Slices planned:**
