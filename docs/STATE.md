@@ -10,13 +10,13 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: SLC-037 Employee Capture-UI + Sicht-Perimeter — **QA done, AC-11 Browser-Smoke pending Coolify-Deploy**. Alle 9 Micro-Tasks + 11 ACs verifiziert. /qa Phase 2 hat 4 In-Phase-Bugs gefixt: B1 capture_session.created_at→started_at (Page haette leere Aufgaben-Liste gezeigt), B2 Test-Fixtures generated_by_model NOT NULL, B3 R16-Perimeter-Leak block_diagnosis+sop tenant_read zu permissiv → MIG-078 (in Live-DB applied), M1 SAVEPOINT-Pattern in RLS-Test. Test-Score: 46/46 RLS-Matrix gruen + 263/263 Gesamt-Suite gruen. RPT-084 QA-Completion. **Naechster Schritt: User Coolify-Deploy** der commits 32613df + 9ad4c8c + 8be74d1 (MIG-078 ist bereits in DB, kein Migration-Lauf noetig), dann 6-Schritt Browser-Smoke (richard@bellaerts.de + Cross-Tenant + Direkt-URL-Block).
-- Current Phase: V4 Implementation — 5/8 Slices done (033, 034, 035, 036, 037), SLC-037 wartet auf Browser-Smoke nach Deploy. FEAT-022 + FEAT-024 done.
+- Current Focus: SLC-038 Capture-Mode-Hooks Spike done + QA PASS. RPT-085 Implementation, RPT-086 QA. SC-V4-6 doppelt abgenommen: per Architektur-Argument + Live-DB-INSERT-Test (Coolify-DB akzeptiert `capture_mode='walkthrough_stub'`, kein neuer sql/migrations/-File). 4 In-Phase-Findings gefixt: F1 CaptureModeKey-Type-Alias, F2 'voice'-Drift in Registry+Doku entfernt (war pre-existing, Voice ist V2-Inline-Feature im Questionnaire-Mode, kein eigener capture_mode), F3 Employee-Routes Mode-Check Reviewed-and-Accepted, F4 pre-existing TS-Errors in fremder Test-Datei als BL-049-Kandidat dokumentiert. AC-2/AC-3/AC-4 sind Post-Deploy-Tests (Worker-Boot-Log, Job-Completion, Browser-Render). 13/13 Registry-Tests gruen, npm run build PASS. **Naechster Schritt: Commit + Push, dann /backend SLC-039 oder User-Coolify-Deploy.**
+- Current Phase: V4 Implementation — 6/8 Slices done (033, 034, 035, 036, 037, 038). FEAT-022 + FEAT-024 + FEAT-025 done. 2 Slices verbleibend: SLC-039 (Handbuch-Backend) + SLC-040 (Handbuch-UI + Cockpit).
 
 ## Immediate Next Steps
-1. **User Coolify-Deploy** SLC-037-Commits (32613df + 9ad4c8c + 8be74d1) auf https://onboarding.strategaizetransition.com. MIG-078 ist bereits in Live-DB applied — kein DB-Schritt noetig.
-2. **Browser-Smoke (User)** als richard@bellaerts.de — 2 Aufgaben sichtbar, Block-Submit funktioniert, tenant_admin sieht KU-Badge "Mitarbeiter". Cross-Tenant + Direkt-URL-Block als employee.
-3. **Bei PASS:** Entscheidung /final-check V4-Halbzeit ODER /backend SLC-038 ODER /backend SLC-039.
+1. **Commit + Push** der SLC-038-Implementation + QA-Phase-Korrekturen + RPT-085 + RPT-086. Conventional Commits: `feat(SLC-038): capture-mode-hooks spike` + `test(SLC-038): registry tests + voice drift fix` + `docs(SLC-038): RPT-085 + RPT-086`.
+2. **/backend SLC-039** — Handbuch-Snapshot Backend: Worker `handbook_snapshot_generation` + ZIP-Builder + MIG-074. Letzter Backend-Slice fuer V4.
+3. **User Coolify-Deploy** SLC-037 + SLC-038-Commits zusammen (SLC-038 hat keine neue Migration). Post-Deploy-Tests: AC-2 Worker-Boot-Log (`docker logs ... | grep walkthrough_stub`), AC-3 Job-Completion-Test (siehe RPT-086 SQL-Snippet), AC-4 Browser-Render-Test mit Test-Session capture_mode='walkthrough_stub'. Plus Browser-Smoke fuer SLC-037 (richard@bellaerts.de + Cross-Tenant + Direkt-URL-Block).
 4. **Mobile-Viewport-Smoke fuer SLC-036** (deferred): wenn Zeit, im DevTools Mobile-Mode pruefen, dass Karten + Edit-Dialog auf <400px sauber rendern.
 5. **/post-launch** fuer SLC-034 + SLC-036 nach 1-2 Tagen Produktivbetrieb (optional, low-risk).
 

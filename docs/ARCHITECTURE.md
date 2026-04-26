@@ -2151,7 +2151,6 @@ ALTER TABLE public.capture_session
   CHECK (capture_mode IS NULL OR capture_mode IN (
     'questionnaire',
     'evidence',
-    'voice',
     'dialogue',
     'employee_questionnaire',   -- NEU V4
     'walkthrough_stub'          -- NEU V4 (Spike, kein produktiver Mode)
@@ -2570,3 +2569,132 @@ Pflicht-Browser-Smoke-Test mit Nicht-Tech-User vor V4-Release (R17, SC-V4-5) ist
 ### Naechster Schritt V4
 
 `/slice-planning` mit 8 Slices.
+
+---
+
+## Anhang A — How to add a new Capture-Mode
+
+Stand: V4 (SLC-038). Geltungsbereich: Capture-Modes innerhalb der Onboarding-Plattform. Bei neuen Hook-Punkten in V5+ ist diese Anleitung zu erweitern.
+
+Capture-Modes sind ueber zwei Hooks plus eine Registry definiert (DEC-040): einen Worker-Pipeline-Slot und einen UI-Slot. Es gibt explizit **keinen** eigenen Routing- oder Permissions-Slot — Routing erfolgt ueber den `basePath` in der Registry, Permissions ueber RLS-Policies, die unabhaengig vom Mode definiert sind.
+
+Die folgenden Schritte sind die vollstaendige Checkliste fuer einen neuen Mode. Vorlage: `walkthrough_stub` (SLC-038) — minimal, aber vollstaendig demonstriert.
+
+### Schritt 1 — CHECK-Constraint erweitern (Migration)
+
+`capture_session.capture_mode` ist ein TEXT mit CHECK-Constraint. Ein neuer Mode-String ist nur erlaubt, wenn er im Constraint enthalten ist. Migration analog zu MIG-067:
+
+```sql
+ALTER TABLE public.capture_session
+  DROP CONSTRAINT capture_session_capture_mode_check;
+ALTER TABLE public.capture_session
+  ADD CONSTRAINT capture_session_capture_mode_check
+  CHECK (capture_mode IS NULL OR capture_mode IN (
+    'questionnaire',
+    'evidence',
+    'voice',
+    'dialogue',
+    'employee_questionnaire',
+    'walkthrough_stub',
+    'mein_neuer_mode'   -- NEU
+  ));
+```
+
+Wenn der Mode auch als `knowledge_unit.source` auftritt, ist `knowledge_unit_source_check` analog zu erweitern.
+
+### Schritt 2 — Worker-Handler
+
+Liefere einen Handler unter:
+
+```
+src/workers/capture-modes/<mode>/handle.ts
+```
+
+Konvention: exportiere `handle<Mode>Job(job: ClaimedJob)`. Der Handler ist verantwortlich fuer:
+
+- payload aus `job.payload` lesen
+- Mode-spezifische Verarbeitung (Bedrock, Aggregation, Markdown-Render, etc.)
+- am Ende `rpc_complete_ai_job` (Erfolg) oder Throw (Fehler — claim-loop ruft `rpc_fail_ai_job`)
+
+Vorlage: `src/workers/capture-modes/walkthrough-stub/handle.ts` (Stub: loggt + completed).
+
+### Schritt 3 — Worker-Job-Type registrieren
+
+Drei Stellen in `src/workers/condensation/`:
+
+1. **`claim-loop.ts`** — Job-Type-Konstante `JOB_TYPES` um `<mode>_processing` erweitern.
+2. **`claim-loop.ts`** — `startClaimLoop`-Signatur um optionalen Handler-Parameter erweitern und im Dispatch-Switch eine neue `else if`-Verzweigung anlegen.
+3. **`run.ts`** — Handler importieren und an `startClaimLoop` durchreichen.
+
+Konvention: Job-Type-Naming `<mode>_processing` (z.B. `walkthrough_stub_processing`). Klassische Modes (questionnaire/evidence/dialogue) teilen sich aus historischen Gruenden den gemeinsamen `knowledge_unit_condensation`-Job — neue Modes sollen einen eigenen Job-Type haben, damit Telemetry und Re-Run klar trennbar sind.
+
+### Schritt 4 — UI-Komponente
+
+Liefere eine Komponente unter:
+
+```
+src/components/capture-modes/<mode>/<Mode>Mode.tsx
+```
+
+Zwei Varianten:
+
+- **Vollstaendige Stub-Komponente** (wie `WalkthroughStubMode`): rendert eigene Page, ersetzt `QuestionnaireWorkspace` komplett. Geeignet fuer Modes, die nicht der Frage-Antwort-Logik folgen (z.B. Walkthrough-Recording, Diary-Stream).
+- **Wrapper um `QuestionnaireWorkspace`** (wie `EmployeeQuestionnaireMode`): minimal, setzt nur `basePath` oder Mode-spezifische Props. Geeignet fuer Modes, die strukturell Fragebogen sind, aber ein anderes Routing oder einen anderen Visual-Frame brauchen.
+
+### Schritt 5 — Registry-Eintrag
+
+`src/components/capture-modes/registry.ts`:
+
+1. Mode-String zum `CaptureMode`-Union ergaenzen.
+2. Eintrag in `CAPTURE_MODE_REGISTRY` mit:
+   - `basePath` — Routing-Praefix (z.B. `/capture` oder `/employee/capture`)
+   - `workerJobType` — Job-Type aus Schritt 3
+   - `displayName` — lesbarer Name fuer Cockpit/Logs
+   - `productive` — `true` wenn der Mode in tenant_admin-UI auswaehlbar sein soll, `false` fuer Spike/Internal-Modes
+   - `StubComponent` — die Komponente aus Schritt 4 wenn sie `QuestionnaireWorkspace` ersetzen soll, sonst `null`
+
+Beispiel `walkthrough_stub`:
+
+```typescript
+walkthrough_stub: {
+  basePath: "/capture",
+  workerJobType: "walkthrough_stub_processing",
+  displayName: "Walkthrough-Mode (Spike)",
+  productive: false,
+  StubComponent: WalkthroughStubMode,
+},
+```
+
+### Schritt 6 — Optional: Mode-spezifische Tabellen oder Spalten
+
+Wenn der Mode eigene Persistenz-Strukturen braucht (z.B. `dialogue_session` fuer V3 Dialogue), liefere eine eigene Migration. Wenn der Mode mit den bestehenden Tabellen auskommt (`capture_session`, `block_checkpoint`, `knowledge_unit`), ist Schritt 1 alleine ausreichend — das ist die zentrale SC-V4-6-Eigenschaft.
+
+`employee_questionnaire` braucht keine eigene Tabelle, weil es 1:1 die `questionnaire`-Pipeline nutzt mit `source='employee_questionnaire'`. `walkthrough_stub` braucht keine eigene Tabelle, weil es als Spike keine Daten persistiert. Echte V5/V6-Modes (Walkthrough-Recording, Diary) werden Mode-spezifische Tabellen brauchen.
+
+### Schritt 7 — Tests
+
+Mindestens:
+
+- **Registry-Test**: neuer Mode-Key ist in `ALL_CAPTURE_MODES`, `resolveCaptureMode('mein_neuer_mode')` liefert die korrekte Meta. Vorlage: `src/components/capture-modes/__tests__/registry.test.ts`.
+- **Handler-Smoke** wenn der Handler nicht-trivial ist: Unit-Test auf payload-Parsing + Bedrock-Mock.
+- **RLS-Tests** wenn der Mode Sicht-Perimeter-Auswirkungen hat (z.B. wenn ein neuer KU-source-Wert eingefuehrt wird).
+
+### Was kein Hook ist (DEC-040)
+
+- **Routing-Slot**: Es gibt keinen modularen Routing-Slot pro Mode. Mode-Pages liegen statisch unter `/capture/...` oder `/employee/capture/...`. Die Registry trifft nur die Komponenten-Auswahl innerhalb dieser Pages, nicht die URL-Struktur.
+- **Permissions-Slot**: Es gibt keine Mode-spezifische Permission-Schicht. Sicht-Perimeter werden ueber RLS-Policies pro Tabelle gesteuert. Wenn ein Mode neue Tabellen einfuehrt, sind RLS-Policies dieser Tabellen unabhaengig vom Mode-Hook zu definieren.
+
+Diese Beschraenkungen sind bewusst — sie halten die Komplexitaet der Hook-Konvention klein und vermeiden ein zweites Skill-System neben RLS.
+
+### Spike-Beweis SC-V4-6
+
+`walkthrough_stub` wurde in SLC-038 hinzugefuegt mit:
+
+1. CHECK-Constraint-Erweiterung in MIG-067 (bereits in V4-Schema-Fundament SLC-033 vorbereitet, kein neuer Migration-Lauf in SLC-038 noetig).
+2. `src/workers/capture-modes/walkthrough-stub/handle.ts` (Stub-Handler).
+3. `walkthrough_stub_processing` in `claim-loop.ts` JOB_TYPES + Dispatch.
+4. `src/components/capture-modes/walkthrough-stub/WalkthroughStubMode.tsx` (Platzhalter-Page).
+5. Eintrag in `CAPTURE_MODE_REGISTRY`.
+6. Routes `/capture/[sessionId]/page.tsx` und `/capture/[sessionId]/block/[blockKey]/page.tsx` delegieren via Registry-Lookup.
+
+Keine zusaetzliche Tabelle, kein zusaetzlicher RLS-Eintrag, keine neue Storage-Bucket. Der Mode ist live, ohne dass das V4-Schema strukturell veraendert wurde — exakt SC-V4-6.

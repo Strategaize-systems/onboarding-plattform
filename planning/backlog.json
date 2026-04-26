@@ -435,9 +435,9 @@
       "title": "Capture-Mode Extension Hooks (Walkthrough + Diary Architecture)",
       "type": "feature",
       "priority": "medium",
-      "status": "in_progress",
+      "status": "done",
       "version": "V4",
-      "description": "Worker-Pipeline-Slot + UI-Slot-Konvention (DEC-040). Pseudo-Mode walkthrough_stub validiert SC-V4-6 (neuer Mode ohne Schema-Aenderung einfuehrbar). CAPTURE_MODE_REGISTRY konsolidiert. Dokumentation 'How to add a new Capture-Mode' in ARCHITECTURE.md Anhang A. KEINE Implementation von Walkthrough (V5) oder Diary (V6). Siehe FEAT-025. Slice: SLC-038.",
+      "description": "Done 2026-04-26 (RPT-085). SLC-038 implementiert: Worker-Handler-Stub fuer 'walkthrough_stub_processing' (claim-loop.ts erweitert), CAPTURE_MODE_REGISTRY konsolidiert mit basePath/workerJobType/displayName/productive/StubComponent pro Mode + Default-Fallback questionnaire, WalkthroughStubMode UI-Komponente, Route-Delegation in /capture/[sessionId]/page.tsx und /capture/[sessionId]/block/[blockKey]/page.tsx via resolveCaptureMode, ARCHITECTURE.md Anhang A 'How to add a new Capture-Mode' (7-Schritte-Anleitung). 13/13 Registry-Tests gruen, npm run build PASS. SC-V4-6 abgenommen: walkthrough_stub eingefuehrt ohne Schema-Aenderung in SLC-038 (CHECK-Constraint war bereits in MIG-067/SLC-033 vorbereitet). Spike-Mode ist NICHT productive, wird NICHT in Cockpit beworben.",
       "createdAt": "2026-04-23"
     },
     {
