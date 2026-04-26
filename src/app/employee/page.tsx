@@ -23,7 +23,7 @@ interface SessionWithProgress {
   id: string;
   status: string;
   template_name: string;
-  created_at: string;
+  started_at: string;
   total_blocks: number;
   submitted_blocks: number;
   task_state: "open" | "in_progress" | "submitted";
@@ -85,9 +85,9 @@ export default async function EmployeePage() {
   if (user) {
     const { data: sessions } = await supabase
       .from("capture_session")
-      .select("id, status, template_id, created_at")
+      .select("id, status, template_id, started_at")
       .eq("capture_mode", "employee_questionnaire")
-      .order("created_at", { ascending: false });
+      .order("started_at", { ascending: false });
 
     for (const s of sessions ?? []) {
       const { data: tmpl } = await supabase
@@ -120,7 +120,7 @@ export default async function EmployeePage() {
         id: s.id,
         status: s.status,
         template_name: tmpl?.name ?? "Aufgabe",
-        created_at: s.created_at,
+        started_at: s.started_at,
         total_blocks: totalBlocks,
         submitted_blocks: submittedBlocks,
         task_state: taskState,

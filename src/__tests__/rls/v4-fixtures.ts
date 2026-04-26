@@ -224,8 +224,8 @@ export async function seedV4Fixtures(client: Client): Promise<V4Fixtures> {
   ): Promise<string> => {
     const res = await client.query<{ id: string }>(
       `INSERT INTO public.block_diagnosis
-         (tenant_id, capture_session_id, block_checkpoint_id, block_key, content, status)
-       VALUES ($1, $2, $3, 'A', '{}'::jsonb, 'draft')
+         (tenant_id, capture_session_id, block_checkpoint_id, block_key, content, status, generated_by_model)
+       VALUES ($1, $2, $3, 'A', '{}'::jsonb, 'draft', 'test-model')
        RETURNING id`,
       [tenantId, sessionId, checkpointId]
     );
@@ -242,8 +242,8 @@ export async function seedV4Fixtures(client: Client): Promise<V4Fixtures> {
   ): Promise<string> => {
     const res = await client.query<{ id: string }>(
       `INSERT INTO public.sop
-         (tenant_id, capture_session_id, block_checkpoint_id, block_key, content)
-       VALUES ($1, $2, $3, 'A', '{}'::jsonb)
+         (tenant_id, capture_session_id, block_checkpoint_id, block_key, content, generated_by_model)
+       VALUES ($1, $2, $3, 'A', '{}'::jsonb, 'test-model')
        RETURNING id`,
       [tenantId, sessionId, checkpointId]
     );
