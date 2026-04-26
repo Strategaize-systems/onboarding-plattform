@@ -49,13 +49,11 @@ export default async function EmployeeBlockDetailPage({
     notFound();
   }
 
-  const owner = (session as { owner_user_id?: string }).owner_user_id;
-  if (owner !== user.id) {
+  if (session.owner_user_id !== user.id) {
     notFound();
   }
 
-  const captureMode = (session as { capture_mode?: string | null }).capture_mode;
-  if (captureMode !== "employee_questionnaire") {
+  if (session.capture_mode !== "employee_questionnaire") {
     notFound();
   }
 

@@ -24,6 +24,7 @@ export const CaptureSessionRowSchema = z.object({
   answers: z.record(z.string(), z.string()).default({}),
   started_at: z.string(),
   updated_at: z.string(),
+  capture_mode: z.string().nullable().optional(),
 });
 
 export type CaptureSessionRow = z.infer<typeof CaptureSessionRowSchema>;
