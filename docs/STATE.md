@@ -9,14 +9,13 @@
 Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdichtung. Ermoeglicht mehrere Capture-Modi (Fragebogen, Meeting, Voice, etc.) und Template-basierte Produktvarianten (z.B. Exit-Readiness, Immobilien-Onboarding). Ab V4: Zwei-Ebenen-Verschmelzung (GF-Blueprint + Mitarbeiter-Capture + Unternehmerhandbuch-Output).
 
 ## Current State
-- High-Level State: go-live
-- Current Focus: **Final-Check ready 2026-04-27 (RPT-093) + ENV-Drift-Fix done.** ISSUE-027 resolved: docker-compose.yml `app`-Service environment-Block um 10 V3-Vars (SMTP_*, ERROR_ALERT_EMAIL, JITSI_JWT_*, NEXT_PUBLIC_JITSI_DOMAIN, RECORDING_WEBHOOK_SECRET) erweitert + .env.deploy.example um RECORDING_WEBHOOK_SECRET ergaenzt. Compose-Syntax via `docker compose config` validiert. 0 Blocker, 0 High, 0 Medium offen. 2 Low residual (ISSUE-026 postcss bundled / npm-Override-immun / build-time-only / kein Runtime-Risk; ISSUE-028 V3 RECORDING_WEBHOOK_SECRET MISSING in Production-ENV / kein V4-Blocker / V3.x-Maintenance-Backlog). V4 ist deploy-ready. **Naechste Schritte: /go-live (Release-Risk-Assessment + Rollback-Plan), Production-Deploy, /post-launch.**
-- Current Phase: V4 Go-Live — alle 8 Slices Code+Live+/qa+/final-check+ENV-Drift-Fix durch. Verbleibend: Go-Live-Decision + Deploy + Post-Launch.
+- High-Level State: deploying
+- Current Focus: **/go-live PASS 2026-04-27 (RPT-094) — GO-Decision fuer V4 Production-Release.** Alle Voraussetzungen erfuellt: /qa PASS (322/322 + 46/46 RLS), /final-check ready + ENV-Drift-Fix done, Coolify-Redeploy live verifiziert (10 Container healthy, 10/10 Vars deklariert ankommend, alle V4-Routen 200/307, Worker-Boot OK), Browser-Smoke User-Self-Test PASS (5/5 Pfade). Rollback-Plan dokumentiert: Coolify-Image-Reset auf 912fba0, RTO ~5-7 min, kein DB-Rollback noetig (alle V4-Migrationen additiv). 0 Blocker. 2 Low residual (ISSUE-026 postcss bundled, ISSUE-028 V3 RECORDING_WEBHOOK_SECRET — keiner V4-relevant). **Naechste Schritte: /deploy (formelle REL-008-Doku), /post-launch nach 1-2 Tagen.**
+- Current Phase: V4 Deploying — Code ist bereits live (Coolify-Redeploy 2026-04-27 ~17:35 UTC mit Compose-Drift-Fix). Verbleibend: REL-008-Doku in RELEASES.md + roadmap.json + features/INDEX.md auf released/deployed.
 
 ## Immediate Next Steps
-1. **/go-live** — Release-Risiko-Assessment, Rollback-Plan, Go/No-Go-Decision.
-2. **/deploy V4** — User-Coolify-Production-Deploy. Pflicht: Coolify "Reload Compose File" vor Redeploy, damit die neuen ENV-Vars im app-Container ankommen.
-3. **/post-launch** nach 1-2 Tagen Produktivbetrieb.
+1. **/deploy** — formelle Doku-Schritt: REL-008 Eintrag in RELEASES.md, V4-Status in roadmap.json auf `released`, V4-Features in features/INDEX.md auf `deployed`, V4-Slices bleiben `done`. Live-Code ist bereits deployed (Coolify-Redeploy 2026-04-27).
+2. **/post-launch** nach 1-2 Tagen Pilot-Betrieb (Beobachtung error_log, Bridge-Cost-Ledger, Snapshot-Generation).
 
 ## Active Scope
 **V4 — Zwei-Ebenen-Verschmelzung, 6 Features Code-done, 8 Slices Code-done:**
