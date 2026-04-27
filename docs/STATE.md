@@ -9,16 +9,15 @@
 Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdichtung. Ermoeglicht mehrere Capture-Modi (Fragebogen, Meeting, Voice, etc.) und Template-basierte Produktvarianten (z.B. Exit-Readiness, Immobilien-Onboarding). Ab V4: Zwei-Ebenen-Verschmelzung (GF-Blueprint + Mitarbeiter-Capture + Unternehmerhandbuch-Output).
 
 ## Current State
-- High-Level State: qa
-- Current Focus: **SLC-040 /qa PASS 2026-04-27 (RPT-091).** Alle 12 ACs erfuellt, Cross-Tenant-Isolation Live verifiziert per psql (foreign tenant_admin → forbidden, RLS visible_rows=0), 11/11 Cockpit-Tests gruen, Build PASS, kein Stub. Drei Low-Findings sind alle V4.x-Backlog (kein Blocker). V4 8/8 Slices Code+Live+QA durch. **Naechste Schritte: Gesamt-V4-/qa (4-Rollen-RLS-Matrix Re-Run + End-to-End-Workflow GF→Bridge→Mitarbeiter→Handbuch), dann /final-check, /go-live, Production-Deploy.**
-- Current Phase: V4 Implementation — 8/8 Slices Code done + Live verifiziert + SLC-040 /qa PASS. Alle 6 V4-Features (FEAT-022..027) abgeschlossen. Verbleibend: Gesamt-V4-/qa + Final-Check + Go-Live + Deploy.
+- High-Level State: final-check
+- Current Focus: **Gesamt-V4-/qa PASS 2026-04-27 (RPT-092).** 322/322 Tests gruen gegen Live-Coolify-DB (SSH-Tunnel auf 10.0.3.3:5432), 46/46 RLS-Matrix Pflicht+Bonus PASS, End-to-End-Workflow live nachweisbar (1 GF + 5 KUs + 2 Bridge-Runs + 6 Proposals + 1 Invitation accepted + 4 Snapshots `ready`), Performance innerhalb Budget (Snapshot exec 0.16-0.23s, Routes <200ms TTFB). 0 Blocker, 0 High, 0 Medium. 1 Low (Pre-V4 HelpButton-Placeholder, kein V4-Scope) + 3 Low aus RPT-091 (Backlog). **Naechste Schritte: /final-check (Code-Hygiene + Dependencies + Security-Sweep), dann /go-live, Production-Deploy, /post-launch.**
+- Current Phase: V4 Final-Check — alle 8 Slices Code+Live+/qa durch. Alle 6 V4-Features (FEAT-022..027) abgeschlossen + Pflicht-Gate SC-V4-3 (RLS-Matrix) live verifiziert. Verbleibend: Final-Check + Go-Live + Deploy.
 
 ## Immediate Next Steps
-1. **Gesamt-V4-/qa** — eigene Session. 4-Rollen-RLS-Matrix Re-Run (32 Failure-Tests aus SLC-037 R16/SC-V4-3) + End-to-End-Workflow (GF-Erhebung → Bridge-Run → Mitarbeiter-Einladung → Mitarbeiter-Aufgabe → Handbuch-Generierung → Download) + Performance-Sanity.
-2. **/final-check** — Code-Hygiene, Dependencies, Security-Sweep, ENV-Vars.
-3. **/go-live** — Release-Risiko-Assessment.
-4. **/deploy V4** — User-Coolify-Production-Deploy.
-5. **/post-launch** nach 1-2 Tagen Produktivbetrieb.
+1. **/final-check** — Code-Hygiene, Dependencies (`npm audit --omit=dev`), ENV-Vars, Compose-Drift, Security-Sweep, Repo-Hygiene.
+2. **/go-live** — Release-Risiko-Assessment + Rollback-Plan.
+3. **/deploy V4** — User-Coolify-Production-Deploy.
+4. **/post-launch** nach 1-2 Tagen Produktivbetrieb.
 
 ## Active Scope
 **V4 — Zwei-Ebenen-Verschmelzung, 6 Features Code-done, 8 Slices Code-done:**
