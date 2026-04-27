@@ -45,9 +45,9 @@
 
 | ID | Feature | Status | Spec | Created |
 |----|---------|--------|------|---------|
-| FEAT-022 | Employee Role + RBAC Extension | done | [Spec](FEAT-022-employee-role-rbac.md) | 2026-04-23 |
+| FEAT-022 | Employee Role + RBAC Extension | deployed | [Spec](FEAT-022-employee-role-rbac.md) | 2026-04-23 |
 | FEAT-023 | Blueprint-to-Employee Bridge Engine | deployed | [Spec](FEAT-023-bridge-engine.md) | 2026-04-23 |
-| FEAT-024 | Employee Capture Workflow | done | [Spec](FEAT-024-employee-capture-workflow.md) | 2026-04-23 |
-| FEAT-025 | Capture-Mode Extension Hooks (Walkthrough + Diary Architecture) | done | [Spec](FEAT-025-capture-mode-hooks.md) | 2026-04-23 |
-| FEAT-026 | Unternehmerhandbuch Foundation (Datenmodell + Markdown-Export) | done | [Spec](FEAT-026-unternehmerhandbuch-foundation.md) | 2026-04-23 |
-| FEAT-027 | Self-Service Status Cockpit Foundation | done | [Spec](FEAT-027-self-service-status-cockpit.md) | 2026-04-23 |
+| FEAT-024 | Employee Capture Workflow | deployed | [Spec](FEAT-024-employee-capture-workflow.md) | 2026-04-23 |
+| FEAT-025 | Capture-Mode Extension Hooks (Walkthrough + Diary Architecture) | deployed | [Spec](FEAT-025-capture-mode-hooks.md) | 2026-04-23 |
+| FEAT-026 | Unternehmerhandbuch Foundation (Datenmodell + Markdown-Export) | deployed | [Spec](FEAT-026-unternehmerhandbuch-foundation.md) | 2026-04-23 |
+| FEAT-027 | Self-Service Status Cockpit Foundation | deployed | [Spec](FEAT-027-self-service-status-cockpit.md) | 2026-04-23 |

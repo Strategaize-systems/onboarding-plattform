@@ -9,13 +9,14 @@
 Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdichtung. Ermoeglicht mehrere Capture-Modi (Fragebogen, Meeting, Voice, etc.) und Template-basierte Produktvarianten (z.B. Exit-Readiness, Immobilien-Onboarding). Ab V4: Zwei-Ebenen-Verschmelzung (GF-Blueprint + Mitarbeiter-Capture + Unternehmerhandbuch-Output).
 
 ## Current State
-- High-Level State: deploying
-- Current Focus: **/go-live PASS 2026-04-27 (RPT-094) — GO-Decision fuer V4 Production-Release.** Alle Voraussetzungen erfuellt: /qa PASS (322/322 + 46/46 RLS), /final-check ready + ENV-Drift-Fix done, Coolify-Redeploy live verifiziert (10 Container healthy, 10/10 Vars deklariert ankommend, alle V4-Routen 200/307, Worker-Boot OK), Browser-Smoke User-Self-Test PASS (5/5 Pfade). Rollback-Plan dokumentiert: Coolify-Image-Reset auf 912fba0, RTO ~5-7 min, kein DB-Rollback noetig (alle V4-Migrationen additiv). 0 Blocker. 2 Low residual (ISSUE-026 postcss bundled, ISSUE-028 V3 RECORDING_WEBHOOK_SECRET — keiner V4-relevant). **Naechste Schritte: /deploy (formelle REL-008-Doku), /post-launch nach 1-2 Tagen.**
-- Current Phase: V4 Deploying — Code ist bereits live (Coolify-Redeploy 2026-04-27 ~17:35 UTC mit Compose-Drift-Fix). Verbleibend: REL-008-Doku in RELEASES.md + roadmap.json + features/INDEX.md auf released/deployed.
+- High-Level State: stable
+- Current Focus: **V4 released 2026-04-27 als REL-008 (RPT-095).** Alle 8 Slices Code+Live+/qa+/final-check+/go-live+/deploy durch. 6 V4-Features (FEAT-022..027) auf `deployed`. roadmap.json V4.1-Summary erweitert um Berater-Review-Workflow. 2 neue Backlog-Items in V4.1: BL-049 Berater-Review Mitarbeiter-Output + Quality-Gate vor Handbuch, BL-050 Berater-Visibility-Verlinkung. **Naechste Schritte: /post-launch nach 1-2 Tagen Pilot-Betrieb. Danach /requirements V4.1 mit erweitertem Scope (Handbuch-In-App + Berater-Workflows).**
+- Current Phase: V4 Stable — released. V4.1-Planung wartet auf Post-Launch-Beobachtung.
 
 ## Immediate Next Steps
-1. **/deploy** — formelle Doku-Schritt: REL-008 Eintrag in RELEASES.md, V4-Status in roadmap.json auf `released`, V4-Features in features/INDEX.md auf `deployed`, V4-Slices bleiben `done`. Live-Code ist bereits deployed (Coolify-Redeploy 2026-04-27).
-2. **/post-launch** nach 1-2 Tagen Pilot-Betrieb (Beobachtung error_log, Bridge-Cost-Ledger, Snapshot-Generation).
+1. **/post-launch** nach 1-2 Tagen Pilot-Betrieb (Beobachtung error_log, Bridge-Cost-Ledger, Snapshot-Generation, User-Behaviour).
+2. **/requirements V4.1** mit erweitertem Scope: BL-047 (Handbuch-In-App + Live-Editor) + BL-049 (Berater-Review + Quality-Gate) + BL-050 (Berater-Visibility-Verlinkung).
+3. **V4.2** spaeter: BL-048 Tenant Self-Service Onboarding (Wizard + Reminders + Hilfe).
 
 ## Active Scope
 **V4 — Zwei-Ebenen-Verschmelzung, 6 Features Code-done, 8 Slices Code-done:**
@@ -43,6 +44,7 @@ V2 — 12/12 Slices done, released (REL-004).
 - aktuell keine
 
 ## Last Stable Version
+- V4 — 2026-04-27 — released (REL-008), Deploy-Commit `d2be0e4` (Compose-Drift-Fix + V4 konsolidiert). Zwei-Ebenen-Verschmelzung: 8 Slices (SLC-033..040), 6 Features (FEAT-022..027), 14 Migrationen (065-078). Geschaeftsfuehrer-Blueprint + Mitarbeiter-Capture + Bridge-Engine + Unternehmerhandbuch-Foundation + Self-Service-Cockpit. Pflicht-Gates SC-V4-3 (4-Rollen-RLS-Matrix 46/46 PASS gegen Live-DB), SC-V4-5 (Nicht-Tech-User-Smoke), SC-V4-6 (Capture-Mode-Hooks-Spike). 322/322 Tests gruen, 0 Blocker, 2 Low residual (ISSUE-026 postcss bundled, ISSUE-028 V3 RECORDING_WEBHOOK_SECRET — keiner V4-relevant). Coolify-Live-Smoke PASS, Browser-Smoke User-Self-Test PASS in 5/5 Pfaden. Demo-Tenant Live-Daten: 5 KUs + 2 Bridge-Runs + 6 Proposals + 1 Invitation accepted + 4 Snapshots ready.
 - V4-FEAT-023 — 2026-04-25 — Bridge Engine deployed + Live-Smoke PASS (Demo-Tenant). Deploy-Commits 82c987e..89836b4 (SLC-035 + SLC-036). 2 Mitarbeiter-Sessions live spawned (Kundenbetreuung + Operative -> richard@bellaerts.de), 1 Reject-Test (Produktentwicklung), Cost-Audit $0.0153 fuer Live-Bridge-Run. 7 In-Phase-Bugs in /qa entdeckt + gefixt (siehe Current Focus). 2 Migrations live (076 RLS-Policy + 077 Schema-USAGE).
 - V4-SLC-034 — 2026-04-24 — released auf https://onboarding.strategaizetransition.com (REL-007), Deploy-Commit 82c987e. Erster echter V4-Feature-Release: Employee-Auth + Invitation-Flow, Mitarbeiter-Verwaltung, /accept-invitation, /employee-Dashboard-Skelett. User-Browser-Smoke bestaetigt.
 - V3.1 — 2026-04-24 — released (REL-006), Deploy-Commit cffc639. Maintenance-Release + dormant V4-Schema.

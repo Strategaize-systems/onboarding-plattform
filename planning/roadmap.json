@@ -38,7 +38,7 @@
     {
       "id": "v4",
       "name": "V4",
-      "status": "active",
+      "status": "released",
       "summary": "Zwei-Ebenen-Verschmelzung: Geschaeftsfuehrer-Blueprint (Ebene 1) + Mitarbeiter-Capture (Ebene 2). Mitarbeiter wird zur eigenen Login-User-Klasse (Rolle 'employee'). Bridge-Engine generiert aus Blueprint-Output automatisch Mitarbeiter-Capture-Aufgaben. Mitarbeiter durchlaeuft Questionnaire-Mode wie GF, gleiche Pipeline (Verdichtung, Diagnose). Walkthrough + Diary nur als Architektur-Hooks vorbereitet (Bau in V5/V6). Unternehmerhandbuch-Output minimal (Datenmodell + Markdown-Export, Ausbau in V4.1). Self-Service-Cockpit minimal (Status-View, Ausbau in V4.2). Exit-Readiness als erster Template-Schnitt, Architektur multi-use fuer spaetere Templates (Compliance, KI-, Wachstums-Readiness). Strategischer Rahmen: SOFTWARE-EXECUTION-MAP Phase 1 (2026-04-23). 6 Features (FEAT-022..027).",
       "order": 6
     },
@@ -46,7 +46,7 @@
       "id": "v4-1",
       "name": "V4.1",
       "status": "planned",
-      "summary": "Unternehmerhandbuch-Output ausgebaut: In-App-Webview, browse-bar, durchsuchbar. Live-Editor zur Pflege des Handbuchs in der Plattform (statt nur Re-Export). Beziehungen zwischen KUs/SOPs/Diagnosen darstellen. Versionierung der Handbuch-Snapshots. Detail-Requirements werden mit eigenem /requirements V4.1 erstellt, sobald V4 ausgeliefert ist.",
+      "summary": "Unternehmerhandbuch-Output ausgebaut: In-App-Webview, browse-bar, durchsuchbar. Live-Editor zur Pflege des Handbuchs in der Plattform (statt nur Re-Export). Beziehungen zwischen KUs/SOPs/Diagnosen darstellen. Versionierung der Handbuch-Snapshots. PLUS Berater-Workflow-Polish: konsolidierter Mitarbeiter-Output-Review-View fuer strategaize_admin (BL-049 — alle Mitarbeiter-KUs zu einem Block in einer Uebersicht), Quality-Gate vor Handbuch-Snapshot (BL-049 — Berater-Sign-off-Hinweis im Trigger-Flow, \"Im Handbuch enthalten\"-Flag pro KU), Berater-Visibility-Verlinkung im strategaize_admin-Cockpit (BL-050 — Direkt-Links zu /admin/debrief pro Tenant + \"Pending Reviews\"-Sicht). Detail-Requirements mit eigenem /requirements V4.1 wenn dran.",
       "order": 7
     },
     {
