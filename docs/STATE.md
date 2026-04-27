@@ -10,7 +10,7 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: /qa SLC-039 Phase 2 durchgelaufen (RPT-088). 9/12 ACs PASS, 3 ACs PASS-mit-Findings. Wiring End-to-End live verifiziert: RPC -> ai_jobs -> Worker (lokal-gebautes Smoke-Bundle in worker-Container ausgefuehrt) -> Render -> ZIP -> Storage-Upload -> Snapshot-Update -> Signed-URL-Roundtrip. 2 Live-Snapshots erzeugt (5-KU-Session 86d18dd6 = 4524 bytes ZIP, Empty-Session 560a77f2 = 3014 bytes ZIP). **2 neue Issues:** ISSUE-024 (HIGH, F4 SOP-Renderer-Schema-Mismatch — leere Steps im Output, Test-Fixture maskiert den Bug), ISSUE-025 (Medium, F6 Self-hosted-Signed-URL erfordert apikey-Query-Param). **Naechster Schritt: Entscheidung F4-Fix-Variante (A=Mini-Slice SLC-039a empfohlen, B=in SLC-040 mit-fixen, C=als Known-Issue laufen lassen) bevor /backend SLC-040.**
+- Current Focus: SLC-039a Mini-Slice F4-Fix done (RPT-089). ISSUE-024 resolved. Renderer akzeptiert echtes SOP-Generator-Schema (number/action/responsible/timeframe/success_criterion/dependencies) + Legacy-Format als Fallback. 35/35 Unit-Tests gruen, build:worker PASS, Live-Re-Smoke PASS gegen frischen Snapshot 5b54b655 — 7 SOP-Steps zeigen jetzt vollstaendigen Inhalt. ZIP-Size 4914 bytes (von 4524). ISSUE-025 (Self-hosted-Signed-URL apikey-Query-Param) bleibt offen, Workaround in SLC-040 Server-Action umzusetzen. **Naechster Schritt: User-Coolify-Deploy SLC-037 + 038 + 039 + 039a zusammen, dann /backend SLC-040 (letzter V4-Slice).**
 - Current Phase: V4 Implementation — 7/8 Slices done (033, 034, 035, 036, 037, 038, 039). FEAT-022 + FEAT-024 + FEAT-025 done. 1 Slice verbleibend: SLC-040 (Handbuch-UI + Cockpit Foundation).
 
 ## Immediate Next Steps

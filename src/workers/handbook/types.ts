@@ -71,8 +71,20 @@ export interface DiagnosisRow {
   };
 }
 
+// SOP-Step kann zwei Form-Varianten haben:
+// - Legacy/Manual: { title, detail }
+// - SOP-Generator (sop/types.ts): { number, action, responsible, timeframe, success_criterion, dependencies }
+// Renderer akzeptiert beide; bevorzugt action vor title.
 export interface SopStep {
   step?: number | string;
+  number?: number;
+  // Generator-Format
+  action?: string;
+  responsible?: string;
+  timeframe?: string;
+  success_criterion?: string;
+  dependencies?: Array<string | number>;
+  // Legacy-Format
   title?: string;
   detail?: string;
   [k: string]: unknown;

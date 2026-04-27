@@ -210,13 +210,13 @@
 - Lesson learned: Bei Self-hosted-Supabase muss explizit verifiziert werden, dass `nspacl` auf `auth` mindestens `authenticated=U/supabase_auth_admin` enthaelt. Sonst greifen viele RLS-Policies still nicht. Pruefen mit `SELECT nspacl FROM pg_namespace WHERE nspname='auth';`.
 
 ### ISSUE-024 — Handbuch-Renderer SOP-Schritt-Schema-Mismatch (leere Steps im Output)
-- Status: open
+- Status: resolved
+- Resolution Date: 2026-04-27
 - Severity: High
 - Area: Worker / Handbook-Renderer
-- Summary: Der Handbuch-Renderer (`src/workers/handbook/sections.ts:339-348`) erwartet `step.title` und `step.detail`, aber das echte SOP-Schema (`src/workers/sop/types.ts` SopStep) hat `{number, action, responsible, timeframe, success_criterion, dependencies}`. Im Output sind alle SOP-Schritte als "Schritt 1, Schritt 2..." ohne Inhalt sichtbar.
-- Impact: Generierte Handbuecher zeigen leere SOP-Schritte. Pilot-User sieht leeren Inhalt unter dem SOP-Header. Verhindert produktiven Einsatz von FEAT-026 Snapshot-Pipeline. Test-Fixture in `__tests__/fixtures.ts` erfindet ein nicht-existentes `{title, detail}`-Format und maskiert den Bug in den Unit-Tests.
-- Workaround: Keiner. Bug muss im Code gefixt werden.
-- Next Action: Mini-Slice SLC-039a (Renderer-Patch + Fixture-Update + Test-Update) vor /backend SLC-040 oder Auto-Fix in /qa-Folge-Session. Fix: SopStep aus `sop/types.ts` importieren, Titel aus `step.action`, Detail aus `step.responsible + step.timeframe + step.success_criterion`. ~30min Aufwand.
+- Summary: Der Handbuch-Renderer (`src/workers/handbook/sections.ts:339-348`) erwartet `step.title` und `step.detail`, aber das echte SOP-Schema (`src/workers/sop/types.ts` SopStep) hat `{number, action, responsible, timeframe, success_criterion, dependencies}`. Im Output waren alle SOP-Schritte als "Schritt 1, Schritt 2..." ohne Inhalt sichtbar.
+- Impact: Generierte Handbuecher zeigten leere SOP-Schritte. Test-Fixture in `__tests__/fixtures.ts` erfand ein nicht-existentes `{title, detail}`-Format und maskierte den Bug in den Unit-Tests.
+- Resolution (SLC-039a Mini-Slice, RPT-089): SopStep um Generator-Felder erweitert (number/action/responsible/timeframe/success_criterion/dependencies), Legacy-Felder (title/detail) bleiben optional fuer Rueckwaertskompatibilitaet. renderSop bevorzugt action vor title; rendert Detail-Zeilen `_Verantwortlich:_ X | _Frist:_ Y`, separaten `_Erfolg:_`-Block, `_Voraussetzungen:_ Schritt N, M`. Fixture SOP_BLOCK_A auf Generator-Format umgestellt, Fixture SOP_BLOCK_A_LEGACY fuer Backward-Compat. Test-Assertion nachgezogen. Live-Re-Smoke PASS: Section 01 zeigt 7 Steps mit vollem Inhalt, ZIP-Size +390 bytes (4524 -> 4914).
 
 ### ISSUE-025 — Signed-URL via Public-Endpoint erfordert apikey-Query-Param
 - Status: open

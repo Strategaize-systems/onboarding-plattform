@@ -339,10 +339,37 @@ function renderSop(sop: SopRow): string[] {
   if (steps.length > 0) {
     let i = 1;
     for (const step of steps) {
-      const t = step.title ? String(step.title).trim() : `Schritt ${i}`;
-      out.push(`${i}. **${escapeMd(t)}**`);
-      if (step.detail) {
-        out.push(`   ${escapeMd(String(step.detail).trim().split("\n").join(" "))}`);
+      const num = typeof step.number === "number" ? step.number : i;
+      // Title bevorzugt: action (Generator) > title (Legacy) > "Schritt N"
+      const titleRaw =
+        (typeof step.action === "string" && step.action.trim()) ||
+        (typeof step.title === "string" && step.title.trim()) ||
+        `Schritt ${num}`;
+      out.push(`${num}. **${escapeMd(titleRaw)}**`);
+
+      // Detail-Zeilen: aus action-Schema (responsible/timeframe/success_criterion)
+      // oder aus legacy detail-Feld.
+      const metaParts: string[] = [];
+      if (typeof step.responsible === "string" && step.responsible.trim()) {
+        metaParts.push(`_Verantwortlich:_ ${escapeMd(step.responsible.trim())}`);
+      }
+      if (typeof step.timeframe === "string" && step.timeframe.trim()) {
+        metaParts.push(`_Frist:_ ${escapeMd(step.timeframe.trim())}`);
+      }
+      if (metaParts.length > 0) {
+        out.push(`   ${metaParts.join(" | ")}`);
+      }
+      if (typeof step.success_criterion === "string" && step.success_criterion.trim()) {
+        out.push(
+          `   _Erfolg:_ ${escapeMd(step.success_criterion.trim().split("\n").join(" "))}`,
+        );
+      }
+      if (typeof step.detail === "string" && step.detail.trim()) {
+        out.push(`   ${escapeMd(step.detail.trim().split("\n").join(" "))}`);
+      }
+      const deps = Array.isArray(step.dependencies) ? step.dependencies : [];
+      if (deps.length > 0) {
+        out.push(`   _Voraussetzungen:_ Schritt ${deps.map((d) => String(d)).join(", ")}`);
       }
       i++;
     }

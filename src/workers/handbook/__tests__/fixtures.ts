@@ -108,12 +108,42 @@ export const DIAG_BLOCK_A_DRAFT: DiagnosisRow = {
   status: "draft",
 };
 
+// Real SOP-Generator-Format (siehe src/workers/sop/types.ts SopStep).
+// Renderer akzeptiert auch das Legacy-Format {title, detail} als Fallback.
 export const SOP_BLOCK_A: SopRow = {
   id: "sop-a-1",
   block_key: "A",
   content: {
     title: "Onboarding neuer Mieter",
     objective: "Schnelle Einzugsbereitschaft.",
+    steps: [
+      {
+        number: 1,
+        action: "Vertrag pruefen",
+        responsible: "Vermietungs-Manager",
+        timeframe: "1 Tag",
+        success_criterion: "SCHUFA + Selbstauskunft vollstaendig.",
+        dependencies: [],
+      },
+      {
+        number: 2,
+        action: "Schluessel uebergeben",
+        responsible: "Hausmeister",
+        timeframe: "Am Einzugstag",
+        success_criterion: "Mieter hat Schluessel + Wohnung uebernommen.",
+        dependencies: [1],
+      },
+    ],
+  },
+};
+
+// Legacy-Variante zum Testen der Backward-Compat-Pfade.
+export const SOP_BLOCK_A_LEGACY: SopRow = {
+  id: "sop-a-legacy",
+  block_key: "A",
+  content: {
+    title: "Legacy-SOP",
+    objective: "Test alter Format.",
     steps: [
       { title: "Vertrag pruefen", detail: "SCHUFA + Selbstauskunft." },
       { title: "Schluessel uebergeben", detail: "Im Buero." },

@@ -100,15 +100,18 @@ describe("renderHandbook", () => {
     expect(sectionA).toContain("green");
   });
 
-  it("rendert SOP-Steps mit Titel + Detail in numerischer Liste", () => {
+  it("rendert SOP-Steps im Generator-Format (action/responsible/timeframe/success_criterion)", () => {
     const result = renderHandbook(
       baseInput({ diagnoses: [DIAG_BLOCK_A], sops: [SOP_BLOCK_A] }),
     );
     const sectionA = result.files["01_geschaeftsmodell.md"];
     expect(sectionA).toContain("Onboarding neuer Mieter");
     expect(sectionA).toContain("1. **Vertrag pruefen**");
-    expect(sectionA).toContain("SCHUFA + Selbstauskunft.");
+    expect(sectionA).toContain("_Verantwortlich:_ Vermietungs-Manager");
+    expect(sectionA).toContain("_Frist:_ 1 Tag");
+    expect(sectionA).toContain("_Erfolg:_ SCHUFA + Selbstauskunft vollstaendig.");
     expect(sectionA).toContain("2. **Schluessel uebergeben**");
+    expect(sectionA).toContain("_Voraussetzungen:_ Schritt 1");
   });
 
   it("setzt Cross-Link-Anker oben in der Quell-Section", () => {
