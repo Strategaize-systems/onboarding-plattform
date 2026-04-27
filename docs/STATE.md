@@ -10,17 +10,15 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: qa
-- Current Focus: SLC-040 Code done 2026-04-27. Handbuch-UI (/admin/handbook) + Status-Cockpit auf /dashboard + Cross-Tenant-Sicht in /admin/tenants. Server-Action triggerHandbookSnapshot + Next.js-API-Proxy /api/handbook/[id]/download (IMP-166-Pattern, kein signed-URL-apikey-Workaround noetig — macht ISSUE-025 obsolet). 11/11 next-step-Tests gruen, 212/222 Suite-Tests gruen (10 fails sind DB-bound Integration-Tests die TEST_DATABASE_URL benoetigen, erwartet). npm run build PASS. **Naechste Schritte: Coolify-Deploy aller V4-Slices (037+038+039+039a+040), dann Pflicht-Nicht-Tech-User-Smoke-Test (R17, SC-V4-5), dann /qa SLC-040 + Gesamt-V4-/qa, /final-check, /go-live, Production-Deploy.**
-- Current Phase: V4 Implementation — 8/8 Slices Code done (033, 034, 035, 036, 037, 038, 039, 040). Alle 6 V4-Features (FEAT-022..027) Code done. Verbleibend: User-Deploy + Nicht-Tech-User-Smoke-Test + Gesamt-QA + Final-Check + Go-Live + Deploy.
+- Current Focus: **SLC-040 /qa PASS 2026-04-27 (RPT-091).** Alle 12 ACs erfuellt, Cross-Tenant-Isolation Live verifiziert per psql (foreign tenant_admin → forbidden, RLS visible_rows=0), 11/11 Cockpit-Tests gruen, Build PASS, kein Stub. Drei Low-Findings sind alle V4.x-Backlog (kein Blocker). V4 8/8 Slices Code+Live+QA durch. **Naechste Schritte: Gesamt-V4-/qa (4-Rollen-RLS-Matrix Re-Run + End-to-End-Workflow GF→Bridge→Mitarbeiter→Handbuch), dann /final-check, /go-live, Production-Deploy.**
+- Current Phase: V4 Implementation — 8/8 Slices Code done + Live verifiziert + SLC-040 /qa PASS. Alle 6 V4-Features (FEAT-022..027) abgeschlossen. Verbleibend: Gesamt-V4-/qa + Final-Check + Go-Live + Deploy.
 
 ## Immediate Next Steps
-1. **Commit + Push** der SLC-040-Outputs: `feat(SLC-040): Handbuch-UI + Status-Cockpit + Cross-Tenant-View` (Files: src/app/admin/handbook/*, src/app/api/handbook/[snapshotId]/download/route.ts, src/app/dashboard/{page.tsx,dashboard-client.tsx,StatusCockpit.tsx,MetricCard.tsx,NextStepBanner.tsx}, src/lib/cockpit/{types,next-step,next-step.test,load-metrics,load-cross-tenant}.ts, src/app/admin/tenants/{page.tsx,CrossTenantCockpit.tsx}, src/components/dashboard-sidebar.tsx). Plus `docs(slc-040): STATE + INDEX + backlog + ISSUE-025 wontfix + RPT-090`.
-2. **User-Coolify-Deploy** aller V4-Slices zusammen (037 + 038 + 039 + 039a + 040). Post-Deploy verify: /admin/handbook reachable, Trigger erzeugt Snapshot, Worker-Boot-Log `[worker] handbook_snapshot_generation handler registered`, /dashboard rendert Cockpit fuer tenant_admin, /admin/tenants rendert Cross-Tenant-Tabelle.
-3. **Pflicht-Nicht-Tech-User-Smoke-Test** (R17, SC-V4-5) — Tester (User selbst oder Peer) durchlaeuft Login → Dashboard → folgt 3-4 Schritten der Empfehlung → generiert Handbuch. Beobachtungen + UX-Bugs ins KNOWN_ISSUES oder als V4.1-Backlog.
-4. **/qa SLC-040** — formelle QA-Pruefung der UI inkl. AC-1..12 (Browser-E2E nach Coolify-Deploy). Pflicht-Test der Cross-Tenant-Isolation mit 2 Tenants.
-5. **Gesamt-V4-/qa** — sobald SLC-040 PASS: 4-Rollen-RLS-Matrix Re-Run + Cross-Tenant-Isolation + Workflow-End-to-End (GF-Erhebung → Bridge → Mitarbeiter-Aufgabe → Handbuch).
-6. **/final-check + /go-live + /deploy V4** — nach Gesamt-QA PASS.
-7. **/post-launch** fuer SLC-034 + SLC-036 nach 1-2 Tagen Produktivbetrieb (optional, low-risk).
+1. **Gesamt-V4-/qa** — eigene Session. 4-Rollen-RLS-Matrix Re-Run (32 Failure-Tests aus SLC-037 R16/SC-V4-3) + End-to-End-Workflow (GF-Erhebung → Bridge-Run → Mitarbeiter-Einladung → Mitarbeiter-Aufgabe → Handbuch-Generierung → Download) + Performance-Sanity.
+2. **/final-check** — Code-Hygiene, Dependencies, Security-Sweep, ENV-Vars.
+3. **/go-live** — Release-Risiko-Assessment.
+4. **/deploy V4** — User-Coolify-Production-Deploy.
+5. **/post-launch** nach 1-2 Tagen Produktivbetrieb.
 
 ## Active Scope
 **V4 — Zwei-Ebenen-Verschmelzung, 6 Features Code-done, 8 Slices Code-done:**
