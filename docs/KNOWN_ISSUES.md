@@ -208,3 +208,21 @@
   - **Migration 077** (`GRANT USAGE ON SCHEMA auth TO authenticated, anon`): Aufgefallen erst nach 076 — die Policy konnte stillschweigend FALSE evaluieren, weil `authenticated` kein USAGE-Grant auf das auth-Schema hatte. Postgres konnte die Cross-Schema-Function-Calls (`auth.user_role()`/`auth.user_tenant_id()`) in der Policy-Expression nicht aufloesen. Das ist Standard-Supabase-Setup, war auf der Onboarding-DB aber nicht gesetzt.
 - Impact: Pre-Fix konnte SLC-034 Aktive-Mitarbeiter-Listing nicht funktioniert haben (silent empty result), wurde dort aber nicht entdeckt weil im Smoke nur die Invitation-Seite geprueft wurde. SLC-036 hat es aufgedeckt durch Live-Inspect der Bridge-UI mit gesetzten proposed_employee_user_id. Andere Funktions-Pfade ueber `auth.uid()` funktionierten weiterhin, weil `auth.uid()` direkt im EXECUTE-Privilege aufgeloest wird ohne Schema-USAGE-Check — RLS-Policy-Expressions mit auth.user_role() haben den Check aber benoetigt.
 - Lesson learned: Bei Self-hosted-Supabase muss explizit verifiziert werden, dass `nspacl` auf `auth` mindestens `authenticated=U/supabase_auth_admin` enthaelt. Sonst greifen viele RLS-Policies still nicht. Pruefen mit `SELECT nspacl FROM pg_namespace WHERE nspname='auth';`.
+
+### ISSUE-024 — Handbuch-Renderer SOP-Schritt-Schema-Mismatch (leere Steps im Output)
+- Status: open
+- Severity: High
+- Area: Worker / Handbook-Renderer
+- Summary: Der Handbuch-Renderer (`src/workers/handbook/sections.ts:339-348`) erwartet `step.title` und `step.detail`, aber das echte SOP-Schema (`src/workers/sop/types.ts` SopStep) hat `{number, action, responsible, timeframe, success_criterion, dependencies}`. Im Output sind alle SOP-Schritte als "Schritt 1, Schritt 2..." ohne Inhalt sichtbar.
+- Impact: Generierte Handbuecher zeigen leere SOP-Schritte. Pilot-User sieht leeren Inhalt unter dem SOP-Header. Verhindert produktiven Einsatz von FEAT-026 Snapshot-Pipeline. Test-Fixture in `__tests__/fixtures.ts` erfindet ein nicht-existentes `{title, detail}`-Format und maskiert den Bug in den Unit-Tests.
+- Workaround: Keiner. Bug muss im Code gefixt werden.
+- Next Action: Mini-Slice SLC-039a (Renderer-Patch + Fixture-Update + Test-Update) vor /backend SLC-040 oder Auto-Fix in /qa-Folge-Session. Fix: SopStep aus `sop/types.ts` importieren, Titel aus `step.action`, Detail aus `step.responsible + step.timeframe + step.success_criterion`. ~30min Aufwand.
+
+### ISSUE-025 — Signed-URL via Public-Endpoint erfordert apikey-Query-Param
+- Status: open
+- Severity: Medium
+- Area: Self-hosted-Supabase / Coolify-Routing
+- Summary: Signed-URLs aus `adminClient.storage.from(bucket).createSignedUrl(path, ttl)` zeigen auf den internen Kong-Endpoint (`http://supabase-kong:8000/...`). Wenn die URL ohne Anpassung ans Frontend geht und gegen `https://onboarding.strategaizetransition.com/supabase/...` aufgerufen wird, schlaegt der Download mit HTTP 401 `{"message":"No API key found in request"}` fehl. Erst `&apikey=<NEXT_PUBLIC_SUPABASE_ANON_KEY>` an die Signed-URL macht den Download moeglich (HTTP 200).
+- Impact: Erstreckt sich auf alle zukuenftigen Public-Bucket-Downloads ueber Self-hosted-Supabase. Aktuell SLC-040 Handbuch-Download betroffen.
+- Workaround: Server-Action muss Host-Replace (kong:8000 -> NEXT_PUBLIC_SUPABASE_URL) UND apikey-Query anhaengen.
+- Next Action: SLC-040 Server-Action `getHandbookDownloadUrl` muss diese 2 Schritte umsetzen + im /qa SLC-040 explizit testen. Verwandt mit IMP-166 (Self-Hosted Public-Storage 3 verzahnte Fallen).

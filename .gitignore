@@ -16,6 +16,9 @@
 # production
 /build
 
+# build artifacts (worker + qa-smoke bundles)
+/dist
+
 # misc
 .DS_Store
 *.pem

@@ -10,16 +10,17 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: SLC-039 Handbuch-Snapshot Backend done. Migration 074 (2 RPCs `rpc_trigger_handbook_snapshot` + `rpc_get_handbook_snapshot_path`) live auf Coolify-DB als MIG-027. Worker-Pipeline `handbook_snapshot_generation` registriert in claim-loop + run.ts, Handler haendelt Schema-Validation -> Multi-Source-Aggregation (KU + Diagnose + SOP) -> deterministisches Markdown-Render -> ZIP-Build -> Storage-Upload. **Kein Bedrock-Call** (DEC-038, $0 Aggregations-Kosten). 35/35 Handbuch-Unit-Tests gruen (validate-schema 12, renderer 13, index-builder 5, zip-builder 5). npm run build PASS, build:worker PASS (183.2kb Bundle). **Naechster Schritt: Commit + Push, dann /qa SLC-039 mit Live-Integration-Test gegen Coolify-DB+Storage.**
+- Current Focus: /qa SLC-039 Phase 2 durchgelaufen (RPT-088). 9/12 ACs PASS, 3 ACs PASS-mit-Findings. Wiring End-to-End live verifiziert: RPC -> ai_jobs -> Worker (lokal-gebautes Smoke-Bundle in worker-Container ausgefuehrt) -> Render -> ZIP -> Storage-Upload -> Snapshot-Update -> Signed-URL-Roundtrip. 2 Live-Snapshots erzeugt (5-KU-Session 86d18dd6 = 4524 bytes ZIP, Empty-Session 560a77f2 = 3014 bytes ZIP). **2 neue Issues:** ISSUE-024 (HIGH, F4 SOP-Renderer-Schema-Mismatch — leere Steps im Output, Test-Fixture maskiert den Bug), ISSUE-025 (Medium, F6 Self-hosted-Signed-URL erfordert apikey-Query-Param). **Naechster Schritt: Entscheidung F4-Fix-Variante (A=Mini-Slice SLC-039a empfohlen, B=in SLC-040 mit-fixen, C=als Known-Issue laufen lassen) bevor /backend SLC-040.**
 - Current Phase: V4 Implementation — 7/8 Slices done (033, 034, 035, 036, 037, 038, 039). FEAT-022 + FEAT-024 + FEAT-025 done. 1 Slice verbleibend: SLC-040 (Handbuch-UI + Cockpit Foundation).
 
 ## Immediate Next Steps
-1. **Commit + Push** der SLC-039-Implementation: `feat(SLC-039): handbuch-snapshot backend — migration 074 + renderer + zip-builder + worker handler` + `docs(SLC-039): MIG-027 + STATE + INDEX + RPT-087`.
-2. **/qa SLC-039** — Phase 1 statisch (35 Unit-Tests gruen, AC-1 Migration-Schema-Verify), Phase 2 Live (Trigger-RPC End-to-End-Test gegen Coolify-DB + Worker auf Coolify, ZIP im Storage-Bucket pruefen, signed-URL-Download). AC-7 + AC-8 + AC-11-Performance-Check.
-3. **/backend SLC-040** — Handbuch-UI + Cockpit Foundation. Letzter V4-Slice. **Pflicht-Gate: Nicht-Tech-User-Smoke-Test** (R17, SC-V4-5).
-4. **User Coolify-Deploy** SLC-037 + SLC-038 + SLC-039-Commits zusammen. Post-Deploy: Worker-Boot-Log `[worker] handbook_snapshot_generation handler registered`, Smoke-Trigger einer Snapshot-Generierung mit echter Demo-Session, Storage-Bucket pruefen.
-4. **Mobile-Viewport-Smoke fuer SLC-036** (deferred): wenn Zeit, im DevTools Mobile-Mode pruefen, dass Karten + Edit-Dialog auf <400px sauber rendern.
-5. **/post-launch** fuer SLC-034 + SLC-036 nach 1-2 Tagen Produktivbetrieb (optional, low-risk).
+1. **Commit + Push** der /qa SLC-039 Phase 2-Outputs: `docs(qa SLC-039): RPT-088 + ISSUE-024 + ISSUE-025` + `chore(qa): qa-handbook-smoke.mjs + Bundle + Stubs` + `docs: STATE + KNOWN_ISSUES`.
+2. **F4-Fix-Entscheidung (User)** — Variante A (Mini-Slice SLC-039a, ~30min, empfohlen), B (in SLC-040), oder C (als Known-Issue). Vor /backend SLC-040.
+3. **Falls A: SLC-039a Mini-Slice** — Renderer akzeptiert echtes SopStep-Schema (action/responsible/timeframe/success_criterion + dependencies), Fixture + 5 Renderer-Tests nachziehen, Re-Run Smoke + Mini-RPT-089 + Re-Deploy.
+4. **/backend SLC-040** — Handbuch-UI + Cockpit Foundation. Letzter V4-Slice. **Pflicht-Gate: Nicht-Tech-User-Smoke-Test** (R17, SC-V4-5). **Note: ISSUE-025 Signed-URL-Apikey-Workaround (Host-Replace + apikey-Query) muss in `getHandbookDownloadUrl` Server-Action umgesetzt werden.**
+5. **User Coolify-Deploy** SLC-037 + SLC-038 + SLC-039 (+ optional SLC-039a) zusammen. Post-Deploy: Worker-Boot-Log `[worker] handbook_snapshot_generation handler registered`, echte UI-Trigger-Validierung.
+6. **Mobile-Viewport-Smoke fuer SLC-036** (deferred): wenn Zeit, im DevTools Mobile-Mode pruefen.
+7. **/post-launch** fuer SLC-034 + SLC-036 nach 1-2 Tagen Produktivbetrieb (optional, low-risk).
 
 ## Active Scope
 **V4 — Zwei-Ebenen-Verschmelzung, 6 Features (planned), 8 Slices planned:**
