@@ -237,13 +237,13 @@
 - Next Action: Auflösung wartet auf Next.js Minor-Bump mit postcss>=8.5.10 im Tarball. Bei naechstem Maintenance-Sprint pruefen (`npm outdated next` + Changelog auf postcss-Update).
 
 ### ISSUE-027 — ENV-Vars-Drift im docker-compose.yml: V3 SMTP/Jitsi/Recording fehlen im app-Service-Block
-- Status: open
+- Status: resolved
+- Resolution Date: 2026-04-27
 - Severity: Medium
 - Area: CI/CD / Deployment-Readiness
-- Summary: Der App-Container-Code referenziert zur Runtime SMTP_*, ERROR_ALERT_EMAIL, RECORDING_WEBHOOK_SECRET, JITSI_JWT_APP_ID, JITSI_JWT_APP_SECRET, NEXT_PUBLIC_JITSI_DOMAIN. Die Vars sind im `docker-compose.yml` `app`-Service `environment:`-Block (Zeile 49-61) NICHT deklariert, werden aber auf Coolify-Live via UI manuell gesetzt.
-- Impact: Bei Disaster-Recovery oder neuer Server-Aufsetzung wuerden V3-Features (Dialogue, Recording, Email) brechen, weil compose.yml nicht self-contained ist. Hidden Knowledge in Coolify-UI statt versionierter Compose-File. V4-Code ist deploy-ready (alle V4-Vars im Compose vorhanden).
-- Live-Status verifiziert (2026-04-27): SMTP_HOST=smtp.ionos.de, SMTP_USER=onboarding@strategaizetransition.com, JITSI_JWT_APP_ID=onboarding, JITSI_JWT_APP_SECRET=SET, NEXT_PUBLIC_JITSI_DOMAIN=meet-onboarding.strategaizetransition.com (alle gesetzt). ERROR_ALERT_EMAIL leer (Fallback auf SMTP_USER aktiv). RECORDING_WEBHOOK_SECRET MISSING (siehe ISSUE-028).
-- Next Action: docker-compose.yml `app`-environment-Block ergaenzen mit `${SMTP_HOST}`, `${SMTP_PORT}`, `${SMTP_USER}`, `${SMTP_PASS}`, `${SMTP_FROM}`, `${ERROR_ALERT_EMAIL}`, `${RECORDING_WEBHOOK_SECRET}`, `${JITSI_JWT_APP_ID}`, `${JITSI_JWT_APP_SECRET}`, `${NEXT_PUBLIC_JITSI_DOMAIN}`. Plus `.env.deploy.example` analog erweitern. Empfohlen vor `/go-live` als Mini-Slice.
+- Summary: Der App-Container-Code referenziert zur Runtime SMTP_*, ERROR_ALERT_EMAIL, RECORDING_WEBHOOK_SECRET, JITSI_JWT_APP_ID, JITSI_JWT_APP_SECRET, NEXT_PUBLIC_JITSI_DOMAIN. Die Vars waren im `docker-compose.yml` `app`-Service `environment:`-Block NICHT deklariert, wurden aber auf Coolify-Live via UI manuell gesetzt.
+- Impact: Bei Disaster-Recovery oder neuer Server-Aufsetzung waeren V3-Features (Dialogue, Recording, Email) gebrochen, weil compose.yml nicht self-contained war.
+- Resolution: docker-compose.yml `app`-Service `environment:` um 10 Vars erweitert: `${SMTP_HOST}`, `${SMTP_PORT:-587}`, `${SMTP_USER}`, `${SMTP_PASS}`, `${SMTP_FROM}`, `${ERROR_ALERT_EMAIL}`, `${JITSI_JWT_APP_ID}`, `${JITSI_JWT_APP_SECRET}`, `${JITSI_DOMAIN:-meet-onboarding.strategaizetransition.com}` als `NEXT_PUBLIC_JITSI_DOMAIN` (gleiche Source wie jitsi-web/jitsi-jibri PUBLIC_URL — vermeidet doppelte Definition), `${RECORDING_WEBHOOK_SECRET}`. Plus `.env.deploy.example` um `RECORDING_WEBHOOK_SECRET=GENERATE_ME_HEX_64` ergaenzt. Compose-Syntax via `docker compose config --quiet` validiert (exit 0). Pflicht nach Deploy: User-Coolify-Reload-Compose-File + Redeploy, danach App-Container hat alle Vars deklariert verfuegbar (statt nur via Coolify-UI).
 
 ### ISSUE-028 — V3 RECORDING_WEBHOOK_SECRET in Production-ENV nicht gesetzt
 - Status: open

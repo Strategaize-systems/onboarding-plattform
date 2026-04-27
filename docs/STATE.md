@@ -10,14 +10,13 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: go-live
-- Current Focus: **Final-Check conditionally ready 2026-04-27 (RPT-093).** 0 Blocker, 0 High, 1 Medium (ISSUE-027 ENV-Drift im docker-compose.yml fuer V3 SMTP/Jitsi/Recording — Live in Coolify gesetzt, fehlt aber in versionierter Compose-File), 3 Low (ISSUE-026 postcss bundled in Next.js / npm-Override-immun, ISSUE-028 V3 RECORDING_WEBHOOK_SECRET MISSING in Production-ENV V3-Defect, F4 HelpButton-Placeholder Pre-V4). V4 ist code-deploy-ready, Coolify-Live-ENV ist konfiguriert. **Empfohlen vor /go-live: ENV-Drift-Mini-Slice (compose.yml + .env.deploy.example ergaenzen) ODER explizit als akzeptiert dokumentieren. Naechste Schritte: /go-live (Release-Risk-Assessment + Rollback-Plan), Production-Deploy, /post-launch.**
-- Current Phase: V4 Go-Live — alle 8 Slices Code+Live+/qa+/final-check durch. Verbleibend: Go-Live-Decision + Deploy + Post-Launch.
+- Current Focus: **Final-Check ready 2026-04-27 (RPT-093) + ENV-Drift-Fix done.** ISSUE-027 resolved: docker-compose.yml `app`-Service environment-Block um 10 V3-Vars (SMTP_*, ERROR_ALERT_EMAIL, JITSI_JWT_*, NEXT_PUBLIC_JITSI_DOMAIN, RECORDING_WEBHOOK_SECRET) erweitert + .env.deploy.example um RECORDING_WEBHOOK_SECRET ergaenzt. Compose-Syntax via `docker compose config` validiert. 0 Blocker, 0 High, 0 Medium offen. 2 Low residual (ISSUE-026 postcss bundled / npm-Override-immun / build-time-only / kein Runtime-Risk; ISSUE-028 V3 RECORDING_WEBHOOK_SECRET MISSING in Production-ENV / kein V4-Blocker / V3.x-Maintenance-Backlog). V4 ist deploy-ready. **Naechste Schritte: /go-live (Release-Risk-Assessment + Rollback-Plan), Production-Deploy, /post-launch.**
+- Current Phase: V4 Go-Live — alle 8 Slices Code+Live+/qa+/final-check+ENV-Drift-Fix durch. Verbleibend: Go-Live-Decision + Deploy + Post-Launch.
 
 ## Immediate Next Steps
-1. **(optional) ENV-Drift Mini-Slice** — docker-compose.yml app-Service environment-Block ergaenzen (10 V3-Vars aus ISSUE-027) + .env.deploy.example updaten. Empfohlen vor /go-live, kein Blocker.
-2. **/go-live** — Release-Risiko-Assessment, Rollback-Plan, Go/No-Go-Decision.
-3. **/deploy V4** — User-Coolify-Production-Deploy.
-4. **/post-launch** nach 1-2 Tagen Produktivbetrieb.
+1. **/go-live** — Release-Risiko-Assessment, Rollback-Plan, Go/No-Go-Decision.
+2. **/deploy V4** — User-Coolify-Production-Deploy. Pflicht: Coolify "Reload Compose File" vor Redeploy, damit die neuen ENV-Vars im app-Container ankommen.
+3. **/post-launch** nach 1-2 Tagen Produktivbetrieb.
 
 ## Active Scope
 **V4 — Zwei-Ebenen-Verschmelzung, 6 Features Code-done, 8 Slices Code-done:**

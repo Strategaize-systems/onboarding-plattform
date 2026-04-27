@@ -59,6 +59,18 @@ services:
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
       LLM_MODEL: ${LLM_MODEL:-eu.anthropic.claude-sonnet-4-20250514-v1:0}
+      # SMTP for invite emails, password reset, error alerts (src/lib/email.ts)
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+      SMTP_FROM: ${SMTP_FROM}
+      ERROR_ALERT_EMAIL: ${ERROR_ALERT_EMAIL}
+      # V3 Jitsi Dialogue-Mode (server-side JWT generation + Jibri webhook auth)
+      JITSI_JWT_APP_ID: ${JITSI_JWT_APP_ID}
+      JITSI_JWT_APP_SECRET: ${JITSI_JWT_APP_SECRET}
+      NEXT_PUBLIC_JITSI_DOMAIN: ${JITSI_DOMAIN:-meet-onboarding.strategaizetransition.com}
+      RECORDING_WEBHOOK_SECRET: ${RECORDING_WEBHOOK_SECRET}
     depends_on:
       supabase-db:
         condition: service_healthy
