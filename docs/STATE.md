@@ -9,13 +9,13 @@
 Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdichtung. Ermoeglicht mehrere Capture-Modi (Fragebogen, Meeting, Voice, etc.) und Template-basierte Produktvarianten (z.B. Exit-Readiness, Immobilien-Onboarding). Ab V4: Zwei-Ebenen-Verschmelzung (GF-Blueprint + Mitarbeiter-Capture + Unternehmerhandbuch-Output).
 
 ## Current State
-- High-Level State: final-check
-- Current Focus: **Gesamt-V4-/qa PASS 2026-04-27 (RPT-092).** 322/322 Tests gruen gegen Live-Coolify-DB (SSH-Tunnel auf 10.0.3.3:5432), 46/46 RLS-Matrix Pflicht+Bonus PASS, End-to-End-Workflow live nachweisbar (1 GF + 5 KUs + 2 Bridge-Runs + 6 Proposals + 1 Invitation accepted + 4 Snapshots `ready`), Performance innerhalb Budget (Snapshot exec 0.16-0.23s, Routes <200ms TTFB). 0 Blocker, 0 High, 0 Medium. 1 Low (Pre-V4 HelpButton-Placeholder, kein V4-Scope) + 3 Low aus RPT-091 (Backlog). **Naechste Schritte: /final-check (Code-Hygiene + Dependencies + Security-Sweep), dann /go-live, Production-Deploy, /post-launch.**
-- Current Phase: V4 Final-Check — alle 8 Slices Code+Live+/qa durch. Alle 6 V4-Features (FEAT-022..027) abgeschlossen + Pflicht-Gate SC-V4-3 (RLS-Matrix) live verifiziert. Verbleibend: Final-Check + Go-Live + Deploy.
+- High-Level State: go-live
+- Current Focus: **Final-Check conditionally ready 2026-04-27 (RPT-093).** 0 Blocker, 0 High, 1 Medium (ISSUE-027 ENV-Drift im docker-compose.yml fuer V3 SMTP/Jitsi/Recording — Live in Coolify gesetzt, fehlt aber in versionierter Compose-File), 3 Low (ISSUE-026 postcss bundled in Next.js / npm-Override-immun, ISSUE-028 V3 RECORDING_WEBHOOK_SECRET MISSING in Production-ENV V3-Defect, F4 HelpButton-Placeholder Pre-V4). V4 ist code-deploy-ready, Coolify-Live-ENV ist konfiguriert. **Empfohlen vor /go-live: ENV-Drift-Mini-Slice (compose.yml + .env.deploy.example ergaenzen) ODER explizit als akzeptiert dokumentieren. Naechste Schritte: /go-live (Release-Risk-Assessment + Rollback-Plan), Production-Deploy, /post-launch.**
+- Current Phase: V4 Go-Live — alle 8 Slices Code+Live+/qa+/final-check durch. Verbleibend: Go-Live-Decision + Deploy + Post-Launch.
 
 ## Immediate Next Steps
-1. **/final-check** — Code-Hygiene, Dependencies (`npm audit --omit=dev`), ENV-Vars, Compose-Drift, Security-Sweep, Repo-Hygiene.
-2. **/go-live** — Release-Risiko-Assessment + Rollback-Plan.
+1. **(optional) ENV-Drift Mini-Slice** — docker-compose.yml app-Service environment-Block ergaenzen (10 V3-Vars aus ISSUE-027) + .env.deploy.example updaten. Empfohlen vor /go-live, kein Blocker.
+2. **/go-live** — Release-Risiko-Assessment, Rollback-Plan, Go/No-Go-Decision.
 3. **/deploy V4** — User-Coolify-Production-Deploy.
 4. **/post-launch** nach 1-2 Tagen Produktivbetrieb.
 

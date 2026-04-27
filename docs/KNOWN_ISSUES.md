@@ -226,3 +226,30 @@
 - Summary: Signed-URLs aus `adminClient.storage.from(bucket).createSignedUrl(path, ttl)` zeigen auf den internen Kong-Endpoint (`http://supabase-kong:8000/...`). Wenn die URL ohne Anpassung ans Frontend geht und gegen `https://onboarding.strategaizetransition.com/supabase/...` aufgerufen wird, schlaegt der Download mit HTTP 401 `{"message":"No API key found in request"}` fehl.
 - Impact: Wuerde alle zukuenftigen Storage-Downloads ueber Self-hosted-Supabase betreffen, falls signed-URLs verwendet wuerden.
 - Resolution (wontfix, Pattern-Switch): SLC-040 hat das Problem strukturell vermieden, indem die Handbuch-Download-Route als Next.js-API-Proxy `/api/handbook/[snapshotId]/download` implementiert wurde — siehe IMP-166-Pattern. Die Route prueft Auth via cookie-basiertem SSR-Client + ruft `rpc_get_handbook_snapshot_path` (mit RLS-/Cross-Tenant-Check) + laedt das Blob via `adminClient.storage.from('handbook').download()` (BYPASSRLS) + streamt mit Content-Disposition zurueck. Damit existiert kein signed-URL-Hop, kein apikey-Workaround, kein Host-Replace. Die existierende Evidence-Download-Route (`src/app/api/capture/[sessionId]/evidence/[fileId]/download/route.ts`) nutzt noch das alte signed-URL-Pattern und sollte bei Gelegenheit auf das gleiche Proxy-Pattern migriert werden — aktuell nicht akut, weil Evidence-Use-Case dort funktional ist.
+
+### ISSUE-026 — postcss 8.4.31 als Next.js bundled dep, npm-Override-immun
+- Status: open
+- Severity: Low
+- Area: Dependencies / Security
+- Summary: `npm audit --omit=dev` meldet 3 moderate Vulnerabilities ueber `postcss <8.5.10` (XSS via Unescaped `</style>`-Sequenzen im Stringify-Output). Vulnerable postcss@8.4.31 wird als `bundled dependency` von Next.js 16.2.4 mitgeliefert (im publish-Tarball, nicht resolveable im npm-Tree). Direkte `postcss`-devDep ist auf `^8.5.10` gehoben (eigene Tailwind-Pipeline OK), aber Next-bundled bleibt vulnerabel.
+- Impact: Build-Time-only. XSS-Vector erfordert User-Input in CSS-Stringify-Output, was im Onboarding-Code nicht passiert (postcss laeuft nur ueber Tailwind/Build). Kein Runtime-Risk fuer Production.
+- Workaround: nested-Override (`"overrides": {"next": {"postcss": "^8.5.10"}}`) wurde getestet — npm registriert den Override, Next.js bundled dep bleibt aber 8.4.31. Auch nach Löschen von `node_modules/next/node_modules/postcss` + `npm install` wird die bundled Version wiederhergestellt.
+- Next Action: Auflösung wartet auf Next.js Minor-Bump mit postcss>=8.5.10 im Tarball. Bei naechstem Maintenance-Sprint pruefen (`npm outdated next` + Changelog auf postcss-Update).
+
+### ISSUE-027 — ENV-Vars-Drift im docker-compose.yml: V3 SMTP/Jitsi/Recording fehlen im app-Service-Block
+- Status: open
+- Severity: Medium
+- Area: CI/CD / Deployment-Readiness
+- Summary: Der App-Container-Code referenziert zur Runtime SMTP_*, ERROR_ALERT_EMAIL, RECORDING_WEBHOOK_SECRET, JITSI_JWT_APP_ID, JITSI_JWT_APP_SECRET, NEXT_PUBLIC_JITSI_DOMAIN. Die Vars sind im `docker-compose.yml` `app`-Service `environment:`-Block (Zeile 49-61) NICHT deklariert, werden aber auf Coolify-Live via UI manuell gesetzt.
+- Impact: Bei Disaster-Recovery oder neuer Server-Aufsetzung wuerden V3-Features (Dialogue, Recording, Email) brechen, weil compose.yml nicht self-contained ist. Hidden Knowledge in Coolify-UI statt versionierter Compose-File. V4-Code ist deploy-ready (alle V4-Vars im Compose vorhanden).
+- Live-Status verifiziert (2026-04-27): SMTP_HOST=smtp.ionos.de, SMTP_USER=onboarding@strategaizetransition.com, JITSI_JWT_APP_ID=onboarding, JITSI_JWT_APP_SECRET=SET, NEXT_PUBLIC_JITSI_DOMAIN=meet-onboarding.strategaizetransition.com (alle gesetzt). ERROR_ALERT_EMAIL leer (Fallback auf SMTP_USER aktiv). RECORDING_WEBHOOK_SECRET MISSING (siehe ISSUE-028).
+- Next Action: docker-compose.yml `app`-environment-Block ergaenzen mit `${SMTP_HOST}`, `${SMTP_PORT}`, `${SMTP_USER}`, `${SMTP_PASS}`, `${SMTP_FROM}`, `${ERROR_ALERT_EMAIL}`, `${RECORDING_WEBHOOK_SECRET}`, `${JITSI_JWT_APP_ID}`, `${JITSI_JWT_APP_SECRET}`, `${NEXT_PUBLIC_JITSI_DOMAIN}`. Plus `.env.deploy.example` analog erweitern. Empfohlen vor `/go-live` als Mini-Slice.
+
+### ISSUE-028 — V3 RECORDING_WEBHOOK_SECRET in Production-ENV nicht gesetzt
+- Status: open
+- Severity: Low
+- Area: V3 Operational Readiness
+- Summary: `docker exec app-... printenv RECORDING_WEBHOOK_SECRET` liefert leeren Wert. Der Endpoint `/api/dialogue/recording-ready` (V3 Jibri-Webhook-Auth) antwortet defense-in-depth mit HTTP 500 `Server misconfiguration` wenn das Secret fehlt — Recording-Pipeline ist damit in Production funktionsunfaehig.
+- Impact: Jitsi-Jibri kann zwar aufzeichnen, aber kein Webhook-Callback an die App zustellen → Aufzeichnungen werden nicht in `dialogue_session.storage_path` registriert + kein Transkriptions-Job ausgeloest. **V4-Features (Bridge, Employee, Handbook) sind nicht betroffen.**
+- Workaround: Aktuell keiner — Recording-Pipeline im Pilot-Betrieb noch nicht aktiv genutzt.
+- Next Action: V3-Maintenance-Slice (V3.x): `RECORDING_WEBHOOK_SECRET=$(openssl rand -hex 32)` generieren, in Coolify-ENV + Jibri-finalize-Script setzen, Live-Smoke-Test mit echter Aufzeichnung. Nicht V4-Release-Blocker.
