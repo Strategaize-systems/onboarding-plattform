@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { logout } from "@/app/login/actions";
-import { PlusCircle, LogOut, ArrowLeft, Users, GitMerge } from "lucide-react";
+import { PlusCircle, LogOut, ArrowLeft, Users, GitMerge, BookOpen } from "lucide-react";
 
 interface DashboardSidebarProps {
   profile: {
@@ -84,7 +84,9 @@ export function DashboardSidebar({ profile, activePage }: DashboardSidebarProps)
         {profile.role === "tenant_admin" && (() => {
           const isTeamActive = pathname.startsWith("/admin/team");
           const isBridgeActive = pathname.startsWith("/admin/bridge");
-          const isCaptureActive = activePage === "capture" && !isTeamActive && !isBridgeActive;
+          const isHandbookActive = pathname.startsWith("/admin/handbook");
+          const isCaptureActive =
+            activePage === "capture" && !isTeamActive && !isBridgeActive && !isHandbookActive;
           return (
             <>
               <Link
@@ -134,6 +136,23 @@ export function DashboardSidebar({ profile, activePage }: DashboardSidebarProps)
                   <div className="text-sm font-bold leading-snug">Bridge</div>
                   <div className={`text-[10px] uppercase tracking-wider font-semibold mt-0.5 ${isBridgeActive ? "text-white/50" : "text-slate-500"}`}>
                     Folge-Aufgaben fuer das Team
+                  </div>
+                </div>
+              </Link>
+              {/* Handbuch — SLC-040 (V4) */}
+              <Link
+                href="/admin/handbook"
+                className={`flex w-full items-center gap-3 rounded-xl px-4 py-3.5 text-left transition-all duration-200 ${
+                  isHandbookActive
+                    ? "bg-gradient-to-r from-brand-primary to-brand-primary-dark text-white shadow-[0_8px_16px_-4px_rgba(68,84,184,0.35)]"
+                    : "text-slate-300 hover:bg-white/[0.06]"
+                }`}
+              >
+                <BookOpen className="h-4 w-4" />
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-bold leading-snug">Handbuch</div>
+                  <div className={`text-[10px] uppercase tracking-wider font-semibold mt-0.5 ${isHandbookActive ? "text-white/50" : "text-slate-500"}`}>
+                    Konsolidiertes Markdown-Paket
                   </div>
                 </div>
               </Link>

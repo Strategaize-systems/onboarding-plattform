@@ -219,10 +219,10 @@
 - Resolution (SLC-039a Mini-Slice, RPT-089): SopStep um Generator-Felder erweitert (number/action/responsible/timeframe/success_criterion/dependencies), Legacy-Felder (title/detail) bleiben optional fuer Rueckwaertskompatibilitaet. renderSop bevorzugt action vor title; rendert Detail-Zeilen `_Verantwortlich:_ X | _Frist:_ Y`, separaten `_Erfolg:_`-Block, `_Voraussetzungen:_ Schritt N, M`. Fixture SOP_BLOCK_A auf Generator-Format umgestellt, Fixture SOP_BLOCK_A_LEGACY fuer Backward-Compat. Test-Assertion nachgezogen. Live-Re-Smoke PASS: Section 01 zeigt 7 Steps mit vollem Inhalt, ZIP-Size +390 bytes (4524 -> 4914).
 
 ### ISSUE-025 — Signed-URL via Public-Endpoint erfordert apikey-Query-Param
-- Status: open
+- Status: wontfix
+- Resolution Date: 2026-04-27
 - Severity: Medium
 - Area: Self-hosted-Supabase / Coolify-Routing
-- Summary: Signed-URLs aus `adminClient.storage.from(bucket).createSignedUrl(path, ttl)` zeigen auf den internen Kong-Endpoint (`http://supabase-kong:8000/...`). Wenn die URL ohne Anpassung ans Frontend geht und gegen `https://onboarding.strategaizetransition.com/supabase/...` aufgerufen wird, schlaegt der Download mit HTTP 401 `{"message":"No API key found in request"}` fehl. Erst `&apikey=<NEXT_PUBLIC_SUPABASE_ANON_KEY>` an die Signed-URL macht den Download moeglich (HTTP 200).
-- Impact: Erstreckt sich auf alle zukuenftigen Public-Bucket-Downloads ueber Self-hosted-Supabase. Aktuell SLC-040 Handbuch-Download betroffen.
-- Workaround: Server-Action muss Host-Replace (kong:8000 -> NEXT_PUBLIC_SUPABASE_URL) UND apikey-Query anhaengen.
-- Next Action: SLC-040 Server-Action `getHandbookDownloadUrl` muss diese 2 Schritte umsetzen + im /qa SLC-040 explizit testen. Verwandt mit IMP-166 (Self-Hosted Public-Storage 3 verzahnte Fallen).
+- Summary: Signed-URLs aus `adminClient.storage.from(bucket).createSignedUrl(path, ttl)` zeigen auf den internen Kong-Endpoint (`http://supabase-kong:8000/...`). Wenn die URL ohne Anpassung ans Frontend geht und gegen `https://onboarding.strategaizetransition.com/supabase/...` aufgerufen wird, schlaegt der Download mit HTTP 401 `{"message":"No API key found in request"}` fehl.
+- Impact: Wuerde alle zukuenftigen Storage-Downloads ueber Self-hosted-Supabase betreffen, falls signed-URLs verwendet wuerden.
+- Resolution (wontfix, Pattern-Switch): SLC-040 hat das Problem strukturell vermieden, indem die Handbuch-Download-Route als Next.js-API-Proxy `/api/handbook/[snapshotId]/download` implementiert wurde — siehe IMP-166-Pattern. Die Route prueft Auth via cookie-basiertem SSR-Client + ruft `rpc_get_handbook_snapshot_path` (mit RLS-/Cross-Tenant-Check) + laedt das Blob via `adminClient.storage.from('handbook').download()` (BYPASSRLS) + streamt mit Content-Disposition zurueck. Damit existiert kein signed-URL-Hop, kein apikey-Workaround, kein Host-Replace. Die existierende Evidence-Download-Route (`src/app/api/capture/[sessionId]/evidence/[fileId]/download/route.ts`) nutzt noch das alte signed-URL-Pattern und sollte bei Gelegenheit auf das gleiche Proxy-Pattern migriert werden — aktuell nicht akut, weil Evidence-Use-Case dort funktional ist.

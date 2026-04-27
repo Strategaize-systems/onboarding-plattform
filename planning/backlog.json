@@ -445,9 +445,9 @@
       "title": "Unternehmerhandbuch Foundation (Datenmodell + Markdown-Export)",
       "type": "feature",
       "priority": "high",
-      "status": "in_progress",
+      "status": "done",
       "version": "V4",
-      "description": "handbook_snapshot-Tabelle + deterministischer Aggregations-Layer ueber template.handbook_schema (DEC-038, kein LLM in V4) + Markdown-ZIP-Export in Storage-Bucket 'handbook'. tenant_admin-only-Zugriff ueber signierte Download-URLs (5 Min). KEINE In-App-Webview, KEIN Live-Editor (V4.1). Siehe FEAT-026. Slices: SLC-039 (Backend+Worker+ZIP), SLC-040 (UI+Download).",
+      "description": "Done 2026-04-27 (SLC-039+SLC-039a+SLC-040). Backend (SLC-039) liefert deterministischen Aggregations-Layer + Markdown-ZIP in Storage-Bucket 'handbook' via Worker. SLC-039a hat den SOP-Renderer-Schema-Mismatch (ISSUE-024) gefixt. SLC-040 liefert die UI: /admin/handbook mit Trigger-Button + Snapshot-Liste + Download via Next.js-API-Proxy /api/handbook/[id]/download (IMP-166-Pattern). Macht ISSUE-025 (Self-hosted-Signed-URL apikey-Problem) obsolet. AutoRefresh-Component fuer generating-Status. Sidebar-Link in DashboardSidebar.",
       "createdAt": "2026-04-23"
     },
     {
@@ -455,9 +455,9 @@
       "title": "Self-Service Status Cockpit Foundation",
       "type": "feature",
       "priority": "medium",
-      "status": "in_progress",
+      "status": "done",
       "version": "V4",
-      "description": "Tenant-Status-View Minimum: 5 Metriken (Bloecke gesamt/submitted, Mitarbeiter eingeladen/Aufgaben offen/fertig) + regelbasierter naechster-Schritt-Hinweis. KEINE Wizards, KEINE Reminders, KEINE Hilfe-Texte (V4.2). Browser-Smoke-Test mit Nicht-Tech-User Pflicht-Gate (R17, SC-V4-5). Siehe FEAT-027. Slice: SLC-040.",
+      "description": "Done 2026-04-27 (SLC-040). /dashboard rendert Cockpit ueber bestehender Sessions-Liste: NextStepBanner + 5 MetricCards (eigene Erhebung, Bridge, Mitarbeiter, Mitarbeiter-Aufgaben, Handbuch). Regel-basierte Empfehlung in src/lib/cockpit/next-step.ts mit 11 TDD-Tests gruen. Cross-Tenant-Sicht in /admin/tenants als Tabelle ueber bestehender TenantsClient. KEINE Wizards/Reminders/Hilfe-Texte (V4.2). Nicht-Tech-User-Smoke-Test ist Pflicht-Gate fuer User nach Coolify-Deploy.",
       "createdAt": "2026-04-23"
     },
     {

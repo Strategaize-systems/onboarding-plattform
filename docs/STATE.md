@@ -9,27 +9,27 @@
 Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdichtung. Ermoeglicht mehrere Capture-Modi (Fragebogen, Meeting, Voice, etc.) und Template-basierte Produktvarianten (z.B. Exit-Readiness, Immobilien-Onboarding). Ab V4: Zwei-Ebenen-Verschmelzung (GF-Blueprint + Mitarbeiter-Capture + Unternehmerhandbuch-Output).
 
 ## Current State
-- High-Level State: implementing
-- Current Focus: SLC-039a Mini-Slice F4-Fix done (RPT-089). ISSUE-024 resolved. Renderer akzeptiert echtes SOP-Generator-Schema (number/action/responsible/timeframe/success_criterion/dependencies) + Legacy-Format als Fallback. 35/35 Unit-Tests gruen, build:worker PASS, Live-Re-Smoke PASS gegen frischen Snapshot 5b54b655 — 7 SOP-Steps zeigen jetzt vollstaendigen Inhalt. ZIP-Size 4914 bytes (von 4524). ISSUE-025 (Self-hosted-Signed-URL apikey-Query-Param) bleibt offen, Workaround in SLC-040 Server-Action umzusetzen. **Naechster Schritt: User-Coolify-Deploy SLC-037 + 038 + 039 + 039a zusammen, dann /backend SLC-040 (letzter V4-Slice).**
-- Current Phase: V4 Implementation — 7/8 Slices done (033, 034, 035, 036, 037, 038, 039). FEAT-022 + FEAT-024 + FEAT-025 done. 1 Slice verbleibend: SLC-040 (Handbuch-UI + Cockpit Foundation).
+- High-Level State: qa
+- Current Focus: SLC-040 Code done 2026-04-27. Handbuch-UI (/admin/handbook) + Status-Cockpit auf /dashboard + Cross-Tenant-Sicht in /admin/tenants. Server-Action triggerHandbookSnapshot + Next.js-API-Proxy /api/handbook/[id]/download (IMP-166-Pattern, kein signed-URL-apikey-Workaround noetig — macht ISSUE-025 obsolet). 11/11 next-step-Tests gruen, 212/222 Suite-Tests gruen (10 fails sind DB-bound Integration-Tests die TEST_DATABASE_URL benoetigen, erwartet). npm run build PASS. **Naechste Schritte: Coolify-Deploy aller V4-Slices (037+038+039+039a+040), dann Pflicht-Nicht-Tech-User-Smoke-Test (R17, SC-V4-5), dann /qa SLC-040 + Gesamt-V4-/qa, /final-check, /go-live, Production-Deploy.**
+- Current Phase: V4 Implementation — 8/8 Slices Code done (033, 034, 035, 036, 037, 038, 039, 040). Alle 6 V4-Features (FEAT-022..027) Code done. Verbleibend: User-Deploy + Nicht-Tech-User-Smoke-Test + Gesamt-QA + Final-Check + Go-Live + Deploy.
 
 ## Immediate Next Steps
-1. **Commit + Push** der /qa SLC-039 Phase 2-Outputs: `docs(qa SLC-039): RPT-088 + ISSUE-024 + ISSUE-025` + `chore(qa): qa-handbook-smoke.mjs + Bundle + Stubs` + `docs: STATE + KNOWN_ISSUES`.
-2. **F4-Fix-Entscheidung (User)** — Variante A (Mini-Slice SLC-039a, ~30min, empfohlen), B (in SLC-040), oder C (als Known-Issue). Vor /backend SLC-040.
-3. **Falls A: SLC-039a Mini-Slice** — Renderer akzeptiert echtes SopStep-Schema (action/responsible/timeframe/success_criterion + dependencies), Fixture + 5 Renderer-Tests nachziehen, Re-Run Smoke + Mini-RPT-089 + Re-Deploy.
-4. **/backend SLC-040** — Handbuch-UI + Cockpit Foundation. Letzter V4-Slice. **Pflicht-Gate: Nicht-Tech-User-Smoke-Test** (R17, SC-V4-5). **Note: ISSUE-025 Signed-URL-Apikey-Workaround (Host-Replace + apikey-Query) muss in `getHandbookDownloadUrl` Server-Action umgesetzt werden.**
-5. **User Coolify-Deploy** SLC-037 + SLC-038 + SLC-039 (+ optional SLC-039a) zusammen. Post-Deploy: Worker-Boot-Log `[worker] handbook_snapshot_generation handler registered`, echte UI-Trigger-Validierung.
-6. **Mobile-Viewport-Smoke fuer SLC-036** (deferred): wenn Zeit, im DevTools Mobile-Mode pruefen.
+1. **Commit + Push** der SLC-040-Outputs: `feat(SLC-040): Handbuch-UI + Status-Cockpit + Cross-Tenant-View` (Files: src/app/admin/handbook/*, src/app/api/handbook/[snapshotId]/download/route.ts, src/app/dashboard/{page.tsx,dashboard-client.tsx,StatusCockpit.tsx,MetricCard.tsx,NextStepBanner.tsx}, src/lib/cockpit/{types,next-step,next-step.test,load-metrics,load-cross-tenant}.ts, src/app/admin/tenants/{page.tsx,CrossTenantCockpit.tsx}, src/components/dashboard-sidebar.tsx). Plus `docs(slc-040): STATE + INDEX + backlog + ISSUE-025 wontfix + RPT-090`.
+2. **User-Coolify-Deploy** aller V4-Slices zusammen (037 + 038 + 039 + 039a + 040). Post-Deploy verify: /admin/handbook reachable, Trigger erzeugt Snapshot, Worker-Boot-Log `[worker] handbook_snapshot_generation handler registered`, /dashboard rendert Cockpit fuer tenant_admin, /admin/tenants rendert Cross-Tenant-Tabelle.
+3. **Pflicht-Nicht-Tech-User-Smoke-Test** (R17, SC-V4-5) — Tester (User selbst oder Peer) durchlaeuft Login → Dashboard → folgt 3-4 Schritten der Empfehlung → generiert Handbuch. Beobachtungen + UX-Bugs ins KNOWN_ISSUES oder als V4.1-Backlog.
+4. **/qa SLC-040** — formelle QA-Pruefung der UI inkl. AC-1..12 (Browser-E2E nach Coolify-Deploy). Pflicht-Test der Cross-Tenant-Isolation mit 2 Tenants.
+5. **Gesamt-V4-/qa** — sobald SLC-040 PASS: 4-Rollen-RLS-Matrix Re-Run + Cross-Tenant-Isolation + Workflow-End-to-End (GF-Erhebung → Bridge → Mitarbeiter-Aufgabe → Handbuch).
+6. **/final-check + /go-live + /deploy V4** — nach Gesamt-QA PASS.
 7. **/post-launch** fuer SLC-034 + SLC-036 nach 1-2 Tagen Produktivbetrieb (optional, low-risk).
 
 ## Active Scope
-**V4 — Zwei-Ebenen-Verschmelzung, 6 Features (planned), 8 Slices planned:**
-- FEAT-022 Employee Role + RBAC Extension — SLC-033 + SLC-034 + SLC-037
-- FEAT-023 Blueprint-to-Employee Bridge Engine — SLC-035 + SLC-036
-- FEAT-024 Employee Capture Workflow — SLC-037
-- FEAT-025 Capture-Mode Extension Hooks — SLC-038 (walkthrough_stub Spike)
-- FEAT-026 Unternehmerhandbuch Foundation — SLC-039 + SLC-040
-- FEAT-027 Self-Service Status Cockpit Foundation — SLC-040
+**V4 — Zwei-Ebenen-Verschmelzung, 6 Features Code-done, 8 Slices Code-done:**
+- FEAT-022 Employee Role + RBAC Extension — SLC-033 + SLC-034 + SLC-037 (done)
+- FEAT-023 Blueprint-to-Employee Bridge Engine — SLC-035 + SLC-036 (deployed)
+- FEAT-024 Employee Capture Workflow — SLC-037 (done)
+- FEAT-025 Capture-Mode Extension Hooks — SLC-038 walkthrough_stub Spike (done)
+- FEAT-026 Unternehmerhandbuch Foundation — SLC-039 + SLC-039a + SLC-040 (done, awaiting deploy)
+- FEAT-027 Self-Service Status Cockpit Foundation — SLC-040 (done, awaiting deploy)
 
 V4 plant 11 Migrationen (065-075) und 8 Slices (SLC-033..040). Alle 8 Slice-Files unter /slices/ dokumentiert (2026-04-24). Detail in /docs/ARCHITECTURE.md V4-Sektion und /docs/MIGRATIONS.md MIG-023.
 

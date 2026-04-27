@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import {
   Card,
@@ -40,9 +40,15 @@ interface DashboardClientProps {
   profile: Profile;
   initialSessions?: CaptureSession[];
   initialGapCounts?: Record<string, number>;
+  cockpitContent?: ReactNode;
 }
 
-export function DashboardClient({ profile, initialSessions = [], initialGapCounts = {} }: DashboardClientProps) {
+export function DashboardClient({
+  profile,
+  initialSessions = [],
+  initialGapCounts = {},
+  cockpitContent,
+}: DashboardClientProps) {
   const t = useTranslations();
   const locale = useLocale();
   const [sessions] = useState<CaptureSession[]>(initialSessions);
@@ -94,7 +100,18 @@ export function DashboardClient({ profile, initialSessions = [], initialGapCount
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-8 py-8">
-          <div className="mx-auto max-w-4xl">
+          <div className="mx-auto max-w-4xl space-y-8">
+            {cockpitContent}
+            {cockpitContent && sessions.length > 0 && (
+              <div className="border-t border-slate-200 pt-6">
+                <h2 className="text-lg font-semibold text-slate-900 mb-1">
+                  Aktive Erhebungen
+                </h2>
+                <p className="text-sm text-slate-500 mb-3">
+                  Direkter Sprung in deine eigenen Sessions.
+                </p>
+              </div>
+            )}
             {loading ? (
               <div className="space-y-4">
                 {[1, 2].map((i) => (
