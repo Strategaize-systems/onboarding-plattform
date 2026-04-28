@@ -10,13 +10,13 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: **V4.1 SLC-041 QA PASS 2026-04-28 (RPT-100).** Backend-Foundation vollstaendig verifiziert: alle 14 ACs erfuellt (12 lebend, 2 strukturell), alle Pflicht-Gates erfuellt. Live-DB-Schema + RLS + Trigger Happy-Path + ON CONFLICT DO NOTHING + Soft-Fail (RAISE WARNING) live durchgespielt. 12/12 RLS-Matrix-Tests gruen, 7/7 Worker-Backwards-Compat-Tests gruen, 24/24 Unit-Tests gruen, Build gruen. 1 Medium-Finding: AC-14 (handbook_snapshot.metadata-Counter) nur strukturell verifiziert — natuerliche Validierung kommt mit SLC-042 Browser-Smoke. 1/5 V4.1-Slices done.
-- Current Phase: V4.1 Implementation — SLC-041 Backend-Foundation released + QA-PASS, naechster /frontend SLC-042.
+- Current Focus: **V4.1 SLC-042 Frontend done 2026-04-28 (RPT-101).** Konsolidierter Review-View `/admin/blocks/[blockKey]/review` (Server-Component fuer strategaize_admin), Approve/Reject-Buttons mit Note-Modal, TriggerHandbookButton mit Quality-Gate-AlertDialog + Audit-Logging via captureInfo, BlockReviewStatusCard als 6. Cockpit-Karte, `/dashboard/reviews` als Tenant-Read-only-Sub-Page. Build PASS, alle 346 bestehenden Unit+RLS-Tests weiterhin gruen. 2/5 V4.1-Slices done.
+- Current Phase: V4.1 Implementation — SLC-042 Frontend done, naechster /qa SLC-042 mit Browser-Smoke (AC-14 von SLC-041 wird beim Trigger-Flow natuerlich validiert).
 
 ## Immediate Next Steps
-1. **/frontend SLC-042** — TriggerHandbookButton Quality-Gate-Confirm-Dialog + Cockpit-Card "Mitarbeiter-Bloecke reviewed". 5 MTs / ~1.5 Tage. Browser-Smoke validiert dabei AC-14 (handbook_snapshot.metadata-Counter) natuerlich live.
+1. **/qa SLC-042** — Browser-E2E + Cross-Rollen-Verifikation: tenant_admin bekommt 403 bei Review-Page, Approve-Flow von Review-View bis Cockpit-Card-Update verifiziert, Confirm-Dialog mit pending=0/pending>0, /dashboard/reviews fuer tenant_admin/tenant_member.
 2. **/frontend SLC-043 ∥ SLC-044** — parallel: Cross-Tenant + Pro-Tenant Reviews-Sichten + Reader-Page.
-3. **/frontend SLC-045** — Konsolidierter Block-zentrierter Review-View.
+3. **/frontend SLC-045** — Reader Volltext-Suche + Polish.
 4. **Gesamt-V4.1-/qa** → /final-check → /go-live → /deploy nach allen 5 Slices.
 5. **/post-launch V4** — verschoben auf nach V4.1-Release (User-Entscheidung).
 6. **V4.2** spaeter: BL-048 Tenant Self-Service Onboarding.

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { BookOpen, ClipboardList, GitMerge, Users, ListChecks } from "lucide-react";
 import { computeRecommendedNextStep } from "@/lib/cockpit/next-step";
 import type { CockpitMetrics } from "@/lib/cockpit/types";
@@ -6,6 +7,8 @@ import { NextStepBanner } from "./NextStepBanner";
 
 interface Props {
   metrics: CockpitMetrics;
+  /** SLC-042: optionale 6. Karte fuer Berater-Review-Status. */
+  reviewCard?: ReactNode;
 }
 
 /**
@@ -18,7 +21,7 @@ interface Props {
  *
  * Alle Karten sind klickbar und fuehren zur jeweiligen Detail-Route.
  */
-export function StatusCockpit({ metrics }: Props) {
+export function StatusCockpit({ metrics, reviewCard }: Props) {
   const nextStep = computeRecommendedNextStep(metrics);
   const captureHref = metrics.captureSessionId
     ? `/capture/${metrics.captureSessionId}`
@@ -150,6 +153,8 @@ export function StatusCockpit({ metrics }: Props) {
                 : "default"
           }
         />
+
+        {reviewCard}
       </div>
     </section>
   );

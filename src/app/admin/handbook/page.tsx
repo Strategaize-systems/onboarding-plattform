@@ -6,6 +6,7 @@ import { AutoRefresh } from "./AutoRefresh";
 import { TriggerHandbookButton } from "./TriggerHandbookButton";
 import { HandbookSnapshotList } from "./HandbookSnapshotList";
 import type { CaptureSessionLite, HandbookSnapshotRow } from "./types";
+import { getReviewSummary } from "@/lib/handbook/get-review-summary";
 
 /**
  * SLC-040 — Handbuch-UI fuer tenant_admin / strategaize_admin.
@@ -138,6 +139,13 @@ export default async function AdminHandbookPage() {
   const hasGenerating = snapshots.some((s) => s.status === "generating");
   const hasReady = snapshots.some((s) => s.status === "ready");
 
+  // SLC-042 — Quality-Gate-Daten fuer den TriggerHandbookButton
+  const reviewSummary = await getReviewSummary(
+    supabase,
+    profile.tenant_id,
+    activeSession.id,
+  );
+
   return (
     <div className="space-y-6">
       {hasGenerating && <AutoRefresh intervalMs={5000} />}
@@ -157,6 +165,7 @@ export default async function AdminHandbookPage() {
           captureSessionId={activeSession.id}
           hasPreviousSnapshot={hasReady}
           disabled={hasGenerating}
+          reviewSummary={reviewSummary}
         />
       </div>
 
@@ -181,7 +190,11 @@ export default async function AdminHandbookPage() {
           </CardContent>
         </Card>
       ) : (
-        <HandbookSnapshotList snapshots={snapshots} captureSessionId={activeSession.id} />
+        <HandbookSnapshotList
+          snapshots={snapshots}
+          captureSessionId={activeSession.id}
+          reviewSummary={reviewSummary}
+        />
       )}
     </div>
   );

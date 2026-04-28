@@ -22,8 +22,19 @@ type ActionResult<T = Record<string, unknown>> =
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+export interface TriggerHandbookOptions {
+  /** SLC-042: Audit der Quality-Gate-Werte zum Zeitpunkt des Triggers (DEC-045 weiches Gate). */
+  reviewAudit?: {
+    pendingAtTrigger: number;
+    approvedCount: number;
+    rejectedCount: number;
+    totalEmployeeBlocks: number;
+  };
+}
+
 export async function triggerHandbookSnapshot(
-  captureSessionId: string
+  captureSessionId: string,
+  options?: TriggerHandbookOptions,
 ): Promise<ActionResult<{ handbookSnapshotId: string }>> {
   if (!captureSessionId || !UUID_RE.test(captureSessionId)) {
     return { ok: false, error: "capture_session_id_invalid" };
@@ -65,6 +76,23 @@ export async function triggerHandbookSnapshot(
   const handbookSnapshotId = result.handbook_snapshot_id;
   if (typeof handbookSnapshotId !== "string") {
     return { ok: false, error: "rpc_invalid_response" };
+  }
+
+  // SLC-042 D — Audit-Log der Quality-Gate-Werte (DEC-045 weiches Gate)
+  if (options?.reviewAudit) {
+    const { captureInfo } = await import("@/lib/logger");
+    captureInfo("handbook_snapshot triggered with review audit", {
+      source: "admin/handbook/triggerHandbookSnapshot",
+      userId: user.id,
+      metadata: {
+        snapshot_id: handbookSnapshotId,
+        capture_session_id: captureSessionId,
+        pending_at_trigger: options.reviewAudit.pendingAtTrigger,
+        approved_count: options.reviewAudit.approvedCount,
+        rejected_count: options.reviewAudit.rejectedCount,
+        total_employee_blocks: options.reviewAudit.totalEmployeeBlocks,
+      },
+    });
   }
 
   revalidatePath("/admin/handbook");

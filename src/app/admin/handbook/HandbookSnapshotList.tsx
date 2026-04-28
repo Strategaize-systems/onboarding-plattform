@@ -1,10 +1,14 @@
 import { HandbookSnapshotCard } from "./HandbookSnapshotCard";
-import { TriggerHandbookButton } from "./TriggerHandbookButton";
+import {
+  TriggerHandbookButton,
+  type ReviewSummaryProp,
+} from "./TriggerHandbookButton";
 import type { HandbookSnapshotRow } from "./types";
 
 interface Props {
   snapshots: HandbookSnapshotRow[];
   captureSessionId: string;
+  reviewSummary?: ReviewSummaryProp;
 }
 
 /**
@@ -14,7 +18,7 @@ interface Props {
  * ein Re-Try-Button neben dem Card gerendert, damit der tenant_admin nicht zum
  * Top-Bereich zurueck muss.
  */
-export function HandbookSnapshotList({ snapshots, captureSessionId }: Props) {
+export function HandbookSnapshotList({ snapshots, captureSessionId, reviewSummary }: Props) {
   if (snapshots.length === 0) return null;
   const latestIsFailed = snapshots[0]?.status === "failed";
 
@@ -35,6 +39,7 @@ export function HandbookSnapshotList({ snapshots, captureSessionId }: Props) {
           <TriggerHandbookButton
             captureSessionId={captureSessionId}
             hasPreviousSnapshot={true}
+            reviewSummary={reviewSummary}
           />
         </div>
       )}

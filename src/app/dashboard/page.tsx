@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { loadCockpitMetrics } from "@/lib/cockpit/load-metrics";
+import { getReviewSummary } from "@/lib/handbook/get-review-summary";
+import { BlockReviewStatusCard } from "@/components/cockpit/BlockReviewStatusCard";
 import { DashboardClient } from "./dashboard-client";
 import { StatusCockpit } from "./StatusCockpit";
 
@@ -69,9 +71,32 @@ export default async function DashboardPage() {
     gapCounts[g.capture_session_id] = (gapCounts[g.capture_session_id] ?? 0) + 1;
   }
 
+  // SLC-042 — Berater-Review-Status fuer 6. Cockpit-Card.
+  // Loaded nur fuer tenant_admin mit aktiver Session; sonst keine Card.
+  let reviewCard: React.ReactNode = null;
+  if (
+    profile.role === "tenant_admin" &&
+    metrics &&
+    metrics.captureSessionId &&
+    profile.tenant_id
+  ) {
+    const summary = await getReviewSummary(
+      supabase,
+      profile.tenant_id,
+      metrics.captureSessionId,
+    );
+    reviewCard = (
+      <BlockReviewStatusCard
+        summary={summary}
+        role="tenant_admin"
+        tenantId={profile.tenant_id}
+      />
+    );
+  }
+
   const cockpitContent =
     profile.role === "tenant_admin" && metrics ? (
-      <StatusCockpit metrics={metrics} />
+      <StatusCockpit metrics={metrics} reviewCard={reviewCard} />
     ) : null;
 
   return (
