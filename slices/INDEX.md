@@ -111,3 +111,32 @@
 - SLC-033 + SLC-037: 4×8 RLS-Test-Matrix (32 Pflicht-Faelle, vollstaendig gruen am Ende von SLC-037).
 - SLC-038: SC-V4-6-Beweis (neuer Mode ohne Migration eingefuehrt).
 - SLC-040: Nicht-Tech-User-Smoke-Test (R17, SC-V4-5).
+
+## V4.1 Slices (Handbuch-Reader + Berater-Review-Workflow)
+
+| ID | Slice | Feature | Status | Priority | Created |
+|----|-------|---------|--------|----------|---------|
+| SLC-041 | [Block-Review Backend + Worker-Pre-Filter](SLC-041-block-review-backend.md) | FEAT-029 | planned | Blocker | 2026-04-28 |
+| SLC-042 | [Konsolidierter Review-View + Trigger-Quality-Gate + Cockpit-Card](SLC-042-review-view-trigger-cockpit.md) | FEAT-029 | planned | High | 2026-04-28 |
+| SLC-043 | [Cross-Tenant + Pro-Tenant Reviews + Quick-Stats-Badge](SLC-043-cross-tenant-reviews.md) | FEAT-030 | planned | Medium | 2026-04-28 |
+| SLC-044 | [Handbuch-Reader + Markdown-Stack + Sidebar-Nav + Snapshot-Liste](SLC-044-handbuch-reader.md) | FEAT-028 | planned | High | 2026-04-28 |
+| SLC-045 | [Reader Volltext-Suche + Performance-Warning + Polish](SLC-045-reader-search-and-warnings.md) | FEAT-028 | planned | Medium | 2026-04-28 |
+
+### V4.1 Execution Order
+- **SLC-041** (Backend-Foundation): MIG-028 + RLS + Worker-Pre-Filter + Server-Actions. **Blocker fuer alle V4.1-Frontend-Slices.** Pflicht-Gates: 4-Rollen-RLS-Matrix erweitert um `block_review` (mind. 8 Test-Faelle, gruen gegen Live-DB), Worker-Backwards-Compat-Test (alte V4-Snapshots reproduzierbar).
+- **SLC-042** (Frontend Review-Workflow): Konsolidierter Review-View + Trigger-Confirm-Dialog + Cockpit-Card. Braucht SLC-041.
+- **SLC-043** (Frontend Berater-Visibility): Cross-Tenant + Pro-Tenant Reviews-Sichten + Quick-Stats-Badge. Braucht SLC-041; profitiert von SLC-042 (Link-Ziele, sonst 404 in Zwischenzeit).
+- **SLC-044** (Frontend Reader): Handbuch-Reader-Page + Markdown-Stack + Sidebar-Nav + Snapshot-Liste. Braucht V4 SLC-039/040 done; profitiert von SLC-041 (block_review_summary in snapshot.metadata) und SLC-042 (Cockpit-Card-Link). **Pflicht-Gate: Browser-Smoke-Test mit Nicht-Tech-User-Persona** (R17 analog SC-V4-5).
+- **SLC-045** (Frontend Reader-Polish): Volltext-Suche + Performance-Warning + Polish-Items aus SLC-044 Smoke-Test-Feedback. Braucht SLC-044 done.
+
+**Empfohlene Reihenfolge:** 041 → 042 → 043 ∥ 044 → 045 → Gesamt-V4.1-/qa.
+
+**Parallelisierbar:**
+- SLC-043 und SLC-044 koennen parallel laufen sobald SLC-042 done (oder sogar parallel zu SLC-042 wenn Cockpit-Card-Link-Stub akzeptiert wird).
+- SLC-041 → SLC-042 → SLC-044 ist die kritische Kette (Cockpit-Card in 042 nutzt getReviewSummary aus 041; Reader in 044 nutzt block_review_summary aus 041).
+
+**Pflicht-Gates fuer V4.1:**
+- SLC-041: 4-Rollen-RLS-Matrix-Erweiterung um `block_review` (mind. 8 Test-Faelle, 100% PASS gegen Live-DB).
+- SLC-041: Worker-Backwards-Compat-Test (alte V4-Snapshots ohne `block_review`-Daten weiter generierbar).
+- SLC-044: Browser-Smoke-Test mit Nicht-Tech-User-Persona (analog SC-V4-5).
+- Gesamt-V4.1-/qa nach SLC-045 (SC-V4.1-1..12 vollstaendig verifiziert).

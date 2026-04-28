@@ -9,15 +9,17 @@
 Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdichtung. Ermoeglicht mehrere Capture-Modi (Fragebogen, Meeting, Voice, etc.) und Template-basierte Produktvarianten (z.B. Exit-Readiness, Immobilien-Onboarding). Ab V4: Zwei-Ebenen-Verschmelzung (GF-Blueprint + Mitarbeiter-Capture + Unternehmerhandbuch-Output).
 
 ## Current State
-- High-Level State: architecture
-- Current Focus: **V4.1 Architecture done 2026-04-28 (RPT-097).** ARCHITECTURE.md V4.1-Addendum vollstaendig (Reader-Stack, Worker-Pre-Filter, block_review-Schema, Cross-Tenant-Sichten, Cockpit-Card, RLS-Matrix-Erweiterung, 5 Tradeoffs explizit). 8 neue DECs DEC-043..050 in DECISIONS.md (DEC-V4.1-1..8 als formale ADRs uebernommen + Q-V4.1-A/B/D entschieden). Q-V4.1-C+E auf /frontend SLC-042/044 verschoben (UI-Implementierungs-Detail). MIG-028 in MIGRATIONS.md geplant (sql/migrations/079_block_review.sql, Backfill+Trigger-Function). Implementation-Empfehlung: 5 Slices in Reihenfolge SLC-041 (Backend) → SLC-042..045 (Frontend).
-- Current Phase: V4.1 Architecture done — Slice-Planning als naechster Schritt.
+- High-Level State: slice-planning
+- Current Focus: **V4.1 Slice-Planning done 2026-04-28 (RPT-098).** 5 Slice-Files SLC-041..045 erstellt mit insgesamt 22 Micro-Tasks (3+5+4+7+3). Pflicht-Gates festgelegt: SLC-041 4-Rollen-RLS-Matrix-Erweiterung um `block_review` (mind. 8 Test-Faelle), Worker-Backwards-Compat-Test; SLC-044 Browser-Smoke-Test mit Nicht-Tech-User-Persona; Gesamt-V4.1-/qa nach SLC-045. slices/INDEX.md V4.1-Sektion mit Execution-Order + Parallelisierbarkeit. Empfohlene Reihenfolge: 041 → 042 → 043 ∥ 044 → 045 → Gesamt-V4.1-/qa.
+- Current Phase: V4.1 Slice-Planning done — Implementation als naechster Schritt.
 
 ## Immediate Next Steps
-1. **/slice-planning V4.1** — 5 Slices SLC-041..045 in finale Slice-Files giessen mit Micro-Tasks (~21 MTs total), Pflicht-Gates (RLS-Matrix-Erweiterung, Reader-Browser-Smoke, Worker-Backwards-Compat-Test), Abhaengigkeiten (SLC-041 vor allen Frontend-Slices).
-2. **/backend SLC-041** — MIG-028 + RLS + Worker-Pre-Filter + loadApprovedBlockKeys-Helper + Approve/Reject Server-Actions.
-3. **/post-launch V4** — verschoben auf nach V4.1-Release (User-Entscheidung).
-4. **V4.2** spaeter: BL-048 Tenant Self-Service Onboarding.
+1. **/backend SLC-041** — Block-Review Backend-Foundation: MIG-028 + RLS-Policies + Worker-Pre-Filter + loadApprovedBlockKeys-Helper + Approve/Reject Server-Actions + RLS-Test-Matrix-Erweiterung. Geschaetzt 4 MTs / ~3-4h.
+2. **/qa SLC-041** sofort danach — RLS-Matrix-Verifikation gegen Live-DB + Worker-Backwards-Compat-Test (Pflicht-Gates).
+3. **/frontend SLC-042 → SLC-043 ∥ SLC-044 → SLC-045** — Frontend-Slices in Reihenfolge.
+4. **Gesamt-V4.1-/qa** nach SLC-045 (SC-V4.1-1..12 vollstaendig verifiziert) → /final-check → /go-live → /deploy.
+5. **/post-launch V4** — verschoben auf nach V4.1-Release (User-Entscheidung).
+6. **V4.2** spaeter: BL-048 Tenant Self-Service Onboarding.
 
 ## Active Scope
 **V4 — Zwei-Ebenen-Verschmelzung, 6 Features Code-done, 8 Slices Code-done:**
