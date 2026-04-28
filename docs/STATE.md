@@ -9,18 +9,20 @@
 Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdichtung. Ermoeglicht mehrere Capture-Modi (Fragebogen, Meeting, Voice, etc.) und Template-basierte Produktvarianten (z.B. Exit-Readiness, Immobilien-Onboarding). Ab V4: Zwei-Ebenen-Verschmelzung (GF-Blueprint + Mitarbeiter-Capture + Unternehmerhandbuch-Output).
 
 ## Current State
-- High-Level State: implementing
-- Current Focus: **V4.1 SLC-044 /frontend Code done 2026-04-28 (RPT-103).** In-App-Reader fuer Unternehmerhandbuch unter `/dashboard/handbook/[snapshotId]` plus Snapshot-Auswahl unter `/dashboard/handbook` plus DashboardSidebar-Link umgelenkt. Dependencies installiert (rehype-slug, rehype-autolink-headings, jszip). Reader entpackt das ZIP server-seitig per jszip + rendert via react-markdown + GFM + Heading-Anchors. Eigene 2-Pane-Reader-Shell (kein DashboardSidebar-Wrapper) analog `/dashboard/reviews`. Section→Block-Key-Mapping aus `template.handbook_schema.sources[].filter.block_keys` (eindeutig → Cross-Link, mehrdeutig → kein Link). Stale-Banner via block_checkpoint.created_at > snapshot.created_at. `npm run build` gruen, 238/238 Pure-Code-Tests gruen (DB-Tests laufen wie ueblich nur im Coolify-Test-Setup). Naechster Schritt: /qa SLC-044 mit Pflicht-Browser-Smoke "Nicht-Tech-User-Persona". 3/5 V4.1-Slices Code-done.
-- Current Phase: V4.1 Implementation — SLC-042 done, SLC-044 Code-done, naechste Schritte /qa SLC-044 + /frontend SLC-043 + /frontend SLC-045.
+- High-Level State: qa
+- Current Focus: **V4.1 SLC-044 /qa MIXED 2026-04-28 (RPT-104).** Alle automatisierten Pruefungen PASS: Stub-Detection 0 Hits, `npm run build` gruen mit beiden Reader-Routes als Dynamic, Coolify-DB-Tests **360/360 PASS in 2.89s** (35 Test-Files inkl. 46/46 v4-perimeter-matrix-RLS + 12/12 block-review-rls + 7/7 SLC-042 get-review-summary), Wiring-Chain strukturell PASS, AC-14 SLC-041 Worker-metadata-Counter LIVE verifiziert (3 Snapshots vom 28.04. mit `{pending,approved,rejected}_blocks`-Feldern; alte Pre-SLC-041-Snapshots mit `{}`-metadata), Storage-Bucket-ZIP-Konvention `{tenant_id}/{snapshot_id}.zip` bestaetigt (3 ZIP-Files), Template handbook_schema-Lookup PASS (8 Sections in "Exit-Readiness"). **AC-16 Pflicht-Browser-Smoke mit Nicht-Tech-User-Persona offen — User-Pflicht-Gate.** Smoke-Plan in RPT-104 dokumentiert (10 Smoke-Punkte inkl. Stale-Banner-Test mit SQL-Variante, Cross-Link-Visibility-Test in 2 Browser-Sessions, Responsive 375/768/1024). SLC-044 bleibt `in_progress` bis User-Smoke PASS.
+- Current Phase: V4.1 Implementation — SLC-041+042 done, SLC-044 /qa MIXED (User-Smoke offen). Naechste Schritte: User fuehrt Browser-Smoke durch + RPT-104 finalisieren ODER parallel /frontend SLC-043 (unabhaengig).
 
 ## Immediate Next Steps
-1. **/qa SLC-044 (Pflicht)** — Browser-Smoke mit Nicht-Tech-User-Persona (R17 analog SC-V4-5). Smoke-Punkte: tenant_admin oeffnet `/dashboard/handbook`, klickt Snapshot → Reader laedt, Section-Anchors klickbar, Snapshot-Wechsel via Sidebar, Cross-Link "Im Debrief bearbeiten" sichtbar nur als strategaize_admin (anderer Browser/User), Stale-Banner via Mock-Block-Checkpoint, Responsive 375/768/1024. Dabei AC-14 von SLC-041 (Worker-metadata-Counter) live verifizieren — der erste reale Reader-Trigger zeigt es natuerlich. Plus Coolify-Test-Run fuer DB-Tests.
-2. **/frontend SLC-043 (parallel-faehig)** — Cross-Tenant + Pro-Tenant Reviews + Quick-Stats-Badge. AC-12 Linkziel `/admin/tenants/[id]/reviews` wird damit existieren (heute noch 404).
-3. **/frontend SLC-045** — Reader Volltext-Suche + Performance-Warning + Polish (nach SLC-044).
-4. **Gesamt-V4.1-/qa** → /final-check → /go-live → /deploy nach allen 5 Slices.
-5. **Optional jetzt: Test-Daten cleanen** — 3 employee_questionnaire-KUs in Demo-Tenant Session 22234f9e-... (Marker `QA-SMOKE-RPT-102`) plus 3 block_review-Rows. Cleanup-SQL in RPT-102 dokumentiert.
-6. **/post-launch V4** — verschoben auf nach V4.1-Release.
-7. **V4.2** spaeter: BL-048 Tenant Self-Service Onboarding + Component-Test-Setup (jsdom + @testing-library/react).
+1. **User fuehrt Browser-Smoke fuer SLC-044 durch (Pflicht-Gate AC-16, R17 analog SC-V4-5).** Smoke-Plan steht in RPT-104. 10 Smoke-Punkte: Sidebar-Klick → Snapshot-Auswahl, Snapshot oeffnen → Reader laedt, Sidebar-Section-Click → Scroll, Heading-Anchor-Click, Snapshot-Wechsel, Cross-Link-Visibility (DOM-Pruefung tenant_admin vs. strategaize_admin), Stale-Banner-Test (Variante A real-Block-Submit oder Variante B Mock-Checkpoint-SQL), Responsive 375/768/1024, Bridge-Konsolidierungs-Sicht, Empty-State (optional). **Pflicht-Voraussetzung: Production-Stand `c6e929a` deployed (Coolify-Manual-Deploy).**
+2. **Bei PASS:** RPT-104 status → completed, slices/INDEX SLC-044 → done, STATE update, dann /frontend SLC-043 oder /frontend SLC-045.
+3. **Bei FAIL:** Iter-Loop analog SLC-042 (RPT-102 Pattern) — Bug-Fix → Coolify-Redeploy → Smoke-Re-Run.
+4. **/frontend SLC-043 (parallel-faehig zu Smoke)** — Cross-Tenant + Pro-Tenant Reviews + Quick-Stats-Badge. AC-12 Linkziel `/admin/tenants/[id]/reviews` existiert heute noch nicht (404). Komplett unabhaengig von SLC-044, kann sofort starten.
+5. **/frontend SLC-045** — Reader Volltext-Suche + Performance-Warning + Polish (nach SLC-044-PASS).
+6. **Gesamt-V4.1-/qa** → /final-check → /go-live → /deploy nach allen 5 Slices.
+7. **Optional jetzt: Test-Daten cleanen** — 3 employee_questionnaire-KUs in Demo-Tenant Session 22234f9e-... (Marker `QA-SMOKE-RPT-102`) plus 3 block_review-Rows. Cleanup-SQL in RPT-102 dokumentiert.
+8. **/post-launch V4** — verschoben auf nach V4.1-Release.
+9. **V4.2** spaeter: BL-048 Tenant Self-Service Onboarding + Component-Test-Setup (jsdom + @testing-library/react). Plus mind. 2 V4.2-Polish-Items aus SLC-044 Open Points: (a) Cockpit-MetricCard "Unternehmerhandbuch" Reader-Umlenkung fuer tenant_admin, (b) Pre-existing TS-Errors in `bridge/__tests__/action-helpers.test.ts:127,129` Cleanup.
 
 ## Active Scope
 **V4 — Zwei-Ebenen-Verschmelzung, 6 Features Code-done, 8 Slices Code-done:**
