@@ -10,16 +10,18 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: **V4.1 SLC-042 Frontend done 2026-04-28 (RPT-101).** Konsolidierter Review-View `/admin/blocks/[blockKey]/review` (Server-Component fuer strategaize_admin), Approve/Reject-Buttons mit Note-Modal, TriggerHandbookButton mit Quality-Gate-AlertDialog + Audit-Logging via captureInfo, BlockReviewStatusCard als 6. Cockpit-Karte, `/dashboard/reviews` als Tenant-Read-only-Sub-Page. Build PASS, alle 346 bestehenden Unit+RLS-Tests weiterhin gruen. 2/5 V4.1-Slices done.
-- Current Phase: V4.1 Implementation — SLC-042 Frontend done, naechster /qa SLC-042 mit Browser-Smoke (AC-14 von SLC-041 wird beim Trigger-Flow natuerlich validiert).
+- Current Focus: **V4.1 SLC-042 /qa CONDITIONAL PASS 2026-04-28 (RPT-102).** Backend-Pfade lebend gegen Live-DB verifiziert: Stub-Detection 0 Hits, Build PASS, 358/358 Tests gruen, Live-Smoke Trigger+Approve+getReviewSummary+Audit-Log durchgespielt, Wiring-Chain komplett, Cross-Rollen-Auth Triple-Schutz (Page+Action+RLS) bestaetigt. 6 Browser-spezifische ACs (AC-1..5, AC-7, AC-9, AC-11, AC-13, AC-15) sowie AC-14 von SLC-041 sind Browser-Smoke-pending — Production noch auf Apr-27-Build, User deployt manuell ueber Coolify auf Commit 757743c. 2/5 V4.1-Slices done (SLC-041 backend+QA, SLC-042 frontend+QA-Backend).
+- Current Phase: V4.1 Implementation — SLC-042 Code+Backend-/qa done, User-Browser-Smoke offen nach Coolify-Deploy.
 
 ## Immediate Next Steps
-1. **/qa SLC-042** — Browser-E2E + Cross-Rollen-Verifikation: tenant_admin bekommt 403 bei Review-Page, Approve-Flow von Review-View bis Cockpit-Card-Update verifiziert, Confirm-Dialog mit pending=0/pending>0, /dashboard/reviews fuer tenant_admin/tenant_member.
-2. **/frontend SLC-043 ∥ SLC-044** — parallel: Cross-Tenant + Pro-Tenant Reviews-Sichten + Reader-Page.
-3. **/frontend SLC-045** — Reader Volltext-Suche + Polish.
-4. **Gesamt-V4.1-/qa** → /final-check → /go-live → /deploy nach allen 5 Slices.
-5. **/post-launch V4** — verschoben auf nach V4.1-Release (User-Entscheidung).
-6. **V4.2** spaeter: BL-048 Tenant Self-Service Onboarding.
+1. **User: Coolify-Deploy** auf Commit 757743c (~2-5min) → /admin/blocks/[blockKey]/review + /dashboard/reviews ins Production-Bundle bringen.
+2. **User: Browser-Smoke 15-20min** — 7 Pflicht-Punkte aus RPT-102 (Cross-Rollen-Redirect, E2E-Approve, Quality-Gate-Dialog pending=0/>0, Audit-Log-Verifikation, AC-14 handbook_snapshot.metadata, /dashboard/reviews als tenant_admin, Responsive 375/768/1024).
+3. **Bei Smoke PASS: /frontend SLC-043 ∥ SLC-044** — parallel-faehig laut V4.1 Execution Order. Cross-Tenant + Pro-Tenant Reviews-Sichten + Reader-Page.
+4. **Bei Smoke FAIL:** zurueck in /frontend SLC-042 fuer Fix.
+5. **/frontend SLC-045** — Reader Volltext-Suche + Polish nach SLC-044.
+6. **Gesamt-V4.1-/qa** → /final-check → /go-live → /deploy nach allen 5 Slices.
+7. **/post-launch V4** — verschoben auf nach V4.1-Release (User-Entscheidung).
+8. **V4.2** spaeter: BL-048 Tenant Self-Service Onboarding + Component-Test-Setup (jsdom + @testing-library/react).
 
 ## Active Scope
 **V4 — Zwei-Ebenen-Verschmelzung, 6 Features Code-done, 8 Slices Code-done:**
