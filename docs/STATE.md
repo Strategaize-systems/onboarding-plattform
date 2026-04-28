@@ -9,14 +9,14 @@
 Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdichtung. Ermoeglicht mehrere Capture-Modi (Fragebogen, Meeting, Voice, etc.) und Template-basierte Produktvarianten (z.B. Exit-Readiness, Immobilien-Onboarding). Ab V4: Zwei-Ebenen-Verschmelzung (GF-Blueprint + Mitarbeiter-Capture + Unternehmerhandbuch-Output).
 
 ## Current State
-- High-Level State: requirements
-- Current Focus: **V4.1 Requirements done 2026-04-28 (RPT-096).** PRD V4.1-Sektion vollstaendig: 3 Features (FEAT-028 Reader, FEAT-029 Berater-Review + Quality-Gate, FEAT-030 Berater-Visibility), 12 Success Criteria, 8 Design Decisions DEC-V4.1-1..8 (per Klaerungs-Dialog mit User), 5 offene Architektur-Fragen Q-V4.1-A..E. roadmap.json V4.1 auf `active`. backlog.json BL-047/049/050 auf `in_progress`. Slice-Skizze: 5 Slices SLC-041..045, ~21 Micro-Tasks, ~4-5 Tage. V4 bleibt im stable-Zustand parallel — /post-launch verschoben auf User-Wunsch.
-- Current Phase: V4.1 Requirements done — Architektur als naechster Schritt.
+- High-Level State: architecture
+- Current Focus: **V4.1 Architecture done 2026-04-28 (RPT-097).** ARCHITECTURE.md V4.1-Addendum vollstaendig (Reader-Stack, Worker-Pre-Filter, block_review-Schema, Cross-Tenant-Sichten, Cockpit-Card, RLS-Matrix-Erweiterung, 5 Tradeoffs explizit). 8 neue DECs DEC-043..050 in DECISIONS.md (DEC-V4.1-1..8 als formale ADRs uebernommen + Q-V4.1-A/B/D entschieden). Q-V4.1-C+E auf /frontend SLC-042/044 verschoben (UI-Implementierungs-Detail). MIG-028 in MIGRATIONS.md geplant (sql/migrations/079_block_review.sql, Backfill+Trigger-Function). Implementation-Empfehlung: 5 Slices in Reihenfolge SLC-041 (Backend) → SLC-042..045 (Frontend).
+- Current Phase: V4.1 Architecture done — Slice-Planning als naechster Schritt.
 
 ## Immediate Next Steps
-1. **/architecture V4.1** — die 5 offenen Architektur-Fragen entscheiden (Q-V4.1-A Backfill-Strategie, Q-V4.1-B Markdown-Library, Q-V4.1-C Snapshot-Liste-Position, Q-V4.1-D Audit-Felder-Tiefe, Q-V4.1-E Cockpit-Card-Implementation), DECs in DECISIONS.md, Migrations-Plan in MIGRATIONS.md, ARCHITECTURE.md V4.1-Sektion.
-2. **/slice-planning V4.1** — Skizze SLC-041..045 in finale Slice-Files giessen, Pflicht-Gates festlegen.
-3. **/post-launch V4** — verschoben auf 1-2 Tage nach V4.1-Plan oder nach V4.1-Release (User-Entscheidung).
+1. **/slice-planning V4.1** — 5 Slices SLC-041..045 in finale Slice-Files giessen mit Micro-Tasks (~21 MTs total), Pflicht-Gates (RLS-Matrix-Erweiterung, Reader-Browser-Smoke, Worker-Backwards-Compat-Test), Abhaengigkeiten (SLC-041 vor allen Frontend-Slices).
+2. **/backend SLC-041** — MIG-028 + RLS + Worker-Pre-Filter + loadApprovedBlockKeys-Helper + Approve/Reject Server-Actions.
+3. **/post-launch V4** — verschoben auf nach V4.1-Release (User-Entscheidung).
 4. **V4.2** spaeter: BL-048 Tenant Self-Service Onboarding.
 
 ## Active Scope

@@ -2698,3 +2698,277 @@ Diese Beschraenkungen sind bewusst — sie halten die Komplexitaet der Hook-Konv
 6. Routes `/capture/[sessionId]/page.tsx` und `/capture/[sessionId]/block/[blockKey]/page.tsx` delegieren via Registry-Lookup.
 
 Keine zusaetzliche Tabelle, kein zusaetzlicher RLS-Eintrag, keine neue Storage-Bucket. Der Mode ist live, ohne dass das V4-Schema strukturell veraendert wurde — exakt SC-V4-6.
+
+---
+
+## V4.1 Architecture Addendum — Handbuch-Reader + Berater-Review-Workflow
+
+### Architecture summary
+
+V4.1 erweitert den V4-Stack um drei Aspekte, ohne die V4-Foundation strukturell zu veraendern:
+
+1. **Ein neues Schema** (`block_review`) als Single-Source-of-Truth fuer den expliziten Berater-Approval-Schritt zwischen Mitarbeiter-Capture und Handbuch-Generation. Eine Tabelle, eine Migration, ein zusaetzlicher RLS-Block.
+2. **Ein Worker-Pre-Filter-Schritt** im bestehenden `handle-snapshot-job.ts` (Reihenfolge VOR `renderHandbook`). Mitarbeiter-KUs (`source='employee_questionnaire'`) werden durch `block_review.status='approved'` gefiltert, bevor der bestehende `sections.ts`-Renderer arbeitet. GF-KUs sind unbeeinflusst. Der Renderer bleibt unveraendert — V4-Snapshots sind unveraendert reproduzierbar.
+3. **Vier neue Frontend-Surfaces**:
+   - Reader unter `/dashboard/handbook/[snapshotId]` (admin-only)
+   - Konsolidierter Review-View `/admin/blocks/[blockKey]/review`
+   - Cross-Tenant `/admin/reviews` + Pro-Tenant `/admin/tenants/[id]/reviews`
+   - Cockpit-Card "Mitarbeiter-Bloecke reviewed" auf `/dashboard`
+
+Keine neuen Worker, keine neuen Storage-Buckets, kein zweiter Bedrock-Job. Die Architektur bleibt **boring by design** — eine Tabelle, ein Pre-Filter, vier React-Pages.
+
+### Main components
+
+| Komponente | Typ | Status | Pfad |
+|---|---|---|---|
+| `block_review` Schema | Backend | NEU | `sql/migrations/079_block_review.sql` (MIG-028) |
+| Worker-Pre-Filter | Backend | GEAENDERT | `src/workers/handbook/handle-snapshot-job.ts` |
+| `loadApprovedBlockKeys()` Helper | Backend | NEU | `src/workers/handbook/block-review-filter.ts` |
+| Approve/Reject Server Actions | Backend | NEU | `src/app/admin/blocks/[blockKey]/review/actions.ts` |
+| Reader-Page | Frontend | NEU | `src/app/dashboard/handbook/[snapshotId]/page.tsx` |
+| Konsolidierter Review-View | Frontend | NEU | `src/app/admin/blocks/[blockKey]/review/page.tsx` |
+| Cross-Tenant-Reviews-Page | Frontend | NEU | `src/app/admin/reviews/page.tsx` |
+| Pro-Tenant-Reviews-Page | Frontend | NEU | `src/app/admin/tenants/[tenantId]/reviews/page.tsx` |
+| Cockpit-Card "Mitarbeiter-Bloecke reviewed" | Frontend | NEU | `src/components/cockpit/BlockReviewStatusCard.tsx` |
+| Trigger-Dialog "Quality-Gate" | Frontend | GEAENDERT | `src/app/admin/handbook/TriggerHandbookButton.tsx` |
+| Reviews-Badge in `/admin/tenants` | Frontend | GEAENDERT | `src/app/admin/tenants/TenantsClient.tsx` |
+| `/admin/tenants/[id]/handbook` Direct-Link | Frontend | NEU | bestehende Page erweitern oder neue Sub-Page |
+
+### Data model — `block_review`
+
+```sql
+CREATE TABLE block_review (
+  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id       uuid NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  capture_session_id uuid NOT NULL REFERENCES capture_session(id) ON DELETE CASCADE,
+  block_key       text NOT NULL,
+  status          text NOT NULL DEFAULT 'pending'
+                    CHECK (status IN ('pending', 'approved', 'rejected')),
+  reviewed_by     uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  reviewed_at     timestamptz,
+  note            text,
+  created_at      timestamptz NOT NULL DEFAULT now(),
+  updated_at      timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (tenant_id, capture_session_id, block_key)
+);
+
+CREATE INDEX idx_block_review_status_created ON block_review (status, created_at)
+  WHERE status = 'pending';
+CREATE INDEX idx_block_review_tenant_status ON block_review (tenant_id, status);
+```
+
+**Audit-Modell:** Single-Row pro Block — KEINE History-Tabelle in V4.1 (DEC-050). Status-Transitionen werden ueberschrieben (`reviewed_by` und `reviewed_at` zeigen den letzten Reviewer + Zeitpunkt). Begruendung: V4.1-Reviews sind selten (max. einmal pro Block + Mitarbeiter-Review-Zyklus); das validation_layer-Pattern aus V2 deckt komplexere Audit-Faelle ab, falls noetig spaeter nachzuruesten.
+
+**Konsistenz:** Block-Approval ist tenant-isoliert ueber `tenant_id`-Spalte plus RLS. Der Composite-UNIQUE `(tenant_id, capture_session_id, block_key)` verhindert doppelte Reviews fuer denselben Block.
+
+### Data flow — Block-Submit → Review → Snapshot
+
+```
+[Mitarbeiter submitted Block]
+       ↓
+[capture_event + Worker-Verdichtung erzeugt KUs mit source='employee_questionnaire']
+       ↓
+[Trigger 1: ON INSERT capture_event WHERE source='employee_questionnaire']
+   --> upsert block_review (tenant_id, session_id, block_key) DEFAULT 'pending'
+       ↓
+[Cross-Tenant-Sicht /admin/reviews zeigt 'pending']
+       ↓
+[strategaize_admin oeffnet /admin/blocks/[blockKey]/review?tenant=...&session=...]
+   --> sieht alle Mitarbeiter-KUs des Blocks (Block-zentriert, DEC-046)
+   --> Approve | Reject (+ optional note)
+   --> UPDATE block_review SET status='approved', reviewed_by=auth.uid(), reviewed_at=now()
+       ↓
+[tenant_admin oder strategaize_admin klickt Trigger im /admin/handbook]
+   --> TriggerHandbookButton:
+       SELECT count(*) WHERE source='employee_questionnaire' GROUP BY block_review.status
+       wenn pending > 0: Confirm-Dialog "X/Y reviewed. Trotzdem generieren?"
+       click-through: enqueue handbook_snapshot_generation Job
+       ↓
+[Worker handle-snapshot-job.ts]
+   1. Lade Snapshot + Tenant + Template + alle KUs/Diagnosen/SOPs (wie bisher)
+   2. NEU: loadApprovedBlockKeys(tenant_id, capture_session_id) -> Set<string>
+      (alle Block-Keys mit block_review.status='approved')
+   3. NEU: Pre-Filter KU-Liste:
+      filteredKus = allKus.filter(ku =>
+        ku.source !== 'employee_questionnaire' || approvedBlockKeys.has(ku.block_key)
+      )
+   4. renderHandbook(filteredKus, ...)  // sections.ts unveraendert
+   5. ZIP-Build + Storage-Upload + UPDATE handbook_snapshot
+       ↓
+[Reader /dashboard/handbook/[snapshotId] zeigt Snapshot]
+   --> liest aus handbook-Storage-Bucket via API-Proxy /api/handbook/[id]/download
+   --> Reader rendert Markdown via react-markdown (DEC-049)
+   --> Sidebar-Liste der Snapshots (DEC-051) + Section-Anchors + Volltext-Suche client-side
+```
+
+**Backwards-Compat (DEC-048):** `loadApprovedBlockKeys` gibt fuer Bloecke OHNE `block_review`-Eintrag den Status implizit als `approved` zurueck — alte V4-Snapshots ohne Review-Daten werden weiter ohne Bruch generiert. Migration MIG-028 fuegt einen Backfill-Step ein, der fuer alle existierenden `(tenant_id, capture_session_id, block_key)`-Kombinationen mit Mitarbeiter-KUs einen `approved`-Eintrag setzt. Neue Mitarbeiter-Submits ab V4.1-Deploy starten als `pending`.
+
+### Worker-Pre-Filter — wie konkret
+
+Der bestehende Renderer-Filter in `src/workers/handbook/sections.ts::filterKnowledgeUnits` bleibt unveraendert (er filtert per `section.sources[].filter` nach Source/Status). Die Approval-Logik wird VORGELAGERT als Pre-Filter im `handle-snapshot-job.ts` zwischen Schritt 5 (Lade KUs) und Schritt 6 (renderHandbook):
+
+```typescript
+// src/workers/handbook/handle-snapshot-job.ts (vereinfacht)
+const allKus = await loadKnowledgeUnits(...);
+const approvedBlockKeys = await loadApprovedBlockKeys(
+  adminClient,
+  snapshot.tenant_id,
+  snapshot.capture_session_id,
+);
+const filteredKus = allKus.filter((ku) =>
+  ku.source !== "employee_questionnaire" || approvedBlockKeys.has(ku.block_key),
+);
+const rendered = renderHandbook({ ...input, knowledgeUnits: filteredKus });
+```
+
+Diese Aufteilung haelt die Verantwortlichkeiten sauber:
+- **Pre-Filter** = Geschaeftsregel "nur approved Mitarbeiter-Bloecke ins Handbuch"
+- **Renderer** = template-driven Section-Aggregation (unveraendert)
+
+Audit-Log-Erweiterung: Pro Snapshot-Job wird ein `note` ins `handbook_snapshot.metadata` geschrieben mit `{ pending_blocks: N, approved_blocks: M, rejected_blocks: K }`. Sichtbar im Reader als Snapshot-Metadata.
+
+### Reader-Architektur — Route + Stack
+
+**Route:** `/dashboard/handbook/[snapshotId]` (DEC-V4.1-3 in PRD, formal als DEC-043 hier).
+**Layout:** nutzt bestehendes `dashboard`-Layout (Sidebar + Header). `tenant_admin` sieht den Reader unter "Handbuch" im Sidebar.
+**Direct-Link fuer strategaize_admin:** Aus `/admin/tenants/[id]` ein Button "Handbuch oeffnen" der zu `/dashboard/handbook/[snapshotId]?as_tenant=[id]` springt — RLS regelt dass `strategaize_admin` per service_role-Client den Snapshot lesen kann; tenant-Filter wird ueber Snapshot-Row's `tenant_id` ausgewertet, nicht ueber `auth.uid()`.
+
+**Stack:**
+- Server-Component laedt `handbook_snapshot`-Row + Snapshot-Markdown-Files aus Storage via Service-Role-Client
+- Client-Component rendert Markdown via **`react-markdown`** (DEC-049) mit `remark-gfm` (Tables, Strikethrough)
+- Section-Anchors via `rehype-slug` + `rehype-autolink-headings`
+- Volltext-Suche client-side ueber den geladenen Markdown-String (`String.includes()` + Highlight via `mark.js`-aequivalentes Inline-DOM-Update)
+- Snapshot-Liste als Sidebar-Element (DEC-051) — neueste oben, Klick wechselt Snapshot ohne Page-Reload (Client-Navigation)
+
+**Begruendung `react-markdown` statt `next-mdx-remote` (Q-V4.1-B / DEC-049):** Der Markdown ist generiert und vertrauenswuerdig (kein User-Input), keine MDX-Komponenten noetig, kein Server-Render-Vorteil bei dynamischen Inhalten. `react-markdown` ist deutlich kleiner, hat keine Build-Time-Compilation, und die Plugin-Kette (`remark-gfm`, `rehype-slug`, `rehype-autolink-headings`) ist Standard. `next-mdx-remote` bringt nur Vorteile bei MDX-Komponenten-Embedding — wir brauchen das nicht.
+
+### Konsolidierter Review-View — Layout
+
+**Route:** `/admin/blocks/[blockKey]/review?tenant=...&session=...` (Block-zentriert, DEC-046).
+**Layout:**
+- Block-Header: Tenant-Name + Block-Titel + Anzahl Mitarbeiter-KUs + Approval-Status
+- Hauptbereich: gestapelte Mitarbeiter-KUs, jede mit:
+  - Mitarbeiter-Quelle (Name + E-Mail aus `capture_session.created_by` lookup)
+  - Confidence-Indikator
+  - KU-Inhalt (Title + Content)
+  - Optional: Link zur ursprünglichen Mitarbeiter-Capture-Session
+- Footer-Aktion: Approve | Reject | Approve mit Notiz (Modal mit Textarea)
+- History-Anzeige (read-only): Letzter Reviewer + Zeitpunkt + Notiz
+
+Approve/Reject sind Server Actions die `block_review` upserten und Audit-Felder setzen.
+
+### Cross-Tenant + Pro-Tenant Review-Sichten
+
+**`/admin/reviews`:** Aggregations-Query
+```sql
+SELECT br.tenant_id, t.name AS tenant_name, br.capture_session_id,
+       br.block_key, br.created_at,
+       (SELECT count(*) FROM knowledge_unit ku
+        WHERE ku.tenant_id = br.tenant_id
+          AND ku.capture_session_id = br.capture_session_id
+          AND ku.block_key = br.block_key
+          AND ku.source = 'employee_questionnaire') AS ku_count
+FROM block_review br
+JOIN tenants t ON t.id = br.tenant_id
+WHERE br.status = 'pending'
+ORDER BY br.created_at ASC;
+```
+Sortiert oldest-first. Index `idx_block_review_status_created` deckt diese Query ab.
+
+**`/admin/tenants/[id]/reviews`:** Gleiche Query, gefiltert auf `br.tenant_id = $1`. Index `idx_block_review_tenant_status` deckt diese ab.
+
+**Quick-Stats-Badge in `/admin/tenants`:** Aggregate count per tenant
+```sql
+SELECT tenant_id, count(*) FILTER (WHERE status = 'pending') AS pending_reviews
+FROM block_review GROUP BY tenant_id;
+```
+LEFT-JOIN auf bestehende Tenant-Liste, Badge-Render im TenantsClient.
+
+### Trigger-Dialog "Quality-Gate" — UX
+
+`TriggerHandbookButton.tsx` wird erweitert:
+1. Beim Click: Server-Action `getReviewSummary(tenantId, sessionId)` -> `{ approved: M, pending: K, rejected: 0 }`
+2. Wenn `pending > 0`:
+   - Confirm-Dialog (z.B. shadcn `AlertDialog`): "X/Y Mitarbeiter-Bloecke reviewed. K Bloecke werden NICHT ins Handbuch fliessen. Trotzdem generieren?"
+   - Click-Through ruft die bestehende Trigger-Server-Action mit zusaetzlichem Audit-Field `pending_at_trigger: K`
+3. Wenn `pending === 0`: Trigger laeuft direkt ohne Dialog (V4-Verhalten)
+
+Audit-Log-Eintrag pro Trigger: in `error_log` (typisierte info-Severity, nicht "error") mit `{ snapshot_id, pending_blocks_at_trigger: K }`.
+
+### Cockpit-Card "Mitarbeiter-Bloecke reviewed"
+
+Neue Card auf `/dashboard` als 6. MetricCard (oder eingebettet als Sub-Card unter "Mitarbeiter-Aufgaben" — finale UI-Entscheidung in /frontend, aber Architektur schlaegt eigene Card vor wegen klarer Daten-Quelle):
+- `tenant_admin`-Sicht: read-only "X/Y" mit Link auf eine read-only Pro-Tenant-Reviews-Sicht
+- `strategaize_admin`-Sicht: gleiche Daten mit Link auf `/admin/tenants/[id]/reviews`
+- Aggregations-Query laeuft als Server-Component-Fetch im Layout
+
+### Security / RLS
+
+**`block_review`-RLS-Policies (RLS-Test-Matrix-Erweiterung um diese Tabelle, SC-V4.1-12):**
+
+| Rolle | SELECT | INSERT | UPDATE | DELETE |
+|---|---|---|---|---|
+| `strategaize_admin` | ALL | ALL | ALL | ALL |
+| `tenant_admin` | OWN tenant_id | DENY | DENY | DENY |
+| `tenant_member` | DENY | DENY | DENY | DENY |
+| `employee` | DENY | DENY | DENY | DENY |
+
+Begruendung:
+- `tenant_admin` darf SEHEN (Cockpit-Card "X/Y reviewed", read-only Liste), darf aber NICHT approven/rejecten — Approval ist `strategaize_admin`-Hoheit (Berater entscheidet ueber Quality)
+- `tenant_member` und `employee` sehen den Status nicht — er ist Berater-Workflow, nicht Mitarbeiter-Workflow
+
+**Reader-Route-RLS:**
+- `strategaize_admin` + `tenant_admin` (eigener Tenant): SELECT auf `handbook_snapshot` + Storage-Lese-Berechtigung via API-Proxy
+- `tenant_member` + `employee`: 403 oder Redirect (Middleware-Block analog zu V4 `/admin/*` und `/dashboard/*` Logik)
+
+**Cross-Link "Im Debrief bearbeiten" sichtbarkeits-Filter (SC-V4.1-3):**
+- Server-seitig im Reader-Page-Render: `if (auth.role === 'strategaize_admin') showDebriefLink = true` — Link nicht im DOM fuer `tenant_admin`
+
+### External dependencies / integrations
+
+Keine neuen externen Dependencies. NPM-Pakete:
+- `react-markdown` + `remark-gfm` + `rehype-slug` + `rehype-autolink-headings` — alle weit verbreitet, MIT-lizenziert, unter 50KB gzipped zusammen
+
+Keine neuen API-Calls (kein Bedrock, kein Whisper, kein Storage-Provider).
+
+### Constraints / tradeoffs
+
+**Trade-off 1 — Reader-Performance bei grossen Snapshots:**
+Reader laedt das gesamte Markdown beim ersten Render. Snapshots > 500KB Markdown werden als Warnung im Reader gekennzeichnet. Volltext-Suche bleibt client-side (`String.includes`) — Server-Side-Search waere overkill fuer V4.1-Volume und wuerde einen zweiten Index brauchen.
+Akzeptiert: V4-Snapshots sind erfahrungsgemaess <200KB (siehe Live-Demo-Tenant-Daten).
+
+**Trade-off 2 — Backfill `approved` vs `pending`:**
+Backfill setzt fuer ALLE existierenden `(session, block)`-Kombinationen mit Mitarbeiter-KUs den Status `approved`. Alternative waere `pending` mit Berater-Aufforderung — aber das wuerde V4-Live-Tenants in Block-Limbo schicken. DEC-048 entscheidet fuer Backwards-Compat: alle bestehenden Daten = approved, neue ab V4.1-Deploy = pending.
+
+**Trade-off 3 — Kein KU-granulares Flag:**
+Block-Approval (DEC-044) ist gegen den User-Wunsch nach Granularitaet eine bewusste Vereinfachung. Begruendung: KU-Override haette pro Mitarbeiter-Beitrag eine UI-Decision verlangt — UX wird unueberblickbar, Berater verliert Zeit. Block-Approval haelt die Berater-Aktion auf 1 Klick pro Block.
+Falls KU-Override echt gebraucht wird (V4.2+): Migration ergaenzt Spalte `included_in_handbook bool` auf `knowledge_unit`, Worker-Filter erweitert, Review-View bekommt KU-Toggles.
+
+**Trade-off 4 — Kein Berater-Mode-Toggle:**
+DEC-047 verzichtet bewusst auf Tenant-Impersonation oder UI-Switcher. Begruendung: `strategaize_admin` sieht via RLS-bypass alle Tenant-Daten — ein Toggle wuerde nur die Anzeige veraendern, nicht die Daten. `/admin/reviews` als Cross-Tenant-Sicht und `/admin/tenants/[id]/reviews` als Pro-Tenant-Sicht reichen fuer den Berater-Workflow.
+
+**Trade-off 5 — Audit-Felder ohne History-Tabelle:**
+DEC-050 nutzt single-row Audit (`reviewed_by`, `reviewed_at`, `note`). Status-Transitionen werden ueberschrieben. Begruendung: Reviews sind in V4.1 selten und in der Regel monoton (pending → approved). Falls History-Bedarf entsteht (z.B. Berater wechselt Approval mehrfach): validation_layer-Pattern aus V2 ist die etablierte Loesung und kann nachgeruestet werden.
+
+### Open technical questions (verbleibend)
+
+Die folgenden Fragen werden in `/slice-planning V4.1` oder spaeter (`/frontend`) entschieden:
+
+- **Q-V4.1-F (Slice) — `as_tenant`-Query-Param oder Drill-Down-Stateful:** Wie `strategaize_admin` aus `/admin/tenants/[id]` zum Reader navigiert. Vorschlag: Direct-URL `/dashboard/handbook/[snapshotId]` reicht (RLS bypass durch service_role bzw. `strategaize_admin`-Pruefung in Layout).
+- **Q-V4.1-G (Frontend) — Volltext-Suche-UX-Detail:** Suche-Eingabe als Sidebar-Filter oder Top-Bar? Anzahl Treffer als Counter? Decision in /frontend SLC-045.
+- **Q-V4.1-H (Slice) — Cockpit-Card-Slot:** Eigene Card "Mitarbeiter-Bloecke reviewed" oder Erweiterung der bestehenden "Mitarbeiter-Aufgaben"-Card. Architektur empfiehlt eigene Card. Finaler Cut in /frontend SLC-042.
+
+### Implementation direction
+
+Empfohlene Slice-Reihenfolge (deckungsgleich mit PRD-Skizze):
+
+1. **SLC-041** (Backend, ~3 MTs): MIG-028 + RLS-Policies + `loadApprovedBlockKeys`-Helper + Worker-Pre-Filter + Server-Action-Foundation. RLS-Test-Matrix erweitern.
+2. **SLC-042** (Frontend, ~5 MTs): Konsolidierter Review-View `/admin/blocks/[blockKey]/review` + Approve/Reject Server-Actions + Trigger-Dialog "Quality-Gate" + Cockpit-Card.
+3. **SLC-043** (Frontend, ~4 MTs): `/admin/reviews` Cross-Tenant + `/admin/tenants/[id]/reviews` Pro-Tenant + Quick-Stats-Badge in `/admin/tenants` + Direct-Links zu Konsolidiertem Review-View und `/admin/debrief`.
+4. **SLC-044** (Frontend, ~6 MTs): Reader unter `/dashboard/handbook/[snapshotId]` mit react-markdown + Sidebar-Nav + Section-Anchors + Snapshot-Liste + Cross-Link "Im Debrief bearbeiten" + RLS-Sicht.
+5. **SLC-045** (Frontend, ~3 MTs): Volltext-Suche Client-Side im Reader + Highlight + Stale-Snapshot-Warnung.
+
+Pflicht-Gates fuer V4.1-Implementation:
+- Pflicht-Browser-Smoke nach SLC-044 (Reader-UX-Test mit Nicht-Tech-User-Persona, analog SC-V4-5).
+- 4-Rollen-RLS-Matrix erweitert um `block_review` (mind. 8 zusaetzliche Test-Faelle, Pflicht in /qa SLC-041 + SLC-042).
+- Worker-Backwards-Compat-Test in /qa SLC-041 (alte V4-Snapshots koennen ohne `block_review`-Eintraege re-generiert werden).
