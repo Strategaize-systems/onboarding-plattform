@@ -560,31 +560,138 @@ Bestehende GF-Capture-Sessions, KUs, Diagnosen, SOPs, Dialogue-Sessions funktion
 
 ---
 
-## V4.1 — Unternehmerhandbuch ausgebaut
+## V4.1 — Handbuch-Reader + Berater-Review-Workflow
 
 ### Problem Statement (V4.1)
-V4 liefert das Unternehmerhandbuch als Markdown-Export — der Kunde kann es herunterladen und lesen. Was fehlt:
-- **In-App-Lesen + Suche**: Kunde muss ZIP entpacken, in einen Markdown-Viewer laden, Suche selbst organisieren. Hohe Reibung.
-- **Pflege**: Wenn der Kunde einen KU/SOP korrigieren oder ergaenzen will, muss er ueber die Capture-Session re-entern. Direkte Pflege im Handbuch geht nicht.
-- **Versionierung**: Snapshots ueber Zeit hinweg sind nicht vergleichbar.
+V4 hat drei harte Reibungspunkte hinterlassen, die im Pilotbetrieb den Berater-Tenant-Workflow ausbremsen:
 
-V4.1 schliesst das.
+1. **Handbuch nur als ZIP-Download.** Der Kunde muss das Markdown-ZIP herunterladen, entpacken und in einem externen Viewer oeffnen. Suche, Navigation und Cross-Links liegen ausserhalb der Plattform. Reibung pro Lese-Vorgang ist hoch und vermittelt nicht das Gefuehl eines lebenden Handbuchs.
+2. **Mitarbeiter-Output fliesst ungereviewt ins Handbuch.** Heute filtert der Snapshot-Worker rein technisch ueber `min_status='confirmed'`. Es gibt keinen expliziten Berater-Review-Schritt zwischen Mitarbeiter-Antworten und Handbuch-Generation. Der Berater kann nicht block-weise entscheiden, welche Mitarbeiter-Beitraege ins Handbuch fliessen, und es gibt keinen sichtbaren Hinweis im Trigger-Flow, ob Reviews fehlen.
+3. **Berater-Workflows sind im Cockpit nicht verlinkt.** Der V2-Debrief-UI unter `/admin/debrief/[sessionId]/[blockKey]` existiert weiter, ist aber vom V4-Cockpit nicht erreichbar — der Berater muss die URL kennen. Es gibt keine Cross-Tenant-Sicht auf "wo sind offene Reviews".
+
+V4.1 schliesst alle drei Luecken in einem Release.
 
 ### Goal (V4.1)
-Das Unternehmerhandbuch ist in der Plattform direkt browse-, durchsuch- und pflegbar. Snapshots sind versioniert vergleichbar.
+- Das Unternehmerhandbuch ist in der Plattform direkt lesbar und durchsuchbar — kein ZIP-Download mehr noetig fuer normale Lesefaelle.
+- Der Berater hat einen konsolidierten, block-zentrierten Review-View ueber alle Mitarbeiter-Beitraege und kann Bloecke explizit fuer das Handbuch freigeben.
+- Der Handbuch-Trigger zeigt den Review-Status sichtbar an, ohne den Berater zu blockieren.
+- Das strategaize_admin-Cockpit verlinkt die Berater-Workflows direkt — Cross-Tenant ("alle offenen Reviews") und pro Tenant.
 
-### V4.1 In Scope (Skizze, Detail kommt mit eigenem /requirements V4.1)
-- In-App-Webview des Handbuchs (Sidebar-Navigation, Markdown-Render, Section-Anchors)
-- Volltext-Suche (mindestens client-seitig im aktuellen Snapshot)
-- Live-Editor fuer KUs und SOPs (Markdown-Editor in der Plattform)
-- Cross-Links zwischen Handbuch-Sektionen klickbar
-- Versionierte Handbuch-Snapshots mit Diff-View
-- Re-Export funktioniert weiter (V4-Funktionalitaet bleibt)
+### V4.1 In Scope
+
+| ID | Feature | Backlog | Zweck |
+|----|---------|---------|-------|
+| FEAT-028 | Handbuch In-App-Reader | BL-047 | Sidebar-Nav, Markdown-Render, Section-Anchors, Volltext-Suche, Snapshot-Liste mit Timestamps |
+| FEAT-029 | Berater-Review + Quality-Gate | BL-049 | `block_review`-Tabelle, konsolidierter Review-View pro Block, weiches Quality-Gate im Trigger-Flow |
+| FEAT-030 | Berater-Visibility-Verlinkung | BL-050 | `/admin/reviews` Cross-Tenant + `/admin/tenants/[id]/reviews` Pro-Tenant + Direct-Links zu `/admin/debrief` |
 
 ### V4.1 Out of Scope (vorlaeufig)
-- Multi-User-Edit (gleichzeitiges Bearbeiten) → spaeter
-- Genehmigungs-Workflows (Editor → Approver) → spaeter
-- Externe Verlinkung / Sharing-Links → spaeter
+- **Inline-Editor im Reader (KU/SOP edit)** — wandert nach V4.2 oder spaeter. Editing bleibt in V4.1 ueber den bestehenden `/admin/debrief`-Editor erreichbar; Reader hat Cross-Link dorthin. Begruendung: Editor-Polish ist eine eigene Komplexitaetsstufe (Dirty-State, Re-Snapshot-Trigger, Konflikt-Behandlung) und wuerde V4.1 verdoppeln.
+- **Diff-View zwischen Snapshot-Versionen** — Snapshots sind in V4.1 nur als Liste mit Timestamp+Generator-Info sichtbar. Diff-Visualisierung kommt spaeter.
+- **KU-Granularer "Im Handbuch enthalten"-Flag** — V4.1 nutzt Block-Approval als Granularitaet. KU-Override kann V4.2 oder spaeter werden, falls ein konkreter Use-Case auftaucht.
+- **Hartes Quality-Gate** (Trigger-Button gesperrt bis 100% reviewed) — V4.1 nutzt weiches Gate (Hinweis + Confirm-Dialog). Berater behaelt Hoheit.
+- **Berater-Mode-Toggle im Cockpit-Header** — keine Tenant-Impersonation, kein UI-Switcher. Cross-Tenant-Sicht reicht.
+- **Reader-Zugriff fuer `tenant_member` und `employee`** — Reader ist in V4.1 admin-only (`strategaize_admin` + `tenant_admin`). Mitarbeiter-Zugriff auf Handbuch ist eigene UX-Frage (V5+).
+- **Multi-User-Edit (gleichzeitiges Bearbeiten)** — spaeter
+- **Genehmigungs-Workflows mehrstufig (Editor → Approver)** — spaeter, wenn Use-Case auftaucht
+- **Externe Verlinkung / Sharing-Links / Public Read-Only** — spaeter
+
+### Core Design Decisions (V4.1)
+
+Die folgenden Entscheidungen wurden im Requirements-Klaerungs-Dialog 2026-04-28 mit dem User getroffen. Sie sind fuer /architecture verbindlich:
+
+- **DEC-V4.1-1 — Reader-Scope:** Reader-Only in V4.1. Editing wird via Cross-Link auf bestehenden `/admin/debrief` delegiert. Kein neuer Live-Editor in V4.1.
+- **DEC-V4.1-2 — Reader-Zugriff:** Nur `strategaize_admin` und `tenant_admin`. RLS regelt Tenant-Filter. `tenant_member` und `employee` sehen den Reader nicht.
+- **DEC-V4.1-3 — Reader-Route:** `/dashboard/handbook/[snapshotId]` (Tenant-Bereich, dort wo `tenant_admin` standardmaessig landet). `strategaize_admin` navigiert via `/admin/tenants` Drill-Down oder Direct-Link aus `/admin/handbook`. Trigger bleibt unter `/admin/handbook` (Berater-Hoheit).
+- **DEC-V4.1-4 — Approval-Granularitaet:** Block-Approval, nicht KU-Granular. Neue Tabelle `block_review` mit Status `pending|approved|rejected`. Worker-Filter ergaenzt `min_status='confirmed'` um `block_review.status='approved'`.
+- **DEC-V4.1-5 — Quality-Gate-Mode:** Weich. Trigger-Button immer aktiv, zeigt "X/Y Mitarbeiter-Bloecke reviewed" + Confirm-Dialog wenn nicht alle reviewed. `tenant_admin` und `strategaize_admin` koennen explizit bestaetigen.
+- **DEC-V4.1-6 — Konsolidierter Review-View Layout:** Block-zentriert. Eine Seite pro Block, alle Mitarbeiter-KUs gestapelt. Berater haakt Approve/Reject pro Block (Bulk-Aktion mit optionalen KU-spezifischen Notizen).
+- **DEC-V4.1-7 — Berater-Visibility ohne Mode-Toggle:** Kein UI-Switcher zwischen tenant_admin- und strategaize_admin-Sicht. Cross-Tenant-Page `/admin/reviews` + Pro-Tenant-Page `/admin/tenants/[id]/reviews` reichen.
+- **DEC-V4.1-8 — Pending-Reviews-Sicht-Scope:** Beides. Cross-Tenant-Aggregat `/admin/reviews` (alle Tenants, sortiert nach aeltester pendender Review) + Pro-Tenant-Detail `/admin/tenants/[id]/reviews`.
+
+### Success Criteria (V4.1)
+
+V4.1 ist erfolgreich, wenn ALLE folgenden Kriterien erfuellt sind:
+
+**SC-V4.1-1 — Handbuch ist In-App lesbar (Reader-Pfad)**
+Ein `tenant_admin` oeffnet `/dashboard/handbook/[snapshotId]` und sieht: Sidebar-Navigation mit Block-Liste aus dem Snapshot, Markdown-Hauptbereich mit gerenderten Inhalten, Section-Anchor-Links innerhalb des Markdowns, Snapshot-Liste mit Timestamp und Generator-Info (welche Version, wann generiert). Volltext-Suche (Client-Side im aktuellen Snapshot) findet Treffer und scrollt zur Stelle.
+
+**SC-V4.1-2 — Reader respektiert RLS strikt**
+`tenant_admin` von Tenant A sieht nur Snapshots von Tenant A. `strategaize_admin` sieht alle Snapshots ueber `/admin/tenants` Drill-Down. `tenant_member` und `employee` bekommen `403`/Redirect bei Direkt-Aufruf der Reader-Route.
+
+**SC-V4.1-3 — Cross-Link Reader → Editor funktioniert**
+Im Reader gibt es pro Block-Sektion einen sichtbaren Link "Im Debrief bearbeiten" der `strategaize_admin` zu `/admin/debrief/[sessionId]/[blockKey]` fuehrt. Fuer `tenant_admin` ist der Link nicht sichtbar (RLS — er hat keinen Editor-Zugriff).
+
+**SC-V4.1-4 — Block-Approval persistiert pro Block**
+`block_review`-Tabelle existiert mit RLS, jede `(tenant_id, session_id, block_key)`-Kombination hat genau einen Approval-Eintrag. Status wechselt sauber zwischen `pending` (Default), `approved`, `rejected`. Audit-Felder (`reviewed_by`, `reviewed_at`, `note`) sind gesetzt bei jedem Statuswechsel.
+
+**SC-V4.1-5 — Konsolidierter Review-View funktioniert (Berater-Pfad)**
+`strategaize_admin` ruft `/admin/blocks/[blockKey]/review?tenant=...` auf und sieht: Block-Header mit Tenant-Name + Block-Titel, alle Mitarbeiter-KUs zu diesem Block gestapelt (mit Mitarbeiter-Quelle pro KU sichtbar), Approve/Reject-Buttons fuer den Block. Approve setzt `block_review.status='approved'` mit Audit-Feldern.
+
+**SC-V4.1-6 — Worker-Filter respektiert Block-Approval**
+Snapshot-Worker filtert pro Block: nur wenn `block_review.status='approved'` fliessen Mitarbeiter-KUs ins Handbuch. GF-KUs (Blueprint-Output) sind unabhaengig — der Filter gilt ausschliesslich fuer Mitarbeiter-KUs (`source='employee_questionnaire'`).
+
+**SC-V4.1-7 — Quality-Gate ist sichtbar im Trigger-Flow**
+Beim Klick auf "Handbuch generieren" zeigt das System: "X/Y Mitarbeiter-Bloecke reviewed. Y-X Bloecke werden NICHT ins Handbuch fliessen. Trotzdem generieren?". Bei 100% reviewed laeuft der Trigger ohne Confirm-Dialog. Confirm-Click loest Snapshot-Generation aus (V4-Verhalten unveraendert).
+
+**SC-V4.1-8 — Cross-Tenant Pending-Reviews-Sicht funktioniert**
+`strategaize_admin` ruft `/admin/reviews` auf und sieht eine Liste aller Bloecke mit `block_review.status='pending'` ueber alle Tenants. Sortiert nach aeltestem `block_session.last_submitted_at`. Jede Zeile linkt direkt auf `/admin/blocks/[blockKey]/review?tenant=...`.
+
+**SC-V4.1-9 — Pro-Tenant Reviews-Sicht funktioniert**
+`/admin/tenants/[id]/reviews` zeigt fuer den Tenant die gleiche Liste, gefiltert auf diesen Tenant. Direct-Links zu `/admin/debrief/[sessionId]/[blockKey]` und zum Konsolidierten Review-View.
+
+**SC-V4.1-10 — Cockpit zeigt Quality-Gate-Status**
+Die V4-Cockpit-MetricCards (`/dashboard`) zeigen einen neuen Status-Indikator "Mitarbeiter-Bloecke reviewed: X/Y". Card linkt fuer `tenant_admin` auf eine read-only Tenant-Sicht der Review-Status-Liste, fuer `strategaize_admin` auf den Konsolidierten Review-View.
+
+**SC-V4.1-11 — Keine V4-Regression**
+V4-Funktionalitaet bleibt stabil: Bridge-Engine, Mitarbeiter-Capture, Handbuch-Trigger, ZIP-Download, Cockpit-Karten. Bestehende Snapshots bleiben lesbar (auch ohne block_review-Eintraege — Worker-Filter gilt nur fuer NEUE Snapshots, alte werden nicht re-filtered).
+
+**SC-V4.1-12 — RLS-Test-Matrix bleibt gruen**
+4-Rollen-RLS-Matrix (strategaize_admin, tenant_admin, tenant_member, employee) wird um die neue Tabelle `block_review` erweitert. Matrix bleibt 100% PASS gegen Live-DB. (Erweiterung: 4 Rollen × 1 neue Tabelle = mindestens 8 zusaetzliche Test-Faelle.)
+
+### Constraints (V4.1)
+
+Alle V4-Constraints gelten weiter, zusaetzlich:
+
+- **Worker-Backwards-Compat:** Der Snapshot-Worker muss alte Snapshots ohne `block_review`-Eintraege weiter generieren koennen (Best-Effort: behandelt fehlenden Eintrag wie `approved`, damit V4-Snapshots reproduzierbar sind). Neue Snapshots respektieren das Approval strikt.
+- **Reader-Performance:** Das Markdown wird beim ersten Laden komplett serviert (kein Lazy-Render pro Section). Snapshots > 500KB Markdown werden als Warnung im Reader gekennzeichnet — Volltext-Suche bleibt client-side.
+- **Search-Scope V4.1:** Volltext-Suche operiert ausschliesslich im aktuellen Snapshot. Cross-Snapshot-Suche oder Full-Tenant-Search ist out-of-scope.
+- **Cockpit-Karten-Erweiterung:** Die neue "Mitarbeiter-Bloecke reviewed"-Card darf die V4-Cockpit-Performance nicht beeintraechtigen — Aggregation laeuft als RLS-konformer Single-Query.
+
+### Risks / Assumptions (V4.1)
+
+- **R-V4.1-1 — Block-Approval-Backfill:** Bestehende Tenants haben keine `block_review`-Eintraege. Migration muss einen Default-Status setzen (entweder Backfill als `approved` fuer existierende Sessions, oder als `pending` mit klarer Berater-Aufforderung). Mitigation: Migration als Backfill `approved` fuer Sessions deren Mitarbeiter-Bloecke bereits einen GF-Block haben. Neue Sessions starten als `pending`. Entscheidung wird in /architecture konkretisiert.
+- **R-V4.1-2 — Reader-UX vs. Markdown-Komplexitaet:** Generierte Markdown-Snapshots koennen komplexe Strukturen (Tabellen, Cross-Links auf nicht-existente Anchors) enthalten. Mitigation: Reader nutzt etablierte Markdown-Library (react-markdown o.ae.), ungueltige Anchors fuehren zu sichtbarer Warnung statt Crash.
+- **R-V4.1-3 — Cross-Link auf Editor durchbricht RLS-Klarheit:** Wenn `tenant_admin` versehentlich einen Cross-Link auf Editor sieht und drauf klickt, soll er sauber `403` bekommen, nicht eine kaputte UI. Mitigation: Link wird per RLS-Check serverseitig gerendert (nur fuer `strategaize_admin`).
+- **R-V4.1-4 — Quality-Gate-Bypass per Bestaetigung als Schwachstelle:** Weicher Modus erlaubt Berater bewusst, ohne Reviews zu generieren. Risiko: Vergessene Reviews fliessen nie ins Handbuch. Mitigation: Cockpit-Karte "Mitarbeiter-Bloecke reviewed: X/Y" macht den Status laufend sichtbar. Audit-Log dokumentiert "Snapshot generated with N pending reviews" pro Trigger.
+- **A-V4.1-1 — Bestehende Snapshots bleiben unveraendert:** Annahme: Wir re-generieren keine alten Snapshots automatisch nach V4.1-Deploy. User kann manuell re-trigger, dann gilt neuer Filter.
+
+### Open Questions (V4.1)
+
+Die folgenden Fragen werden in `/architecture` V4.1 entschieden:
+
+- **Q-V4.1-A — Backfill-Strategie:** Wie werden existierende Sessions/Bloecke beim Migrations-Run behandelt? `approved` per Default (Backwards-Compat) oder `pending` (zwingt Berater-Review fuer Bestand)? Empfehlung Requirements: `approved` fuer alle V4-Bloecke die vor V4.1-Deploy existierten, `pending` fuer alle neuen. Definitive Entscheidung in /architecture.
+- **Q-V4.1-B — Reader-Markdown-Library:** `react-markdown` (de-facto Standard) oder `next-mdx-remote` (mehr Flexibilitaet)? Entscheidung in /architecture mit Tradeoff-Analyse.
+- **Q-V4.1-C — Snapshot-Liste-Position:** Im Reader als Sidebar-Element oder als separate Snapshot-Auswahl-Page (`/dashboard/handbook` ohne ID)? Entscheidung in /architecture.
+- **Q-V4.1-D — Audit-Felder auf `block_review`:** Reicht `reviewed_by` (UUID) + `reviewed_at` (timestamptz) + `note` (text)? Oder zusaetzlich History-Tabelle fuer Status-Transitionen? Empfehlung Requirements: keine History-Tabelle in V4.1 (validation_layer-Pattern reicht). Definitiv in /architecture.
+- **Q-V4.1-E — Cockpit-Karte Implementation:** Eigene Card oder Erweiterung der bestehenden "Mitarbeiter-Aufgaben"-Card? Entscheidung in /frontend, wenn Cockpit-Layout konkret wird.
+
+### Slice-Skizze (informativ, finaler Schnitt in /slice-planning)
+
+| Slice | Scope | Geschaetzt |
+|-------|-------|-----------|
+| SLC-041 | BL-049 Backend — `block_review`-Tabelle + RLS + Worker-Filter + Backfill-Migration | ~3 MTs |
+| SLC-042 | BL-049 Frontend — Konsolidierter Block-zentrierter Review-View + Trigger-Status-Dialog + Cockpit-Card | ~5 MTs |
+| SLC-043 | BL-050 Frontend — `/admin/reviews` Cross-Tenant + `/admin/tenants/[id]/reviews` Pro-Tenant + Direct-Links | ~4 MTs |
+| SLC-044 | BL-047 Frontend — Reader unter `/dashboard/handbook/[snapshotId]` (Sidebar-Nav, Markdown, Section-Anchors, Snapshot-Liste) | ~6 MTs |
+| SLC-045 | BL-047 Frontend — Volltext-Suche (Client-Side) + Cross-Link Reader → Debrief-Editor (RLS-bedingt sichtbar) | ~3 MTs |
+
+5 Slices, ~21 Micro-Tasks, geschaetzt 4-5 Tage Implementation.
+
+Pflicht-Gates fuer V4.1-Implementation:
+- 4-Rollen-RLS-Matrix erweitert um `block_review` (mind. 8 zusaetzliche Test-Faelle, Pflicht in /qa pro V4.1-Slice der das Schema beruehrt)
+- Browser-Smoke-Test fuer Reader-UX vor V4.1-Release (`tenant_admin` liest Snapshot ohne Berater-Hilfe)
+- Worker-Backwards-Compat-Test (alte Snapshots re-generierbar ohne `block_review`-Eintraege)
 
 ---
 

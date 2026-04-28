@@ -9,14 +9,15 @@
 Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdichtung. Ermoeglicht mehrere Capture-Modi (Fragebogen, Meeting, Voice, etc.) und Template-basierte Produktvarianten (z.B. Exit-Readiness, Immobilien-Onboarding). Ab V4: Zwei-Ebenen-Verschmelzung (GF-Blueprint + Mitarbeiter-Capture + Unternehmerhandbuch-Output).
 
 ## Current State
-- High-Level State: stable
-- Current Focus: **V4 released 2026-04-27 als REL-008 (RPT-095).** Alle 8 Slices Code+Live+/qa+/final-check+/go-live+/deploy durch. 6 V4-Features (FEAT-022..027) auf `deployed`. roadmap.json V4.1-Summary erweitert um Berater-Review-Workflow. 2 neue Backlog-Items in V4.1: BL-049 Berater-Review Mitarbeiter-Output + Quality-Gate vor Handbuch, BL-050 Berater-Visibility-Verlinkung. **Naechste Schritte: /post-launch nach 1-2 Tagen Pilot-Betrieb. Danach /requirements V4.1 mit erweitertem Scope (Handbuch-In-App + Berater-Workflows).**
-- Current Phase: V4 Stable — released. V4.1-Planung wartet auf Post-Launch-Beobachtung.
+- High-Level State: requirements
+- Current Focus: **V4.1 Requirements done 2026-04-28 (RPT-096).** PRD V4.1-Sektion vollstaendig: 3 Features (FEAT-028 Reader, FEAT-029 Berater-Review + Quality-Gate, FEAT-030 Berater-Visibility), 12 Success Criteria, 8 Design Decisions DEC-V4.1-1..8 (per Klaerungs-Dialog mit User), 5 offene Architektur-Fragen Q-V4.1-A..E. roadmap.json V4.1 auf `active`. backlog.json BL-047/049/050 auf `in_progress`. Slice-Skizze: 5 Slices SLC-041..045, ~21 Micro-Tasks, ~4-5 Tage. V4 bleibt im stable-Zustand parallel — /post-launch verschoben auf User-Wunsch.
+- Current Phase: V4.1 Requirements done — Architektur als naechster Schritt.
 
 ## Immediate Next Steps
-1. **/post-launch** nach 1-2 Tagen Pilot-Betrieb (Beobachtung error_log, Bridge-Cost-Ledger, Snapshot-Generation, User-Behaviour).
-2. **/requirements V4.1** mit erweitertem Scope: BL-047 (Handbuch-In-App + Live-Editor) + BL-049 (Berater-Review + Quality-Gate) + BL-050 (Berater-Visibility-Verlinkung).
-3. **V4.2** spaeter: BL-048 Tenant Self-Service Onboarding (Wizard + Reminders + Hilfe).
+1. **/architecture V4.1** — die 5 offenen Architektur-Fragen entscheiden (Q-V4.1-A Backfill-Strategie, Q-V4.1-B Markdown-Library, Q-V4.1-C Snapshot-Liste-Position, Q-V4.1-D Audit-Felder-Tiefe, Q-V4.1-E Cockpit-Card-Implementation), DECs in DECISIONS.md, Migrations-Plan in MIGRATIONS.md, ARCHITECTURE.md V4.1-Sektion.
+2. **/slice-planning V4.1** — Skizze SLC-041..045 in finale Slice-Files giessen, Pflicht-Gates festlegen.
+3. **/post-launch V4** — verschoben auf 1-2 Tage nach V4.1-Plan oder nach V4.1-Release (User-Entscheidung).
+4. **V4.2** spaeter: BL-048 Tenant Self-Service Onboarding.
 
 ## Active Scope
 **V4 — Zwei-Ebenen-Verschmelzung, 6 Features Code-done, 8 Slices Code-done:**

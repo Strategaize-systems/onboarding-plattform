@@ -462,12 +462,12 @@
     },
     {
       "id": "BL-047",
-      "title": "Unternehmerhandbuch In-App-Webview + Suche + Live-Editor",
+      "title": "Unternehmerhandbuch In-App-Reader (Reader-Only, ohne Inline-Editor)",
       "type": "feature",
       "priority": "high",
-      "status": "open",
+      "status": "in_progress",
       "version": "V4.1",
-      "description": "Detail-Requirements werden mit eigenem /requirements V4.1 erstellt. Scope-Skizze: In-App-Webview (Sidebar-Navigation, Markdown-Render, Section-Anchors), Volltext-Suche, Live-Editor fuer KUs/SOPs in der Plattform, Cross-Links klickbar, versionierte Snapshots mit Diff-View.",
+      "description": "Requirements done 2026-04-28 als FEAT-028. V4.1-Scope eingegrenzt: Reader-Only (Sidebar-Nav, Markdown-Render, Section-Anchors, Volltext-Suche client-side, Snapshot-Liste mit Timestamps). Reader unter /dashboard/handbook/[snapshotId], admin-only (strategaize_admin + tenant_admin). Cross-Link zu /admin/debrief fuer Editor-Workflow. Inline-Editor + Diff-View bewusst deferred fuer V4.2 oder spaeter (DEC-V4.1-1).",
       "createdAt": "2026-04-23"
     },
     {
@@ -485,9 +485,9 @@
       "title": "Berater-Review Mitarbeiter-Output + Quality-Gate vor Handbuch",
       "type": "feature",
       "priority": "high",
-      "status": "open",
+      "status": "in_progress",
       "version": "V4.1",
-      "description": "Konsolidierter Berater-Review-Workflow nach Bridge-Phase, bevor Handbuch-Snapshot generiert wird. (a) Konsolidierter Review-View: alle Mitarbeiter-KUs zu einem Block in einer Uebersicht (heute muss man jede Mitarbeiter-Session einzeln aufrufen). (b) 'Im Handbuch enthalten' Flag pro KU oder Block-Approval — nach Berater-Review entscheiden welche Mitarbeiter-KUs ins Handbuch fliessen (heute geht alles automatisch via min_status='confirmed'-Filter). (c) Handbuch-Trigger-Button zeigt Review-Status: 'X/Y Mitarbeiter-Bloecke reviewed', mit Sign-off-Hinweis fuer tenant_admin (DEC-Frage offen: harter Lock oder weicher Hinweis?). (d) Quality-Gate-Status in Cockpit-Karten sichtbar. Architektur passt — validation_layer-Pattern aus V2 deckt 'wer hat was wann reviewed' bereits ab. Pure UX/UI-Slice auf bestehender Datenstruktur.",
+      "description": "Requirements done 2026-04-28 als FEAT-029. Schema: neue block_review-Tabelle mit RLS, Status pending|approved|rejected, Audit-Felder. Granularitaet: Block-Approval (DEC-V4.1-4, kein KU-Override in V4.1). Quality-Gate: weich (DEC-V4.1-5) — Trigger-Button immer aktiv, Confirm-Dialog 'X/Y reviewed' bei <100%. Konsolidierter Review-View block-zentriert (DEC-V4.1-6). Worker-Filter erweitert um block_review.status='approved' (nur fuer source='employee_questionnaire' KUs). Backfill-Strategie offen (Q-V4.1-A). Cockpit-Card 'Mitarbeiter-Bloecke reviewed' auf /dashboard.",
       "createdAt": "2026-04-27"
     },
     {
@@ -495,9 +495,9 @@
       "title": "Berater-Visibility-Verlinkung im strategaize_admin-Cockpit",
       "type": "feature",
       "priority": "medium",
-      "status": "open",
+      "status": "in_progress",
       "version": "V4.1",
-      "description": "Vom strategaize_admin-Cockpit aus Direkt-Links zu Berater-Konsultations-Workflows pro Tenant. Heute existiert /admin/debrief/[sessionId]/[blockKey] als V2-Foundation, aber es ist nicht aus dem V4-Cockpit verlinkt — Berater muss URL kennen. (a) Pro-Tenant Berater-Sicht in /admin/tenants: 'Active Sessions + Reviews' mit Direkt-Links. (b) Neue Sicht 'Pending Reviews' — alle Sessions mit unreviewten KUs, sortiert nach Datum. (c) 'Berater-Mode-Toggle' im Cockpit-Header fuer strategaize_admin (Kontext-Switch tenant_admin-Sicht vs. Berater-Sicht). Pure UX-Slice ohne Architektur-Aenderung.",
+      "description": "Requirements done 2026-04-28 als FEAT-030. Scope: neue Top-Level-Page /admin/reviews (Cross-Tenant-Aggregat aller pendenden Block-Reviews, sortiert oldest-first), Pro-Tenant-Sicht /admin/tenants/[id]/reviews, Quick-Stats-Badge im /admin/tenants Tabellen-Eintrag. Direct-Links zu Konsolidiertem Review-View (FEAT-029) und /admin/debrief. Kein Mode-Toggle / keine Tenant-Impersonation in V4.1 (DEC-V4.1-7). Cross-Tenant + Pro-Tenant beide gebaut (DEC-V4.1-8).",
       "createdAt": "2026-04-27"
     }
   ]
