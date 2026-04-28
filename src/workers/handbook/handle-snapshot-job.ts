@@ -12,6 +12,11 @@ import type { ClaimedJob } from "../condensation/claim-loop";
 import { buildHandbookZip } from "./zip-builder";
 import { renderHandbook } from "./renderer";
 import { validateHandbookSchema } from "./validate-schema";
+import {
+  applyBlockReviewFilter,
+  countBlockReviewStatuses,
+  loadBlockReviewState,
+} from "./block-review-filter";
 import type {
   DiagnosisRow,
   KnowledgeUnitRow,
@@ -97,7 +102,7 @@ export async function handleHandbookSnapshotJob(job: ClaimedJob): Promise<void> 
       throw new Error(`Failed to load knowledge_units: ${kuErr.message}`);
     }
 
-    const knowledgeUnits: KnowledgeUnitRow[] = (kuRows ?? []).map((r) => ({
+    const allKnowledgeUnits: KnowledgeUnitRow[] = (kuRows ?? []).map((r) => ({
       id: r.id as string,
       block_key: r.block_key as string,
       source: r.source as string,
@@ -107,6 +112,19 @@ export async function handleHandbookSnapshotJob(job: ClaimedJob): Promise<void> 
       confidence: r.confidence as string,
       status: r.status as string,
     }));
+
+    // 5b. SLC-041 V4.1 Pre-Filter — block_review-Status fuer Mitarbeiter-KUs anwenden.
+    // Backwards-Compat (DEC-048): Sessions ohne block_review-Eintraege laufen 1:1 wie pre-V4.1.
+    const blockReviewState = await loadBlockReviewState(
+      adminClient,
+      snapshot.tenant_id as string,
+      snapshot.capture_session_id as string,
+    );
+    const knowledgeUnits = applyBlockReviewFilter(allKnowledgeUnits, blockReviewState);
+    const reviewCounts = countBlockReviewStatuses(blockReviewState);
+    console.log(
+      `[handbook-job] block_review state: hasAnyRows=${blockReviewState.hasAnyRows} approved=${reviewCounts.approved_blocks} pending=${reviewCounts.pending_blocks} rejected=${reviewCounts.rejected_blocks} — KUs gefiltert ${allKnowledgeUnits.length} -> ${knowledgeUnits.length}`,
+    );
 
     // 6. Lade Diagnosen (alle Status — Filter passiert im Renderer per min_status)
     const { data: diagRows, error: diagErr } = await adminClient
@@ -180,6 +198,7 @@ export async function handleHandbookSnapshotJob(job: ClaimedJob): Promise<void> 
     }
 
     // 11. UPDATE handbook_snapshot -> ready
+    // SLC-041: metadata enthaelt Audit-Counter fuer Block-Review-Status (AC-14).
     const { error: updErr } = await adminClient
       .from("handbook_snapshot")
       .update({
@@ -190,6 +209,11 @@ export async function handleHandbookSnapshotJob(job: ClaimedJob): Promise<void> 
         knowledge_unit_count: rendered.counts.knowledge_unit_count,
         diagnosis_count: rendered.counts.diagnosis_count,
         sop_count: rendered.counts.sop_count,
+        metadata: {
+          pending_blocks: reviewCounts.pending_blocks,
+          approved_blocks: reviewCounts.approved_blocks,
+          rejected_blocks: reviewCounts.rejected_blocks,
+        },
       })
       .eq("id", snapshot.id);
 
