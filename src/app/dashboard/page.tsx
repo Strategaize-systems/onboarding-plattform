@@ -73,6 +73,8 @@ export default async function DashboardPage() {
 
   // SLC-042 — Berater-Review-Status fuer 6. Cockpit-Card.
   // Loaded nur fuer tenant_admin mit aktiver Session; sonst keine Card.
+  // ISSUE-029 Fix: getReviewSummary aggregiert ueber Tenant (nicht GF-Session),
+  // weil block_review-Rows in den Mitarbeiter-Sessions liegen.
   let reviewCard: React.ReactNode = null;
   if (
     profile.role === "tenant_admin" &&
@@ -80,11 +82,7 @@ export default async function DashboardPage() {
     metrics.captureSessionId &&
     profile.tenant_id
   ) {
-    const summary = await getReviewSummary(
-      supabase,
-      profile.tenant_id,
-      metrics.captureSessionId,
-    );
+    const summary = await getReviewSummary(supabase, profile.tenant_id);
     reviewCard = (
       <BlockReviewStatusCard
         summary={summary}

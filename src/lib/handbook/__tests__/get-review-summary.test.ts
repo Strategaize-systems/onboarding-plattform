@@ -10,17 +10,31 @@ interface MockTableResult {
   error: { message: string } | null;
 }
 
+interface MockTracker {
+  /** Tracks `.eq(column, value)` calls per table. */
+  eqCalls: Record<string, Array<[string, unknown]>>;
+}
+
 /**
  * Erzeugt einen Supabase-Client-Stub. Jeder Aufruf von `.eq()` liefert ein
  * thenable Objekt zurueck — Supabase-Builder werden am Ende einfach geawait.
+ * Optional: Tracker registriert die `.eq()`-Calls pro Tabelle, damit Tests
+ * den Filter-Pfad verifizieren koennen (ISSUE-029).
  */
 function makeMockClient(
   reviewResult: MockTableResult,
   kuResult: MockTableResult,
+  tracker?: MockTracker,
 ): SupabaseClient {
-  const buildThenable = (result: MockTableResult) => {
+  const buildThenable = (table: string, result: MockTableResult) => {
     const obj: Record<string, unknown> = {};
-    obj.eq = vi.fn(() => obj);
+    obj.eq = vi.fn((col: string, val: unknown) => {
+      if (tracker) {
+        tracker.eqCalls[table] = tracker.eqCalls[table] ?? [];
+        tracker.eqCalls[table].push([col, val]);
+      }
+      return obj;
+    });
     obj.then = (resolve: (v: MockTableResult) => unknown) => resolve(result);
     return obj;
   };
@@ -28,7 +42,7 @@ function makeMockClient(
   const fromFn = vi.fn((table: string) => {
     const result = table === "block_review" ? reviewResult : kuResult;
     return {
-      select: vi.fn(() => buildThenable(result)),
+      select: vi.fn(() => buildThenable(table, result)),
     };
   });
   return { from: fromFn } as unknown as SupabaseClient;
@@ -118,5 +132,69 @@ describe("getReviewSummary", () => {
     await expect(
       getReviewSummary(client, TENANT_ID, SESSION_ID),
     ).rejects.toThrow(/Failed to load knowledge_unit/);
+  });
+
+  // ISSUE-029: captureSessionId ist optional. Wenn weggelassen, filtert der
+  // Helper nur auf tenant_id (und auf source='employee_questionnaire' fuer KUs).
+  // Das ist V4.1-korrekt, weil block_review-Rows in den Mitarbeiter-Sessions
+  // liegen und Aufrufer nur die GF-Session kennen.
+  it("filtert ohne captureSessionId nur auf tenant_id (ISSUE-029)", async () => {
+    const tracker: MockTracker = { eqCalls: {} };
+    const client = makeMockClient(
+      {
+        data: [
+          { block_key: "A", status: "approved" },
+          { block_key: "B", status: "pending" },
+        ],
+        error: null,
+      },
+      {
+        data: [{ block_key: "A" }, { block_key: "B" }],
+        error: null,
+      },
+      tracker,
+    );
+    const result = await getReviewSummary(client, TENANT_ID);
+
+    expect(result).toEqual({
+      approved: 1,
+      pending: 1,
+      rejected: 0,
+      totalEmployeeBlocks: 2,
+    });
+
+    // block_review: nur tenant_id-Filter
+    const reviewCols = (tracker.eqCalls.block_review ?? []).map(
+      ([col]) => col,
+    );
+    expect(reviewCols).toContain("tenant_id");
+    expect(reviewCols).not.toContain("capture_session_id");
+
+    // knowledge_unit: tenant_id + source, KEIN capture_session_id
+    const kuCols = (tracker.eqCalls.knowledge_unit ?? []).map(([col]) => col);
+    expect(kuCols).toContain("tenant_id");
+    expect(kuCols).toContain("source");
+    expect(kuCols).not.toContain("capture_session_id");
+  });
+
+  it("filtert mit captureSessionId zusaetzlich auf capture_session_id", async () => {
+    const tracker: MockTracker = { eqCalls: {} };
+    const client = makeMockClient(
+      { data: [], error: null },
+      { data: [], error: null },
+      tracker,
+    );
+    await getReviewSummary(client, TENANT_ID, SESSION_ID);
+
+    const reviewCols = (tracker.eqCalls.block_review ?? []).map(
+      ([col]) => col,
+    );
+    expect(reviewCols).toContain("tenant_id");
+    expect(reviewCols).toContain("capture_session_id");
+
+    const kuCols = (tracker.eqCalls.knowledge_unit ?? []).map(([col]) => col);
+    expect(kuCols).toContain("tenant_id");
+    expect(kuCols).toContain("source");
+    expect(kuCols).toContain("capture_session_id");
   });
 });

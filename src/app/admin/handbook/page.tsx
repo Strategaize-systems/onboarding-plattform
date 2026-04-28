@@ -139,12 +139,10 @@ export default async function AdminHandbookPage() {
   const hasGenerating = snapshots.some((s) => s.status === "generating");
   const hasReady = snapshots.some((s) => s.status === "ready");
 
-  // SLC-042 — Quality-Gate-Daten fuer den TriggerHandbookButton
-  const reviewSummary = await getReviewSummary(
-    supabase,
-    profile.tenant_id,
-    activeSession.id,
-  );
+  // SLC-042 — Quality-Gate-Daten fuer den TriggerHandbookButton.
+  // ISSUE-029 Fix: ueber Tenant aggregieren, weil block_review-Rows in den
+  // Mitarbeiter-Sessions liegen (nicht in der GF-Session des Beraters).
+  const reviewSummary = await getReviewSummary(supabase, profile.tenant_id);
 
   return (
     <div className="space-y-6">
