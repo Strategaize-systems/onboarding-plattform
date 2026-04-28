@@ -10,18 +10,19 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: **V4.1 SLC-042 /qa CONDITIONAL PASS 2026-04-28 (RPT-102).** Backend-Pfade lebend gegen Live-DB verifiziert: Stub-Detection 0 Hits, Build PASS, 358/358 Tests gruen, Live-Smoke Trigger+Approve+getReviewSummary+Audit-Log durchgespielt, Wiring-Chain komplett, Cross-Rollen-Auth Triple-Schutz (Page+Action+RLS) bestaetigt. 6 Browser-spezifische ACs (AC-1..5, AC-7, AC-9, AC-11, AC-13, AC-15) sowie AC-14 von SLC-041 sind Browser-Smoke-pending — Production noch auf Apr-27-Build, User deployt manuell ueber Coolify auf Commit 757743c. 2/5 V4.1-Slices done (SLC-041 backend+QA, SLC-042 frontend+QA-Backend).
-- Current Phase: V4.1 Implementation — SLC-042 Code+Backend-/qa done, User-Browser-Smoke offen nach Coolify-Deploy.
+- Current Focus: **V4.1 SLC-042 Browser-Smoke STOP 2026-04-28: ISSUE-029 (High) gefunden.** Production deployed auf Commit 757743c. Smoke-Punkte 1-3 PASS (Cross-Rollen-Redirect AC-6, E2E Approve-Flow AC-1..AC-5 in /admin/blocks/A/review, Reject-Flow AC-4). Smoke-Punkt 4 + 5 zeigen denselben Bug: Cockpit-Card "Mitarbeiter-Bloecke reviewed" zeigt "—" / "Noch keine Mitarbeiter-Beitraege" statt "2 / 3" + warning-Tone, und /admin/handbook "Neu generieren" triggert direkt ohne Quality-Gate-AlertDialog. Ursache: getReviewSummary filtert auf capture_session_id der GF-Session des Beraters — die block_review-Rows + employee_questionnaire-KUs liegen aber in der Mitarbeiter-Session. /dashboard/reviews ist NICHT betroffen (filtert nur auf tenant_id) — Liste zeigt korrekt 3 Bloecke (A approved, B rejected, C pending). User stoppt wegen Usage-voll. 2/5 V4.1-Slices done; SLC-042 in /qa BLOCKED bis ISSUE-029 fix.
+- Current Phase: V4.1 Implementation — SLC-042 /qa BLOCKED, ISSUE-029 Fix vor Re-Smoke. Test-Daten in Live-DB persistent (Marker `QA-SMOKE-RPT-102` in 3 KUs in Session 22234f9e-..., Block A approved + Block B rejected + Block C pending — wiederverwendbar fuer Re-Smoke).
 
 ## Immediate Next Steps
-1. **User: Coolify-Deploy** auf Commit 757743c (~2-5min) → /admin/blocks/[blockKey]/review + /dashboard/reviews ins Production-Bundle bringen.
-2. **User: Browser-Smoke 15-20min** — 7 Pflicht-Punkte aus RPT-102 (Cross-Rollen-Redirect, E2E-Approve, Quality-Gate-Dialog pending=0/>0, Audit-Log-Verifikation, AC-14 handbook_snapshot.metadata, /dashboard/reviews als tenant_admin, Responsive 375/768/1024).
-3. **Bei Smoke PASS: /frontend SLC-043 ∥ SLC-044** — parallel-faehig laut V4.1 Execution Order. Cross-Tenant + Pro-Tenant Reviews-Sichten + Reader-Page.
-4. **Bei Smoke FAIL:** zurueck in /frontend SLC-042 fuer Fix.
-5. **/frontend SLC-045** — Reader Volltext-Suche + Polish nach SLC-044.
-6. **Gesamt-V4.1-/qa** → /final-check → /go-live → /deploy nach allen 5 Slices.
-7. **/post-launch V4** — verschoben auf nach V4.1-Release (User-Entscheidung).
-8. **V4.2** spaeter: BL-048 Tenant Self-Service Onboarding + Component-Test-Setup (jsdom + @testing-library/react).
+1. **/doctor ISSUE-029** — `src/lib/handbook/get-review-summary.ts` Fix: `captureSessionId` optional machen, Filter weglassen wenn nicht gesetzt. Aufrufer in `/dashboard/page.tsx` und `/admin/handbook/page.tsx` ohne Session-ID aufrufen. 2 neue Test-Faelle in `get-review-summary.test.ts` (with/without sessionId). Build + 358+2 Tests gruen.
+2. **User: Coolify-Redeploy** nach Fix-Commit.
+3. **Re-Smoke Smoke-Punkt 4 + 5 + 6 + 7** — Cockpit-Card 2/3, Quality-Gate-Dialog mit korrekten X/Y-Zahlen, "Trotzdem generieren"-Bestaetigung, AC-14 (handbook_snapshot.metadata-Counter), Responsive.
+4. **Nach Re-Smoke PASS:** AC-14 Verifikation + Audit-Log-Check + Test-Daten Cleanup + RPT-102 Update auf endgueltigen PASS.
+5. **/frontend SLC-043 ∥ SLC-044** — Cross-Tenant + Pro-Tenant Reviews + Reader-Page.
+6. **/frontend SLC-045** — Reader Volltext-Suche + Polish nach SLC-044.
+7. **Gesamt-V4.1-/qa** → /final-check → /go-live → /deploy nach allen 5 Slices.
+8. **/post-launch V4** — verschoben auf nach V4.1-Release.
+9. **V4.2** spaeter: BL-048 Tenant Self-Service Onboarding + Component-Test-Setup (jsdom + @testing-library/react).
 
 ## Active Scope
 **V4 — Zwei-Ebenen-Verschmelzung, 6 Features Code-done, 8 Slices Code-done:**
