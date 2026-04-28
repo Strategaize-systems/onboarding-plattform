@@ -84,7 +84,9 @@ export function DashboardSidebar({ profile, activePage }: DashboardSidebarProps)
         {profile.role === "tenant_admin" && (() => {
           const isTeamActive = pathname.startsWith("/admin/team");
           const isBridgeActive = pathname.startsWith("/admin/bridge");
-          const isHandbookActive = pathname.startsWith("/admin/handbook");
+          const isHandbookActive =
+            pathname.startsWith("/admin/handbook") ||
+            pathname.startsWith("/dashboard/handbook");
           const isCaptureActive =
             activePage === "capture" && !isTeamActive && !isBridgeActive && !isHandbookActive;
           return (
@@ -139,9 +141,9 @@ export function DashboardSidebar({ profile, activePage }: DashboardSidebarProps)
                   </div>
                 </div>
               </Link>
-              {/* Handbuch — SLC-040 (V4) */}
+              {/* Unternehmerhandbuch — SLC-044 (V4.1): tenant_admin liest in der Plattform. */}
               <Link
-                href="/admin/handbook"
+                href="/dashboard/handbook"
                 className={`flex w-full items-center gap-3 rounded-xl px-4 py-3.5 text-left transition-all duration-200 ${
                   isHandbookActive
                     ? "bg-gradient-to-r from-brand-primary to-brand-primary-dark text-white shadow-[0_8px_16px_-4px_rgba(68,84,184,0.35)]"
@@ -150,9 +152,9 @@ export function DashboardSidebar({ profile, activePage }: DashboardSidebarProps)
               >
                 <BookOpen className="h-4 w-4" />
                 <div className="min-w-0 flex-1">
-                  <div className="text-sm font-bold leading-snug">Handbuch</div>
+                  <div className="text-sm font-bold leading-snug">Unternehmerhandbuch</div>
                   <div className={`text-[10px] uppercase tracking-wider font-semibold mt-0.5 ${isHandbookActive ? "text-white/50" : "text-slate-500"}`}>
-                    Konsolidiertes Markdown-Paket
+                    Lesen + alle Versionen
                   </div>
                 </div>
               </Link>

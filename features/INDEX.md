@@ -56,6 +56,6 @@
 
 | ID | Feature | Status | Spec | Created |
 |----|---------|--------|------|---------|
-| FEAT-028 | Handbuch In-App-Reader | planned | [Spec](FEAT-028-handbuch-reader.md) | 2026-04-28 |
+| FEAT-028 | Handbuch In-App-Reader | in_progress | [Spec](FEAT-028-handbuch-reader.md) | 2026-04-28 |
 | FEAT-029 | Berater-Review + Quality-Gate | in_progress | [Spec](FEAT-029-berater-review-quality-gate.md) | 2026-04-28 |
 | FEAT-030 | Berater-Visibility-Verlinkung | planned | [Spec](FEAT-030-berater-visibility-verlinkung.md) | 2026-04-28 |
