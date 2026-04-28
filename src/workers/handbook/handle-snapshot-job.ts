@@ -115,10 +115,13 @@ export async function handleHandbookSnapshotJob(job: ClaimedJob): Promise<void> 
 
     // 5b. SLC-041 V4.1 Pre-Filter — block_review-Status fuer Mitarbeiter-KUs anwenden.
     // Backwards-Compat (DEC-048): Sessions ohne block_review-Eintraege laufen 1:1 wie pre-V4.1.
+    // ISSUE-029 Fix: tenant-only Aggregation, weil block_review-Rows in Mitarbeiter-Sessions
+    // liegen und der Worker nur die GF-Session-ID kennt. metadata-Counter (AC-14) wird
+    // dadurch korrekt befuellt; Filter-Effekt auf KUs aendert sich nicht (KU-Loader laedt
+    // nur GF-Session-KUs).
     const blockReviewState = await loadBlockReviewState(
       adminClient,
       snapshot.tenant_id as string,
-      snapshot.capture_session_id as string,
     );
     const knowledgeUnits = applyBlockReviewFilter(allKnowledgeUnits, blockReviewState);
     const reviewCounts = countBlockReviewStatuses(blockReviewState);

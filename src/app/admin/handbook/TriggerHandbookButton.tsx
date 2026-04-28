@@ -131,7 +131,7 @@ export function TriggerHandbookButton({
               <AlertDialogDescription asChild>
                 <div className="space-y-2 text-sm text-slate-700">
                   <p>
-                    {reviewSummary.approved} von{" "}
+                    {reviewSummary.approved + reviewSummary.rejected} von{" "}
                     {reviewSummary.totalEmployeeBlocks} Mitarbeiter-Bloecken
                     sind reviewed.
                   </p>

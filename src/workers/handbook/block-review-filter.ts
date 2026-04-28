@@ -29,19 +29,29 @@ const EMPTY_STATE: BlockReviewState = Object.freeze({
 }) as BlockReviewState;
 
 /**
- * Laedt alle block_review-Eintraege fuer eine (tenant, session) und gruppiert sie
- * nach Status. Erwartet einen service-role Supabase-Client (RLS bypass).
+ * Laedt alle block_review-Eintraege und gruppiert sie nach Status.
+ * Erwartet einen service-role Supabase-Client (RLS bypass).
+ *
+ * ISSUE-029 Fix (2026-04-28): captureSessionId ist optional. block_review-Rows
+ * liegen in den Mitarbeiter-Sessions, der Worker kennt aber nur die GF-Session.
+ * Ohne sessionId aggregiert der Helper ueber den gesamten Tenant — V4.1-konsistent
+ * (1 GF-Session pro Tenant). Der Quality-Gate-Counter handbook_snapshot.metadata
+ * (AC-14) muss dadurch auch dann korrekt befuellt werden, wenn der Worker mit der
+ * GF-Session-ID aufgerufen wird.
  */
 export async function loadBlockReviewState(
   client: SupabaseClient,
   tenantId: string,
-  captureSessionId: string,
+  captureSessionId?: string,
 ): Promise<BlockReviewState> {
-  const { data, error } = await client
+  let query = client
     .from("block_review")
     .select("block_key, status")
-    .eq("tenant_id", tenantId)
-    .eq("capture_session_id", captureSessionId);
+    .eq("tenant_id", tenantId);
+  if (captureSessionId) {
+    query = query.eq("capture_session_id", captureSessionId);
+  }
+  const { data, error } = await query;
 
   if (error) {
     throw new Error(`Failed to load block_review: ${error.message}`);
