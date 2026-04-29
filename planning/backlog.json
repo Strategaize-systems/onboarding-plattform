@@ -465,7 +465,7 @@
       "title": "Unternehmerhandbuch In-App-Reader (Reader-Only, ohne Inline-Editor)",
       "type": "feature",
       "priority": "high",
-      "status": "in_progress",
+      "status": "done",
       "version": "V4.1",
       "description": "Requirements done 2026-04-28 als FEAT-028. V4.1-Scope eingegrenzt: Reader-Only (Sidebar-Nav, Markdown-Render, Section-Anchors, Volltext-Suche client-side, Snapshot-Liste mit Timestamps). Reader unter /dashboard/handbook/[snapshotId], admin-only (strategaize_admin + tenant_admin). Cross-Link zu /admin/debrief fuer Editor-Workflow. Inline-Editor + Diff-View bewusst deferred fuer V4.2 oder spaeter (DEC-V4.1-1).",
       "createdAt": "2026-04-23"
@@ -485,7 +485,7 @@
       "title": "Berater-Review Mitarbeiter-Output + Quality-Gate vor Handbuch",
       "type": "feature",
       "priority": "high",
-      "status": "in_progress",
+      "status": "done",
       "version": "V4.1",
       "description": "Requirements done 2026-04-28 als FEAT-029. Schema: neue block_review-Tabelle mit RLS, Status pending|approved|rejected, Audit-Felder. Granularitaet: Block-Approval (DEC-V4.1-4, kein KU-Override in V4.1). Quality-Gate: weich (DEC-V4.1-5) — Trigger-Button immer aktiv, Confirm-Dialog 'X/Y reviewed' bei <100%. Konsolidierter Review-View block-zentriert (DEC-V4.1-6). Worker-Filter erweitert um block_review.status='approved' (nur fuer source='employee_questionnaire' KUs). Backfill-Strategie offen (Q-V4.1-A). Cockpit-Card 'Mitarbeiter-Bloecke reviewed' auf /dashboard.",
       "createdAt": "2026-04-27"
@@ -495,7 +495,7 @@
       "title": "Berater-Visibility-Verlinkung im strategaize_admin-Cockpit",
       "type": "feature",
       "priority": "medium",
-      "status": "in_progress",
+      "status": "done",
       "version": "V4.1",
       "description": "Requirements done 2026-04-28 als FEAT-030. Scope: neue Top-Level-Page /admin/reviews (Cross-Tenant-Aggregat aller pendenden Block-Reviews, sortiert oldest-first), Pro-Tenant-Sicht /admin/tenants/[id]/reviews, Quick-Stats-Badge im /admin/tenants Tabellen-Eintrag. Direct-Links zu Konsolidiertem Review-View (FEAT-029) und /admin/debrief. Kein Mode-Toggle / keine Tenant-Impersonation in V4.1 (DEC-V4.1-7). Cross-Tenant + Pro-Tenant beide gebaut (DEC-V4.1-8).",
       "createdAt": "2026-04-27"
