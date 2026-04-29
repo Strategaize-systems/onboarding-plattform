@@ -10,15 +10,16 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: **V4.1 SLC-043 /qa strukturell PASS 2026-04-29 (RPT-108) — gebuendelter User-Browser-Smoke mit SLC-045 offen.** Cross-Tenant + Pro-Tenant Reviews + Quick-Stats-Badge strukturell verifiziert: 0 Stub-Hits ueber alle 5 neuen + 3 modifizierten Files, Wiring-Chain Sidebar→Page→Helper→DB→Table→SLC-042-Action-Link strukturell PASS, lokaler Production-Build gruen, **378/378 Vitest-Tests PASS auf Coolify-DB** (identisch RPT-106 — keine Regression durch SLC-043). 10/12 ACs strukturell PASS, AC-2 (Cross-Rollen-Auth live) + AC-9 (Performance Mock-Daten) + AC-12 (Responsive live) als USER-PFLICHT-BROWSER-SMOKE offen. Demo-DB hat aktuell 0 block_review-Rows → Empty-State + grauer Badge sind die Live-Default-Erwartung. **Naechste Aktion: gebuendelter Coolify-Redeploy SLC-045 + SLC-043 + gemeinsamer Browser-Smoke (17 Smoke-Punkte total, RPT-106 + RPT-108).**
-- Current Phase: V4.1 Implementation — alle 5 V4.1-Slices Code-done und /qa strukturell PASS. Pending: gemeinsamer Browser-Smoke nach Coolify-Redeploy + Gesamt-V4.1-/qa → /final-check → /go-live → /deploy.
+- Current Focus: **V4.1 5/5 Slices DONE 2026-04-29 — Browser-Smoke 17/17 PASS nach 3 Iter-Cycles.** Iter-1 (commit 519acc1): SearchInput verschluckte Eingabe <3 Zeichen (useEffect-Sync mit Min-Length-Guard kollidierte; Fix: useEffect raus, Imperative `clear()`-API via forwardRef). Iter-2 (commit 6188a23): TOC-Markdown-Datei-Links (`[Title](01_section.md)`) fuehrten zu 404 weil relativ zur Reader-URL aufgeloest; Fix: `components.a`-Override im ReactMarkdown der `.md`-Links auf In-App-Anchor-Navigation umlenkt. Iter-3 (commit c1bd83a): `capture_session.last_submitted_at` existiert nicht in der DB; Fix: Wechsel auf `updated_at` + Spalte umbenannt zu "Aktualisiert". Alle anderen Smoke-Punkte sauber durch. 1 Low-Severity Mobile-Polish-Item (BL-055) fuer 375px h1-Title-Wrap. **Naechste Aktion: Gesamt-V4.1-/qa** → /final-check → /go-live → /deploy.
+- Current Phase: V4.1 Implementation 5/5 Slices done + Browser-Smoke PASS. Pending: Gesamt-V4.1-/qa → /final-check → /go-live → /deploy V4.1.
 
 ## Immediate Next Steps
-1. **Coolify-Redeploy SLC-045 + SLC-043 gebuendelt** (User-Pflicht via Coolify-UI, `feedback_manual_deploy.md`). Production-Stand soll auf `76856ca` (main HEAD) deployt werden.
-2. **Gemeinsamer Browser-Smoke SLC-045 + SLC-043** — 17 Smoke-Punkte total: 7 aus RPT-106 (Reader-Suche, Performance-Banner, Polish, Responsive) + 10 aus RPT-108 (Sidebar-Link, Cross-Tenant-Page, Cross-Rollen-Auth, Pro-Tenant-Page, Quick-Stats-Badge gelb+grau, Action-Link → SLC-042, Pencil → V2-Debrief, Responsive). Empfohlen: in einer User-Sitzung ~25-35 Min.
-3. **Gesamt-V4.1-/qa** nach Smoke-PASS — SC-V4.1-1..12 vollstaendig verifizieren.
-4. **/final-check → /go-live → /deploy V4.1** anschliessend.
-5. **Optional vor Smoke:** Mock-Pending-Review im Demo-Tenant erzeugen (SQL in RPT-108 Smoke-Punkt 14), damit Quick-Stats-Badge gelb live testbar ist.
+1. **Gesamt-V4.1-/qa** — SC-V4.1-1..12 vollstaendig verifizieren ueber alle 5 Slices (FEAT-028 Reader, FEAT-029 Review-Quality-Gate, FEAT-030 Visibility). Stub-Detection cross-slice, Test-Suite 378/378 stabil bestaetigen, KNOWN_ISSUES nachziehen.
+2. **/final-check** — Hygiene + Dependencies + Security-Audit vor Release.
+3. **/go-live** — Release-Risk + Rollback-Plan + Stable-Stand entscheiden.
+4. **/deploy V4.1** — User-Pflicht via Coolify-UI (manuelle Deploy-Disziplin).
+5. **/post-launch** in 1-2 Tagen nach Deploy.
+6. **V4.2-Backlog (zur Info):** BL-055 Mobile-Polish 375px h1-Title-Wrap im Reader, BL-051..054 (Active-Section-Scroll-Spy, Copy-Permalink-Button, Loading-Skeleton, Cross-Snapshot-Suche), Sidebar-Total-Pending-Badge, Worker-TOC-Links als Anchor statt .md-Pfade (Compatibility), Umlaut-Konsistenz Templates+Worker+UI.
 3. **Gesamt-V4.1-/qa** nach SLC-043 + SLC-045 done — SC-V4.1-1..12 vollstaendig verifizieren.
 4. **/final-check → /go-live → /deploy V4.1** anschliessend.
 5. **Optional vorab: Test-Daten cleanen** — 3 employee_questionnaire-KUs in Demo-Tenant Session 22234f9e-... (Marker `QA-SMOKE-RPT-102`) plus 3 block_review-Rows. Cleanup-SQL in RPT-102 dokumentiert.

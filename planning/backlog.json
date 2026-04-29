@@ -539,6 +539,46 @@
       "version": "V4.2",
       "description": "SLC-045 hat client-side Single-Snapshot-Suche umgesetzt. Cross-Snapshot-Suche (alle Snapshots eines Tenants) braucht serverseitige Pre-Indexierung oder einen Search-Index. Search-History (letzte 5 Queries pro User) ist optional. Beides war bewusst out-of-scope (Slice-Spec).",
       "createdAt": "2026-04-29"
+    },
+    {
+      "id": "BL-055",
+      "title": "Reader Mobile-Polish: h1-Title-Wrap bei 375px",
+      "type": "improvement",
+      "priority": "low",
+      "status": "open",
+      "version": "V4.2",
+      "description": "Auf 375px Mobile-Viewport bricht der h1-Titel im Reader-Header in 4 Zeilen weil prose-h1:text-3xl bei dieser Container-Breite zu gross ist. Funktional kein Problem (kein Overflow, Sidebar collapsed sauber, alles erreichbar), nur optisch suboptimal. Fix: prose-h1:text-2xl sm:prose-h1:text-3xl als Mobile-Override im PROSE_CLASSES-Block. Aufgedeckt im V4.1 Browser-Smoke 2026-04-29.",
+      "createdAt": "2026-04-29"
+    },
+    {
+      "id": "BL-056",
+      "title": "Worker-Output: TOC-Markdown-Links als In-App-Anchors statt .md-Datei-Pfade",
+      "type": "improvement",
+      "priority": "medium",
+      "status": "open",
+      "version": "V4.2",
+      "description": "Handbuch-Worker schreibt im INDEX.md die TOC-Links als [Title](01_section.md). Im Reader fuehrt das zu 404 weil die .md-URL relativ aufgeloest wird. SLC-045 iter-2 hat das im Render-Path via components.a-Override gefixt (commit 6188a23) — funktioniert, aber die ZIP-Download-Variante leidet darunter nicht. Sauberer: Worker schreibt direkt In-App-Anchor-Links und der ZIP-Download-Pfad nutzt Post-Processing.",
+      "createdAt": "2026-04-29"
+    },
+    {
+      "id": "BL-057",
+      "title": "Umlaut-Konsistenz Templates + Worker + UI",
+      "type": "improvement",
+      "priority": "medium",
+      "status": "open",
+      "version": "V4.2",
+      "description": "Templates-Schema (Section-Titel) und Worker-Output verwenden ae/oe/ue statt richtigen Umlauten. Markdown kann Umlaute problemlos. Stoert die User-Sicht im Reader. Fix: Templates konsistent umstellen + Worker-Prompts angleichen + UI-Strings konsistent. Optional Re-Generation der Demo-Snapshots damit alte ZIPs auch korrekt sind. User-Frage im V4.1 Browser-Smoke 2026-04-29.",
+      "createdAt": "2026-04-29"
+    },
+    {
+      "id": "BL-058",
+      "title": "Reader Heading-Anchor-Hover am h1-Titel sichtbar machen",
+      "type": "improvement",
+      "priority": "low",
+      "status": "open",
+      "version": "V4.2",
+      "description": "Heading-Anchor-Hover-Indicator (#-Symbol bei Hover) erscheint korrekt bei h2/h3-Headings, aber nicht zuverlaessig am h1-Titel des Reader-Inhaltsverzeichnisses (vermutlich CSS-Specificity-Issue mit prose-h1:mt-0 oder Hit-Bereich zu klein). Funktional nicht-blockierend. Aufgedeckt im V4.1 Browser-Smoke 2026-04-29 (Punkt 5a).",
+      "createdAt": "2026-04-29"
     }
   ]
 }
