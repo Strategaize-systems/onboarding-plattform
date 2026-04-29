@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { loadCrossTenantCockpit } from "@/lib/cockpit/load-cross-tenant";
+import { pendingCountsByTenant } from "@/lib/reviews/pending-counts-by-tenant";
 import { TenantsClient } from "./tenants-client";
 import { CrossTenantCockpit } from "./CrossTenantCockpit";
 
@@ -28,9 +29,16 @@ export default async function AdminTenantsPage() {
   // Bridge-Status, Handbuch-Status. Wenn die Aggregation fehlschlaegt, faellt
   // der Render auf die Tenants-Liste ohne Cockpit zurueck — nicht-blockierend.
   let cockpitRows: Awaited<ReturnType<typeof loadCrossTenantCockpit>> = [];
+  // SLC-043 MT-3 — Pending-Reviews-Counts pro Tenant fuer den Quick-Stats-Badge.
+  let pendingByTenant: Record<string, number> = {};
   try {
     const adminClient = createAdminClient();
-    cockpitRows = await loadCrossTenantCockpit(adminClient);
+    const [cockpit, pending] = await Promise.all([
+      loadCrossTenantCockpit(adminClient),
+      pendingCountsByTenant(adminClient).catch(() => new Map<string, number>()),
+    ]);
+    cockpitRows = cockpit;
+    pendingByTenant = Object.fromEntries(pending.entries());
   } catch (err) {
     const { captureException } = await import("@/lib/logger");
     captureException(err, { source: "admin/tenants/loadCrossTenantCockpit" });
@@ -39,7 +47,10 @@ export default async function AdminTenantsPage() {
   return (
     <div>
       <CrossTenantCockpit rows={cockpitRows} />
-      <TenantsClient email={profile.email ?? ""} />
+      <TenantsClient
+        email={profile.email ?? ""}
+        pendingReviewsByTenant={pendingByTenant}
+      />
     </div>
   );
 }

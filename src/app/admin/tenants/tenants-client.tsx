@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -46,7 +47,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ChevronDown, ChevronRight, Pencil, Trash2, UserMinus, ShieldCheck } from "lucide-react";
+import { ChevronDown, ChevronRight, ClipboardCheck, Pencil, Trash2, UserMinus, ShieldCheck } from "lucide-react";
 
 interface TenantUser {
   id: string;
@@ -87,7 +88,13 @@ interface Tenant {
 
 const LANG_LABELS: Record<string, string> = { de: "DE", en: "EN", nl: "NL" };
 
-export function TenantsClient({ email }: { email: string }) {
+export function TenantsClient({
+  email,
+  pendingReviewsByTenant = {},
+}: {
+  email: string;
+  pendingReviewsByTenant?: Record<string, number>;
+}) {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
@@ -523,6 +530,29 @@ export function TenantsClient({ email }: { email: string }) {
                         <Badge variant="secondary" className="text-xs">
                           {LANG_LABELS[tenant.language] ?? tenant.language}
                         </Badge>
+                        {(() => {
+                          const pending = pendingReviewsByTenant[tenant.id] ?? 0;
+                          const isYellow = pending > 0;
+                          return (
+                            <Link
+                              href={`/admin/tenants/${tenant.id}/reviews`}
+                              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors ${
+                                isYellow
+                                  ? "bg-amber-100 text-amber-800 hover:bg-amber-200"
+                                  : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                              }`}
+                              data-testid="tenant-pending-reviews-badge"
+                              title={
+                                isYellow
+                                  ? `${pending} pending Reviews — klicken zum Pruefen`
+                                  : "Keine pendenden Reviews"
+                              }
+                            >
+                              <ClipboardCheck className="h-3 w-3" />
+                              {pending} {pending === 1 ? "Review" : "Reviews"}
+                            </Link>
+                          );
+                        })()}
                       </div>
                       <div className="flex items-center gap-2">
                         <Button variant="outline" size="sm" onClick={() => openInvite(tenant.id, tenant.name)}>
