@@ -9,17 +9,16 @@
 Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdichtung. Ermoeglicht mehrere Capture-Modi (Fragebogen, Meeting, Voice, etc.) und Template-basierte Produktvarianten (z.B. Exit-Readiness, Immobilien-Onboarding). Ab V4: Zwei-Ebenen-Verschmelzung (GF-Blueprint + Mitarbeiter-Capture + Unternehmerhandbuch-Output).
 
 ## Current State
-- High-Level State: implementing
-- Current Focus: **V4.1 5/5 Slices DONE 2026-04-29 — Browser-Smoke 17/17 PASS nach 3 Iter-Cycles.** Iter-1 (commit 519acc1): SearchInput verschluckte Eingabe <3 Zeichen (useEffect-Sync mit Min-Length-Guard kollidierte; Fix: useEffect raus, Imperative `clear()`-API via forwardRef). Iter-2 (commit 6188a23): TOC-Markdown-Datei-Links (`[Title](01_section.md)`) fuehrten zu 404 weil relativ zur Reader-URL aufgeloest; Fix: `components.a`-Override im ReactMarkdown der `.md`-Links auf In-App-Anchor-Navigation umlenkt. Iter-3 (commit c1bd83a): `capture_session.last_submitted_at` existiert nicht in der DB; Fix: Wechsel auf `updated_at` + Spalte umbenannt zu "Aktualisiert". Alle anderen Smoke-Punkte sauber durch. 1 Low-Severity Mobile-Polish-Item (BL-055) fuer 375px h1-Title-Wrap. **Naechste Aktion: Gesamt-V4.1-/qa** → /final-check → /go-live → /deploy.
-- Current Phase: V4.1 Implementation 5/5 Slices done + Browser-Smoke PASS. Pending: Gesamt-V4.1-/qa → /final-check → /go-live → /deploy V4.1.
+- High-Level State: qa
+- Current Focus: **V4.1 Gesamt-/qa PASS 2026-04-29 (RPT-109) — freigabereif fuer /final-check.** 12/12 Success Criteria erfuellt, 378/378 Tests gruen auf Coolify-DB, 0 Blocker, 0 High, 0 Medium-Findings (V4.1-spezifisch), 4 Low-Items als V4.2-Backlog. Cross-Slice-Stub-Detection 0 echte Hits (Worker-Operations-Logs akzeptiert). Wiring-Chain ueber alle 5 Slices (SLC-041..045) und 3 Features (FEAT-028+029+030) verifiziert. Keine V4-Regression (alle V4-Backstop-Tests gruen: 46/46 v4-perimeter-matrix, 19/19 bridge-rpcs, 14/14 employee-invitation, 13/13 worker-renderer, etc.). Keine offenen V4.1-spezifischen Issues (ISSUE-029 als V4.1-Iter-Bug bereits resolved). Browser-Smoke 17/17 user-bestaetigt nach 3 Iter-Cycles. **Naechste Aktion: /final-check** → /go-live → /deploy V4.1.
+- Current Phase: V4.1 Gesamt-/qa abgeschlossen. Pending: /final-check (Hygiene+Dependencies+Security-Audit) → /go-live (Release-Risk-Assessment) → /deploy V4.1 (User-Pflicht via Coolify) → /post-launch.
 
 ## Immediate Next Steps
-1. **Gesamt-V4.1-/qa** — SC-V4.1-1..12 vollstaendig verifizieren ueber alle 5 Slices (FEAT-028 Reader, FEAT-029 Review-Quality-Gate, FEAT-030 Visibility). Stub-Detection cross-slice, Test-Suite 378/378 stabil bestaetigen, KNOWN_ISSUES nachziehen.
-2. **/final-check** — Hygiene + Dependencies + Security-Audit vor Release.
-3. **/go-live** — Release-Risk + Rollback-Plan + Stable-Stand entscheiden.
-4. **/deploy V4.1** — User-Pflicht via Coolify-UI (manuelle Deploy-Disziplin).
-5. **/post-launch** in 1-2 Tagen nach Deploy.
-6. **V4.2-Backlog (zur Info):** BL-055 Mobile-Polish 375px h1-Title-Wrap im Reader, BL-051..054 (Active-Section-Scroll-Spy, Copy-Permalink-Button, Loading-Skeleton, Cross-Snapshot-Suche), Sidebar-Total-Pending-Badge, Worker-TOC-Links als Anchor statt .md-Pfade (Compatibility), Umlaut-Konsistenz Templates+Worker+UI.
+1. **/final-check** — Hygiene + Dependencies + Security-Audit. Themen: Pre-existing TS-Errors `bridge/__tests__/action-helpers.test.ts:127,129` (V4.2-Defer oder Fix), `npm audit --omit=dev` (Erwartung 0 Vulns), Bundle-Size-Check fuer neue Komponenten, ENV-Var-Audit (keine neuen ENVs in V4.1), Storage-RLS-Check `handbook`-Bucket. Optional: Test-Daten-Cleanup in Demo-DB (Marker `QA-SMOKE-RPT-102`).
+2. **/go-live** — Release-Risk + Rollback-Plan + GO/NO-GO. V4.1 hat keine neuen Migrationen ausser MIG-028 (bereits live), keine ENV-Aenderungen, kein Schema-Change auf bestehenden Tabellen — Rollback-Risk ist niedrig.
+3. **/deploy V4.1** — User-Pflicht via Coolify-UI (`feedback_manual_deploy.md`). Production-Stand soll auf `bc00093` (oder Nachfolger nach /final-check-Fixes) deployt werden.
+4. **/post-launch** 1-2 Tage nach Deploy.
+5. **V4.2-Backlog (zur Info):** BL-051..058 (Active-Section-Scroll-Spy, Copy-Permalink-Button, Loading-Skeleton, Cross-Snapshot-Suche, Mobile-Polish 375px h1-Wrap, Worker-TOC-Anchor, Umlaut-Konsistenz, h1-Hover-Anchor), Sidebar-Total-Pending-Badge, plus aus V4.1-Iter-Cycles 3 IMPs in Dev-System (IMP-211/212/213).
 3. **Gesamt-V4.1-/qa** nach SLC-043 + SLC-045 done — SC-V4.1-1..12 vollstaendig verifizieren.
 4. **/final-check → /go-live → /deploy V4.1** anschliessend.
 5. **Optional vorab: Test-Daten cleanen** — 3 employee_questionnaire-KUs in Demo-Tenant Session 22234f9e-... (Marker `QA-SMOKE-RPT-102`) plus 3 block_review-Rows. Cleanup-SQL in RPT-102 dokumentiert.
