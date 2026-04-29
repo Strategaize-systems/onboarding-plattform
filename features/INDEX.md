@@ -59,3 +59,11 @@
 | FEAT-028 | Handbuch In-App-Reader | deployed | [Spec](FEAT-028-handbuch-reader.md) | 2026-04-28 |
 | FEAT-029 | Berater-Review + Quality-Gate | deployed | [Spec](FEAT-029-berater-review-quality-gate.md) | 2026-04-28 |
 | FEAT-030 | Berater-Visibility-Verlinkung | deployed | [Spec](FEAT-030-berater-visibility-verlinkung.md) | 2026-04-28 |
+
+## V4.2 Features (Tenant Self-Service Onboarding)
+
+| ID | Feature | Status | Spec | Created |
+|----|---------|--------|------|---------|
+| FEAT-031 | Tenant-Onboarding-Wizard | planned | [Spec](FEAT-031-tenant-onboarding-wizard.md) | 2026-04-29 |
+| FEAT-032 | Capture-Reminders | planned | [Spec](FEAT-032-capture-reminders.md) | 2026-04-29 |
+| FEAT-033 | In-App-Hilfe | planned | [Spec](FEAT-033-in-app-hilfe.md) | 2026-04-29 |

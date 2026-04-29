@@ -52,30 +52,37 @@
     {
       "id": "v4-2",
       "name": "V4.2",
-      "status": "planned",
-      "summary": "Self-Service-Cockpit ausgebaut: Tenant-Onboarding-Wizard (Erste-Schritte, Hilfe-Texte), Capture-Reminders pro Mitarbeiter, In-App-Hilfe und Tutorials, Status-Dashboards mit naechsten Schritten. Ziel: Kunde kommt ohne Haendchen-Halten durch das gesamte Onboarding. Detail-Requirements werden mit eigenem /requirements V4.2 erstellt.",
+      "status": "active",
+      "summary": "Tenant Self-Service Onboarding. 3 Features: (1) FEAT-031 Tenant-Onboarding-Wizard (4-Schritte-Erst-Login-Wizard mit Step-Persistenz, Skip-Mechanismen, Multi-Admin-Lock), (2) FEAT-032 Capture-Reminders (E-Mail-Reminder Stufe 1 nach 3 Werktagen, Stufe 2 nach 7 Werktagen, Idempotenz via reminder_log, Opt-Out via user_settings, Coolify-Cron 09:00 Europe/Berlin, In-App-Badge fuer tenant_admin), (3) FEAT-033 In-App-Hilfe (Right-Side-Sheet mit Markdown-Content auf 5 Haupt-Pages, Tooltips an mind. 5 UI-Elementen). Requirements done 2026-04-29, 9 DECs (DEC-V4.2-1..9) als Empfehlung gesetzt, 7 offene Architektur-Fragen (Q-V4.2-A..G). Skizze: 5 Slices SLC-046..050, ~24 Micro-Tasks, 5-7 Tage Implementation. BL-048 + 2 neue BL-Items (BL-060, BL-061). Naechster Schritt: /architecture V4.2.",
       "order": 8
+    },
+    {
+      "id": "v4-3",
+      "name": "V4.3",
+      "status": "planned",
+      "summary": "Maintenance-Sammelrelease (Pattern aus V3.1). 9 Items aus V4.1-Browser-Smoke + Final-Check: Reader-UX-Polish (Scroll-Spy, Copy-Permalink, Loading-Skeleton, Cross-Snapshot-Suche, Mobile-h1, Heading-Anchor-Hover), Worker-Output-Hygiene (TOC-Anchor-Links, Umlaut-Konsistenz), Next.js 16 middleware->proxy Convention-Migration. BL-051..059 (re-versioniert von V4.2 auf V4.3 in /requirements V4.2). Skizze: 4 Slices SLC-051..054, ~14 MTs, 2-3 Tage. Keine neuen Features, keine Schema-Aenderungen. Detail-Requirements optional als eigene /requirements V4.3 oder direkt /architecture wenn Scope klar bleibt.",
+      "order": 9
     },
     {
       "id": "v5",
       "name": "V5",
       "status": "planned",
       "summary": "Walkthrough-Mode (Screen-Capture + Think-Aloud) als zusaetzlicher Capture-Modus. Architektur-Hooks dafuer wurden in V4 vorbereitet (Capture-Mode-Erweiterungs-Schnittstelle). Benoetigt vorher Technologie-Entscheidungs-Spike (Browser-Extension vs. Electron vs. Native). Versionsnummer ehemals V4 (vor 2026-04-23 Re-Numerierung).",
-      "order": 9
+      "order": 10
     },
     {
       "id": "v6",
       "name": "V6",
       "status": "planned",
       "summary": "Diary-Mode (zeitlich verteilte In-Situ-Aufnahmen, Mobile/PWA) als zusaetzlicher Capture-Modus. Architektur-Hooks dafuer wurden in V4 vorbereitet. Versionsnummer ehemals V5 (vor 2026-04-23 Re-Numerierung).",
-      "order": 10
+      "order": 11
     },
     {
       "id": "v7",
       "name": "V7+",
       "status": "planned",
       "summary": "Queroptionen: Process-Mining-Connector, kollaborative Annotation, Anomalie-Flagging, Prozess-Simulation. Versionsnummer ehemals V6+ (vor 2026-04-23 Re-Numerierung).",
-      "order": 11
+      "order": 12
     }
   ]
 }

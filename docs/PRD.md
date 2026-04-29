@@ -695,22 +695,230 @@ Pflicht-Gates fuer V4.1-Implementation:
 
 ---
 
-## V4.2 — Self-Service-Cockpit ausgebaut
+## V4.2 — Tenant Self-Service Onboarding (Wizard + Reminders + In-App-Hilfe)
 
 ### Problem Statement (V4.2)
-V4 liefert ein minimales Status-Cockpit ("wo stehen wir"). Wenn der Kunde tiefer einsteigen will, braucht er den Berater — V4 ist kein Self-Service-Werkzeug, sondern nur ein Status-Display. V4.2 macht es zum echten Self-Service-Cockpit.
+V4 liefert ein minimales Status-Cockpit ("wo stehen wir") und V4.1 liefert Handbuch-Reader + Berater-Review. Was bleibt: jeder neue Tenant braucht heute eine Berater-Einfuehrung, weil
+
+1. **Erste-Login-Erlebnis ist leer.** Ein neu eingeladener `tenant_admin` landet auf `/dashboard` und sieht ein Cockpit ohne Daten — kein klarer Start-Pfad. Ohne Berater erklaert ihm niemand, dass er erst eine Capture-Session starten und dann Mitarbeiter einladen muss.
+2. **Mitarbeiter werden vergessen.** Wenn ein `tenant_admin` Mitarbeiter eingeladen hat, gibt es heute keinen Reminder-Mechanismus. Mitarbeiter, die ihre Aufgabe nicht starten, bleiben unsichtbar bis der Berater nachfragt.
+3. **In-App-Hilfe fehlt.** Jede Hauptansicht (Dashboard, Capture, Bridge-Review, Handbuch) hat genug Komplexitaet, dass ein Erst-User Tooltips oder eine Inline-Erklaerung braucht. Ohne Berater muss der User raten oder googeln — beides bricht das Self-Service-Versprechen.
+
+V4.2 schliesst diese drei Reibungspunkte fuer den GF-Pfad. Der Berater wird erst beim Block-Review wieder gebraucht — vorher laeuft alles automatisch.
 
 ### Goal (V4.2)
-Ein neuer tenant_admin kann sich anmelden und ohne Berater-Hilfe das gesamte Onboarding starten und durchziehen. Mitarbeiter-Erinnerungen passieren automatisch. Hilfe ist im Tool, nicht im Kopf des Beraters.
+Ein neuer `tenant_admin` kann sich nach Invitation einloggen, einen Wizard durchlaufen, das Onboarding selbstaendig starten, Mitarbeiter einladen und das Tool eigenstaendig bedienen. Mitarbeiter-Reminders gehen automatisch raus. In-App-Hilfe ist pro Hauptansicht erreichbar. Der Berater wird in der ersten Onboarding-Phase nicht mehr gebraucht.
 
-### V4.2 In Scope (Skizze, Detail kommt mit eigenem /requirements V4.2)
-- Tenant-Onboarding-Wizard (Erste-Schritte, Begruessung, Template-Auswahl, erste Mitarbeiter einladen)
-- In-App-Hilfe pro Hauptansicht (Sidebar-Help, Tooltips)
-- Capture-Reminders (E-Mail an Mitarbeiter, In-App-Badge fuer GF)
-- Status-Dashboards mit naechsten empfohlenen Schritten
-- Eventuell: Tenant-Self-Service-Signup (offene Frage, evtl. spaeter)
+### V4.2 In Scope
 
-### V4.2 Out of Scope (vorlaeufig)
-- AI-gestuetzte Hilfe (Chat-Bot im Tool) → spaeter
-- Mehrsprachige Hilfe → spaeter (Tenant-Language gilt)
-- Externe Onboarding-Videos / Tutorials-Hosting → spaeter
+| ID | Feature | Backlog | Zweck |
+|----|---------|---------|-------|
+| FEAT-031 | Tenant-Onboarding-Wizard | BL-048 | Mehrstufiger Erst-Login-Wizard fuer `tenant_admin`: Begruessung → Template-Auswahl → erste Mitarbeiter einladen → "Was nun"-Abschluss. State persistent pro Tenant, Skip jederzeit moeglich. |
+| FEAT-032 | Capture-Reminders | BL-060 (NEU) | Automatische E-Mail-Reminder an Mitarbeiter mit pendentem Capture-Task (Stufe 1 nach 3 Tagen, Stufe 2 nach 7 Tagen). In-App-Badge fuer `tenant_admin` ("X Mitarbeiter ohne Aktivitaet"). Cron-getrieben, idempotent, Opt-Out pro Mitarbeiter. |
+| FEAT-033 | In-App-Hilfe | BL-061 (NEU) | Right-Side Help-Sheet (shadcn `Sheet`) pro Hauptansicht mit kontextuellen Markdown-Inhalten. Tooltips an wichtigen UI-Elementen. Help-Content im Repo unter `/content/help/*.md` (versioniert, Berater-pflegbar via PR). |
+
+### V4.2 Out of Scope (bewusst, V4.3 oder spaeter)
+
+- **Reader-Polish (BL-051..058) und Convention-Migration (BL-059)** → V4.3 als Maintenance-Sammelrelease. Begruendung: anderer Scope (UX-Polish + Hygiene), andere Risiko-Klasse (Regression statt Feature-Acceptance).
+- **AI-gestuetzte Hilfe (Chatbot im Tool)** → spaeter (V5+). V4.2 bleibt regelbasiert.
+- **Mehrsprachige Hilfe** → spaeter (Tenant-Language gilt; Help-Content ist DE-only in V4.2).
+- **Externe Onboarding-Videos / Tutorials-Hosting** → spaeter. Markdown-Hilfe reicht fuer V4.2.
+- **Tenant-Self-Service-Signup** (Public-Sign-up ohne Berater-Invite) → bewusst nicht in V4.2. Tenants werden weiter durch `strategaize_admin` angelegt. Self-Service-Signup ist ein Geschaeftsmodell-Wechsel, kein Tooling-Item.
+- **Reminder-Eskalation an `tenant_admin` als E-Mail** → V4.2 nutzt In-App-Badge fuer den GF. E-Mail an GF kann V4.3+.
+- **Wizard mit KI-Vorschlaegen** (z.B. "fuer eure Branche koennten diese Mitarbeiter relevant sein") → V5+, wenn Branchen-Datenmodell existiert.
+- **Help-Content-Editor in der UI** → spaeter, wenn Berater-Inhalte staendig wechseln. PR-Workflow reicht fuer V4.2.
+
+### Core Design Decisions (V4.2 — Empfehlung Requirements)
+
+Die folgenden Entscheidungen wurden im /requirements V4.2-Dialog 2026-04-29 als Empfehlung gesetzt. Sie sind in `/architecture` V4.2 zu bestaetigen oder explizit zu kippen.
+
+- **DEC-V4.2-1 — Wizard-Trigger:** Auto-Open beim ersten Login eines `tenant_admin`, der noch keine Capture-Session hat UND `tenant.onboarding_wizard_state` nicht `skipped` oder `completed` ist. `strategaize_admin` sieht den Wizard nie.
+- **DEC-V4.2-2 — Wizard-Schritte (V4.2-Scope):** (1) Begruessung mit Tenant-Name + Berater-Anrede, (2) Template-Auswahl aus aktiven Templates (Default: Exit-Readiness), (3) Erste Mitarbeiter einladen (E-Mail + Anzeigename, 0..N optional), (4) Abschluss "Was nun" mit drei klickbaren Cards (Capture starten, Bridge nutzen, Handbuch generieren). Branche/Firmen-Groesse-Erfassung **nicht** in V4.2 (kein klarer Use-Case in V4.2-Scope).
+- **DEC-V4.2-3 — Wizard-State-Speicherung:** Pro Tenant (nicht pro User) auf neuer Spalte `tenant.onboarding_wizard_state` (`pending|started|skipped|completed`) + `tenant.onboarding_wizard_completed_at`. Multi-Admin-Tenant-Szenario: nur der erste Login-Admin sieht den Wizard.
+- **DEC-V4.2-4 — Reminder-Empfaenger:** Nur Mitarbeiter (`employee`-Rolle) bekommen E-Mail-Reminder. `tenant_admin` selbst bekommt KEINE E-Mails (User explizit: "kein Berater neben Teilnehmer" — gleiches Prinzip: keine Bevormundung des GFs). GF sieht stattdessen In-App-Badge mit Anzahl pendenter Mitarbeiter-Tasks.
+- **DEC-V4.2-5 — Reminder-Schedule:** Stufe 1 nach 3 Werktagen Inaktivitaet (`employee.invitation_accepted_at` + 3d und kein `block_submit`), Stufe 2 nach 7 Werktagen, danach **kein** weiterer Reminder. Idempotent: `reminder_log`-Tabelle verhindert Doppel-Sends.
+- **DEC-V4.2-6 — Reminder-Provider:** Bestehender Supabase-Auth-SMTP nutzen (Magic-Link-Pattern). Kein neuer E-Mail-Provider in V4.2. Wenn das ueber Volume nicht reicht, V4.3+ Migration auf dedizierten Provider (Resend, SES).
+- **DEC-V4.2-7 — Help-Content-Format:** Markdown-Files unter `/content/help/<page-key>.md`, geladen zur Build-Zeit (Static-Imports). Versionierbar via Git, Berater-pflegbar via PR. **Kein** DB-Schema fuer Help-Content in V4.2.
+- **DEC-V4.2-8 — Help-UI-Pattern:** Right-Side `Sheet` (shadcn/ui) mit `?`-Trigger im Header pro Page. Tooltips via shadcn `Tooltip` an spezifischen UI-Elementen (Bridge-Trigger, Reviews-Approve, Snapshot-Generate). Kein Onboarding-Tour-Overlay (zu invasiv).
+- **DEC-V4.2-9 — Cron-Infrastruktur:** Bestehender Coolify-Cron-Container nutzen (analog Pattern aus Business System V4.x). Reminder-Job laeuft 1×/Tag um 09:00 Europe/Berlin. Keine eigene Worker-Container in V4.2.
+
+### Success Criteria (V4.2)
+
+V4.2 ist erfolgreich, wenn ALLE folgenden Kriterien erfuellt sind:
+
+**SC-V4.2-1 — Wizard zeigt sich nur fuer Erst-Login**
+Ein neu eingeladener `tenant_admin` von Tenant X wird beim ersten Login automatisch in den Wizard gefuehrt (`onboarding_wizard_state` initial `pending`). Skip jederzeit moeglich, danach `state='skipped'` und Wizard erscheint nie wieder fuer diesen Tenant.
+
+**SC-V4.2-2 — Wizard ist 4 Schritte, jederzeit unterbrechbar**
+Der Wizard hat genau 4 Schritte (Begruessung, Template-Auswahl, Mitarbeiter-Invite, Was-nun). Jeder Schritt hat einen "Spaeter"-Button und einen "Weiter"-Button. State wird nach jedem Schritt persistiert (Step-Position auf `tenant.onboarding_wizard_step`). Browser-Reload fuehrt den User zum letzten persistierten Schritt zurueck.
+
+**SC-V4.2-3 — Mitarbeiter-Invite aus Wizard heraus funktioniert**
+In Schritt 3 kann der User 0..N Mitarbeiter (E-Mail + Name) anlegen. Submit triggert die bestehende `inviteEmployees`-Server-Action (kein neues Backend). Nach Submit zeigt der Wizard "X Mitarbeiter eingeladen" und navigiert zu Schritt 4.
+
+**SC-V4.2-4 — Capture-Reminders gehen automatisch raus**
+Cron-Job `capture-reminder-job` laeuft 1×/Tag um 09:00 Europe/Berlin. Mitarbeiter mit `invitation_accepted_at + 3d` ohne `block_submit` bekommen Stufe-1-Reminder. Mitarbeiter mit `invitation_accepted_at + 7d` ohne `block_submit` bekommen Stufe-2-Reminder. `reminder_log`-Tabelle verhindert Doppel-Sends.
+
+**SC-V4.2-5 — Reminder-Opt-Out wirkt**
+Ein Mitarbeiter setzt `user_settings.reminders_opt_out=true` (oder unsubscribe-Link in der Mail). Folgende Cron-Runs ueberspringen diesen Mitarbeiter — kein weiterer Reminder geht raus.
+
+**SC-V4.2-6 — In-App-Badge zeigt pendente Mitarbeiter**
+Der `tenant_admin` sieht im Cockpit (`/dashboard`) eine neue Card "Mitarbeiter ohne Aktivitaet: X" — gezaehlt: Mitarbeiter mit `invitation_accepted_at` aber ohne `block_submit`. Klick fuehrt zur Mitarbeiter-Liste mit Filter "ohne Aktivitaet".
+
+**SC-V4.2-7 — Help-Sheet ist auf 5 Hauptpages erreichbar**
+`?`-Icon im Header oeffnet Right-Side-Sheet mit Markdown-Inhalt. Pages mit Help-Sheet: `/dashboard`, `/capture/[sessionId]`, `/admin/bridge`, `/admin/reviews`, `/dashboard/handbook[/...]`. Help-Content wird aus `/content/help/<page-key>.md` geladen.
+
+**SC-V4.2-8 — Tooltips an kritischen UI-Elementen**
+Mindestens 5 spezifische UI-Elemente bekommen einen Tooltip mit kurzem Erklaerungstext: Bridge-Trigger-Button, Approve-Block-Button im Review, Generate-Snapshot-Button, Wizard-"Spaeter"-Button, "Mitarbeiter ohne Aktivitaet"-Badge.
+
+**SC-V4.2-9 — Browser-Smoke-Test mit Nicht-Tech-User**
+Ein neuer Tenant wird angelegt. Eine Person, die das Tool nie gesehen hat, wird als `tenant_admin` eingeladen. Ohne Berater-Hilfe + ohne Mausschubsen schafft die Person: (a) Wizard durchlaufen, (b) Mitarbeiter einladen, (c) erste Capture-Session starten, (d) Help-Sheet mindestens einmal oeffnen. Wenn diese Person scheitert, wird die UI angepasst.
+
+**SC-V4.2-10 — Keine V4 / V4.1-Regression**
+Bestehende Workflows funktionieren weiter: Bridge-Engine, Mitarbeiter-Capture, Handbuch-Trigger, Reader, Berater-Review. Wizard ueberlagert das nicht. RLS-Test-Matrix bleibt 100% PASS.
+
+**SC-V4.2-11 — RLS-Test-Matrix bleibt gruen**
+4-Rollen-RLS-Matrix wird um `reminder_log` und `user_settings` erweitert (mind. 8 zusaetzliche Test-Faelle: 4 Rollen × 2 neue Tabellen).
+
+**SC-V4.2-12 — Reminder-Cost-Audit**
+Reminder-Cron loggt pro Run: Anzahl Stufe-1-Reminders, Anzahl Stufe-2-Reminders, Anzahl Skips (Opt-Out, bereits-gesendet). Audit-Log ist im `error_log` (oder neuer `cron_log`-Tabelle) sichtbar.
+
+### Constraints (V4.2)
+
+Alle V4 + V4.1 Constraints gelten weiter, zusaetzlich:
+
+- **E-Mail-Provider Limit:** Supabase-Auth-SMTP hat begrenztes Volume. Cron-Job darf bei `> 50 Reminders/Tag` einen Warning-Log schreiben, damit V4.3+ Migration auf dedizierten Provider getriggert werden kann.
+- **Wizard darf den Login-Flow nicht blockieren:** Wenn der Wizard in einem unerwarteten Zustand crasht, faellt der User auf das Standard-Cockpit zurueck (Skip wird automatisch gesetzt). Niemand wird durch einen Wizard-Bug aus dem Tool ausgesperrt.
+- **Help-Content-Ladezeit:** Markdown wird statisch zur Build-Zeit gebundelt (max 5 Files × max 5KB = 25KB Bundle-Overhead). Kein Runtime-Fetch fuer Help-Content.
+- **Tooltip-Performance:** shadcn `Tooltip` nutzt Radix-Underlying. Keine Custom-Position-Berechnung, keine Animationen ueber CSS-Transition hinaus.
+- **Cron-Idempotenz:** Bei Cron-Doppellauf (z.B. Coolify-Restart waehrend Job-Run) darf kein Mitarbeiter zwei Reminders bekommen. `reminder_log` hat Unique-Constraint `(employee_id, reminder_stage, sent_date)`.
+
+### Risks / Assumptions (V4.2)
+
+#### Risiken
+
+- **R-V4.2-1 — Wizard wird als nervig empfunden:** Der GF moechte ggf. das Tool ohne Wizard kennenlernen. Mitigation: jeder Schritt skipbar, plus "Wizard nicht mehr zeigen"-Toggle in Schritt 4. Wizard erscheint nach Skip nie wieder (DEC-V4.2-1).
+- **R-V4.2-2 — E-Mail-Reminders landen im Spam:** Self-hosted Supabase-Auth-SMTP hat begrenzten Reputations-Score. Mitigation: SPF/DKIM auf Server-Domain pruefen (eigener Maintenance-Sprint), Reminder-Subject-Lines neutral halten (nicht "Achtung!" / "Letzte Chance" — Spam-Trigger).
+- **R-V4.2-3 — Help-Content veraltet schnell:** Markdown-Files driften vom UI-Stand ab. Mitigation: Help-Pages werden nur fuer 5 Haupt-Pages gepflegt. Wenn UI sich aendert, ist Help-Update Pflicht-Item im Slice (Sentry-aehnlicher Lint: kein Merge ohne Help-Update wenn betroffene Page touched).
+- **R-V4.2-4 — Cron-Job vergessen wird in Coolify:** Wenn der Cron-Container nicht laeuft, gehen keine Reminders raus — und niemand merkt es. Mitigation: Cron-Run schreibt in `cron_log` mit Timestamp. Cockpit zeigt "Letzter Reminder-Run: vor X Stunden" als operative Sichtbarkeit.
+- **R-V4.2-5 — Wizard-State-Konflikt bei Multi-Admin-Tenant:** Wenn Tenant X zwei `tenant_admin` hat und beide gleichzeitig zum ersten Mal einloggen, wer sieht den Wizard? Mitigation: DB-Lock auf `tenant.onboarding_wizard_state` mit `pending → started` (Version-Increment). Zweiter Login sieht direkt das Cockpit.
+
+#### Annahmen
+
+- **A-V4.2-1 — Coolify-Cron-Container ist verfuegbar:** Pattern aus Business System V4.x ist uebertragbar. Wenn nicht, Fallback auf Vercel-Cron oder GitHub-Actions-Cron (aber nicht V4.2-Scope).
+- **A-V4.2-2 — Supabase-Auth-SMTP ist konfiguriert:** Magic-Link-E-Mails funktionieren bereits in V1+. Reminder nutzen die selbe SMTP-Konfiguration, kein neuer Setup-Schritt.
+- **A-V4.2-3 — Markdown-Render aus V4.1 ist wiederverwendbar:** `react-markdown` aus FEAT-028 wird auch in Help-Sheet genutzt. Keine zweite Markdown-Library.
+- **A-V4.2-4 — Bestehende `inviteEmployees`-Server-Action ist Wizard-tauglich:** Wenn nicht, kleine Anpassung waehrend FEAT-031 — kein Architektur-Risiko.
+
+### Open Questions (V4.2)
+
+Die folgenden Fragen werden in `/architecture` V4.2 entschieden:
+
+- **Q-V4.2-A — Wizard-Persistenz-Granularitaet:** Step-genaue Persistenz (User kommt beim Schritt 3 wieder rein) oder nur Pending/Started/Completed-Status (User startet Wizard immer von vorn)? Empfehlung Requirements: Step-genau (DEC-V4.2-3 — User-Convenience-Pflicht). Definitiv in /architecture.
+- **Q-V4.2-B — Reminder-Schedule-Werktage vs. Kalendertage:** Wochenenden sollen vermutlich nicht zaehlen (sonst geht Mo-Reminder fuer Fr-Invitation). Empfehlung Requirements: Werktage (DEC-V4.2-5). Holiday-Calendar nicht in V4.2 (zu komplex). Bestaetigung in /architecture.
+- **Q-V4.2-C — Help-Content-Lokalitaet:** Markdown-Files unter `/content/help/<page-key>.md` (am Repo-Root) oder unter `src/content/help/`? Convention-Frage, wird in /architecture entschieden.
+- **Q-V4.2-D — In-App-Badge-Refresh:** Polling vs. Page-Refresh-only vs. Server-Sent-Events? Empfehlung Requirements: Page-Refresh-only (Cockpit ist nicht Real-Time-Tool). Definitiv in /architecture.
+- **Q-V4.2-E — Cron-Job Containerisierung:** Eigener Cron-Container oder via Supabase pg_cron Extension? Empfehlung Requirements: Coolify-Container (gleicher Pattern wie Business System). Definitiv in /architecture.
+- **Q-V4.2-F — Tooltip-Persistenz-Hint:** Soll ein Tooltip einen "Verstanden, nicht mehr zeigen"-Toggle haben (per User), oder bleibt er immer? Empfehlung Requirements: immer (Tooltips sind kontextuell, nicht Onboarding-Schritte). Definitiv in /frontend.
+- **Q-V4.2-G — `user_settings`-Schema:** Neue eigene Tabelle oder als JSONB-Feld auf `auth.users`? Empfehlung Requirements: eigene Tabelle (RLS-faehig, erweiterbar). Definitiv in /architecture.
+
+### Slice-Skizze (informativ, finaler Schnitt in /slice-planning)
+
+| Slice | Scope | Geschaetzt |
+|-------|-------|-----------|
+| SLC-046 | FEAT-031 Backend — `tenant.onboarding_wizard_*`-Spalten + RLS-Update + `tenant_admin`-erste-Login-Erkennung-RPC | ~3 MTs |
+| SLC-047 | FEAT-031 Frontend — Wizard-Component (4 Schritte) + Step-Persistenz + Skip-Logic + Was-nun-Cards | ~7 MTs |
+| SLC-048 | FEAT-032 Backend — `reminder_log` + `user_settings` Tabellen + RLS + Cron-Job-Skript + SMTP-Integration | ~6 MTs |
+| SLC-049 | FEAT-032 Frontend — In-App-Badge "Mitarbeiter ohne Aktivitaet" + Mitarbeiter-Liste-Filter + Opt-Out-Toggle | ~3 MTs |
+| SLC-050 | FEAT-033 — Help-Content (5 MD-Files) + Help-Sheet-Component + Tooltip-Integration an 5 UI-Elementen | ~5 MTs |
+
+5 Slices, ~24 Micro-Tasks, geschaetzt 5-7 Tage Implementation.
+
+Pflicht-Gates fuer V4.2-Implementation:
+- 4-Rollen-RLS-Matrix erweitert um `reminder_log` und `user_settings` (mind. 8 zusaetzliche Test-Faelle).
+- Browser-Smoke-Test mit Nicht-Tech-User vor V4.2-Release (SC-V4.2-9, R17 aus V4-Pflicht-Gates).
+- Cron-Idempotenz-Test: Doppellauf des Reminder-Jobs darf keine Doppel-Mails ausloesen.
+
+### Delivery Mode (V4.2)
+**SaaS Product** — unveraendert seit V1. Keine Aenderung im Delivery-Mode trotz interner Selbstbedienungs-Erweiterung.
+
+---
+
+## V4.3 — Reader-Polish + Convention-Migration (Maintenance-Sammelrelease)
+
+### Problem Statement (V4.3)
+V4.1 hat in Browser-Smoke + Final-Check 9 kleinere Items aufgedeckt, die nicht V4.1-blockierend waren, aber den Reader und die Code-Hygiene weiter verbessern. Sie als V4.3-Sammelrelease zu buendeln folgt dem V3.1-Pattern (Maintenance-Release nach Feature-Release).
+
+### Goal (V4.3)
+Reader-Erlebnis polieren (UX-Tuning, Mobile-Fix, Worker-Output-Konsistenz) und Next.js 16 Convention-Migration (`middleware`→`proxy`) durchfuehren — alle Items aus V4.1-Browser-Smoke + Final-Check abarbeiten, ohne neue Features einzufuehren.
+
+### V4.3 In Scope
+
+| ID | Item | Backlog | Severity |
+|----|------|---------|----------|
+| V4.3.1 | Reader Active-Section-Scroll-Spy in Sidebar | BL-051 | Medium UX |
+| V4.3.2 | Reader Copy-Permalink-Button pro Section | BL-052 | Low UX |
+| V4.3.3 | Reader Loading-Skeleton waehrend Snapshot-Wechsel | BL-053 | Low UX |
+| V4.3.4 | Reader Cross-Snapshot-Suche und Suche-Historie | BL-054 | Low UX |
+| V4.3.5 | Reader Mobile-Polish: h1-Title-Wrap bei 375px | BL-055 | Low Mobile |
+| V4.3.6 | Worker-Output: TOC-Markdown-Links als In-App-Anchors | BL-056 | Medium Hygiene |
+| V4.3.7 | Umlaut-Konsistenz Templates + Worker + UI | BL-057 | Medium Content |
+| V4.3.8 | Reader Heading-Anchor-Hover am h1-Titel sichtbar | BL-058 | Low UX |
+| V4.3.9 | Next.js 16 `middleware`→`proxy` Convention-Migration | BL-059 | Low Hygiene |
+
+### V4.3 Out of Scope
+- Neue Features. V4.3 ist explizit Maintenance.
+- Cross-Snapshot-Suche mit Backend-Index. BL-054 wird nur als client-side-aufruefbares History-Feature umgesetzt; ein dedizierter Search-Index ist V5+.
+- Re-Generation aller bestehender Snapshots fuer Umlaut-Konsistenz (BL-057). User entscheidet manuell, welche Demos re-generiert werden sollen — kein Auto-Migrate.
+
+### Success Criteria (V4.3)
+
+V4.3 ist erfolgreich, wenn ALLE folgenden Kriterien erfuellt sind:
+
+**SC-V4.3-1 — Alle 9 Items abgearbeitet**
+Jedes Item aus V4.3.1..V4.3.9 ist entweder implementiert oder dokumentiert als "won't-fix" mit Begruendung in KNOWN_ISSUES.md.
+
+**SC-V4.3-2 — Reader UX-Browser-Smoke besser als V4.1**
+Auf 1280×800 Desktop und 375×667 Mobile keine sichtbaren Layout-Brueche. h1-Title bricht max. 2 Zeilen. Active-Section in Sidebar wird beim Scrollen markiert.
+
+**SC-V4.3-3 — Worker-Output enthaelt In-App-Anchor-Links**
+INDEX.md im Snapshot enthaelt `[Title](#section-anchor)` statt `[Title](01_section.md)`. Reader verlinkt direkt, kein components.a-Override mehr noetig (wird zur Vereinfachung entfernt).
+
+**SC-V4.3-4 — Convention-Migration ohne Funktions-Verlust**
+`src/middleware.ts` ist als `src/proxy.ts` umbenannt + Convention-Anpassungen umgesetzt. Build zeigt keine Deprecation-Warning mehr. Auth-Middleware-Tests bleiben 100% PASS.
+
+**SC-V4.3-5 — RLS-Test-Matrix bleibt gruen**
+Keine Schema-Aenderung in V4.3 (additive UI/Hygiene). RLS-Matrix bleibt 100% PASS.
+
+**SC-V4.3-6 — Keine V4.2-Regression**
+V4.2-Funktionalitaet (Wizard, Reminders, Help) bleibt stabil.
+
+### Constraints (V4.3)
+
+- Keine Schema-Aenderungen.
+- Kein neuer Cron-Job, kein neuer Container.
+- Maintenance-Release-Disziplin: keine Feature-Slices, keine Architektur-Aenderungen.
+- Re-Generation von Demo-Snapshots fuer Umlaut-Konsistenz nur auf User-Trigger, nicht automatisch.
+
+### Risks / Assumptions (V4.3)
+
+- **R-V4.3-1 — Convention-Migration bricht Auth-Flow:** Next.js 16 `middleware`→`proxy`-API-Aenderungen sind nicht trivial. Mitigation: Migration in eigenem Slice mit dedizierten Tests, Rollback ist 1-Datei-Rename.
+- **R-V4.3-2 — Worker-Output-Aenderung bricht alte Reader:** Wenn TOC-Format aendert, muessen alte Snapshots ggf. re-rendered werden. Mitigation: Reader behaelt components.a-Override fuer alte Snapshots, neue Snapshots brauchen ihn nicht.
+
+### Open Questions (V4.3)
+
+- **Q-V4.3-A — V4.3 als ein Slice oder mehrere?** Empfehlung: 2-3 Slices (1× Reader-UX-Bundle, 1× Worker+Templates-Bundle, 1× Convention-Migration). Definitiv in /slice-planning.
+- **Q-V4.3-B — Search-History-Persistenz:** localStorage vs. user_settings? Empfehlung: localStorage (V4.3-Maintenance, kein DB-Round-Trip).
+
+### Slice-Skizze (informativ, finaler Schnitt in /slice-planning)
+
+| Slice | Scope | Geschaetzt |
+|-------|-------|-----------|
+| SLC-051 | Reader-UX-Bundle: Scroll-Spy + Copy-Permalink + Loading-Skeleton + Mobile-h1 + Heading-Anchor-Hover (BL-051..053, BL-055, BL-058) | ~5 MTs |
+| SLC-052 | Worker+Templates-Bundle: Anchor-Links + Umlaut-Konsistenz (BL-056, BL-057) | ~4 MTs |
+| SLC-053 | Convention-Migration `middleware`→`proxy` (BL-059) | ~2 MTs |
+| SLC-054 | Cross-Snapshot-Suche client-side + Search-History localStorage (BL-054) | ~3 MTs |
+
+4 Slices, ~14 Micro-Tasks, geschaetzt 2-3 Tage Implementation.
+
+### Delivery Mode (V4.3)
+**SaaS Product** — Maintenance-Release-Cadence wie V3.1.

@@ -9,14 +9,15 @@
 Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdichtung. Ermoeglicht mehrere Capture-Modi (Fragebogen, Meeting, Voice, etc.) und Template-basierte Produktvarianten (z.B. Exit-Readiness, Immobilien-Onboarding). Ab V4: Zwei-Ebenen-Verschmelzung (GF-Blueprint + Mitarbeiter-Capture + Unternehmerhandbuch-Output).
 
 ## Current State
-- High-Level State: released
-- Current Focus: **V4.1 released 2026-04-29 als REL-009 (Deploy-Commit `ec311a7`).** Coolify-Redeploy durch, HTTP-Sanity-Check 307 Login-Redirect TTFB 102ms. Alle 5 Slices (SLC-041..045) und 3 Features (FEAT-028..030) live in Production. MIG-028 bereits seit 2026-04-28 deployed. Browser-Smoke 17/17 user-bestaetigt 2026-04-29 ueber 3 Iter-Cycles. Pending: /post-launch in 1-2 Tagen (eigene Session). **Naechste Aktion (in 1-2 Tagen): /post-launch V4.1 — Live-Verhalten beobachten (Reader-Last, Berater-Workflow-Throughput, Worker-Pre-Filter-Stabilitaet).** Danach: /requirements V4.2 (Tenant Self-Service Onboarding-Wizard + 8 Reader-Polish-Items + BL-059 Next.js-middleware-Migration).
-- Current Phase: V4.1 deployed. Pending: /post-launch V4.1 (1-2 Tage Live-Beobachtung) → /requirements V4.2.
+- High-Level State: requirements
+- Current Focus: **V4.2 Requirements done 2026-04-29.** Tenant Self-Service Onboarding (Wizard + Reminders + In-App-Hilfe) als 3 Features (FEAT-031..033) ausgearbeitet, 9 DECs (DEC-V4.2-1..9) als Empfehlung gesetzt, 7 offene Architektur-Fragen (Q-V4.2-A..G). Split-Entscheidung getroffen: V4.2 = nur Wizard-Sammelpaket (BL-048 + neue BL-060 + BL-061). V4.3 = Maintenance-Sammelrelease (BL-051..059 re-versioniert von V4.2 auf V4.3, 9 Items: Reader-UX-Polish + Worker-Output-Hygiene + Next.js 16 middleware->proxy Convention-Migration). Skizze V4.2: 5 Slices SLC-046..050, ~24 MTs, 5-7 Tage. **Naechste Aktion: /architecture V4.2 — 7 Open Questions klaeren (Q-V4.2-A..G), Schema-Skizze fuer tenant.onboarding_wizard_*, reminder_log, user_settings, Cron-Job-Architektur, Help-Content-Lokalitaet.** /post-launch V4.1 bleibt Pflicht-Folgeschritt (1-2 Tage Live-Beobachtung), wurde aber per User-Entscheidung verschoben — kann nach /architecture V4.2 oder vor /backend V4.2 nachgeholt werden.
+- Current Phase: V4.2 Requirements done. Naechste Phase: /architecture V4.2.
 
 ## Immediate Next Steps
-1. **/post-launch V4.1** — 1-2 Tage nach Deploy (eigene Session, nicht jetzt). Live-Verhalten beobachten: Reader-Last, Berater-Workflow-Throughput, Worker-Pre-Filter-Stabilitaet, Cost-Audit (sollte 0 sein, V4.1 fuegt keine neuen Bedrock-Calls hinzu).
-2. **/requirements V4.2** — nach /post-launch. V4.2-Scope-Skizze: BL-048 Tenant Self-Service Onboarding-Wizard (Haupt-Feature) + BL-051..058 Reader/Worker-Polish (8 Items aus V4.1-Browser-Smoke) + BL-059 Next.js 16 `middleware`->`proxy`-Migration. Eventuell Split V4.2 (Wizard) + V4.3 (Polish-Sammelrelease).
-3. **V4.2-Backlog-Stand:** 10 offene Items (BL-048 Tenant Self-Service [high], BL-051..058 Reader-Polish [low/medium], BL-059 Next-Convention-Migration [low]).
+1. **/architecture V4.2** — Naechste Aktion. 7 Open Questions klaeren (Q-V4.2-A..G), Schema-Designs fuer 3 neue Tabellen-/Spaltenfamilien (`tenant.onboarding_wizard_*`, `reminder_log`, `user_settings`), Cron-Job-Containerisierung-Entscheidung, Help-Content-Lokalitaet, react-markdown-Wiederverwendung. Output: DEC-V4.2-1..9 finalisieren oder kippen, MIG-Skizze fuer V4.2-Migrationen, /architecture-Report.
+2. **/post-launch V4.1** — Verschoben per User-Entscheidung. Pflicht-Folgeschritt bleibt: 1-2 Tage Live-Beobachtung der V4.1-Production (Reader-Last, Berater-Workflow-Throughput, Worker-Pre-Filter-Stabilitaet, Cost-Audit=0). Kann nach /architecture V4.2 oder vor /backend SLC-046 eingeschoben werden.
+3. **V4.2-Backlog-Stand:** 3 offene Items (BL-048 Tenant-Onboarding-Wizard [high, in_progress], BL-060 Capture-Reminders [high, in_progress], BL-061 In-App-Hilfe [medium, in_progress]).
+4. **V4.3-Backlog-Stand (Maintenance-Sammelrelease):** 9 offene Items (BL-051..059, alle re-versioniert von V4.2 auf V4.3 in dieser Session). Detail-Requirements fuer V4.3 optional, /architecture V4.3 kann uebersprungen werden wenn Scope klar bleibt.
 
 ## Active Scope
 **V4 — Zwei-Ebenen-Verschmelzung, 6 Features Code-done, 8 Slices Code-done:**

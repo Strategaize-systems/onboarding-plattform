@@ -472,13 +472,33 @@
     },
     {
       "id": "BL-048",
-      "title": "Tenant Self-Service Onboarding (Wizard + Reminders + Hilfe)",
+      "title": "Tenant-Onboarding-Wizard (FEAT-031)",
       "type": "feature",
       "priority": "high",
-      "status": "open",
+      "status": "in_progress",
       "version": "V4.2",
-      "description": "Detail-Requirements werden mit eigenem /requirements V4.2 erstellt. Scope-Skizze: Tenant-Onboarding-Wizard (Begruessung, Template-Wahl, erste Mitarbeiter), In-App-Hilfe pro Hauptansicht (Sidebar-Help, Tooltips), Capture-Reminders (E-Mail an Mitarbeiter, In-App-Badge), Status-Dashboards mit naechsten Schritten.",
+      "description": "Requirements done 2026-04-29 als FEAT-031. 4-Schritte-Wizard fuer tenant_admin Erst-Login: Begruessung -> Template-Auswahl -> erste Mitarbeiter einladen -> Was-nun-Cards. Step-Persistenz auf tenant.onboarding_wizard_state/_step/_completed_at. Skip-Mechanismen pro Schritt + globaler Skip. Multi-Admin-Lock via DB-Row-Lock. strategaize_admin sieht Wizard nie. 9 ACs, 3 DECs. Naechster Schritt: /architecture V4.2.",
       "createdAt": "2026-04-23"
+    },
+    {
+      "id": "BL-060",
+      "title": "Capture-Reminders (FEAT-032)",
+      "type": "feature",
+      "priority": "high",
+      "status": "in_progress",
+      "version": "V4.2",
+      "description": "Requirements done 2026-04-29 als FEAT-032. Automatische E-Mail-Reminder fuer Mitarbeiter (employee-Rolle) mit pendentem Capture-Task: Stufe 1 nach 3 Werktagen, Stufe 2 nach 7 Werktagen Inaktivitaet. Bestehender Supabase-Auth-SMTP. Coolify-Cron 09:00 Europe/Berlin. Idempotenz via reminder_log-Unique-Constraint, Opt-Out via user_settings + Unsubscribe-Link. tenant_admin bekommt KEINE E-Mail (DEC-V4.2-4), stattdessen In-App-Badge auf /dashboard. 10 ACs, 4 DECs. Naechster Schritt: /architecture V4.2.",
+      "createdAt": "2026-04-29"
+    },
+    {
+      "id": "BL-061",
+      "title": "In-App-Hilfe (FEAT-033)",
+      "type": "feature",
+      "priority": "medium",
+      "status": "in_progress",
+      "version": "V4.2",
+      "description": "Requirements done 2026-04-29 als FEAT-033. Right-Side Help-Sheet (shadcn/ui) mit Markdown-Inhalten pro Hauptansicht (5 Pages: /dashboard, /capture, /admin/bridge, /admin/reviews, /dashboard/handbook). Markdown-Files unter /content/help/<page-key>.md, statisch gebundelt. Tooltips an mind. 5 UI-Elementen. Wiederverwendung react-markdown aus FEAT-028. 10 ACs, 2 DECs. Naechster Schritt: /architecture V4.2.",
+      "createdAt": "2026-04-29"
     },
     {
       "id": "BL-049",
@@ -506,7 +526,7 @@
       "type": "improvement",
       "priority": "medium",
       "status": "open",
-      "version": "V4.2",
+      "version": "V4.3",
       "description": "Wenn der User durch das Handbuch scrollt, soll die linke Sidebar-Section-Liste die aktuell sichtbare Section automatisch markieren (Scroll-Spy via IntersectionObserver). Aufwand klein, UX-Wert hoch. Aus SLC-045 Open Points dokumentiert (Scope-Disziplin: war kein Pflicht-Item).",
       "createdAt": "2026-04-29"
     },
@@ -516,7 +536,7 @@
       "type": "improvement",
       "priority": "low",
       "status": "open",
-      "version": "V4.2",
+      "version": "V4.3",
       "description": "Pro Section ein Copy-Button im Section-Hero, der den Permalink (URL inkl. Section-Anchor-Hash) in die Zwischenablage kopiert. Aktuell muss der User das Heading-Anchor-Hover-Symbol nutzen (SLC-045 MT-3). Aufwand klein, hilft beim Teilen einzelner Section-Links.",
       "createdAt": "2026-04-29"
     },
@@ -526,7 +546,7 @@
       "type": "improvement",
       "priority": "low",
       "status": "open",
-      "version": "V4.2",
+      "version": "V4.3",
       "description": "Beim Klick auf einen Snapshot in der Versionen-Liste laedt die naechste Page neu. Waehrend dieser Zeit ist die Reader-Flaeche leer. Skeleton-Loader wuerde Wartezeit ueberbruecken. Server-Component re-renders sind schnell genug fuer V4.1, aber bei grossen Snapshots (>300KB) sichtbar.",
       "createdAt": "2026-04-29"
     },
@@ -536,7 +556,7 @@
       "type": "improvement",
       "priority": "low",
       "status": "open",
-      "version": "V4.2",
+      "version": "V4.3",
       "description": "SLC-045 hat client-side Single-Snapshot-Suche umgesetzt. Cross-Snapshot-Suche (alle Snapshots eines Tenants) braucht serverseitige Pre-Indexierung oder einen Search-Index. Search-History (letzte 5 Queries pro User) ist optional. Beides war bewusst out-of-scope (Slice-Spec).",
       "createdAt": "2026-04-29"
     },
@@ -546,7 +566,7 @@
       "type": "improvement",
       "priority": "low",
       "status": "open",
-      "version": "V4.2",
+      "version": "V4.3",
       "description": "Auf 375px Mobile-Viewport bricht der h1-Titel im Reader-Header in 4 Zeilen weil prose-h1:text-3xl bei dieser Container-Breite zu gross ist. Funktional kein Problem (kein Overflow, Sidebar collapsed sauber, alles erreichbar), nur optisch suboptimal. Fix: prose-h1:text-2xl sm:prose-h1:text-3xl als Mobile-Override im PROSE_CLASSES-Block. Aufgedeckt im V4.1 Browser-Smoke 2026-04-29.",
       "createdAt": "2026-04-29"
     },
@@ -556,7 +576,7 @@
       "type": "improvement",
       "priority": "medium",
       "status": "open",
-      "version": "V4.2",
+      "version": "V4.3",
       "description": "Handbuch-Worker schreibt im INDEX.md die TOC-Links als [Title](01_section.md). Im Reader fuehrt das zu 404 weil die .md-URL relativ aufgeloest wird. SLC-045 iter-2 hat das im Render-Path via components.a-Override gefixt (commit 6188a23) — funktioniert, aber die ZIP-Download-Variante leidet darunter nicht. Sauberer: Worker schreibt direkt In-App-Anchor-Links und der ZIP-Download-Pfad nutzt Post-Processing.",
       "createdAt": "2026-04-29"
     },
@@ -566,7 +586,7 @@
       "type": "improvement",
       "priority": "medium",
       "status": "open",
-      "version": "V4.2",
+      "version": "V4.3",
       "description": "Templates-Schema (Section-Titel) und Worker-Output verwenden ae/oe/ue statt richtigen Umlauten. Markdown kann Umlaute problemlos. Stoert die User-Sicht im Reader. Fix: Templates konsistent umstellen + Worker-Prompts angleichen + UI-Strings konsistent. Optional Re-Generation der Demo-Snapshots damit alte ZIPs auch korrekt sind. User-Frage im V4.1 Browser-Smoke 2026-04-29.",
       "createdAt": "2026-04-29"
     },
@@ -576,7 +596,7 @@
       "type": "improvement",
       "priority": "low",
       "status": "open",
-      "version": "V4.2",
+      "version": "V4.3",
       "description": "Heading-Anchor-Hover-Indicator (#-Symbol bei Hover) erscheint korrekt bei h2/h3-Headings, aber nicht zuverlaessig am h1-Titel des Reader-Inhaltsverzeichnisses (vermutlich CSS-Specificity-Issue mit prose-h1:mt-0 oder Hit-Bereich zu klein). Funktional nicht-blockierend. Aufgedeckt im V4.1 Browser-Smoke 2026-04-29 (Punkt 5a).",
       "createdAt": "2026-04-29"
     },
@@ -586,7 +606,7 @@
       "type": "improvement",
       "priority": "low",
       "status": "open",
-      "version": "V4.2",
+      "version": "V4.3",
       "description": "Next.js 16.2.4 deprecated die `middleware`-File-Convention zugunsten `proxy`. Build zeigt `The middleware file convention is deprecated`. Nicht funktional blockierend, aber sollte vor Next 17-Bump migriert werden. Migration: `src/middleware.ts` -> `src/proxy.ts`, Convention-Anpassungen in API-Signatur. Aufgedeckt in /final-check V4.1 (RPT-110) und /go-live V4.1 (RPT-111).",
       "createdAt": "2026-04-29"
     }
