@@ -61,7 +61,7 @@ export function PendingReviewsTable({
               )}
               <th className="px-4 py-3 text-left">Block</th>
               <th className="px-4 py-3 text-right">KUs</th>
-              <th className="px-4 py-3 text-left">Letzter Submit</th>
+              <th className="px-4 py-3 text-left">Aktualisiert</th>
               <th className="px-4 py-3 text-left">Erstellt</th>
               <th className="px-4 py-3 text-right">Aktion</th>
             </tr>
@@ -89,7 +89,7 @@ export function PendingReviewsTable({
                     {row.knowledgeUnitCount}
                   </td>
                   <td className="px-4 py-3 text-slate-600">
-                    {formatDate(row.lastSubmittedAt)}
+                    {formatDate(row.sessionUpdatedAt)}
                   </td>
                   <td className="px-4 py-3 text-slate-500">
                     {formatDate(row.createdAt)}

@@ -21,7 +21,13 @@ export interface PendingReviewRow {
   captureSessionId: string;
   blockKey: string;
   createdAt: string;
-  lastSubmittedAt: string | null;
+  /**
+   * `capture_session.updated_at` der zugehoerigen Session. Best-fit fuer
+   * "letzter Submit-Zeitpunkt" — die Tabelle hat keine dedizierte
+   * `last_submitted_at`-Spalte; `updated_at` wird bei jedem Block-Submit
+   * via Trigger hochgesetzt.
+   */
+  sessionUpdatedAt: string | null;
   knowledgeUnitCount: number;
 }
 
@@ -33,7 +39,7 @@ export async function listPendingReviews(
   let reviewQuery = adminClient
     .from("block_review")
     .select(
-      "tenant_id, capture_session_id, block_key, created_at, tenants:tenants!inner(name), capture_session:capture_session(last_submitted_at)",
+      "tenant_id, capture_session_id, block_key, created_at, tenants:tenants!inner(name), capture_session:capture_session(updated_at)",
     )
     .eq("status", "pending")
     .order("created_at", { ascending: true });
@@ -82,9 +88,8 @@ export async function listPendingReviews(
   const rows: PendingReviewRow[] = (reviewRows ?? []).map((r) => {
     const tenantName =
       (r.tenants as { name?: string } | null)?.name ?? "Unbekannter Tenant";
-    const lastSubmittedAt =
-      (r.capture_session as { last_submitted_at?: string } | null)
-        ?.last_submitted_at ?? null;
+    const sessionUpdatedAt =
+      (r.capture_session as { updated_at?: string } | null)?.updated_at ?? null;
     const key = `${r.tenant_id}|${r.capture_session_id}|${r.block_key}`;
 
     return {
@@ -93,7 +98,7 @@ export async function listPendingReviews(
       captureSessionId: r.capture_session_id as string,
       blockKey: r.block_key as string,
       createdAt: r.created_at as string,
-      lastSubmittedAt,
+      sessionUpdatedAt,
       knowledgeUnitCount: kuCountByKey.get(key) ?? 0,
     };
   });
