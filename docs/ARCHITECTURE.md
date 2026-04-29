@@ -2972,3 +2972,485 @@ Pflicht-Gates fuer V4.1-Implementation:
 - Pflicht-Browser-Smoke nach SLC-044 (Reader-UX-Test mit Nicht-Tech-User-Persona, analog SC-V4-5).
 - 4-Rollen-RLS-Matrix erweitert um `block_review` (mind. 8 zusaetzliche Test-Faelle, Pflicht in /qa SLC-041 + SLC-042).
 - Worker-Backwards-Compat-Test in /qa SLC-041 (alte V4-Snapshots koennen ohne `block_review`-Eintraege re-generiert werden).
+
+---
+
+## V4.2 Architecture Addendum — Tenant Self-Service Onboarding (Wizard + Reminders + In-App-Hilfe)
+
+### Architecture summary
+
+V4.2 erweitert die V4 + V4.1 Foundation um drei orthogonale Self-Service-Bausteine, ohne neue Container, neue Worker-Job-Typen, neue Storage-Buckets oder neue Bedrock-Calls einzufuehren:
+
+1. **Drei neue Datenmodell-Erweiterungen**: 3 Spalten auf bestehender `tenants`-Tabelle fuer Wizard-State, neue `reminder_log`-Tabelle fuer Reminder-Idempotenz + Audit, neue `user_settings`-Tabelle fuer Per-User-Praeferenzen + Unsubscribe-Token.
+2. **Ein neuer Cron-Endpoint** unter `/api/cron/capture-reminders` (POST mit `x-cron-secret`-Header). Coolify Scheduled Task ruft den Endpoint taeglich um 09:00 Europe/Berlin via `node -e fetch()`-Pattern (etabliert im Business System V4.x). Cron schreibt Audit-Log nach `error_log` (severity='info').
+3. **Drei neue Frontend-Surfaces**: 4-Schritte-Wizard-Modal (shadcn `Dialog`), Right-Side Help-Sheet (shadcn `Sheet` mit Markdown-Render via `react-markdown` aus FEAT-028), Cockpit-Card "Mitarbeiter ohne Aktivitaet" (regelbasierte Aggregation, Page-Refresh-only).
+
+Help-Content lebt unter `src/content/help/<page-key>.md` (5 Files, statisch ueber `fs.readFileSync` zur Server-Render-Zeit geladen). Tooltips an mind. 5 UI-Elementen ueber bestehendes shadcn `Tooltip` (Radix-Underlying).
+
+Die V4.2-Architektur ist explizit **boring by design** — alles laeuft auf bestehender Infrastruktur, alle Patterns sind im System bereits validiert (Cron-Pattern aus Business System, Markdown-Render aus V4.1 Reader, RLS-Matrix-Erweiterung wie SLC-041).
+
+### Main components
+
+| Komponente | Typ | Status | Pfad |
+|---|---|---|---|
+| `tenants.onboarding_wizard_*` Spalten | Backend | NEU | `sql/migrations/080_v42_self_service.sql` (MIG-029) |
+| `reminder_log` Tabelle | Backend | NEU | dito |
+| `user_settings` Tabelle | Backend | NEU | dito |
+| Cron-Endpoint `/api/cron/capture-reminders` | Backend | NEU | `src/app/api/cron/capture-reminders/route.ts` |
+| `sendReminder()` Helper | Backend | NEU | `src/lib/reminders/send-reminder.ts` |
+| `workdaysSince()` Helper | Backend | NEU | `src/lib/reminders/workdays.ts` |
+| Unsubscribe-Endpoint `/api/unsubscribe/[token]` | Backend | NEU | `src/app/api/unsubscribe/[token]/route.ts` |
+| `getInactiveEmployeesCount()` | Backend | NEU | `src/lib/dashboard/inactive-employees.ts` |
+| Wizard-Server-Actions (setStarted/setStep/setSkipped/setCompleted) | Backend | NEU | `src/app/dashboard/wizard-actions.ts` |
+| Wizard-Modal (4 Steps) | Frontend | NEU | `src/components/onboarding-wizard/Wizard.tsx` + 4 Step-Komponenten |
+| Wizard-Auto-Trigger im Layout | Frontend | GEAENDERT | `src/app/dashboard/layout.tsx` |
+| Help-Sheet | Frontend | NEU | `src/components/help/HelpSheet.tsx` |
+| Help-Trigger-Button (`?`-Icon im Header) | Frontend | NEU | `src/components/help/HelpTrigger.tsx` |
+| `loadHelpMarkdown(pageKey)` Helper | Backend (server-side) | NEU | `src/lib/help/load.ts` |
+| 5 Help-Markdown-Files | Frontend Content | NEU | `src/content/help/*.md` |
+| Cockpit-Card "Mitarbeiter ohne Aktivitaet" | Frontend | NEU | `src/components/cockpit/InactiveEmployeesCard.tsx` |
+| Mitarbeiter-Liste-Filter `?filter=inactive` | Frontend | GEAENDERT | `src/app/admin/employees/page.tsx` |
+| Opt-Out-Toggle (User-Settings) | Frontend | NEU | `src/app/dashboard/settings/page.tsx` (oder Inline auf /dashboard) |
+| Tooltips an 5 UI-Elementen | Frontend | GEAENDERT | (verteilt: Bridge-Trigger, Approve-Block, Generate-Snapshot, Wizard-Spaeter, Inactive-Badge) |
+
+### Data model — `tenants.onboarding_wizard_*` (Wizard-State pro Tenant)
+
+```sql
+ALTER TABLE public.tenants
+  ADD COLUMN IF NOT EXISTS onboarding_wizard_state text NOT NULL DEFAULT 'pending'
+    CHECK (onboarding_wizard_state IN ('pending', 'started', 'skipped', 'completed')),
+  ADD COLUMN IF NOT EXISTS onboarding_wizard_step integer NOT NULL DEFAULT 1
+    CHECK (onboarding_wizard_step BETWEEN 1 AND 4),
+  ADD COLUMN IF NOT EXISTS onboarding_wizard_completed_at timestamptz;
+
+-- Partial index — nur die Tenants die noch im Wizard koennten
+CREATE INDEX IF NOT EXISTS idx_tenants_wizard_state
+  ON public.tenants (onboarding_wizard_state)
+  WHERE onboarding_wizard_state IN ('pending', 'started');
+```
+
+**State-Maschine:**
+- `pending` (default fuer neue Tenants ab V4.2-Deploy) → `started` (erster Wizard-Open) → `completed` (Schritt 4 mit "Erledigt"-Click) ODER → `skipped` ("Spaeter"-Click oder "Nicht mehr zeigen")
+- Backwards-Compat: Migration setzt fuer alle pre-V4.2 Tenants `state='completed'` (DEC-053). Diese Tenants kennen das Tool bereits, Wizard waere unnoetig.
+
+**Multi-Admin-Lock (DEC-053):**
+```typescript
+// Server-Action setStarted (atomar)
+const { rowCount } = await db.query`
+  UPDATE tenants
+  SET onboarding_wizard_state = 'started',
+      onboarding_wizard_step = 1
+  WHERE id = ${tenantId}
+    AND onboarding_wizard_state = 'pending'
+`;
+return rowCount === 1; // true = dieser User darf den Wizard starten
+```
+
+Wenn 0 Rows: anderer Admin war schneller, dieser User sieht direkt das Cockpit.
+
+**RLS:** Bestehende Policies auf `tenants` decken die neuen Spalten ab (existing `tenant_admin` SELECT/UPDATE OWN, `strategaize_admin` ALL). Kein neuer RLS-Block.
+
+### Data model — `reminder_log` (Idempotenz + Audit)
+
+```sql
+CREATE TABLE public.reminder_log (
+  id                uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id         uuid        NOT NULL REFERENCES public.tenants ON DELETE CASCADE,
+  employee_user_id  uuid        NOT NULL REFERENCES auth.users ON DELETE CASCADE,
+  reminder_stage    text        NOT NULL CHECK (reminder_stage IN ('stage1', 'stage2')),
+  sent_date         date        NOT NULL DEFAULT current_date,
+  email_to          text        NOT NULL,
+  status            text        NOT NULL DEFAULT 'sent'
+                                CHECK (status IN ('sent', 'failed', 'skipped_opt_out')),
+  error_message     text,
+  created_at        timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (employee_user_id, reminder_stage, sent_date)
+);
+
+CREATE INDEX idx_reminder_log_tenant_date
+  ON public.reminder_log (tenant_id, sent_date DESC);
+```
+
+**Idempotenz:** Unique-Constraint `(employee_user_id, reminder_stage, sent_date)` verhindert Doppel-Sends bei Cron-Doppellauf am selben Tag. Cron-Endpoint nutzt `INSERT ... ON CONFLICT DO NOTHING` und prueft `rowCount` ob tatsaechlich gesendet wurde.
+
+**Status `skipped_opt_out`:** Wird auch geloggt, damit Audit zeigt warum kein Send erfolgte (nicht "stiller Skip"). `error_message` traegt SMTP-Fehler bei `status='failed'`.
+
+**RLS:**
+- `strategaize_admin`: ALL (Cross-Tenant-Audit)
+- `tenant_admin`: SELECT OWN tenant_id (Audit-Lese fuer eigene Tenant-Reminders)
+- `tenant_member`, `employee`: DENY
+- INSERT/UPDATE: NUR via service_role (Cron-Endpoint nutzt service_role-Client mit RLS-Bypass)
+
+### Data model — `user_settings` (Per-User-Praeferenzen + Unsubscribe-Token)
+
+```sql
+CREATE TABLE public.user_settings (
+  user_id            uuid        PRIMARY KEY REFERENCES auth.users ON DELETE CASCADE,
+  reminders_opt_out  boolean     NOT NULL DEFAULT false,
+  unsubscribe_token  text        NOT NULL DEFAULT encode(gen_random_bytes(32), 'hex'),
+  created_at         timestamptz NOT NULL DEFAULT now(),
+  updated_at         timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (unsubscribe_token)
+);
+
+-- Trigger: auto-create user_settings beim auth.users-INSERT (passive seed)
+CREATE OR REPLACE FUNCTION public.tg_create_user_settings()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+  INSERT INTO public.user_settings (user_id) VALUES (NEW.id) ON CONFLICT DO NOTHING;
+  RETURN NEW;
+END $$;
+CREATE TRIGGER tg_create_user_settings_on_auth_users_insert
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.tg_create_user_settings();
+```
+
+**Token-Strategie:** 64-char-Hex-Token via `gen_random_bytes(32)`. Kein Expiry — Unsubscribe-Token bleibt gueltig solange der User existiert. Token ist NICHT zur Authentifizierung geeignet, nur fuer einen einzigen Unsubscribe-Effekt.
+
+**Backfill (in MIG-029 Schritt 3):**
+```sql
+INSERT INTO public.user_settings (user_id)
+SELECT id FROM auth.users
+ON CONFLICT (user_id) DO NOTHING;
+```
+
+**RLS:**
+- `strategaize_admin`: ALL
+- jeder authenticated User: SELECT/UPDATE OWN row (`user_id = auth.uid()`)
+- Cross-User-Lookup (z.B. `tenant_admin` will sehen welche Mitarbeiter opt-out): bewusst nicht erlaubt (User-Praeferenz ist privat)
+
+### Data flow — Wizard
+
+```
+[tenant_admin loggt sich erstmalig ein]
+       ↓
+[Server-Component dashboard/layout.tsx prueft:
+  - auth.user_role() === 'tenant_admin' (kein strategaize_admin!)
+  - tenant.onboarding_wizard_state === 'pending'
+  - capture_session_count === 0 (zusaetzliche Soft-Bedingung)]
+       ↓
+[Wenn alle 3 erfuellt: render <WizardModal> mit initialStep=1]
+       ↓
+[Client-Klick "Weiter" auf Schritt 1
+  → Server-Action setStarted(tenantId)
+  → atomares UPDATE state='started', step=1 WHERE state='pending'
+  → wenn rowCount=0: anderer Admin war schneller → modal schliesst]
+       ↓
+[Schritt 2: Template-Auswahl
+  → Lokal-State (selectedTemplateId) bis Submit
+  → "Weiter" → setStep(2)]
+       ↓
+[Schritt 3: Mitarbeiter-Invite-Form
+  → Inline 0..N Inputs (E-Mail + Anzeigename)
+  → Submit → bestehende Server-Action inviteEmployees(...)
+  → setStep(3) nach Erfolg]
+       ↓
+[Schritt 4: 3 Quick-Action-Cards
+  → "Erledigt" → setCompleted(tenantId) + completed_at=now()
+  → "Schliessen + nicht mehr zeigen" → setSkipped(tenantId)
+  → Card-Klicks navigieren zu /capture, /admin/bridge, /admin/handbook]
+```
+
+**Skip-Pfade:**
+- "Spaeter"-Button auf Schritt 1-3 → setSkipped(tenantId)
+- "Schliessen + nicht mehr zeigen" auf Schritt 4 → setSkipped(tenantId)
+- Beide setzen `state='skipped'` final — Wizard erscheint danach nie wieder.
+
+**Crash-Recovery:** Wenn Wizard durch JS-Exception bricht, fuehrt der Error-Boundary einen `setSkipped(tenantId)` Server-Action aus + leitet zum Cockpit weiter. User wird nicht aus dem Tool ausgesperrt (Constraint aus PRD).
+
+### Data flow — Capture-Reminders Cron
+
+```
+[Coolify Scheduled Task (taeglich 09:00 Europe/Berlin)]
+       ↓
+[POST /api/cron/capture-reminders mit x-cron-secret: $CRON_SECRET]
+       ↓
+[Endpoint validiert Header gegen ENV CRON_SECRET (403 bei Mismatch + error_log severity='warn')]
+       ↓
+[Service-Role-Client lade Mitarbeiter-Kandidaten:
+  SELECT u.id AS user_id, u.email, ei.tenant_id, ei.accepted_at,
+         us.reminders_opt_out, us.unsubscribe_token
+  FROM auth.users u
+  JOIN employee_invitation ei ON ei.accepted_user_id = u.id AND ei.status='accepted'
+  LEFT JOIN user_settings us ON us.user_id = u.id
+  WHERE NOT EXISTS (
+    SELECT 1 FROM block_checkpoint bc WHERE bc.created_by = u.id
+  )]
+       ↓
+[Pro Kandidat:
+  workdays = workdaysSince(accepted_at)
+  if workdays >= 3 and < 7: stage = 'stage1'
+  if workdays >= 7: stage = 'stage2'
+  if workdays < 3: skip]
+       ↓
+[Pro stage:
+  if reminders_opt_out: status = 'skipped_opt_out' (kein Send)
+  else: try sendReminder(email, stage, unsubscribe_token)
+        if ok: status = 'sent'
+        if exception: status = 'failed', error_message = e.message]
+       ↓
+[INSERT INTO reminder_log (tenant_id, employee_user_id, reminder_stage,
+   email_to, status, error_message)
+ ON CONFLICT (employee_user_id, reminder_stage, sent_date) DO NOTHING]
+       ↓
+[Aggregiere Counts: stage1_sent, stage2_sent, skipped_opt_out, failed]
+       ↓
+[INSERT INTO error_log (severity='info', message='cron:capture-reminders',
+   metadata = JSON.stringify({ stage1_sent, stage2_sent, skipped_opt_out, failed }))]
+       ↓
+[Response 200 JSON: { stage1_sent, stage2_sent, skipped_opt_out, failed }]
+```
+
+**Werktage-Helper (DEC-055):**
+```typescript
+// src/lib/reminders/workdays.ts
+export function workdaysSince(start: Date, end: Date = new Date()): number {
+  let count = 0;
+  const cur = new Date(start);
+  cur.setHours(0, 0, 0, 0);
+  while (cur < end) {
+    cur.setDate(cur.getDate() + 1);
+    const day = cur.getDay();
+    if (day !== 0 && day !== 6) count++;
+  }
+  return count;
+}
+```
+
+Mo-Fr ohne Holiday-Calendar. Drift bei Feiertagen (z.B. Mo Feiertag → Reminder kommt einen Tag spaeter) ist akzeptabel weil max. 2 Reminder.
+
+**SMTP-Send (DEC-056):**
+Wiederverwendung der bestehenden Supabase-Auth-SMTP-Konfiguration aus V1+. Eigentliche Send-Methode in `src/lib/reminders/send-reminder.ts`:
+- Wenn Supabase JS-SDK keine Custom-Send-API hat: Direct-SMTP via `nodemailer` mit den bestehenden Supabase-SMTP-ENVs (`SUPABASE_SMTP_HOST`, `_PORT`, `_USER`, `_PASS`).
+- Subject Stage 1: `"Erinnerung: Du hast noch nicht angefangen"`
+- Subject Stage 2: `"Letzte Erinnerung: Bitte starte deine Erfassung"`
+- Body: einfacher Text mit Tenant-Name + Capture-Link + Unsubscribe-Link `https://onboarding.../api/unsubscribe/<token>`
+- Templates inline im Code (max. 2 Templates, kein eigenes Template-File-System in V4.2)
+
+Falls Volume >50/Tag (Cron-Run loggt Warning): V4.3+ Migration auf Resend/SES.
+
+### Data flow — In-App-Hilfe
+
+```
+[User auf z.B. /dashboard]
+       ↓
+[Server-Component lade Help-Content:
+  const helpMd = loadHelpMarkdown('dashboard') // fs.readFileSync zur Render-Zeit]
+       ↓
+[Page rendert HelpTrigger-Button (?-Icon) im Header
+  + HelpSheet als Hidden-Component mit pageKey + helpMd-Prop]
+       ↓
+[Klick auf '?' → openHelp() (lokaler React-State)
+  → HelpSheet wird sichtbar (shadcn Sheet, Right-Side-Slide-In)]
+       ↓
+[Sheet rendert helpMd via react-markdown + remark-gfm
+  (gleiche Lib wie Reader FEAT-028, kein neuer NPM-Pakete)]
+       ↓
+[User schliesst via Esc / Outside-Click / X-Button]
+```
+
+**`loadHelpMarkdown` Helper (DEC-057):**
+```typescript
+// src/lib/help/load.ts
+import { readFileSync } from 'fs';
+import { join } from 'path';
+
+const HELP_DIR = join(process.cwd(), 'src/content/help');
+
+export function loadHelpMarkdown(pageKey: string): string {
+  return readFileSync(join(HELP_DIR, `${pageKey}.md`), 'utf-8');
+}
+```
+
+Server-Side-Read zur Render-Zeit. Next.js Server Components cachen das Ergebnis pro Request — kein Re-Read pro Sheet-Open. Fuer Production-Build wird `fs.readFileSync` durch Next.js' Static-Asset-Inlining-Logik gehandhabt (Files unter `src/` werden gebundelt).
+
+**Help-Files (5):**
+- `src/content/help/dashboard.md` — "Was zeigt das Cockpit", "Was ist der naechste Schritt-Banner"
+- `src/content/help/capture.md` — "Wie funktioniert Block-Submit", "Was sind Knowledge Units"
+- `src/content/help/bridge.md` — "Was macht die Bridge-Engine", "Wann nutzen"
+- `src/content/help/reviews.md` — "Wozu Block-Reviews", "Wie approven"
+- `src/content/help/handbook.md` — "Wie liest man das Handbuch", "Was sind Snapshots"
+
+Mindestens 100 Worter pro File (SC-V4.2-7-Pflicht). Inhalts-Pflege via Git-PR (kein In-App-Editor in V4.2, R-V4.2-3 Mitigation).
+
+**Tooltip-Integration (5 Pflicht-Elemente, DEC-058):**
+
+| UI-Element | Tooltip-Text |
+|---|---|
+| Bridge-Trigger-Button (`/admin/bridge`) | "Erzeugt Mitarbeiter-Capture-Vorschlaege aus GF-Blueprint" |
+| Approve-Block-Button (`/admin/blocks/[blockKey]/review`) | "Approve = Mitarbeiter-Antworten fliessen ins Handbuch" |
+| Generate-Snapshot-Button (`/admin/handbook`) | "Generiert das Unternehmerhandbuch aus aktuellem Stand" |
+| Wizard-"Spaeter"-Button (Wizard-Modal) | "Du kannst den Wizard jederzeit abschliessen" |
+| Inactive-Employees-Badge (`/dashboard`) | "Mitarbeiter mit accepted Invitation aber ohne Block-Submit" |
+
+Alle Tooltips ueber shadcn `Tooltip` (Radix-basiert). Kein "Verstanden, nicht mehr zeigen"-Toggle (DEC-058: Tooltips sind kontextuell, nicht Onboarding-Schritte).
+
+### Cockpit-Card "Mitarbeiter ohne Aktivitaet"
+
+```typescript
+// src/lib/dashboard/inactive-employees.ts
+export async function getInactiveEmployeesCount(tenantId: string): Promise<number> {
+  // Mitarbeiter mit accepted Invitation aber ohne block_checkpoint
+  const result = await db.query`
+    SELECT count(*) AS cnt FROM employee_invitation ei
+    WHERE ei.tenant_id = ${tenantId}
+      AND ei.status = 'accepted'
+      AND NOT EXISTS (
+        SELECT 1 FROM block_checkpoint bc WHERE bc.created_by = ei.accepted_user_id
+      )
+  `;
+  return result.rows[0]?.cnt ?? 0;
+}
+```
+
+Aufruf im /dashboard Server-Component (RLS-konform, `tenant_admin` darf `employee_invitation` lesen). Refresh-Strategie (DEC-060): Page-Refresh-only — Cockpit ist kein Real-Time-Tool. Aggregation laeuft als Server-Component-Fetch pro Request.
+
+**Card-Layout:**
+- Titel: "Mitarbeiter ohne Aktivitaet"
+- Wert: Zahl (z.B. "3")
+- Kontext: "von X eingeladenen Mitarbeitern" (X = total accepted invitations)
+- Klickziel: `/admin/employees?filter=inactive` (Mitarbeiter-Liste mit aktivem Filter)
+- Tooltip am Badge: siehe oben (DEC-058)
+
+### Cron-Job Coolify-Configuration
+
+**Coolify Scheduled Task** (DEC-059):
+
+| Feld | Wert |
+|------|------|
+| **Name** | `capture-reminders-daily` |
+| **Command** | `node -e "fetch('http://localhost:3000/api/cron/capture-reminders', { method: 'POST', headers: { 'x-cron-secret': process.env.CRON_SECRET } }).then(r => r.json()).then(console.log).catch(console.error)"` |
+| **Frequency** | `0 9 * * *` |
+| **Container** | `app` |
+| **Timezone** | `Europe/Berlin` (server-default oder explizit `TZ=Europe/Berlin` in app-Container-ENV) |
+
+**ENV-Vars (neu in V4.2):**
+- `CRON_SECRET` (zufaelliger 32+ Char Hex-String, in Coolify ENV gesetzt vor erstem Cron-Run)
+
+Cron-Endpoint:
+```typescript
+// src/app/api/cron/capture-reminders/route.ts (skizziert)
+export async function POST(req: Request) {
+  const secret = req.headers.get('x-cron-secret');
+  if (secret !== process.env.CRON_SECRET) {
+    await logError('cron-auth-fail', 'warn');
+    return new Response('Unauthorized', { status: 403 });
+  }
+
+  const { stage1_sent, stage2_sent, skipped_opt_out, failed }
+    = await runReminderBatch();
+
+  await logError('cron:capture-reminders', 'info', {
+    stage1_sent, stage2_sent, skipped_opt_out, failed
+  });
+
+  return Response.json({ stage1_sent, stage2_sent, skipped_opt_out, failed });
+}
+```
+
+**Audit-Log:** Jeder Cron-Run schreibt in bestehende `error_log`-Tabelle (V1.1) mit `severity='info'`. Keine neue `cron_log`-Tabelle in V4.2 — wiederverwendet bestehende Infrastruktur.
+
+### External dependencies / integrations
+
+**Keine neuen externen Dependencies.** Wiederverwendung:
+- `react-markdown` + `remark-gfm` aus V4.1 (FEAT-028 Reader)
+- shadcn `Dialog`, `Sheet`, `Tooltip` (V3+ etabliert)
+- Supabase-Auth-SMTP (V1+ etabliert)
+- Coolify Scheduled-Task-Pattern (analog Business System V4.x)
+
+**Optionale neue NPM-Dependencies fuer SMTP-Direct-Call (Q-V4.2-I, /backend SLC-048):**
+- `nodemailer` falls Supabase-JS-SDK keine Custom-Send-API freigibt. Standard-Library, MIT-lizenziert, 0 Sicherheits-Issues.
+
+### Security / RLS
+
+**`tenants.onboarding_wizard_*`:**
+RLS bleibt unveraendert. Bestehende `tenants`-Policies decken die neuen Spalten ab. Wizard-Server-Actions laufen als `tenant_admin`-Client (UPDATE OWN row gilt).
+
+**`reminder_log` RLS-Policies:**
+
+| Rolle | SELECT | INSERT | UPDATE | DELETE |
+|---|---|---|---|---|
+| `strategaize_admin` | ALL | ALL | ALL | ALL |
+| `tenant_admin` | OWN tenant_id | DENY | DENY | DENY |
+| `tenant_member` | DENY | DENY | DENY | DENY |
+| `employee` | DENY | DENY | DENY | DENY |
+
+Cron-Endpoint nutzt service_role-Client, RLS-Bypass.
+
+**`user_settings` RLS-Policies:**
+
+| Rolle | SELECT | INSERT | UPDATE | DELETE |
+|---|---|---|---|---|
+| `strategaize_admin` | ALL | ALL | ALL | ALL |
+| jeder User (`auth.uid()`) | OWN | OWN | OWN | DENY |
+
+Begruendung: User darf eigene Praeferenzen sehen + aendern. Cross-User-Lookup verboten — User-Privatsphaere. Trigger-basierte `INSERT` beim auth.users-Insert nutzt SECURITY DEFINER.
+
+**Cron-Endpoint Auth:**
+- `x-cron-secret`-Header gegen ENV `CRON_SECRET` validieren
+- Bei Mismatch: 403 + `error_log` severity='warn'
+- service_role-Client fuer DB-Writes (RLS-Bypass)
+
+**Unsubscribe-Endpoint Auth:**
+- Token-basiert (kein Login noetig — DSGVO-konform)
+- Token-Lookup in `user_settings.unsubscribe_token` via service_role
+- Bei valid Token: UPDATE `user_settings.reminders_opt_out=true` + Bestaetigungs-Page rendern
+- Bei invalid Token: 404 + neutrale "Link ungueltig"-Page (kein Token-Existence-Leak)
+- Rate-Limit (zukuenftig): falls Brute-Force-Versuche, IP-Throttle nachruesten — V4.3+
+
+**Wizard-Cross-Role-Check:**
+- Wizard-Auto-Trigger im Layout pruft `auth.user_role() === 'tenant_admin'`. `strategaize_admin` sieht den Wizard NIE (DEC-051), auch wenn `tenants.onboarding_wizard_state='pending'`.
+- Server-Actions (`setStarted`/`setStep`/`setSkipped`/`setCompleted`) pruefen `auth.user_role()` und werfen Forbidden bei falscher Rolle.
+
+### Constraints / tradeoffs
+
+**Trade-off 1 — Werktage ohne Holiday-Calendar:**
+Mitarbeiter Fr eingeladen bekommt Stage 1 frueher (Wochenende zaehlt nicht) als Mo-eingeladener. Drift bei Feiertagen ist kosmetisch (max. 2 Reminder, der Effekt ist 1 Tag). Akzeptiert.
+
+**Trade-off 2 — Wizard-State pro Tenant statt pro User:**
+Multi-Admin-Tenant: nur erster Admin sieht Wizard. Konsequenz: zweiter Admin sieht Wizard nie, auch wenn er die App noch nicht kennt. Mitigation: Help-Sheet (FEAT-033) deckt das Per-User-Onboarding-Bedarf ab (jeder User kann Help oeffnen). Per-User-Onboarding-Tour ist V5+.
+
+**Trade-off 3 — Help-Content statisch im Repo:**
+Berater-Edits brauchen PR-Workflow (kein In-App-Editor). Akzeptabel fuer V4.2-Volume (5 Pages × ~200 Worter). In-App-Editor wird gebraucht wenn Help oft wechselt — V5+.
+
+**Trade-off 4 — Cron-Endpoint statt pg_cron:**
+Cron-Endpoint im app-Container (kein DB-Cron via pg_cron). Begruendung: Reminder-Send braucht JS-Helpers (Werktage-Berechnung, SMTP-Templates) — pg_cron muesste plpgsql + http_post-Extension nutzen. Coolify-Pattern ist etabliert, Cron-Logs ueber Coolify-UI sichtbar.
+
+**Trade-off 5 — Reminder-Provider weiterhin Supabase-Auth-SMTP:**
+Volume-Risk: bei >50 Reminders/Tag droht Rate-Limit oder Spam-Reputation. Mitigation: Cron-Run loggt Warning bei `>50 stage1+stage2_sent`, V4.3+ Migration auf Resend/SES wenn noetig. SPF/DKIM-Audit der Server-Domain (eigener Maintenance-Sprint, nicht V4.2-Slice).
+
+**Trade-off 6 — Tooltip ohne Persistenz:**
+Tooltips sind kontextuell. Kein "Verstanden, nicht mehr zeigen". Wenn als nervig empfunden: V5+ User-Setting nachruesten.
+
+**Trade-off 7 — Page-Refresh-only fuer Inactive-Employees-Badge:**
+Kein Polling, keine SSE. Cockpit zeigt ggf. veralteten Stand bis User F5 drueckt. Akzeptabel: Cockpit ist nicht Real-Time-Tool, Throughput "wer hat heute Capture gestartet" ist <1/Tag in V4.2-Volume.
+
+**Trade-off 8 — Eine Migration fuer drei Datenmodell-Aenderungen:**
+MIG-029 enthaelt 3 logische Bloecke (tenants ALTER + reminder_log + user_settings) in einer Migration-Datei. Begruendung: alle drei sind V4.2-Foundation, gehoeren atomar deployed. V4.1 hatte das gleiche Pattern (MIG-028 hatte 4 Bloecke: Tabelle + Indizes + RLS + Backfill + Trigger).
+
+### Open technical questions (verbleibend)
+
+Verbleibende Detail-Fragen werden in `/slice-planning V4.2` oder spaeter (`/frontend`/`/backend`) entschieden:
+
+- **Q-V4.2-H (Frontend) — Wizard-Step-3-Form-Validation:** Inline-Validierung pro E-Mail-Input vs. Submit-Time-Validierung? Empfehlung Architektur: Submit-Time, einfacher und konsistent mit `inviteEmployees`-Server-Action-Pattern. Decision in /frontend SLC-047.
+- **Q-V4.2-I (Backend) — SMTP-Klient-Library:** Wiederverwendung Supabase-JS-SDK vs. `nodemailer`-Direct-Call? Empfehlung Architektur: Erst Supabase-SDK pruefen (kein neues NPM-Paket), Fallback `nodemailer` falls SDK keine Send-Custom-Mail-API hat. Decision in /backend SLC-048.
+- **Q-V4.2-J (Backend) — Reminder-Email-Templates:** Inline-TS-Template-Strings vs. eigene Template-Files? Empfehlung Architektur: inline (max. 2 Templates Stage 1+2, ~30 Zeilen each). Decision in /backend SLC-048.
+- **Q-V4.2-K (Frontend) — Wizard-Visual-Style:** Modal-Overlay (shadcn `Dialog`) vs. Full-Screen-Page? Empfehlung Architektur: Modal-Overlay (weniger invasiv, Cockpit-Hintergrund bleibt sichtbar). Decision in /frontend SLC-047.
+- **Q-V4.2-L (Frontend) — Opt-Out-Toggle-Lokalitaet:** Eigene `/dashboard/settings`-Page vs. Inline-Toggle im Cockpit-Header-Menu? Empfehlung Architektur: Eigene Settings-Page (V4.2 hat sonst nur 1 Setting, aber V4.3+ koennten mehr kommen). Decision in /frontend SLC-049.
+
+### Implementation direction
+
+Empfohlene Slice-Reihenfolge (deckungsgleich mit PRD-Skizze):
+
+1. **SLC-046** (Backend, ~3 MTs): MIG-029 ALTER TABLE tenants + Backfill (alle pre-V4.2 Tenants = 'completed') + Wizard-Server-Actions (setStarted/setStep/setSkipped/setCompleted) + Server-Component-Helper `getWizardStateForTenant()` + Layout-Integration. RLS-Test bestaetigt: tenants-Policies decken neue Spalten ab.
+2. **SLC-047** (Frontend, ~7 MTs): WizardModal mit 4 Step-Komponenten (Welcome, TemplatePick, EmployeeInvite, WhatNow) + Skip-Logic + Form-Validation Schritt 3 + Was-nun-Cards + Layout-Auto-Trigger via `getWizardStateForTenant()`. Tests: 4 Step-Renders + Skip-Pfade + Multi-Admin-Lock-Race-Test.
+3. **SLC-048** (Backend, ~6 MTs): MIG-029 reminder_log + user_settings + Trigger + Backfill + RLS + Cron-Endpoint `/api/cron/capture-reminders` + workdaysSince-Helper + sendReminder-Helper + Unsubscribe-Endpoint + RLS-Test-Matrix-Erweiterung (4 Rollen × 2 Tabellen = 8 Tests). **Cron-Idempotenz-Test Pflicht** (zwei Cron-Runs am selben Tag → 0 Doppel-Mails).
+4. **SLC-049** (Frontend, ~3 MTs): InactiveEmployeesCard auf /dashboard + Mitarbeiter-Liste-Filter `?filter=inactive` + Opt-Out-Toggle in /dashboard/settings (oder bestehender Settings-Page).
+5. **SLC-050** (Frontend, ~5 MTs): 5 Help-Markdown-Files schreiben (mind. 100 Worter pro File) + HelpSheet-Component + HelpTrigger im Header-Layout + Tooltip-Integration an 5 UI-Elementen + `loadHelpMarkdown`-Helper + Tests (Help-Sheet-Render + Markdown-Inhalt-Pruefung).
+
+Pflicht-Gates fuer V4.2-Implementation:
+- 4-Rollen-RLS-Matrix erweitert um `reminder_log` + `user_settings` (mind. 8 zusaetzliche Test-Faelle, Pflicht in /qa SLC-048).
+- Pflicht-Browser-Smoke-Test mit Nicht-Tech-User vor V4.2-Release (SC-V4.2-9, R17 aus V4-Pflicht-Gates).
+- Cron-Idempotenz-Test als Pflicht-AC fuer SLC-048 /qa.
+- Coolify-Cron-Setup-Anleitung (Tabelle + Bestaetigung) in /deploy V4.2 (feedback_cron_job_instructions).
+- Vor V4.2-/deploy: User-manueller Check der Spam-Reputation der Reminder-Mails (SPF/DKIM auf onboarding.strategaizetransition.com).
