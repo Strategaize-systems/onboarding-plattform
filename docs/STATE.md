@@ -9,21 +9,15 @@
 Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdichtung. Ermoeglicht mehrere Capture-Modi (Fragebogen, Meeting, Voice, etc.) und Template-basierte Produktvarianten (z.B. Exit-Readiness, Immobilien-Onboarding). Ab V4: Zwei-Ebenen-Verschmelzung (GF-Blueprint + Mitarbeiter-Capture + Unternehmerhandbuch-Output).
 
 ## Current State
-- High-Level State: qa
-- Current Focus: **V4.1 Gesamt-/qa PASS 2026-04-29 (RPT-109) — freigabereif fuer /final-check.** 12/12 Success Criteria erfuellt, 378/378 Tests gruen auf Coolify-DB, 0 Blocker, 0 High, 0 Medium-Findings (V4.1-spezifisch), 4 Low-Items als V4.2-Backlog. Cross-Slice-Stub-Detection 0 echte Hits (Worker-Operations-Logs akzeptiert). Wiring-Chain ueber alle 5 Slices (SLC-041..045) und 3 Features (FEAT-028+029+030) verifiziert. Keine V4-Regression (alle V4-Backstop-Tests gruen: 46/46 v4-perimeter-matrix, 19/19 bridge-rpcs, 14/14 employee-invitation, 13/13 worker-renderer, etc.). Keine offenen V4.1-spezifischen Issues (ISSUE-029 als V4.1-Iter-Bug bereits resolved). Browser-Smoke 17/17 user-bestaetigt nach 3 Iter-Cycles. **Naechste Aktion: /final-check** → /go-live → /deploy V4.1.
-- Current Phase: V4.1 Gesamt-/qa abgeschlossen. Pending: /final-check (Hygiene+Dependencies+Security-Audit) → /go-live (Release-Risk-Assessment) → /deploy V4.1 (User-Pflicht via Coolify) → /post-launch.
+- High-Level State: final-check
+- Current Focus: **V4.1 /final-check PASS 2026-04-29 (RPT-110) — READY fuer /go-live.** Alle 7 Audit-Dimensionen PASS. 3 unused `@ts-expect-error`-Direktiven gefixt (1 V4.1-Scope SLC-045 highlight-rehype-plugin.test.ts:24, 2 pre-existing SLC-035 action-helpers.test.ts:127+129). `tsc --noEmit` exit 0. `npm run build` exit 0 mit 51 Routes. `npm audit --omit=dev` 3 moderate (alle ISSUE-026 wontfix postcss-bundled, unveraendert seit V3.1). 0 Stubs/Secrets in V4.1-Files. Storage-RLS via Page-Level-Guards intakt (Service-Role-Bypass mit Auth/Role/Cross-Tenant-Gates gated). Keine neuen ENVs. MIG-028 in Production deployed (verifiziert via SSH). Demo-DB Test-Daten-Cleanup bereits 0/0 (kein Restmuell). Eine Low-Notiz: Next.js 16 `middleware`→`proxy`-Convention-Deprecation (BL-059 als V4.x-Cleanup-Vorschlag, nicht V4.1-blockierend). **Naechste Aktion: /go-live.**
+- Current Phase: V4.1 /final-check abgeschlossen. Pending: /go-live (Release-Risk-Assessment + Rollback-Plan + GO/NO-GO) → /deploy V4.1 (User-Pflicht via Coolify) → /post-launch.
 
 ## Immediate Next Steps
-1. **/final-check** — Hygiene + Dependencies + Security-Audit. Themen: Pre-existing TS-Errors `bridge/__tests__/action-helpers.test.ts:127,129` (V4.2-Defer oder Fix), `npm audit --omit=dev` (Erwartung 0 Vulns), Bundle-Size-Check fuer neue Komponenten, ENV-Var-Audit (keine neuen ENVs in V4.1), Storage-RLS-Check `handbook`-Bucket. Optional: Test-Daten-Cleanup in Demo-DB (Marker `QA-SMOKE-RPT-102`).
-2. **/go-live** — Release-Risk + Rollback-Plan + GO/NO-GO. V4.1 hat keine neuen Migrationen ausser MIG-028 (bereits live), keine ENV-Aenderungen, kein Schema-Change auf bestehenden Tabellen — Rollback-Risk ist niedrig.
-3. **/deploy V4.1** — User-Pflicht via Coolify-UI (`feedback_manual_deploy.md`). Production-Stand soll auf `bc00093` (oder Nachfolger nach /final-check-Fixes) deployt werden.
-4. **/post-launch** 1-2 Tage nach Deploy.
-5. **V4.2-Backlog (zur Info):** BL-051..058 (Active-Section-Scroll-Spy, Copy-Permalink-Button, Loading-Skeleton, Cross-Snapshot-Suche, Mobile-Polish 375px h1-Wrap, Worker-TOC-Anchor, Umlaut-Konsistenz, h1-Hover-Anchor), Sidebar-Total-Pending-Badge, plus aus V4.1-Iter-Cycles 3 IMPs in Dev-System (IMP-211/212/213).
-3. **Gesamt-V4.1-/qa** nach SLC-043 + SLC-045 done — SC-V4.1-1..12 vollstaendig verifizieren.
-4. **/final-check → /go-live → /deploy V4.1** anschliessend.
-5. **Optional vorab: Test-Daten cleanen** — 3 employee_questionnaire-KUs in Demo-Tenant Session 22234f9e-... (Marker `QA-SMOKE-RPT-102`) plus 3 block_review-Rows. Cleanup-SQL in RPT-102 dokumentiert.
-6. **/post-launch V4** — verschoben auf nach V4.1-Release.
-7. **V4.2** spaeter: BL-048 Tenant Self-Service Onboarding + Component-Test-Setup (jsdom + @testing-library/react). Reader-Polish-Items: BL-051 Active-Section-Scroll-Spy, BL-052 Copy-Permalink-Button, BL-053 Loading-Skeleton, BL-054 Cross-Snapshot-Suche. Plus aus SLC-044 Open Points: Cockpit-MetricCard "Unternehmerhandbuch" Reader-Umlenkung fuer tenant_admin + Pre-existing TS-Errors in `bridge/__tests__/action-helpers.test.ts:127,129`.
+1. **/go-live** — Release-Risk + Rollback-Plan + GO/NO-GO-Entscheidung. V4.1 ist additiv (block_review-Tabelle neu via MIG-028 bereits live, keine Schema-Aenderungen auf bestehenden Tabellen, keine ENV-Aenderungen). Rollback-Risk LOW.
+2. **/deploy V4.1** — User-Pflicht via Coolify-UI nach /go-live-GO (`feedback_manual_deploy.md`).
+3. **/post-launch** — 1-2 Tage nach Deploy, Live-Verhalten beobachten.
+4. **V4.2-Backlog (zur Info):** BL-051..058 (Active-Section-Scroll-Spy, Copy-Permalink-Button, Loading-Skeleton, Cross-Snapshot-Suche, Mobile-Polish 375px h1-Wrap, Worker-TOC-Anchor, Umlaut-Konsistenz, h1-Hover-Anchor), Sidebar-Total-Pending-Badge, plus aus V4.1-Iter-Cycles 3 IMPs in Dev-System (IMP-211/212/213). Aus /final-check vorgeschlagen: **BL-059** Next.js 16 `middleware`→`proxy`-Convention-Migration.
 
 ## Active Scope
 **V4 — Zwei-Ebenen-Verschmelzung, 6 Features Code-done, 8 Slices Code-done:**

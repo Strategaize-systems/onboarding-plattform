@@ -21,8 +21,7 @@ function runPlugin(tree: NodeLike, query: string, sectionId = "s1") {
   const transformer = factory();
   // unified-Konvention: Plugin-Factory-Pattern, transformer(tree, file)
   // wird als sync gerufen — hier reicht direkt der Aufruf.
-  // @ts-expect-error — minimal HAST mock, transformer hat any-Signatur
-  transformer(tree);
+  transformer(tree as never);
   return tree;
 }
 

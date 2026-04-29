@@ -124,9 +124,7 @@ describe("buildCleanEditedPayload", () => {
   it("verwirft nicht-whitelisted Felder still", () => {
     const result = buildCleanEditedPayload({
       proposed_block_title: "titel",
-      // @ts-expect-error — bewusst Test fuer Whitelist-Schutz
       tenant_id: "00000000-0000-0000-0000-000000000666",
-      // @ts-expect-error
       bridge_run_id: "fremd",
     } as never);
     expect(result).toEqual({ proposed_block_title: "titel" });
