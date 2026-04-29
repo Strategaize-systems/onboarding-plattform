@@ -2,11 +2,16 @@
 
 // SLC-044 MT-3 + MT-5 — Markdown-Render und Cross-Link "Im Debrief bearbeiten".
 //
-// Pro Section eine <article> mit react-markdown + remark-gfm + rehype-slug +
-// rehype-autolink-headings. Section-Header bekommt eine DOM-ID fuer Anchor-Scroll
-// aus der Sidebar. Cross-Link "Im Debrief bearbeiten" wird nur fuer
-// strategaize_admin gerendert (server-seitig per Prop entschieden — fuer
-// tenant_admin ist der Link nicht im DOM).
+// Pro Section eine <article> mit react-markdown + remark-gfm + rehype-raw +
+// rehype-slug + rehype-autolink-headings. Section-Header bekommt eine DOM-ID
+// fuer Anchor-Scroll aus der Sidebar. Cross-Link "Im Debrief bearbeiten" wird
+// nur fuer strategaize_admin gerendert (server-seitig per Prop entschieden —
+// fuer tenant_admin ist der Link nicht im DOM).
+//
+// rehype-raw: Worker-Markdown enthaelt Inline-HTML wie <a id="block-A"></a>
+// als Anchor-Targets (siehe sections.ts:263). Ohne rehype-raw rendert
+// react-markdown das als Text. Reihenfolge: remarkGfm → rehypeRaw →
+// rehypeSlug → rehypeAutolinkHeadings.
 //
 // Block-Key-Mapping kommt aus loadSnapshotContent (templates.handbook_schema).
 // Sections ohne eindeutigen Block-Key zeigen keinen Cross-Link.
@@ -14,6 +19,7 @@
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import rehypeRaw from "rehype-raw";
 import rehypeSlug from "rehype-slug";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import { Pencil } from "lucide-react";
@@ -45,7 +51,7 @@ export function HandbookReader({
           <div className="prose prose-slate max-w-none prose-headings:scroll-mt-24 prose-a:text-brand-primary-dark hover:prose-a:underline prose-table:text-sm">
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
-              rehypePlugins={[rehypeSlug, rehypeAutolinkHeadings]}
+              rehypePlugins={[rehypeRaw, rehypeSlug, rehypeAutolinkHeadings]}
             >
               {indexMarkdown}
             </ReactMarkdown>

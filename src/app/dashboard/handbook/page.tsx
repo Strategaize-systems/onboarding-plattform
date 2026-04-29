@@ -20,6 +20,7 @@ import {
   ChevronRight,
   Loader2,
 } from "lucide-react";
+import { HandbookSelectionShell } from "@/components/handbook/HandbookSelectionShell";
 
 interface HandbookListRow {
   id: string;
@@ -54,7 +55,7 @@ export default async function HandbookSelectionPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, tenant_id")
+    .select("role, tenant_id, email")
     .eq("id", user.id)
     .single();
 
@@ -97,56 +98,60 @@ export default async function HandbookSelectionPage() {
   }));
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 p-6">
-      <div>
-        <Link
-          href="/dashboard"
-          className="inline-flex items-center gap-1.5 text-sm text-brand-primary-dark underline-offset-2 hover:underline"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" />
-          Zurueck zum Dashboard
-        </Link>
-      </div>
-
-      <header className="flex items-start gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-primary/10">
-          <BookOpen className="h-5 w-5 text-brand-primary-dark" />
-        </div>
+    <HandbookSelectionShell
+      profile={{ email: profile.email as string, role: profile.role as string }}
+    >
+      <div className="mx-auto max-w-3xl space-y-6">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">
-            Unternehmerhandbuch
-          </h1>
-          <p className="text-sm text-slate-500">
-            Konsolidierte Handbuch-Versionen aus deiner GF-Erhebung und den
-            Mitarbeiter-Beitraegen.
-          </p>
+          <Link
+            href="/dashboard"
+            className="inline-flex items-center gap-1.5 text-sm text-brand-primary-dark underline-offset-2 hover:underline"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Zurueck zum Dashboard
+          </Link>
         </div>
-      </header>
 
-      {snapshots.length === 0 ? (
-        <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
-              <BookOpen className="h-8 w-8 text-slate-400" />
-            </div>
-            <p className="text-lg font-semibold text-slate-900">
-              Noch kein Handbuch generiert
+        <header className="flex items-start gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-primary/10">
+            <BookOpen className="h-5 w-5 text-brand-primary-dark" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-semibold text-slate-900">
+              Unternehmerhandbuch
+            </h1>
+            <p className="text-sm text-slate-500">
+              Konsolidierte Handbuch-Versionen aus deiner GF-Erhebung und den
+              Mitarbeiter-Beitraegen.
             </p>
-            <p className="mt-1 max-w-md text-sm text-slate-500">
-              Sobald StrategAIze deine Erhebung freigibt und einen Snapshot
-              erzeugt, erscheint er hier zum Lesen. Bei Fragen wende dich an
-              deinen Berater.
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-3">
-          {snapshots.map((snap) => (
-            <SnapshotCardLink key={snap.id} snap={snap} />
-          ))}
-        </div>
-      )}
-    </div>
+          </div>
+        </header>
+
+        {snapshots.length === 0 ? (
+          <Card className="border-dashed">
+            <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
+                <BookOpen className="h-8 w-8 text-slate-400" />
+              </div>
+              <p className="text-lg font-semibold text-slate-900">
+                Noch kein Handbuch generiert
+              </p>
+              <p className="mt-1 max-w-md text-sm text-slate-500">
+                Sobald StrategAIze deine Erhebung freigibt und einen Snapshot
+                erzeugt, erscheint er hier zum Lesen. Bei Fragen wende dich an
+                deinen Berater.
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-3">
+            {snapshots.map((snap) => (
+              <SnapshotCardLink key={snap.id} snap={snap} />
+            ))}
+          </div>
+        )}
+      </div>
+    </HandbookSelectionShell>
   );
 }
 
