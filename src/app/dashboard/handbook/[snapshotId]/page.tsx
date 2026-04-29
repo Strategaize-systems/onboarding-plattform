@@ -46,9 +46,13 @@ export default async function HandbookReaderPage({ params }: PageProps) {
 
   if (
     !profile ||
-    !["tenant_admin", "strategaize_admin"].includes(profile.role) ||
-    !profile.tenant_id
+    !["tenant_admin", "strategaize_admin"].includes(profile.role)
   ) {
+    redirect("/dashboard");
+  }
+  // tenant_id ist Pflicht fuer tenant_admin (eigener Tenant). strategaize_admin
+  // hat tenant_id=NULL per Design und kann via Direct-URL Cross-Tenant lesen.
+  if (profile.role === "tenant_admin" && !profile.tenant_id) {
     redirect("/dashboard");
   }
 

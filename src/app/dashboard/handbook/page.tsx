@@ -59,7 +59,7 @@ export default async function HandbookSelectionPage() {
     .eq("id", user.id)
     .single();
 
-  if (!profile || !profile.tenant_id) {
+  if (!profile) {
     redirect("/dashboard");
   }
 
@@ -67,6 +67,16 @@ export default async function HandbookSelectionPage() {
     profile.role !== "tenant_admin" &&
     profile.role !== "strategaize_admin"
   ) {
+    redirect("/dashboard");
+  }
+
+  // strategaize_admin hat keinen eigenen Tenant — Cross-Tenant-Sicht liegt
+  // unter /admin/handbook.
+  if (profile.role === "strategaize_admin") {
+    redirect("/admin/handbook");
+  }
+
+  if (!profile.tenant_id) {
     redirect("/dashboard");
   }
 
