@@ -20,7 +20,11 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 const STORAGE_BUCKET = "handbook";
 const INDEX_FILENAME = "INDEX.md";
-const SECTION_FILENAME_PATTERN = /^(\d{2})_([a-z0-9_-]+)\.md$/i;
+// Worker schreibt das ZIP mit Verzeichnis-Prefix `handbuch/` (siehe
+// zip-builder.ts). Wir akzeptieren den optionalen Prefix, damit der Match
+// klappt. Beispiele die matchen: "01_foo.md" und "handbuch/01_foo.md".
+const SECTION_FILENAME_PATTERN = /^(?:handbuch\/)?(\d{2})_([a-z0-9_-]+)\.md$/i;
+const INDEX_FILENAME_PATTERN = /^(?:handbuch\/)?INDEX\.md$/i;
 
 export interface SectionFile {
   filename: string;
@@ -92,7 +96,7 @@ export async function loadSnapshotContent(params: {
 
     const markdown = await fileEntry.async("string");
 
-    if (filename === INDEX_FILENAME) {
+    if (INDEX_FILENAME_PATTERN.test(filename)) {
       index = { filename, markdown };
       continue;
     }
@@ -102,11 +106,12 @@ export async function loadSnapshotContent(params: {
       // Unbekannte Markdown-Datei (z.B. README in alten Snapshots). Wir nehmen sie
       // mit reduzierten Metadaten in die Liste auf, damit der Reader sie zumindest
       // anzeigt — Cross-Link gibt es dafuer nicht.
+      const fallbackName = filename.replace(/^.*\//, "").replace(/\.md$/i, "");
       sections.push({
         filename,
         order: 999,
-        sectionKey: filename.replace(/\.md$/i, ""),
-        title: filename.replace(/\.md$/i, ""),
+        sectionKey: fallbackName,
+        title: fallbackName,
         markdown,
         blockKey: null,
       });

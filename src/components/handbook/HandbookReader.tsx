@@ -48,9 +48,11 @@ const PROSE_CLASSES = [
   "prose-p:leading-relaxed prose-p:text-slate-700",
   "prose-strong:text-slate-900 prose-strong:font-semibold",
   "prose-em:text-slate-500 prose-em:font-normal",
-  // Lists
-  "prose-ul:my-4 prose-ul:space-y-3 prose-li:marker:text-brand-primary",
-  "prose-ol:my-4 prose-ol:space-y-3 prose-ol:marker:font-semibold",
+  // Lists — jede Wissens-Einheit / SOP-Schritt mit visueller Trennlinie + grossem
+  // Atemspielraum, damit Multi-Zeilen-Items lesbar getrennt sind.
+  "prose-ul:my-6 prose-ul:space-y-0 prose-ol:my-6 prose-ol:space-y-0",
+  "prose-li:py-5 prose-li:border-b prose-li:border-slate-100 prose-li:last:border-b-0 prose-li:leading-relaxed prose-li:marker:text-brand-primary prose-li:marker:font-bold",
+  "prose-li:[&>p]:my-2",
   // Inline + Code + Tables
   "prose-a:text-brand-primary-dark prose-a:no-underline hover:prose-a:underline prose-a:font-medium",
   "prose-table:text-sm prose-th:bg-slate-50 prose-th:font-semibold prose-th:px-3 prose-th:py-2 prose-td:px-3 prose-td:py-2 prose-table:border prose-table:border-slate-200",
