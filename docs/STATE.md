@@ -9,14 +9,14 @@
 Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdichtung. Ermoeglicht mehrere Capture-Modi (Fragebogen, Meeting, Voice, etc.) und Template-basierte Produktvarianten (z.B. Exit-Readiness, Immobilien-Onboarding). Ab V4: Zwei-Ebenen-Verschmelzung (GF-Blueprint + Mitarbeiter-Capture + Unternehmerhandbuch-Output).
 
 ## Current State
-- High-Level State: final-check
-- Current Focus: **V4.1 /final-check PASS 2026-04-29 (RPT-110) — READY fuer /go-live.** Alle 7 Audit-Dimensionen PASS. 3 unused `@ts-expect-error`-Direktiven gefixt (1 V4.1-Scope SLC-045 highlight-rehype-plugin.test.ts:24, 2 pre-existing SLC-035 action-helpers.test.ts:127+129). `tsc --noEmit` exit 0. `npm run build` exit 0 mit 51 Routes. `npm audit --omit=dev` 3 moderate (alle ISSUE-026 wontfix postcss-bundled, unveraendert seit V3.1). 0 Stubs/Secrets in V4.1-Files. Storage-RLS via Page-Level-Guards intakt (Service-Role-Bypass mit Auth/Role/Cross-Tenant-Gates gated). Keine neuen ENVs. MIG-028 in Production deployed (verifiziert via SSH). Demo-DB Test-Daten-Cleanup bereits 0/0 (kein Restmuell). Eine Low-Notiz: Next.js 16 `middleware`→`proxy`-Convention-Deprecation (BL-059 als V4.x-Cleanup-Vorschlag, nicht V4.1-blockierend). **Naechste Aktion: /go-live.**
-- Current Phase: V4.1 /final-check abgeschlossen. Pending: /go-live (Release-Risk-Assessment + Rollback-Plan + GO/NO-GO) → /deploy V4.1 (User-Pflicht via Coolify) → /post-launch.
+- High-Level State: go-live
+- Current Focus: **V4.1 /go-live = GO 2026-04-29 (RPT-111) — READY fuer /deploy V4.1.** Release-Risk LOW (additive Aenderung, MIG-028 bereits in Production deployed seit 2026-04-28, keine Schema-Aenderungen auf bestehenden Tabellen, keine neuen ENVs, keine neuen Container/Cron-Jobs). 0 V4.1-spezifische Blocker. 4 akzeptierte Pre-V4.1-Residual-Risks (ISSUE-007 V3-JWT, ISSUE-021/022 V4-Bridge, ISSUE-026 postcss bundled, ISSUE-028 V3-Recording) — alle unveraendert seit REL-008 V4-Release. Rollback-Plan vollstaendig dokumentiert in MIG-028 (Worker-Image-Revert → SQL-DROP optional → Frontend-Revert via App-Image-Rollback). RTO ~5 Min via Coolify-Image-Rollback. RPO 0 Datenverlust. Final-Check (RPT-110) und Gesamt-/qa (RPT-109) sauber. Browser-Smoke 17/17 user-bestaetigt. **Naechste Aktion: /deploy V4.1 — User triggert manuell ueber Coolify-UI.**
+- Current Phase: V4.1 /go-live abgeschlossen mit GO. Pending: /deploy V4.1 (User-Pflicht via Coolify-UI) → REL-009 in RELEASES.md → /post-launch (1-2 Tage nach Deploy).
 
 ## Immediate Next Steps
-1. **/go-live** — Release-Risk + Rollback-Plan + GO/NO-GO-Entscheidung. V4.1 ist additiv (block_review-Tabelle neu via MIG-028 bereits live, keine Schema-Aenderungen auf bestehenden Tabellen, keine ENV-Aenderungen). Rollback-Risk LOW.
-2. **/deploy V4.1** — User-Pflicht via Coolify-UI nach /go-live-GO (`feedback_manual_deploy.md`).
-3. **/post-launch** — 1-2 Tage nach Deploy, Live-Verhalten beobachten.
+1. **/deploy V4.1** — User-Pflicht via Coolify-UI (`feedback_manual_deploy.md`). Deploy-Commit `9a86e59`. Verifikation: `curl -I https://onboarding.strategaizetransition.com` 200 + Browser-Smoke (Reader, Berater-Workflow, Pending-Reviews-Sicht).
+2. **REL-009-Eintrag** in `/docs/RELEASES.md` nach erfolgreichem Deploy.
+3. **/post-launch** — 1-2 Tage nach Deploy, Live-Verhalten beobachten (Reader-Last, Berater-Workflow-Throughput, Worker-Pre-Filter-Stabilitaet).
 4. **V4.2-Backlog (zur Info):** BL-051..058 (Active-Section-Scroll-Spy, Copy-Permalink-Button, Loading-Skeleton, Cross-Snapshot-Suche, Mobile-Polish 375px h1-Wrap, Worker-TOC-Anchor, Umlaut-Konsistenz, h1-Hover-Anchor), Sidebar-Total-Pending-Badge, plus aus V4.1-Iter-Cycles 3 IMPs in Dev-System (IMP-211/212/213). Aus /final-check vorgeschlagen: **BL-059** Next.js 16 `middleware`→`proxy`-Convention-Migration.
 
 ## Active Scope
