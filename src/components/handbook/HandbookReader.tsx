@@ -22,6 +22,7 @@
 // Sections ohne eindeutigen Block-Key zeigen keinen Cross-Link.
 
 import Link from "next/link";
+import type { ComponentPropsWithoutRef, MouseEvent } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
@@ -80,6 +81,72 @@ const SECTION_BADGE_COLORS = [
 
 const INDEX_SECTION_KEY = "__index";
 
+// SLC-045 iter-2 — TOC-Markdown-Links umlenken auf In-App-Anchor-Navigation.
+// Worker schreibt im INDEX.md Datei-Links wie `[Section-Titel](01_section_key.md)`,
+// damit das ZIP lokal navigierbar ist. Im Reader fuehrt das aber zu 404, weil die
+// `.md`-URL relativ zur Reader-Page aufgeloest wird. Wir matchen das Filename-Pattern
+// (gleiches wie in load-snapshot-content.ts) und ersetzen den Klick durch
+// scrollIntoView auf der entsprechenden DOM-ID `handbook-section-{key}`.
+const SECTION_LINK_RE = /^(?:.*\/)?(\d{2})_([a-z0-9_-]+)\.md(?:#.*)?$/i;
+const INDEX_LINK_RE = /^(?:.*\/)?INDEX\.md(?:#.*)?$/i;
+
+function CustomLink(
+  props: ComponentPropsWithoutRef<"a"> & {
+    sectionDomIdFn: (sectionKey: string) => string;
+  },
+) {
+  const { href, children, sectionDomIdFn, ...rest } = props;
+
+  if (typeof href === "string") {
+    const sectionMatch = SECTION_LINK_RE.exec(href);
+    if (sectionMatch) {
+      const sectionKey = sectionMatch[2];
+      const targetId = sectionDomIdFn(sectionKey);
+      return (
+        <a
+          {...rest}
+          href={`#${targetId}`}
+          onClick={(e: MouseEvent<HTMLAnchorElement>) => {
+            e.preventDefault();
+            const el = document.getElementById(targetId);
+            if (el) {
+              el.scrollIntoView({ behavior: "smooth", block: "start" });
+              if (typeof window !== "undefined") {
+                window.history.replaceState(null, "", `#${targetId}`);
+              }
+            }
+          }}
+        >
+          {children}
+        </a>
+      );
+    }
+    if (INDEX_LINK_RE.test(href)) {
+      const targetId = sectionDomIdFn("__index");
+      return (
+        <a
+          {...rest}
+          href={`#${targetId}`}
+          onClick={(e: MouseEvent<HTMLAnchorElement>) => {
+            e.preventDefault();
+            const el = document.getElementById(targetId);
+            if (el) {
+              el.scrollIntoView({ behavior: "smooth", block: "start" });
+              if (typeof window !== "undefined") {
+                window.history.replaceState(null, "", `#${targetId}`);
+              }
+            }
+          }}
+        >
+          {children}
+        </a>
+      );
+    }
+  }
+
+  return <a {...rest} href={href}>{children}</a>;
+}
+
 // rehype-autolink-headings: append-Verhalten haengt einen klickbaren <a>-Link
 // (Klasse `heading-anchor`) an jedes Heading. Sichtbar nur bei Hover via
 // globals.css. Klick kopiert den Anchor-Hash in die URL.
@@ -127,6 +194,11 @@ export function HandbookReader({
                   counter: { value: 0 },
                 }),
               ]}
+              components={{
+                a: (props) => (
+                  <CustomLink {...props} sectionDomIdFn={sectionDomIdFn} />
+                ),
+              }}
             >
               {indexMarkdown}
             </ReactMarkdown>
@@ -189,6 +261,11 @@ export function HandbookReader({
                       counter: { value: 0 },
                     }),
                   ]}
+                  components={{
+                    a: (props) => (
+                      <CustomLink {...props} sectionDomIdFn={sectionDomIdFn} />
+                    ),
+                  }}
                 >
                   {stripLeadingH1(section.markdown)}
                 </ReactMarkdown>
