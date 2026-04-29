@@ -499,6 +499,46 @@
       "version": "V4.1",
       "description": "Requirements done 2026-04-28 als FEAT-030. Scope: neue Top-Level-Page /admin/reviews (Cross-Tenant-Aggregat aller pendenden Block-Reviews, sortiert oldest-first), Pro-Tenant-Sicht /admin/tenants/[id]/reviews, Quick-Stats-Badge im /admin/tenants Tabellen-Eintrag. Direct-Links zu Konsolidiertem Review-View (FEAT-029) und /admin/debrief. Kein Mode-Toggle / keine Tenant-Impersonation in V4.1 (DEC-V4.1-7). Cross-Tenant + Pro-Tenant beide gebaut (DEC-V4.1-8).",
       "createdAt": "2026-04-27"
+    },
+    {
+      "id": "BL-051",
+      "title": "Reader Polish: Active-Section-Scroll-Spy in Sidebar",
+      "type": "improvement",
+      "priority": "medium",
+      "status": "open",
+      "version": "V4.2",
+      "description": "Wenn der User durch das Handbuch scrollt, soll die linke Sidebar-Section-Liste die aktuell sichtbare Section automatisch markieren (Scroll-Spy via IntersectionObserver). Aufwand klein, UX-Wert hoch. Aus SLC-045 Open Points dokumentiert (Scope-Disziplin: war kein Pflicht-Item).",
+      "createdAt": "2026-04-29"
+    },
+    {
+      "id": "BL-052",
+      "title": "Reader Polish: Copy-Permalink-Button pro Section",
+      "type": "improvement",
+      "priority": "low",
+      "status": "open",
+      "version": "V4.2",
+      "description": "Pro Section ein Copy-Button im Section-Hero, der den Permalink (URL inkl. Section-Anchor-Hash) in die Zwischenablage kopiert. Aktuell muss der User das Heading-Anchor-Hover-Symbol nutzen (SLC-045 MT-3). Aufwand klein, hilft beim Teilen einzelner Section-Links.",
+      "createdAt": "2026-04-29"
+    },
+    {
+      "id": "BL-053",
+      "title": "Reader Polish: Loading-Skeleton waehrend Snapshot-Wechsel",
+      "type": "improvement",
+      "priority": "low",
+      "status": "open",
+      "version": "V4.2",
+      "description": "Beim Klick auf einen Snapshot in der Versionen-Liste laedt die naechste Page neu. Waehrend dieser Zeit ist die Reader-Flaeche leer. Skeleton-Loader wuerde Wartezeit ueberbruecken. Server-Component re-renders sind schnell genug fuer V4.1, aber bei grossen Snapshots (>300KB) sichtbar.",
+      "createdAt": "2026-04-29"
+    },
+    {
+      "id": "BL-054",
+      "title": "Reader Cross-Snapshot-Suche und Suche-Historie",
+      "type": "improvement",
+      "priority": "low",
+      "status": "open",
+      "version": "V4.2",
+      "description": "SLC-045 hat client-side Single-Snapshot-Suche umgesetzt. Cross-Snapshot-Suche (alle Snapshots eines Tenants) braucht serverseitige Pre-Indexierung oder einen Search-Index. Search-History (letzte 5 Queries pro User) ist optional. Beides war bewusst out-of-scope (Slice-Spec).",
+      "createdAt": "2026-04-29"
     }
   ]
 }

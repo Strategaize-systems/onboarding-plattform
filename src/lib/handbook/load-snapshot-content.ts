@@ -48,7 +48,14 @@ export interface IndexFile {
 export interface SnapshotContent {
   index: IndexFile | null;
   sections: SectionFile[];
+  /** SLC-045 MT-2: Summe der Markdown-Bytes (INDEX + alle Sections). */
+  totalMarkdownBytes: number;
+  /** SLC-045 MT-2: true wenn totalMarkdownBytes > LARGE_SNAPSHOT_BYTE_THRESHOLD. */
+  isLargeSnapshot: boolean;
 }
+
+/** SLC-045 MT-2: Schwellenwert fuer den Performance-Banner (500KB). */
+export const LARGE_SNAPSHOT_BYTE_THRESHOLD = 500_000;
 
 interface SchemaSectionLite {
   key: string;
@@ -141,7 +148,16 @@ export async function loadSnapshotContent(params: {
     return a.sectionKey.localeCompare(b.sectionKey);
   });
 
-  return { index, sections };
+  const totalMarkdownBytes =
+    (index?.markdown.length ?? 0) +
+    sections.reduce((sum, s) => sum + s.markdown.length, 0);
+
+  return {
+    index,
+    sections,
+    totalMarkdownBytes,
+    isLargeSnapshot: totalMarkdownBytes > LARGE_SNAPSHOT_BYTE_THRESHOLD,
+  };
 }
 
 async function loadSchemaSectionMap(

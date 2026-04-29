@@ -152,12 +152,16 @@ export default async function HandbookReaderPage({ params }: PageProps) {
         isStale={false}
         isStrategaizeAdmin={isStrategaizeAdmin}
         captureSessionId={snapshotRow.capture_session_id as string}
+        isLargeSnapshot={false}
+        totalMarkdownBytes={0}
       />
     );
   }
 
   let sections: SectionFile[] = [];
   let indexMarkdown: string | null = null;
+  let totalMarkdownBytes = 0;
+  let isLargeSnapshot = false;
   let loadError: string | null = null;
 
   try {
@@ -167,6 +171,8 @@ export default async function HandbookReaderPage({ params }: PageProps) {
     });
     sections = content.sections;
     indexMarkdown = content.index?.markdown ?? null;
+    totalMarkdownBytes = content.totalMarkdownBytes;
+    isLargeSnapshot = content.isLargeSnapshot;
   } catch (err) {
     loadError = err instanceof Error ? err.message : String(err);
   }
@@ -194,6 +200,8 @@ export default async function HandbookReaderPage({ params }: PageProps) {
       isStale={isStale}
       isStrategaizeAdmin={isStrategaizeAdmin}
       captureSessionId={snapshotRow.capture_session_id as string}
+      isLargeSnapshot={isLargeSnapshot}
+      totalMarkdownBytes={totalMarkdownBytes}
     />
   );
 }

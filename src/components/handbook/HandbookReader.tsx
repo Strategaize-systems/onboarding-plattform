@@ -1,17 +1,22 @@
 "use client";
 
 // SLC-044 MT-3 + MT-5 — Markdown-Render und Cross-Link "Im Debrief bearbeiten".
+// SLC-045 MT-1 — Volltext-Such-Highlight via custom rehype-Plugin (text-only,
+// skip code/pre, Match-IDs `match-{sectionKey}-{index}` synchron zur Treffer-Liste).
+// SLC-045 MT-3 — Heading-Anchor-Hover-Indicator via append-Verhalten von
+// rehype-autolink-headings + CSS in app/globals.css. Print-CSS via print:-Modifier.
 //
 // Pro Section eine <article> mit react-markdown + remark-gfm + rehype-raw +
-// rehype-slug + rehype-autolink-headings. Section-Header bekommt eine DOM-ID
-// fuer Anchor-Scroll aus der Sidebar. Cross-Link "Im Debrief bearbeiten" wird
-// nur fuer strategaize_admin gerendert (server-seitig per Prop entschieden —
-// fuer tenant_admin ist der Link nicht im DOM).
+// rehype-slug + rehype-autolink-headings + ggf. highlight-Plugin. Section-Header
+// bekommt eine DOM-ID fuer Anchor-Scroll aus der Sidebar. Cross-Link "Im Debrief
+// bearbeiten" wird nur fuer strategaize_admin gerendert (server-seitig per Prop
+// entschieden — fuer tenant_admin ist der Link nicht im DOM).
 //
 // rehype-raw: Worker-Markdown enthaelt Inline-HTML wie <a id="block-A"></a>
 // als Anchor-Targets (siehe sections.ts:263). Ohne rehype-raw rendert
 // react-markdown das als Text. Reihenfolge: remarkGfm → rehypeRaw →
-// rehypeSlug → rehypeAutolinkHeadings.
+// rehypeSlug → rehypeAutolinkHeadings → highlight (zuletzt, weil es Text-Nodes
+// splittet und die anderen Plugins bereits durch sind).
 //
 // Block-Key-Mapping kommt aus loadSnapshotContent (templates.handbook_schema).
 // Sections ohne eindeutigen Block-Key zeigen keinen Cross-Link.
@@ -25,6 +30,7 @@ import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import { Pencil } from "lucide-react";
 
 import type { SectionFile } from "@/lib/handbook/load-snapshot-content";
+import { highlightRehypePlugin } from "@/lib/handbook/highlight-rehype-plugin";
 
 interface HandbookReaderProps {
   sections: SectionFile[];
@@ -32,12 +38,13 @@ interface HandbookReaderProps {
   isStrategaizeAdmin: boolean;
   captureSessionId: string;
   sectionDomIdFn: (sectionKey: string) => string;
+  searchQuery: string;
 }
 
 // Premium-Look Tailwind-prose-Modifiers — Brand-Hierarchie + bessere Lesbarkeit.
-// Bewusst gemeinsame Klassen-Konstante, damit INDEX und Sections identisch styled sind.
+// `handbook-prose` triggert die globalen Anchor-/Search-Styles in app/globals.css.
 const PROSE_CLASSES = [
-  "prose prose-slate max-w-none",
+  "prose prose-slate max-w-none handbook-prose",
   // Heading-Hierarchie
   "prose-headings:scroll-mt-24 prose-headings:tracking-tight prose-headings:text-slate-900",
   "prose-h1:text-3xl prose-h1:font-bold prose-h1:mb-4 prose-h1:mt-0",
@@ -71,24 +78,55 @@ const SECTION_BADGE_COLORS = [
   "from-teal-500 to-emerald-600",
 ];
 
+const INDEX_SECTION_KEY = "__index";
+
+// rehype-autolink-headings: append-Verhalten haengt einen klickbaren <a>-Link
+// (Klasse `heading-anchor`) an jedes Heading. Sichtbar nur bei Hover via
+// globals.css. Klick kopiert den Anchor-Hash in die URL.
+const AUTOLINK_OPTIONS = {
+  behavior: "append" as const,
+  properties: {
+    className: ["heading-anchor"],
+    "aria-label": "Direkt-Link zu diesem Heading",
+  },
+  content: {
+    type: "element" as const,
+    tagName: "span",
+    properties: { className: ["heading-anchor-icon"], "aria-hidden": "true" },
+    children: [{ type: "text" as const, value: "#" }],
+  },
+};
+
 export function HandbookReader({
   sections,
   indexMarkdown,
   isStrategaizeAdmin,
   captureSessionId,
   sectionDomIdFn,
+  searchQuery,
 }: HandbookReaderProps) {
+  const trimmedQuery = searchQuery.trim();
+
   return (
     <div className="space-y-12">
       {indexMarkdown && (
         <article
-          id={sectionDomIdFn("__index")}
+          id={sectionDomIdFn(INDEX_SECTION_KEY)}
           className="scroll-mt-24 rounded-2xl border border-slate-200 bg-white px-8 py-10 shadow-sm"
         >
           <div className={PROSE_CLASSES}>
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
-              rehypePlugins={[rehypeRaw, rehypeSlug, rehypeAutolinkHeadings]}
+              rehypePlugins={[
+                rehypeRaw,
+                rehypeSlug,
+                [rehypeAutolinkHeadings, AUTOLINK_OPTIONS],
+                highlightRehypePlugin({
+                  query: trimmedQuery,
+                  sectionId: INDEX_SECTION_KEY,
+                  counter: { value: 0 },
+                }),
+              ]}
             >
               {indexMarkdown}
             </ReactMarkdown>
@@ -113,21 +151,21 @@ export function HandbookReader({
             data-block-key={section.blockKey ?? ""}
           >
             <div
-              className={`bg-gradient-to-r ${gradient} px-8 py-5 text-white`}
+              className={`bg-gradient-to-r ${gradient} px-8 py-5 text-white print:bg-none print:bg-white print:text-slate-900 print:border-b print:border-slate-300`}
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="text-xs font-bold uppercase tracking-[0.18em] text-white/70">
+                  <div className="text-xs font-bold uppercase tracking-[0.18em] text-white/70 print:text-slate-500">
                     Sektion {String(section.order).padStart(2, "0")}
                   </div>
-                  <h2 className="mt-1 text-2xl font-bold tracking-tight text-white">
+                  <h2 className="mt-1 text-2xl font-bold tracking-tight text-white print:text-slate-900">
                     {section.title}
                   </h2>
                 </div>
                 {debriefHref && (
                   <Link
                     href={debriefHref}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-white/30 bg-white/15 px-3 py-1.5 text-xs font-medium text-white backdrop-blur hover:bg-white/25"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-white/30 bg-white/15 px-3 py-1.5 text-xs font-medium text-white backdrop-blur hover:bg-white/25 print:hidden"
                     data-testid="reader-cross-link"
                   >
                     <Pencil className="h-3.5 w-3.5" />
@@ -141,7 +179,16 @@ export function HandbookReader({
               <div className={PROSE_CLASSES}>
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
-                  rehypePlugins={[rehypeRaw, rehypeSlug, rehypeAutolinkHeadings]}
+                  rehypePlugins={[
+                    rehypeRaw,
+                    rehypeSlug,
+                    [rehypeAutolinkHeadings, AUTOLINK_OPTIONS],
+                    highlightRehypePlugin({
+                      query: trimmedQuery,
+                      sectionId: section.sectionKey,
+                      counter: { value: 0 },
+                    }),
+                  ]}
                 >
                   {stripLeadingH1(section.markdown)}
                 </ReactMarkdown>

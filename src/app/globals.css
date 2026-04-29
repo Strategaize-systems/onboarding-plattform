@@ -97,3 +97,92 @@
     @apply bg-background text-foreground;
   }
 }
+
+/*
+ * SLC-045 MT-1 + MT-3 — Handbuch-Reader-spezifisches CSS.
+ * - Heading-Anchor-Hover-Indicator (Permalink-#-Symbol nur bei Hover)
+ * - Search-Match-Highlights (<mark class="handbook-search-match">)
+ * - Active-Match-Flash bei Klick auf Treffer aus der Treffer-Liste
+ * - Print-Styles fuer sauberen Druck-Output
+ */
+
+/* Heading-Anchor: append-Verhalten von rehype-autolink-headings haengt
+   <a class="heading-anchor"><span class="heading-anchor-icon">#</span></a>
+   an jedes Heading. Default unsichtbar; bei Hover ueber das Heading sichtbar. */
+.handbook-prose :is(h1, h2, h3, h4, h5, h6) {
+  position: relative;
+}
+.handbook-prose a.heading-anchor {
+  margin-left: 0.5rem;
+  opacity: 0;
+  transition: opacity 0.15s ease-in-out;
+  text-decoration: none;
+  color: rgb(99 102 241); /* indigo-500 */
+  font-weight: 400;
+  font-size: 0.85em;
+  padding: 0 0.25rem;
+  border-radius: 0.25rem;
+}
+.handbook-prose :is(h1, h2, h3, h4, h5, h6):hover a.heading-anchor,
+.handbook-prose a.heading-anchor:focus {
+  opacity: 1;
+}
+.handbook-prose a.heading-anchor:hover {
+  background-color: rgb(238 242 255); /* indigo-50 */
+  color: rgb(67 56 202); /* indigo-700 */
+}
+
+/* Search-Match-Highlights aus highlight-rehype-plugin.ts */
+.handbook-prose mark.handbook-search-match {
+  background-color: rgb(254 240 138); /* yellow-200 */
+  color: rgb(15 23 42); /* slate-900 */
+  padding: 0 0.125rem;
+  border-radius: 0.125rem;
+  font-weight: 500;
+}
+
+/* Active-Match-Flash: 1.5s Pulse, getriggert durch handbook-search-match-flash
+   Klasse die ReaderShell.handleJumpToMatch nach scrollIntoView vergibt. */
+@keyframes handbook-match-flash {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
+    background-color: rgb(254 240 138);
+  }
+  20%, 60% {
+    box-shadow: 0 0 0 6px rgba(245, 158, 11, 0.35);
+    background-color: rgb(253 224 71); /* yellow-300 */
+  }
+}
+.handbook-prose mark.handbook-search-match.handbook-search-match-flash {
+  animation: handbook-match-flash 1.5s ease-in-out;
+}
+
+/* Print-CSS: Sauberer Druck. Sidebar/Header/Buttons aus, Section-Hero ohne
+   Gradient. Tailwind print:-Modifier deckt das meiste in den Komponenten ab.
+   Hier nur die globalen Korrekturen. */
+@media print {
+  body {
+    background: #fff !important;
+  }
+  .handbook-prose {
+    color: #000 !important;
+  }
+  .handbook-prose a.heading-anchor {
+    display: none !important;
+  }
+  .handbook-prose mark.handbook-search-match {
+    background: transparent !important;
+    color: inherit !important;
+    padding: 0 !important;
+    font-weight: inherit !important;
+  }
+  /* Avoid page-break inside Wissens-Einheiten (li-Bloecke). */
+  .handbook-prose li {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .handbook-prose article,
+  .handbook-prose section {
+    break-inside: avoid-page;
+  }
+}
