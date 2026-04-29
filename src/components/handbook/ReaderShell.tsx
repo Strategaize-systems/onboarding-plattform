@@ -155,7 +155,7 @@ export function ReaderShell({
         return;
       }
       if (e.key === "Escape" && searchQuery !== "") {
-        setSearchQuery("");
+        searchInputRef.current?.clear();
       }
     }
     window.addEventListener("keydown", onKeyDown);

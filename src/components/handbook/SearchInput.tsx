@@ -7,7 +7,6 @@
 import { Search, X, Loader2 } from "lucide-react";
 import {
   forwardRef,
-  useEffect,
   useImperativeHandle,
   useRef,
   useState,
@@ -24,6 +23,7 @@ interface SearchInputProps {
 
 export interface SearchInputHandle {
   focus: () => void;
+  clear: () => void;
 }
 
 export const SearchInput = forwardRef<SearchInputHandle, SearchInputProps>(
@@ -44,14 +44,12 @@ export const SearchInput = forwardRef<SearchInputHandle, SearchInputProps>(
 
     useImperativeHandle(ref, () => ({
       focus: () => inputRef.current?.focus(),
-    }));
-
-    // Aussen-Reset durch Esc oder onClear-Aufruf
-    useEffect(() => {
-      if (query !== localValue && query === "") {
+      clear: () => {
+        if (timerRef.current) clearTimeout(timerRef.current);
         setLocalValue("");
-      }
-    }, [query, localValue]);
+        onQueryChange("");
+      },
+    }));
 
     function emitDebounced(next: string) {
       if (timerRef.current) clearTimeout(timerRef.current);
