@@ -45,7 +45,7 @@
     {
       "id": "v4-1",
       "name": "V4.1",
-      "status": "active",
+      "status": "released",
       "summary": "Handbuch-Reader + Berater-Review-Workflow. 3 Features: (1) FEAT-028 Handbuch In-App-Reader unter /dashboard/handbook/[snapshotId] mit Sidebar-Navigation, Markdown-Render, Section-Anchors, Volltext-Suche und Snapshot-Liste (Reader-Only, kein Inline-Editor in V4.1, Cross-Link zu /admin/debrief). (2) FEAT-029 Berater-Review + Quality-Gate ueber neue block_review-Tabelle, Block-Approval-Granularitaet, weiches Quality-Gate im Trigger-Flow (Confirm-Dialog statt hartem Lock), Cockpit-Card 'Mitarbeiter-Bloecke reviewed'. (3) FEAT-030 Berater-Visibility-Verlinkung: neue /admin/reviews Cross-Tenant-Sicht und /admin/tenants/[id]/reviews Pro-Tenant-Sicht mit Direct-Links zu /admin/debrief. Requirements done 2026-04-28, 8 DECs (DEC-V4.1-1..8) gesetzt, 5 offene Architektur-Fragen (Q-V4.1-A..E). Skizze: 5 Slices SLC-041..045, ~21 Micro-Tasks, ~4-5 Tage Implementation. Naechster Schritt: /architecture V4.1.",
       "order": 7
     },
