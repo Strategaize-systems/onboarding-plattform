@@ -579,6 +579,16 @@
       "version": "V4.2",
       "description": "Heading-Anchor-Hover-Indicator (#-Symbol bei Hover) erscheint korrekt bei h2/h3-Headings, aber nicht zuverlaessig am h1-Titel des Reader-Inhaltsverzeichnisses (vermutlich CSS-Specificity-Issue mit prose-h1:mt-0 oder Hit-Bereich zu klein). Funktional nicht-blockierend. Aufgedeckt im V4.1 Browser-Smoke 2026-04-29 (Punkt 5a).",
       "createdAt": "2026-04-29"
+    },
+    {
+      "id": "BL-059",
+      "title": "Next.js 16 middleware->proxy Convention-Migration",
+      "type": "improvement",
+      "priority": "low",
+      "status": "open",
+      "version": "V4.2",
+      "description": "Next.js 16.2.4 deprecated die `middleware`-File-Convention zugunsten `proxy`. Build zeigt `The middleware file convention is deprecated`. Nicht funktional blockierend, aber sollte vor Next 17-Bump migriert werden. Migration: `src/middleware.ts` -> `src/proxy.ts`, Convention-Anpassungen in API-Signatur. Aufgedeckt in /final-check V4.1 (RPT-110) und /go-live V4.1 (RPT-111).",
+      "createdAt": "2026-04-29"
     }
   ]
 }
