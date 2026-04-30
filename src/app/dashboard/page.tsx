@@ -5,6 +5,13 @@ import { getReviewSummary } from "@/lib/handbook/get-review-summary";
 import { BlockReviewStatusCard } from "@/components/cockpit/BlockReviewStatusCard";
 import { DashboardClient } from "./dashboard-client";
 import { StatusCockpit } from "./StatusCockpit";
+// SLC-047 Wizard-Trigger — eigentlich ueber dashboard/layout.tsx geplant
+// (DEC SLC-047 MT-5), aber Next 16 Turbopack-Build erkennt das layout.tsx
+// nicht und packt seinen Code nicht ins Bundle. Workaround: Trigger hier in
+// page.tsx. Effektiv identisch fuer V4.2 (Wizard nur initial auf /dashboard).
+import { getWizardStateForCurrentUser } from "@/lib/wizard/get-wizard-state";
+import { Wizard, type WizardTemplate } from "@/components/onboarding-wizard/Wizard";
+import { clampStep } from "@/components/onboarding-wizard/wizard-helpers";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -97,12 +104,44 @@ export default async function DashboardPage() {
       <StatusCockpit metrics={metrics} reviewCard={reviewCard} />
     ) : null;
 
+  // SLC-047 — Auto-Trigger Wizard fuer tenant_admin im pending|started state.
+  // Lade Tenant-Name + aktive Templates nur wenn Wizard tatsaechlich rendert.
+  const wizardState = await getWizardStateForCurrentUser();
+  let wizardOverlay: React.ReactNode = null;
+  if (wizardState.shouldShow && profile.tenant_id) {
+    const [tenantRes, templatesRes] = await Promise.all([
+      supabase.from("tenants").select("name").eq("id", profile.tenant_id).single(),
+      supabase
+        .from("template")
+        .select("id, slug, name, description")
+        .order("created_at", { ascending: true }),
+    ]);
+    const tenantName = tenantRes.data?.name ?? "Ihr Unternehmen";
+    const templates: WizardTemplate[] = (templatesRes.data ?? []).map((row) => ({
+      id: row.id as string,
+      slug: row.slug as string,
+      name: row.name as string,
+      description: (row.description as string | null) ?? null,
+    }));
+    wizardOverlay = (
+      <Wizard
+        initialStep={clampStep(wizardState.step)}
+        initialState={wizardState.state === "started" ? "started" : "pending"}
+        tenantName={tenantName}
+        templates={templates}
+      />
+    );
+  }
+
   return (
-    <DashboardClient
-      profile={profile}
-      initialSessions={sessions}
-      initialGapCounts={gapCounts}
-      cockpitContent={cockpitContent}
-    />
+    <>
+      <DashboardClient
+        profile={profile}
+        initialSessions={sessions}
+        initialGapCounts={gapCounts}
+        cockpitContent={cockpitContent}
+      />
+      {wizardOverlay}
+    </>
   );
 }
