@@ -2,11 +2,17 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 // SLC-046 MT-2 — V4.2 Wizard Server-Actions
 // DEC-051: nur tenant_admin darf den Wizard ausfuehren (Cross-Role-Check).
 // DEC-052..056: Multi-Admin-Lock via atomares UPDATE mit WHERE state='pending'.
 // State-Maschine: pending -> started -> (skipped|completed). step bewegt sich 1..4 nur in 'started'.
+//
+// Fix 2026-04-30: tenants-Tabelle hat KEINE UPDATE-RLS-Policy fuer tenant_admin
+// (nur SELECT). UPDATEs durch tenant_admin returnen 0 Rows silent. Alle UPDATE-
+// Aufrufe nutzen jetzt den Service-Role-Client; Auth-Check (Cross-Role) passiert
+// vorher mit dem RLS-aware Client in requireTenantAdmin.
 
 type ActionOk<T extends Record<string, unknown> = Record<string, unknown>> = {
   ok: true;
@@ -62,7 +68,8 @@ export async function setWizardStarted(): Promise<StartedResult> {
   const ctx = await requireTenantAdmin();
   if ("error" in ctx) return { ok: false, error: ctx.error };
 
-  const { data, error } = await ctx.supabase
+  const admin = createAdminClient();
+  const { data, error } = await admin
     .from("tenants")
     .update({ onboarding_wizard_state: "started", onboarding_wizard_step: 1 })
     .eq("id", ctx.tenantId)
@@ -85,7 +92,8 @@ export async function setWizardStep(step: 1 | 2 | 3 | 4): Promise<SimpleResult> 
   const ctx = await requireTenantAdmin();
   if ("error" in ctx) return { ok: false, error: ctx.error };
 
-  const { data, error } = await ctx.supabase
+  const admin = createAdminClient();
+  const { data, error } = await admin
     .from("tenants")
     .update({ onboarding_wizard_step: step })
     .eq("id", ctx.tenantId)
@@ -106,7 +114,8 @@ export async function setWizardSkipped(): Promise<SimpleResult> {
   const ctx = await requireTenantAdmin();
   if ("error" in ctx) return { ok: false, error: ctx.error };
 
-  const { data, error } = await ctx.supabase
+  const admin = createAdminClient();
+  const { data, error } = await admin
     .from("tenants")
     .update({ onboarding_wizard_state: "skipped" })
     .eq("id", ctx.tenantId)
@@ -127,7 +136,8 @@ export async function setWizardCompleted(): Promise<SimpleResult> {
   const ctx = await requireTenantAdmin();
   if ("error" in ctx) return { ok: false, error: ctx.error };
 
-  const { data, error } = await ctx.supabase
+  const admin = createAdminClient();
+  const { data, error } = await admin
     .from("tenants")
     .update({
       onboarding_wizard_state: "completed",
