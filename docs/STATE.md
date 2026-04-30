@@ -10,14 +10,13 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: **V4.2 SLC-046 /backend done 2026-04-30.** MIG-029 (Migration 080) atomar in 3 Bloecken auf Hetzner-Onboarding-DB live deployt (Variante A bestaetigt). Wizard-Server-Actions in `src/app/dashboard/wizard-actions.ts` (4 Actions, Multi-Admin-Lock atomar) + `src/lib/wizard/get-wizard-state.ts` Layout-Helper + 16/16 RLS-Test-Matrix-Erweiterung gegen Live-DB PASS. Alle 4 Pflicht-Gates erfuellt: Multi-Admin-Lock-Race (1/0 atomar), Trigger-Soft-Fail (auth.users-INSERT geht durch trotz Trigger-Exception), Live-Migration-Deploy, RLS-Matrix-16-Tests. Backfills: 1 Tenant auf 'completed', 3 user_settings angelegt mit 64-char Token. **Naechste Aktion: /qa SLC-046** (Pflicht direkt nach /backend per Rules).
-- Current Phase: V4.2 1/5 Slices done (SLC-046). Naechste Phase: /qa SLC-046.
+- Current Focus: **V4.2 SLC-046 /qa PASS 2026-04-30 (RPT-116, reviewOf RPT-115).** Alle 13 ACs verifiziert, alle 4 Pflicht-Gates re-verified (Migration-Live-Schema-Inspektion, 16/16 RLS-Live-PASS, Multi-Admin-Lock atomar, Trigger-Soft-Fail-Wrap). 29/29 Mock-Tests PASS, `npx tsc --noEmit` clean, `npm run build` clean. 4 Low-Findings dokumentiert (Kosmetik / Semantik-Klarheit), kein Blocker. 3 positive Deviations gegenueber Spec: tightere user_settings GRANTs (P-1), gesplittete own_rw Policy (P-2), zusaetzlicher updated_at-Trigger (P-3). **Naechste Aktion: /post-launch V4.1** (verschoben aus letzter Session) oder direkt `/frontend SLC-047 ∥ /backend SLC-048`.
+- Current Phase: V4.2 1/5 Slices done+QA (SLC-046). Naechste Phase: /post-launch V4.1 oder SLC-047/048.
 
 ## Immediate Next Steps
-1. **/qa SLC-046** — Pflicht direkt nach /backend (rules/general.md). Reviews Schema-Drift, Server-Action-Edge-Cases, RLS-Matrix-Output, Soft-Fail-Korrektheit, Code-Quality.
-2. **/post-launch V4.1** — Pflicht-Folgeschritt, wurde per User-Entscheidung verschoben. 1-2 Tage Live-Beobachtung der V4.1-Production. Sollte spaetestens 3-5 Tage nach V4.1-Deploy laufen, sonst gehen Live-Findings-Datenpunkte verloren.
-3. **/frontend SLC-047 ∥ /backend SLC-048** — koennen parallel laufen. SLC-047 Wizard-Modal-UI + 4 Step-Komponenten + Auto-Trigger im Layout. SLC-048 Cron-Endpoint + workdaysSince + sendReminder + Unsubscribe-Endpoint. Schema steht aus SLC-046.
-3. **V4.2-Slices-Stand (5/5 geplant):** SLC-046 Blocker, SLC-047 Frontend Wizard, SLC-048 Backend Reminders+Cron, SLC-049 Frontend Cockpit-Card+Filter+OptOut, SLC-050 Help-Sheet+Tooltips. Geschaetzt 5-7 Tage Implementation total.
+1. **/post-launch V4.1** — Pflicht-Folgeschritt, wurde per User-Entscheidung verschoben. 1-2 Tage Live-Beobachtung der V4.1-Production. Sollte spaetestens 3-5 Tage nach V4.1-Deploy laufen, sonst gehen Live-Findings-Datenpunkte verloren.
+2. **/frontend SLC-047 ∥ /backend SLC-048** — koennen parallel laufen. SLC-047 Wizard-Modal-UI + 4 Step-Komponenten + Auto-Trigger im Layout. SLC-048 Cron-Endpoint + workdaysSince + sendReminder + Unsubscribe-Endpoint. Schema steht aus SLC-046.
+3. **V4.2-Slices-Stand (1/5 done+QA, 4/5 planned):** SLC-046 done+QA-PASS (RPT-115+116), SLC-047 Frontend Wizard, SLC-048 Backend Reminders+Cron, SLC-049 Frontend Cockpit-Card+Filter+OptOut, SLC-050 Help-Sheet+Tooltips. Geschaetzt 4-6 Tage Implementation total fuer SLC-047..050.
 4. **V4.3-Backlog-Stand (Maintenance-Sammelrelease):** 9 offene Items (BL-051..059), Detail-Requirements optional, Start nach V4.2-Release.
 
 ## Active Scope
