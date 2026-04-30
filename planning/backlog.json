@@ -475,9 +475,9 @@
       "title": "Tenant-Onboarding-Wizard (FEAT-031)",
       "type": "feature",
       "priority": "high",
-      "status": "in_progress",
+      "status": "done",
       "version": "V4.2",
-      "description": "Requirements done 2026-04-29 als FEAT-031. 4-Schritte-Wizard fuer tenant_admin Erst-Login: Begruessung -> Template-Auswahl -> erste Mitarbeiter einladen -> Was-nun-Cards. Step-Persistenz auf tenant.onboarding_wizard_state/_step/_completed_at. Skip-Mechanismen pro Schritt + globaler Skip. Multi-Admin-Lock via DB-Row-Lock. strategaize_admin sieht Wizard nie. 9 ACs, 3 DECs. Naechster Schritt: /architecture V4.2.",
+      "description": "Wizard komplett: SLC-046 Backend-Foundation + SLC-047 Frontend (Wizard-Modal, 4 Step-Komponenten, Auto-Trigger im /dashboard/layout, Multi-Admin-Lock-Handshake, Error-Boundary, Skip/Complete-Pfade, Step-Persistenz). 26/26 neue Tests gruen. Code done 2026-04-30; QA + Browser-Smoke MT-7 stehen aus.",
       "createdAt": "2026-04-23"
     },
     {

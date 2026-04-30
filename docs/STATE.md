@@ -10,13 +10,13 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: **V4.1 /post-launch STABLE 2026-04-30 (RPT-117, ~18h post-deploy).** 0 Errors, alle V4.1-Routes reachable, Container 18h healthy, kein Hotfix/Rollback noetig. Demo-Daten unveraendert. V4.2-SLC-046-Foundation co-existiert sauber. Vorher: SLC-046 /qa PASS (RPT-116). Naechste Aktion: V4.2-Implementation SLC-047 ∥ SLC-048.
-- Current Phase: V4.1 vollstaendig abgeschlossen (released + post-launch STABLE). V4.2 1/5 Slices done+QA. Naechste Phase: /frontend SLC-047 oder /backend SLC-048.
+- Current Focus: **V4.2 SLC-047 Frontend Code-done 2026-04-30.** Wizard-Modal mit 4 Step-Komponenten, Auto-Trigger im neuen `/dashboard/layout.tsx`, Multi-Admin-Lock-Handshake, Error-Boundary, Step-Persistenz und Skip/Complete-Pfade implementiert. tsc + build clean, 26/26 neue Logic-Tests gruen (wizard-helpers + persistence). MT-7 Browser-Smoke mit Nicht-Tech-User-Persona steht aus (Pflicht-Gate SC-V4.2-9). Naechste Aktion: /qa SLC-047. Vorher: V4.1 /post-launch STABLE (RPT-117), SLC-046 /qa PASS (RPT-116).
+- Current Phase: V4.2 2/5 Slices Code-done (SLC-046 + SLC-047). Naechste Phase: /qa SLC-047 + Browser-Smoke MT-7, dann /backend SLC-048.
 
 ## Immediate Next Steps
-1. **/frontend SLC-047** — Wizard-Modal-UI mit 4 Step-Komponenten + Auto-Trigger im Layout. Empfohlen zuerst (User-sichtbare UX). Pflicht-Gate: Browser-Smoke mit Nicht-Tech-User-Persona (SC-V4.2-9, R17-Pattern).
-2. **/backend SLC-048** — Cron-Endpoint + workdaysSince + sendReminder + Unsubscribe. Parallel zu SLC-047 moeglich. Pflicht-Gates: Cron-Idempotenz, Live-SMTP-Test, SPF/DKIM-Pre-Check, Coolify-Cron-Setup.
-3. **V4.2-Slices-Stand (1/5 done+QA, 4/5 planned):** SLC-046 done+QA-PASS (RPT-115+116), SLC-047 Frontend Wizard, SLC-048 Backend Reminders+Cron, SLC-049 Frontend Cockpit-Card+Filter+OptOut, SLC-050 Help-Sheet+Tooltips. Geschaetzt 4-6 Tage Implementation total fuer SLC-047..050.
+1. **/qa SLC-047** — Pflicht-Gate Browser-Smoke mit Nicht-Tech-User-Persona (MT-7, SC-V4.2-9), Cross-Role-Test (strategaize_admin sieht Wizard nicht), Step-Persistenz nach Reload (Live-DB), Skip-Pfade aus jedem Step, Multi-Admin-Race-Test (zwei parallele tenant_admin-Logins), Error-Boundary-Smoke. Tests gegen Coolify-DB.
+2. **/backend SLC-048** — Cron-Endpoint + workdaysSince + sendReminder + Unsubscribe. Parallel zu /qa SLC-047 moeglich. Pflicht-Gates: Cron-Idempotenz, Live-SMTP-Test, SPF/DKIM-Pre-Check, Coolify-Cron-Setup.
+3. **V4.2-Slices-Stand (2/5 Code-done, 3/5 planned):** SLC-046 done+QA-PASS (RPT-115+116), SLC-047 Code-done (RPT-118), SLC-048 Backend Reminders+Cron, SLC-049 Frontend Cockpit-Card+Filter+OptOut, SLC-050 Help-Sheet+Tooltips. Geschaetzt 3-5 Tage Implementation total fuer SLC-048..050.
 4. **V4.3-Backlog-Stand (Maintenance-Sammelrelease):** 9 offene Items (BL-051..059), Detail-Requirements optional, Start nach V4.2-Release.
 
 ## Active Scope
