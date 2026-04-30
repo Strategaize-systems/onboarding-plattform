@@ -9,15 +9,15 @@
 Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdichtung. Ermoeglicht mehrere Capture-Modi (Fragebogen, Meeting, Voice, etc.) und Template-basierte Produktvarianten (z.B. Exit-Readiness, Immobilien-Onboarding). Ab V4: Zwei-Ebenen-Verschmelzung (GF-Blueprint + Mitarbeiter-Capture + Unternehmerhandbuch-Output).
 
 ## Current State
-- High-Level State: architecture
-- Current Focus: **V4.2 Architecture done 2026-04-29.** 11 neue DECs (DEC-051..061) finalisiert, 7 Open Questions Q-V4.2-A..G beantwortet, 5 verbleibende Detail-Fragen Q-V4.2-H..L an /slice-planning + /backend + /frontend delegiert. ARCHITECTURE.md V4.2-Sektion mit kompletter Komponentenliste (15 neue/geaenderte Pfade), Schema-Designs fuer 3 Datenmodell-Erweiterungen (tenant.onboarding_wizard_* + reminder_log + user_settings), Data-Flows fuer Wizard + Cron-Reminder + In-App-Hilfe, RLS-Tabellen, Cron-Coolify-Pattern, Constraints, Slice-Reihenfolge. MIGRATIONS.md MIG-029 als atomare 3-Block-Migration geplant (Migration 080). Foundation: kein neuer Container, kein neuer Bedrock-Call, kein neuer Storage-Bucket, kein neuer Worker-Job-Typ — alles laeuft auf bestehender Infrastruktur. **Naechste Aktion: /slice-planning V4.2 — 5 Slices SLC-046..050 detaillieren mit Micro-Tasks + ACs + Testing-Strategie.** /post-launch V4.1 bleibt Pflicht-Folgeschritt (verschoben per User-Entscheidung).
-- Current Phase: V4.2 Architecture done. Naechste Phase: /slice-planning V4.2.
+- High-Level State: slice-planning
+- Current Focus: **V4.2 Slice-Planning done 2026-04-29.** 5 Slice-Files SLC-046..050 angelegt mit Goal/In-Scope/ACs/Dependencies/Pflicht-Gates/Risks/Micro-Tasks (~30 MTs total). Variante A fuer MIG-029 final bestaetigt (Single-File 080_v42_self_service.sql, deployed in SLC-046 MT-1). Slice-Reihenfolge: 046 → 047 ∥ 048 → 049 → 050 → Gesamt-V4.2-/qa. SLC-047 + SLC-048 koennen parallel laufen. Pflicht-Gates pro Slice eindeutig dokumentiert. **Naechste Aktion: /backend SLC-046 — V4.2-Schema-Foundation deployen + Wizard-Server-Actions + Layout-Helper.** /post-launch V4.1 sollte vor /backend SLC-046 eingeschoben werden (1-2 Tage Live-Beobachtung).
+- Current Phase: V4.2 Slice-Planning done. Naechste Phase: /backend SLC-046.
 
 ## Immediate Next Steps
-1. **/slice-planning V4.2** — Naechste Aktion. Detaillierte Slice-Schnitte fuer 5 Slices SLC-046..050 (~24 MTs total): SLC-046 Backend Wizard-State + Server-Actions, SLC-047 Frontend Wizard-Modal mit 4 Step-Komponenten, SLC-048 Backend reminder_log + user_settings + Cron-Endpoint + SMTP, SLC-049 Frontend Cockpit-Card + Liste-Filter + Opt-Out, SLC-050 Help-Sheet + 5 Markdown-Files + Tooltips.
-2. **/post-launch V4.1** — Verschoben per User-Entscheidung. Kann nach /slice-planning V4.2 oder vor /backend SLC-046 eingeschoben werden, sollte aber nicht laenger als 3-5 Tage post-V4.1-Deploy dauern.
-3. **V4.2-Backlog-Stand:** 3 offene Items (BL-048 Tenant-Onboarding-Wizard [high, in_progress], BL-060 Capture-Reminders [high, in_progress], BL-061 In-App-Hilfe [medium, in_progress]).
-4. **V4.3-Backlog-Stand (Maintenance-Sammelrelease):** 9 offene Items (BL-051..059), Detail-Requirements optional.
+1. **/post-launch V4.1** (empfohlen vor SLC-046) — Pflicht-Folgeschritt, wurde per User-Entscheidung verschoben. 1-2 Tage Live-Beobachtung der V4.1-Production. Sollte vor V4.2-Backend laufen, sonst gehen Live-Findings-Datenpunkte verloren.
+2. **/backend SLC-046** — Naechste Implementation. MIG-029 Single-File-Migration auf Hetzner deployen (atomare 3-Block: tenants ALTER + reminder_log + user_settings) + Wizard-Server-Actions + getWizardStateForCurrentUser-Helper + 4-Rollen-RLS-Matrix-Erweiterung (16 Tests). Pflicht-Gates: Multi-Admin-Lock-Race-Test, Trigger-Soft-Fail-Test, Live-Migration-Deploy.
+3. **V4.2-Slices-Stand (5/5 geplant):** SLC-046 Blocker, SLC-047 Frontend Wizard, SLC-048 Backend Reminders+Cron, SLC-049 Frontend Cockpit-Card+Filter+OptOut, SLC-050 Help-Sheet+Tooltips. Geschaetzt 5-7 Tage Implementation total.
+4. **V4.3-Backlog-Stand (Maintenance-Sammelrelease):** 9 offene Items (BL-051..059), Detail-Requirements optional, Start nach V4.2-Release.
 
 ## Active Scope
 **V4 — Zwei-Ebenen-Verschmelzung, 6 Features Code-done, 8 Slices Code-done:**

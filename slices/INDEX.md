@@ -140,3 +140,49 @@
 - SLC-041: Worker-Backwards-Compat-Test (alte V4-Snapshots ohne `block_review`-Daten weiter generierbar).
 - SLC-044: Browser-Smoke-Test mit Nicht-Tech-User-Persona (analog SC-V4-5).
 - Gesamt-V4.1-/qa nach SLC-045 (SC-V4.1-1..12 vollstaendig verifiziert).
+
+## V4.2 Slices (Tenant Self-Service Onboarding)
+
+| ID | Slice | Feature | Status | Priority | Created |
+|----|-------|---------|--------|----------|---------|
+| SLC-046 | [Wizard Backend-Foundation + MIG-029](SLC-046-wizard-backend-foundation.md) | FEAT-031 | planned | Blocker | 2026-04-29 |
+| SLC-047 | [Wizard-Modal Frontend (4 Steps + Skip + Auto-Trigger)](SLC-047-wizard-modal-frontend.md) | FEAT-031 | planned | High | 2026-04-29 |
+| SLC-048 | [Capture-Reminders Backend (Cron + SMTP + Unsubscribe)](SLC-048-reminders-cron-backend.md) | FEAT-032 | planned | High | 2026-04-29 |
+| SLC-049 | [Cockpit-Card + Mitarbeiter-Filter + Opt-Out-Toggle](SLC-049-cockpit-card-filter-optout.md) | FEAT-032 | planned | Medium | 2026-04-29 |
+| SLC-050 | [Help-Sheet + 5 Markdown-Files + 5 Tooltips](SLC-050-help-sheet-tooltips.md) | FEAT-033 | planned | Medium | 2026-04-29 |
+
+### V4.2 Execution Order
+- **SLC-046** (Backend-Foundation, Blocker): MIG-029 atomare 3-Block-Migration (tenants ALTER + reminder_log + user_settings) + Wizard-Server-Actions + Layout-Helper. **Blocker fuer alle V4.2-Slices** weil das Schema fuer reminder_log und user_settings hier schon live geht (Variante A aus /architecture V4.2). Pflicht-Gates: 4-Rollen-RLS-Matrix-Erweiterung (16 Test-Faelle), Multi-Admin-Lock-Race-Test, Trigger-Soft-Fail-Test, Migration-Live-Deploy auf Hetzner.
+- **SLC-047** (Frontend Wizard): Wizard-Modal mit 4 Step-Komponenten + Skip-Logic + Auto-Trigger im Layout. Braucht SLC-046. Pflicht-Gate: Browser-Smoke mit Nicht-Tech-User-Persona (SC-V4.2-9).
+- **SLC-048** (Backend Reminders): Cron-Endpoint + workdaysSince + sendReminder + Unsubscribe-Endpoint. Schema steht aus SLC-046. Pflicht-Gates: Cron-Idempotenz-Test, Live-SMTP-Test mit Test-Mitarbeiter, SPF/DKIM-Pre-Check (Pre-Deploy-Pflicht), Coolify-Cron-Setup-Anleitung im Slice-Report.
+- **SLC-049** (Frontend Reminders-UX): InactiveEmployeesCard + Mitarbeiter-Liste-Filter `?filter=inactive` + Settings-Page mit Opt-Out-Toggle. Braucht SLC-046. Profitiert von SLC-048 (Reminder-Pipeline aktiv), funktioniert aber standalone.
+- **SLC-050** (Frontend Help): 5 Help-Markdown-Files + HelpSheet + HelpTrigger + 5 Tooltips. Tooltips brauchen SLC-047 (Wizard-Spaeter-Button) + SLC-049 (Inactive-Badge). Pflicht-Gate: Berater-Inhalts-Review der 5 Help-Files.
+
+**Empfohlene Reihenfolge:** 046 → 047 ∥ 048 → 049 → 050 → Gesamt-V4.2-/qa.
+
+**Parallelisierbar:**
+- SLC-047 und SLC-048 koennen parallel laufen sobald SLC-046 done (verschiedene Pfade — Frontend-Wizard vs. Backend-Cron).
+- SLC-049 kann starten sobald SLC-046 done (Schema steht). SLC-049 braucht SLC-048 nicht hart, profitiert aber vom Reminder-Loop fuer Real-Smoke-Test.
+- SLC-050 ist letzter — Tooltips brauchen alle anderen V4.2-Slices done.
+
+**Pflicht-Gates fuer V4.2:**
+- SLC-046: 4-Rollen-RLS-Matrix-Erweiterung um `reminder_log` + `user_settings` (16 Test-Faelle, 100% PASS gegen Live-DB).
+- SLC-046: Multi-Admin-Lock-Race-Test fuer setWizardStarted.
+- SLC-046: Migration-Live-Deploy via base64-pipe + `psql -U postgres` auf Hetzner.
+- SLC-047: Browser-Smoke-Test mit Nicht-Tech-User-Persona (SC-V4.2-9, R17-Pattern).
+- SLC-048: Cron-Idempotenz-Test (zwei Cron-Runs am selben Tag → 0 Doppel-Mails, SC-V4.2-12).
+- SLC-048: Live-SMTP-Test mit Test-Mitarbeiter-Account.
+- SLC-048: SPF/DKIM-Pre-Check der Server-Domain (eigener Maintenance-Sprint, Pre-Deploy-Pflicht).
+- SLC-048: Coolify-Cron-Setup-Anleitung im Slice-Report (feedback_cron_job_instructions).
+- SLC-050: Berater-Inhalts-Review der 5 Help-Files (kein Lorem-Ipsum, mind. 100 Worter pro File).
+- Gesamt-V4.2-/qa nach SLC-050 (SC-V4.2-1..12 vollstaendig verifiziert).
+
+### V4.2 Variante-A-Bestaetigung (MIG-029)
+
+In /architecture V4.2 wurde Variante A vs. Variante B fuer MIG-029 als offene Frage markiert. /slice-planning V4.2 entscheidet final fuer **Variante A**: Single-Migration-File `sql/migrations/080_v42_self_service.sql` mit allen 3 logischen Bloecken (tenants ALTER + reminder_log + user_settings), deployed in SLC-046 MT-1.
+
+Begruendung:
+- Pattern-Konsistenz mit V4.1 SLC-041 (MIG-028 hatte 4 Bloecke in einem File).
+- Ein DEPLOY-Run statt zwei reduziert Drift-Risiko.
+- Schema-Foundation komplett vor Slice-Implementation — SLC-048 kann direkt mit Code starten ohne weiteren DB-Schritt.
+- RLS-Policies regeln Sichtbarkeit von Anfang an korrekt — keine Halb-Schema-Phase.
