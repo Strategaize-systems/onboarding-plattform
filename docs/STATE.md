@@ -10,16 +10,15 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: **V4.2 SLC-047 /qa Code-PASS 2026-04-30 (RPT-119) + ISSUE-030 resolved.** Live-Site nach Coolify-Proxy-Restart wieder erreichbar (4/4 HTTP 200 in 127-160ms). Code-Lage: alle automatisierbaren Pflicht-Gates gruen — 26/26 Wizard-Tests gegen Coolify-DB, tsc=0, Build clean, Wiring konsistent, Cross-Role doppelt, Multi-Admin-Race race-safe, Stub-Detection clean. **Browser-Smoke MT-7 (SC-V4.2-9) wartet jetzt nur noch auf 2 Vorbedingungen:** (a) User-Coolify-Deploy des Commits `abd3811` (Coolify-UI "Redeploy"), (b) Test-Tenant-Setup (Demo-Tenant ist 'completed' + 4 Sessions; Soft-Bedingung "0 sessions" greift, daher frischer Test-Tenant noetig).
-- Current Phase: V4.2 2/5 Slices Code-done. Naechste Phase: User-Deploy SLC-047 + frischer Test-Tenant + MT-7 Re-QA (RPT-120), parallel /backend SLC-048.
+- Current Focus: **V4.2 SLC-047 final PASS 2026-04-30 (RPT-120, MT-7 Browser-Smoke User-bestaetigt).** Wizard-Modal oeffnet automatisch nach Login als tenant_admin, alle 4 Steps durchgelaufen ohne Friction, "Erledigt" schliesst Modal. Im /qa-Pfad 2 Live-Bugs entdeckt + gefixt: ISSUE-030 (Coolify-Proxy stale Traefik-Routing → 504; Fix: `docker restart coolify-proxy`) + ISSUE-031 (tenants RLS keine UPDATE-Policy fuer tenant_admin → SLC-046 Server-Actions silent broken; Fix: Service-Role-Client fuer UPDATEs in wizard-actions.ts, commit d1978ca). Plus Workaround fuer Next 16 Turbopack-Layout-Inlining-Anomalie (Wizard-Trigger jetzt in dashboard/page.tsx, layout.tsx geloescht).
+- Current Phase: V4.2 2/5 Slices final PASS (SLC-046 + SLC-047). Naechste Phase: /backend SLC-048 Cron-Reminders.
 
 ## Immediate Next Steps
-1. **User-Coolify-Deploy** des Commits `abd3811` (oder neuer) ueber Coolify-UI "Redeploy" — pulled SLC-047 Wizard-Modal Frontend live.
-2. **Test-Tenant-Setup fuer MT-7** — Demo-Tenant ist 'completed' + 4 Sessions; Soft-Bedingung "0 sessions" verhindert Wizard-Render. Drei Optionen, naechste Session entscheidet: (A) frischen Test-Tenant via Strategaize-Admin-UI anlegen + tenant_admin per Invitation einladen — empfohlen, sauberster Pfad; (B) zweiten realen Test-Account anlegen; (C) Demo-Tenant zwischenzeitlich resetten — riskant, da Live-Daten.
-3. **MT-7 Browser-Smoke** mit Nicht-Tech-User-Persona (SC-V4.2-9, R17-Pattern): Wizard-Auto-Open → 4 Steps durchlaufen → Reload-Persistenz Step 2/3 → Cross-Role-Test mit strategaize_admin → Skip-Pfade → Error-Boundary-Smoke. Resultat in RPT-120.
-4. **/backend SLC-048** — Cron-Endpoint + workdaysSince + sendReminder + Unsubscribe. **Parallel zu Punkten 1-3 moeglich** (verschiedene Pfade). Pflicht-Gates: Cron-Idempotenz, Live-SMTP-Test, SPF/DKIM-Pre-Check, Coolify-Cron-Setup.
-5. **V4.2-Slices-Stand (2/5 Code-done, 3/5 planned):** SLC-046 done+QA-PASS, SLC-047 Code-done + /qa Code-PASS Browser-Smoke pending, SLC-048..050 noch planned.
-6. **V4.3-Backlog-Stand (Maintenance-Sammelrelease):** 9 offene Items (BL-051..059), Start nach V4.2-Release.
+1. **/backend SLC-048** — Cron-Endpoint + workdaysSince + sendReminder + Unsubscribe-Endpoint. Pflicht-Gates: Cron-Idempotenz (zwei Cron-Runs am selben Tag → 0 Doppel-Mails, SC-V4.2-12), Live-SMTP-Test mit Test-Mitarbeiter, SPF/DKIM-Pre-Check, Coolify-Cron-Setup-Anleitung im Slice-Report. Geschaetzt 1-1.5 Tage.
+2. **/frontend SLC-049** — InactiveEmployeesCard + Mitarbeiter-Liste-Filter `?filter=inactive` + Settings-Page Opt-Out-Toggle. Parallel zu SLC-048 moeglich.
+3. **/frontend SLC-050** — Help-Sheet + 5 Markdown-Files + 5 Tooltips. Letzter, weil Tooltips fuer SLC-047 + SLC-049 Komponenten brauchen.
+4. **V4.2-Slices-Stand (2/5 final PASS, 3/5 planned):** SLC-046 done+QA-PASS (RPT-115+116), SLC-047 done+QA-PASS+MT-7-PASS (RPT-118+119+120), SLC-048..050 noch planned.
+5. **V4.3-Backlog-Stand (Maintenance-Sammelrelease):** 9 offene Items (BL-051..059), Start nach V4.2-Release. Neu zu adden: ADR fuer State-Maschinen-UPDATE-Pattern (Service-Role vs RLS-Policy) basierend auf ISSUE-031, plus Investigation Next 16 Turbopack-Layout-Inlining-Anomalie.
 
 ## Active Scope
 **V4 — Zwei-Ebenen-Verschmelzung, 6 Features Code-done, 8 Slices Code-done:**
