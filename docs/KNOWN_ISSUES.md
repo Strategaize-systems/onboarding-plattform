@@ -265,10 +265,11 @@
 - Resolution: 3-Stufen-Fix verteilt auf 2 Commits. `abae023` (Phase 1): `get-review-summary.ts` `captureSessionId` optional + Aufrufer in `/dashboard/page.tsx` + `/admin/handbook/page.tsx` ohne Session-ID. `8ebd65c` (Phase 2): `block-review-filter.ts` `loadBlockReviewState` `captureSessionId` optional + Worker `handle-snapshot-job.ts` ohne Session-ID + Dialog-Wording in `TriggerHandbookButton.tsx` `approved+rejected` statt nur `approved`. 360/360 Tests gruen (358 + 2 neue Filter-Tests). Browser-Smoke 2026-04-28 ueber 4 Iterationen verifiziert: Cockpit-Card "2 / 3" + Dialog "2 von 3 Mitarbeiter-Bloecken sind reviewed". Worker-metadata-Pfad ist strukturell verifiziert ueber Tests + naechster realer Trigger schreibt korrekte Counter (live verifiziert beim ersten produktiven Snapshot in /qa SLC-044 oder spaeter).
 
 ### ISSUE-030 — Live-Site liefert 504 Gateway Timeout extern (V4.1 Stable Live-Bruch)
-- Status: open
+- Status: resolved
+- Resolution Date: 2026-04-30
 - Severity: High
 - Area: Infrastruktur / Coolify-Proxy / V4.1 Live
 - Summary: https://onboarding.strategaizetransition.com/login (und alle anderen externen Routen) liefern persistent HTTP 504 Gateway Timeout (3/3 Versuche je 30s ab 2026-04-30 09:56 UTC). Intern ist die App vollstaendig gesund: `app-*` Container `health=healthy`, `restarts=0`, `next dev ready`, `coolify-proxy wget http://app:3000/login` liefert sauberes HTML, `/api/health` antwortet `{"status":"ok"}`. Bruch liegt zwischen Internet/Traefik und Container.
 - Impact: Live-Frontend nicht nutzbar von extern. Browser-Smoke-Test fuer SLC-047 MT-7 (SC-V4.2-9) blockiert. V4.1-Post-Launch-STABLE-Status (RPT-117 vom Vortag, ~18h gesund) wurde gebrochen. Kein Datenverlust, kein Container-Crash.
 - Workaround: Keiner extern. Intern via `docker exec coolify-proxy wget http://app-...:3000/...` testbar.
-- Next Action: Coolify-Proxy/Traefik-Konfiguration pruefen (Routing, Network, TLS-Backend-Routing, ggf. Container neu in Coolify-Domain-Routing einhaengen). Separates Doctor-Ticket — nicht Teil von /qa SLC-047.
+- Resolution: Stale Traefik-Routing-Cache im Coolify-Proxy. Issue isoliert auf Onboarding-App (Jitsi am selben Proxy lieferte HTTP 200 in 73ms). Diagnose: Traefik-Labels am App-Container vollstaendig (Host-Rule, entryPoints, TLS, certresolver), gemeinsames Network mit coolify-proxy vorhanden (`bwkg80w04wgccos48gcws8cs`). Fix: `docker restart coolify-proxy` 2026-04-30 ~10:08 UTC, ~5-10s Downtime auf alle Domains am Host (159.69.207.29). Verifikation: 4/4 Versuche HTTP 200 in 127-160ms direkt nach Restart. Pattern fuer zukuenftige Coolify-Proxy-Routing-Stales dokumentiert.
