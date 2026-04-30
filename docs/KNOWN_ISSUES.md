@@ -284,3 +284,12 @@
 - Workaround: Keiner — direkter Fix.
 - Resolution: Alle 4 Server-Actions in `src/app/dashboard/wizard-actions.ts` nutzen jetzt `createAdminClient()` (Service-Role) fuer UPDATE. Auth-Check (Cross-Role tenant_admin-only) bleibt mit normalem RLS-aware Client in `requireTenantAdmin()` davorgeschaltet. Service-Role-Bypass ist nur fuer den UPDATE-Pfad. Fix in commit d1978ca. Browser-Smoke nach Redeploy User-bestaetigt PASS.
 - Followup: Pattern in Architektur-Doku als Standard fuer State-Maschinen-UPDATEs durch tenant_admin dokumentieren. Alternative waere RLS-UPDATE-Policy auf wizard-state-Spalten — ist eine ADR-Entscheidung fuer V4.3.
+
+### ISSUE-032 — DKIM-Signatur fehlt fuer strategaizetransition.com (V4.2 SLC-048 Pre-Deploy-Pflicht)
+- Status: open
+- Severity: High
+- Area: V4.2 / SLC-048 / SMTP / DSGVO-Mail-Reputation
+- Summary: DNS-Audit der Sender-Domain `strategaizetransition.com` (und Subdomain `onboarding.strategaizetransition.com`) zeigt: SPF ist gesetzt (`v=spf1 include:_spf-eu.ionos.com ~all`), DMARC ist gesetzt (`v=DMARC1; p=none`), aber DKIM-Selektoren fehlen vollstaendig. Geprueft (alle leer): `default._domainkey`, `s1._domainkey`, `s2._domainkey`, `s1024`, `s2048`, `k1`, `dk1`, `dk2`, `mx`, `selector1/2`, `ionos1/2`. SMTP-Versand laeuft ueber `smtp.ionos.de:587` mit From `onboarding@strategaizetransition.com`.
+- Impact: Capture-Reminder-Mails (SLC-048) werden ohne DKIM-Signatur auf der From-Domain verschickt. Risiken: (a) Gmail/Yahoo strict-Bulk-Sender-Anforderungen 2024+ fuehren zu Spam-Folder-Zustellung; (b) DMARC-Alignment scheitert (DKIM-`d=ionos.com` vs. From-`strategaizetransition.com`); (c) Spam-Reputation der Sender-Domain leidet bei jeder gesendeten Mail. SLC-048-Wirkung wird damit eingeschraenkt — die Reminder kommen formal an, landen aber bei Gmail-Empfaengern hoeher in Spam.
+- Workaround: Vor erstem Live-Cron-Run im IONOS-Account "DKIM aktivieren fuer strategaizetransition.com" (im IONOS-Webmail/Domain-Bereich, ein Klick). IONOS-Selektoren werden danach automatisch publiziert (typischerweise `s1` und `s2`). Verifikation per `dig +short TXT s1._domainkey.strategaizetransition.com`. Bis dahin: Cron-Job in Coolify auf "disabled" lassen.
+- Next Action: User-Aktion: DKIM in IONOS-Account aktivieren. Danach DNS-Recheck. Cron erst danach aktivieren.
