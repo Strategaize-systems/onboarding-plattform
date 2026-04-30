@@ -10,14 +10,17 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: **V4.2 SLC-047 Frontend Code-done 2026-04-30.** Wizard-Modal mit 4 Step-Komponenten, Auto-Trigger im neuen `/dashboard/layout.tsx`, Multi-Admin-Lock-Handshake, Error-Boundary, Step-Persistenz und Skip/Complete-Pfade implementiert. tsc + build clean, 26/26 neue Logic-Tests gruen (wizard-helpers + persistence). MT-7 Browser-Smoke mit Nicht-Tech-User-Persona steht aus (Pflicht-Gate SC-V4.2-9). Naechste Aktion: /qa SLC-047. Vorher: V4.1 /post-launch STABLE (RPT-117), SLC-046 /qa PASS (RPT-116).
-- Current Phase: V4.2 2/5 Slices Code-done (SLC-046 + SLC-047). Naechste Phase: /qa SLC-047 + Browser-Smoke MT-7, dann /backend SLC-048.
+- Current Focus: **V4.2 SLC-047 /qa Code-PASS 2026-04-30 (RPT-119).** Code-Lage: alle automatisierbaren Pflicht-Gates gruen — 26/26 Wizard-Tests gegen Coolify-DB PASS, tsc=0, Next-Build clean, Wiring-Chain konsistent (Step3 → inviteEmployee, Wizard → 4 SLC-046 Server-Actions, Layout → getWizardStateForCurrentUser), Cross-Role-Block doppelt (Layout + Server-Action), Multi-Admin-Race-Verhalten via SQL-Simulation gegen Live-Coolify-DB bewiesen race-safe, Stub-Detection clean. **Browser-Smoke MT-7 (Pflicht-Gate SC-V4.2-9) BLOCKED** durch 3 Vorbedingungen: (a) SLC-047 Commit `e4edcfc` noch nicht deployed (User-Coolify-Action), (b) Demo-Tenant in `onboarding_wizard_state='completed'` mit 4 Sessions (DB-Reset noetig), (c) **ISSUE-030 Live-Site liefert 504 Gateway Timeout extern** — separater V4.1-Live-Bruch zwischen Internet/Traefik und gesundem App-Container, NICHT SLC-047-Verschulden.
+- Current Phase: V4.2 2/5 Slices Code-done. Naechste Phase: User-Deploy + Doctor ISSUE-030 + MT-7 Re-QA (RPT-120), parallel /backend SLC-048.
 
 ## Immediate Next Steps
-1. **/qa SLC-047** — Pflicht-Gate Browser-Smoke mit Nicht-Tech-User-Persona (MT-7, SC-V4.2-9), Cross-Role-Test (strategaize_admin sieht Wizard nicht), Step-Persistenz nach Reload (Live-DB), Skip-Pfade aus jedem Step, Multi-Admin-Race-Test (zwei parallele tenant_admin-Logins), Error-Boundary-Smoke. Tests gegen Coolify-DB.
-2. **/backend SLC-048** — Cron-Endpoint + workdaysSince + sendReminder + Unsubscribe. Parallel zu /qa SLC-047 moeglich. Pflicht-Gates: Cron-Idempotenz, Live-SMTP-Test, SPF/DKIM-Pre-Check, Coolify-Cron-Setup.
-3. **V4.2-Slices-Stand (2/5 Code-done, 3/5 planned):** SLC-046 done+QA-PASS (RPT-115+116), SLC-047 Code-done (RPT-118), SLC-048 Backend Reminders+Cron, SLC-049 Frontend Cockpit-Card+Filter+OptOut, SLC-050 Help-Sheet+Tooltips. Geschaetzt 3-5 Tage Implementation total fuer SLC-048..050.
-4. **V4.3-Backlog-Stand (Maintenance-Sammelrelease):** 9 offene Items (BL-051..059), Detail-Requirements optional, Start nach V4.2-Release.
+1. **Doctor ISSUE-030** — Live-Site `https://onboarding.strategaizetransition.com/login` liefert persistent HTTP 504 Gateway Timeout extern (3/3 Versuche je 30s). Container `app-bwkg80w04wgccos48gcws8cs-153426223551` ist healthy, `/api/health` antwortet `{"status":"ok"}`. Coolify-Proxy/Traefik-Routing pruefen. Blockiert MT-7 Browser-Smoke + alle V4.1-Nutzer.
+2. **User-Coolify-Deploy** des Commits `e4edcfc` (SLC-047 Wizard-Modal Frontend). Nach Deploy + Cockpit-Refresh.
+3. **DB-Reset auf Test-Tenant** vor MT-7: `UPDATE tenants SET onboarding_wizard_state='pending', onboarding_wizard_step=1, onboarding_wizard_completed_at=NULL WHERE id=<test-id>;` plus 0 capture_sessions sicherstellen oder frischen Test-Tenant anlegen.
+4. **MT-7 Browser-Smoke** mit Nicht-Tech-User-Persona (SC-V4.2-9, R17-Pattern): Wizard-Auto-Open → 4 Steps durchlaufen → Reload-Persistenz auf Step 2/3 → Cross-Role-Test mit strategaize_admin → Skip-Pfade → Error-Boundary-Smoke. Resultat in RPT-120.
+5. **/backend SLC-048** — Cron-Endpoint + workdaysSince + sendReminder + Unsubscribe. **Parallel zu Punkten 1-4 moeglich** (verschiedene Pfade). Pflicht-Gates: Cron-Idempotenz, Live-SMTP-Test, SPF/DKIM-Pre-Check, Coolify-Cron-Setup.
+6. **V4.2-Slices-Stand (2/5 Code-done, 3/5 planned):** SLC-046 done+QA-PASS (RPT-115+116), SLC-047 Code-done + /qa Code-PASS Browser-Smoke pending (RPT-118+119), SLC-048 Backend Reminders+Cron, SLC-049 Frontend Cockpit-Card+Filter+OptOut, SLC-050 Help-Sheet+Tooltips.
+7. **V4.3-Backlog-Stand (Maintenance-Sammelrelease):** 9 offene Items (BL-051..059), Detail-Requirements optional, Start nach V4.2-Release.
 
 ## Active Scope
 **V4 — Zwei-Ebenen-Verschmelzung, 6 Features Code-done, 8 Slices Code-done:**
@@ -42,7 +45,7 @@ V4.1 (Unternehmerhandbuch ausgebaut) und V4.2 (Self-Service-Cockpit ausgebaut) s
 V2 — 12/12 Slices done, released (REL-004).
 
 ## Blockers
-- aktuell keine
+- ISSUE-030 — Live-Site `https://onboarding.strategaizetransition.com` liefert persistent HTTP 504 Gateway Timeout extern. Container intern gesund. Blockiert V4.1 Live-Nutzer + SLC-047 MT-7 Browser-Smoke. Doctor noetig (Coolify-Proxy/Traefik-Routing).
 
 ## Last Stable Version
 - V4.1 — 2026-04-29 — released (REL-009), Deploy-Commit `ec311a7`. **Post-Launch STABLE 2026-04-30 (RPT-117, ~18h)**: 0 Errors, alle Routes reachable, Container 18h healthy, kein Hotfix. Handbuch-Reader + Berater-Review-Workflow: 5 Slices (SLC-041..045), 3 Features (FEAT-028..030), 1 Migration (MIG-028 = Migration 079, bereits 2026-04-28 deployed). Reader unter `/dashboard/handbook[/<id>]`, Berater-Review unter `/admin/reviews` + `/admin/blocks/<key>/review` + `/admin/tenants/<id>/reviews`, Cockpit-Card "Mitarbeiter-Bloecke reviewed". Worker-Pre-Filter mit Best-Effort-Backfill (DEC-048). 8 V4.1-DECs (DEC-043..050). 378/378 Vitest-PASS auf Coolify-DB, Final-Check (RPT-110) + Go-Live (RPT-111) PASS. Browser-Smoke 17/17 user-bestaetigt. Post-Deploy HTTP 307 Login-Redirect TTFB 102ms. 0 V4.1-Blocker. 4 akzeptierte Pre-V4.1-Residual-Risks (ISSUE-007/021/022/026/028).

@@ -263,3 +263,12 @@
 - Impact: AC-7, AC-8, AC-10 von SLC-042 + AC-14 von SLC-041 funktional gebrochen. Quality-Gate-Workflow (DEC-045) war umgehbar; Snapshot-metadata-Counter fuer SLC-044 Reader waeren falsch gewesen. /dashboard/reviews war NICHT betroffen. Audit-Log (error_log via captureInfo) war direkt aus reviewSummary-Prop gespeist und korrekt. Plus Sekundaer-Bug: Dialog-Wording zeigte nur `approved` als "reviewed" statt `approved+rejected` — inkonsistent zur Cockpit-Card.
 - Workaround: Keiner — direkter Fix.
 - Resolution: 3-Stufen-Fix verteilt auf 2 Commits. `abae023` (Phase 1): `get-review-summary.ts` `captureSessionId` optional + Aufrufer in `/dashboard/page.tsx` + `/admin/handbook/page.tsx` ohne Session-ID. `8ebd65c` (Phase 2): `block-review-filter.ts` `loadBlockReviewState` `captureSessionId` optional + Worker `handle-snapshot-job.ts` ohne Session-ID + Dialog-Wording in `TriggerHandbookButton.tsx` `approved+rejected` statt nur `approved`. 360/360 Tests gruen (358 + 2 neue Filter-Tests). Browser-Smoke 2026-04-28 ueber 4 Iterationen verifiziert: Cockpit-Card "2 / 3" + Dialog "2 von 3 Mitarbeiter-Bloecken sind reviewed". Worker-metadata-Pfad ist strukturell verifiziert ueber Tests + naechster realer Trigger schreibt korrekte Counter (live verifiziert beim ersten produktiven Snapshot in /qa SLC-044 oder spaeter).
+
+### ISSUE-030 — Live-Site liefert 504 Gateway Timeout extern (V4.1 Stable Live-Bruch)
+- Status: open
+- Severity: High
+- Area: Infrastruktur / Coolify-Proxy / V4.1 Live
+- Summary: https://onboarding.strategaizetransition.com/login (und alle anderen externen Routen) liefern persistent HTTP 504 Gateway Timeout (3/3 Versuche je 30s ab 2026-04-30 09:56 UTC). Intern ist die App vollstaendig gesund: `app-*` Container `health=healthy`, `restarts=0`, `next dev ready`, `coolify-proxy wget http://app:3000/login` liefert sauberes HTML, `/api/health` antwortet `{"status":"ok"}`. Bruch liegt zwischen Internet/Traefik und Container.
+- Impact: Live-Frontend nicht nutzbar von extern. Browser-Smoke-Test fuer SLC-047 MT-7 (SC-V4.2-9) blockiert. V4.1-Post-Launch-STABLE-Status (RPT-117 vom Vortag, ~18h gesund) wurde gebrochen. Kein Datenverlust, kein Container-Crash.
+- Workaround: Keiner extern. Intern via `docker exec coolify-proxy wget http://app-...:3000/...` testbar.
+- Next Action: Coolify-Proxy/Traefik-Konfiguration pruefen (Routing, Network, TLS-Backend-Routing, ggf. Container neu in Coolify-Domain-Routing einhaengen). Separates Doctor-Ticket — nicht Teil von /qa SLC-047.
