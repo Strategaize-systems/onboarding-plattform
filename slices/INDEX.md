@@ -145,7 +145,7 @@
 
 | ID | Slice | Feature | Status | Priority | Created |
 |----|-------|---------|--------|----------|---------|
-| SLC-046 | [Wizard Backend-Foundation + MIG-029](SLC-046-wizard-backend-foundation.md) | FEAT-031 | planned | Blocker | 2026-04-29 |
+| SLC-046 | [Wizard Backend-Foundation + MIG-029](SLC-046-wizard-backend-foundation.md) | FEAT-031 | done | Blocker | 2026-04-29 |
 | SLC-047 | [Wizard-Modal Frontend (4 Steps + Skip + Auto-Trigger)](SLC-047-wizard-modal-frontend.md) | FEAT-031 | planned | High | 2026-04-29 |
 | SLC-048 | [Capture-Reminders Backend (Cron + SMTP + Unsubscribe)](SLC-048-reminders-cron-backend.md) | FEAT-032 | planned | High | 2026-04-29 |
 | SLC-049 | [Cockpit-Card + Mitarbeiter-Filter + Opt-Out-Toggle](SLC-049-cockpit-card-filter-optout.md) | FEAT-032 | planned | Medium | 2026-04-29 |
