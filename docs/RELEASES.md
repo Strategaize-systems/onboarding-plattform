@@ -1,5 +1,13 @@
 # Releases
 
+### REL-010 — V4.2 Self-Service-Onboarding (Wizard + Reminders + Help) [DRAFT — finalisiert in /deploy]
+- Date: TBD (Deploy-Datum)
+- Scope: 5 Slices (SLC-046..050), 3 Features (FEAT-031 Wizard + FEAT-032 Reminders + FEAT-033 In-App-Hilfe), 1 Migration (MIG-029 = sql/migrations/080_v42_self_service.sql, schon 2026-04-29 deployed). Pflicht-Pre-Deploy-Items: (1) CRON_SECRET in Coolify-ENV, (2) Coolify-Redeploy fixed docker-compose.yml (CRON_SECRET-Durchreichung), (3) DKIM in IONOS aktivieren (ISSUE-032), (4) Coolify-Scheduled-Task fuer /api/cron/capture-reminders. Frontend bereits live seit 918377a (2026-05-01), Cron-Pipeline aktiviert in /deploy nach Pre-Deploy-Items.
+- Summary: V4.2 macht die Plattform self-service-faehig fuer neue Tenants. Erst-Login-Wizard (4 Schritte mit Step-Persistenz + Skip-Mechanismen + Multi-Admin-Lock) fuehrt durch Setup. Capture-Reminders (E-Mail Stufe 1 nach 3 Werktagen + Stufe 2 nach 7 Werktagen, reminder_log Idempotenz, user_settings Opt-Out, Coolify-Scheduled-Task 09:00 Europe/Berlin) sorgen fuer Mitarbeiter-Aktivierung. In-App-Hilfe (Right-Side-Sheet mit Markdown auf 5 Pages: dashboard, capture, bridge, reviews, handbook + 5 Tooltips an UI-Elementen) reduziert Berater-Last. Gesamt-/qa LIVE PASS (RPT-127), Final-Check CONDITIONALLY READY mit CRON_SECRET-Fix (RPT-128), Go-Live CONDITIONAL GO (RPT-129).
+- Risks: 1 High Pre-Deploy-Pflicht (ISSUE-032 DKIM, User-Action in IONOS). 2 Medium V4-Pre-existing (ISSUE-021/022). 5 Low Pre-existing (ISSUE-007/026/028 + BL-060/061 V4.3-Backlog). Privacy-Page-Gap als V4.3-Compliance-Item dokumentiert.
+- Rollback Notes: Coolify-UI → V4.1 (Deploy-Commit ec311a7) → Redeploy. MIG-029 ist additiv (3 ALTER tenants + CREATE TABLE reminder_log + CREATE TABLE user_settings) — V4.1-Code ignoriert neue Spalten/Tabellen, kein DB-Rollback noetig. Bei Bedarf: SQL-Reset Wizard-State auf 'completed' (`UPDATE tenants SET onboarding_wizard_state='completed'`).
+- Post-Launch: TBD (Post-Launch-Window 18h nach Deploy).
+
 ### REL-001 — SLC-001 Initial Deploy (V1-preview)
 - Date: 2026-04-15
 - Scope: Baseline-Datenmodell (tenants, profiles) + Core-Capture-Schema (template, capture_session, block_checkpoint, knowledge_unit, validation_layer) + RLS-Policies + Auth-Helper-Funktionen + handle_new_user-Trigger. Next.js-App-Container + 9 Supabase-Container + Whisper-Container auf Hetzner CPX62 (159.69.207.29). Domain: https://onboarding.strategaizetransition.com mit Let's-Encrypt-Cert.
