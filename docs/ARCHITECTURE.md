@@ -3454,3 +3454,179 @@ Pflicht-Gates fuer V4.2-Implementation:
 - Cron-Idempotenz-Test als Pflicht-AC fuer SLC-048 /qa.
 - Coolify-Cron-Setup-Anleitung (Tabelle + Bestaetigung) in /deploy V4.2 (feedback_cron_job_instructions).
 - Vor V4.2-/deploy: User-manueller Check der Spam-Reputation der Reminder-Mails (SPF/DKIM auf onboarding.strategaizetransition.com).
+
+## V4.3 Architecture Addendum — Maintenance-Sammelrelease (Reader-UX + Worker-Hygiene + Tooling + Help-Konsolidierung + State-Machine-ADR + Spike)
+
+### Status (V4.3)
+- /requirements V4.3 done 2026-05-01 (RPT-131): 15 Items in 6 Kategorien, 6 Open Questions Q-V4.3-A..F.
+- /architecture V4.3 done 2026-05-01 (this section + DEC-062..067): alle 6 Open Questions geklaert + dokumentiert.
+- Naechste Schritte: /slice-planning V4.3 (6 Slices SLC-051..056 + 1 Content-Item BL-067), dann Implementation in der Reihenfolge SLC-053 → 051 → 052 → 055 → 056 → 054.
+
+### Architektur-Zusammenfassung (V4.3)
+V4.3 ist ein Maintenance-Sammelrelease ohne neue Features, ohne Schema-Aenderung und ohne neuen Container/Cron. Der Code-Touch erstreckt sich auf vier ausgewaehlte Bereiche der bestehenden V4-Architektur:
+1. **Reader-UI-Layer** (Frontend, `/dashboard/handbook/[snapshotId]`) bekommt UX-Polish (Scroll-Spy, Permalink, Skeleton, Mobile-h1, Heading-Anchor-Hover) und client-side Cross-Snapshot-Suche mit localStorage-History.
+2. **Worker+Templates-Layer** (Verdichtungs-Worker + Template-Files) erhaelt Output-Hygiene (TOC-Format auf In-App-Anchors, Umlaut-Konsistenz).
+3. **Tooling-Layer** (Next.js + ESLint Convention-Migrations): `src/middleware.ts` → `src/proxy.ts` (Next 16 Convention) + ESLint flat-config.
+4. **Help-Layer** (SLC-050 HelpSheet + Learning Center FEAT-029): wird konsolidiert auf Single-Trigger pro Page mit Learning-Center-Tab "Diese Seite".
+
+Drei zusaetzliche Querschnittsthemen: ADR fuer State-Maschinen-UPDATE-Pattern (DEC-065, beruehrt kein Code direkt), Investigation Turbopack-Layout-Inlining (Spike in eigenem Branch, kein main-Code), Berater-Help-Review (Content-only via Editor).
+
+Es entsteht keine neue Komponente. Keine Tabelle, kein Trigger, keine RLS-Policy aendert sich. RLS-Test-Matrix bleibt 100% PASS-Pflicht (SC-V4.3-5).
+
+### Komponenten-Sicht (V4.3)
+
+#### A. Reader-UX-Komponenten (SLC-051 + SLC-054)
+**Bestand (V4.1):** `src/app/dashboard/handbook/[snapshotId]/page.tsx` als Server-Component, `ReaderShell.tsx` als Client-Component, `react-markdown` mit `remark-gfm` + `rehype-slug` + `rehype-autolink-headings` (DEC-049). Sidebar-Navigation existiert mit Section-Links (kein Active-Marker).
+
+**Aenderungen V4.3:**
+- `useScrollSpy(headingIds: string[])`-Hook (neu, client-side): IntersectionObserver pro h2/h3 → setzt aktive Section-ID in State, wird in Sidebar als Active-Class konsumiert. Kein Server-Touch.
+- `CopyPermalinkButton`-Komponente (neu, client-side): pro Section-Heading ein kleiner Clipboard-Icon-Button, kopiert `window.location.href + '#section-anchor'` in `navigator.clipboard`. Toast-Feedback via shadcn `useToast()`.
+- `ReaderLoadingSkeleton`-Komponente (neu, server- oder client-side): wird waehrend `Suspense` beim Snapshot-Wechsel gezeigt — TOC-Outline-Skeleton + Content-Block-Skeleton.
+- `ReaderShell`-Mobile-Layout: h1-Title bei `max-width: 375px` mit `text-balance` + `word-break: break-word`, max 2 Zeilen.
+- Heading-Anchor-Hover am h1-Titel: `rehype-autolink-headings`-Config erweitert (existiert seit V4.1) um den h1-Hauptanker (vorher nur h2/h3).
+- `useSearchHistory()`-Hook (neu, client-side, SLC-054): liest/schreibt `localStorage['onboarding.reader.searchHistory.v1']` (DEC-063), max 10 Eintraege, FIFO-Trim, dedupliziert.
+- `ReaderSearchBox`-Komponente (neu, client-side): Eingabefeld + Dropdown mit History + Treffer-Liste; Suche laeuft client-side ueber alle aktuell geladenen Snapshots des Tenants (SELECT auf `handbook_snapshot` ohne Filter, in der `ReaderShell`-Server-Component vorab geladen). KEIN dedizierter Search-Index, KEIN Backend-Endpoint.
+
+**Trade-off:** Cross-Snapshot-Suche client-side bedeutet, die `ReaderShell`-Server-Component muss alle Snapshots inkl. ihrer rendered Sections ans Frontend ausliefern. Bei vielen Snapshots (>10) wird das DOM-Payload merklich groesser. Akzeptabel fuer V4.3-Maintenance, da Tenants typischerweise 1-3 aktuelle Snapshots gleichzeitig haben. Server-side Search-Index ist V5+ (per Out-of-Scope).
+
+#### B. Worker-Output + Templates (SLC-052)
+**Bestand (V4.1):** Verdichtungs-Worker schreibt pro Snapshot ein `INDEX.md` mit `[Title](01_section.md)`-Links, plus pro Section eigene `.md`-Datei. Reader rendert via `react-markdown` mit `components.a`-Override, der die Markdown-File-Links auf In-App-Anchors umschreibt.
+
+**Aenderungen V4.3:**
+- Worker-Template `INDEX.md.template` (im Repo unter `src/worker/templates/` oder `bin/worker/`) wird umgestellt: statt `[Title](01_section.md)` schreibt der Worker `[Title](#section-anchor)` mit dem gleichen Anchor-Slug, den `rehype-slug` im Reader generiert (kebab-case auf dem Heading-Text).
+- `react-markdown` `components.a`-Override im Reader bleibt fuer alte Snapshots (Backward-Compat) — neue Snapshots brauchen ihn nicht. KEIN Auto-Migrate alter Snapshots (per Out-of-Scope, R-V4.3-2-Mitigation).
+- Umlaut-Konsistenz: alle Templates + Worker-Heading-Generators + UI-Strings auf konsistente UTF-8 Umlaute (oe → oe ASCII, oder UTF-8 ö wo bisher inkonsistent). Snapshot-Helper `scripts/audit-umlauts.ts` (neu, dev-only) prueft die Konsistenz pre-deploy.
+
+**Trade-off:** Pre-V4.3-Snapshots behalten ihre `01_section.md`-Links. Reader rendert sie korrekt dank `components.a`-Override. Ein User kann manuell ueber den /admin/snapshots Trigger einen Re-Generate ausloesen — kein Auto-Migration in V4.3 (per Out-of-Scope-Decision).
+
+#### C. Convention + Tooling-Migrations (SLC-053)
+**Bestand (V4.2):** `src/middleware.ts` mit Next 15-Convention. ESLint via `.eslintrc.json` (legacy-config) mit `eslint-config-next`.
+
+**Aenderungen V4.3:**
+- **Next 16 Convention `middleware`→`proxy`:** Datei wird zu `src/proxy.ts` umbenannt + ggf. minor-Konvention-Anpassungen aus Next 16 Migration-Guide. Build zeigt keine middleware-Deprecation-Warning mehr (Pflicht-AC SC-V4.3-4). Auth-Middleware-Tests (existieren seit V1) bleiben 100% PASS.
+- **ESLint 9 flat-config:** `.eslintrc.json` → `eslint.config.mjs` mit flat-config-Schema. `eslint-config-next` muss in 16.x kompatibel sein (Kompatibilitaets-Pruefung als erste MT). Pre-Migration: `npm run lint` Output-Snapshot speichern. Post-Migration: gleicher Snapshot, ggf. Diff-Analyse fuer neue Warnings (R-V4.3-3-Mitigation).
+- Beide Migrations werden in einem Slice gebuendelt, weil sie strukturell aehnlich sind (Convention + Tooling Update) und sich gegenseitig nicht stoeren. Rollback-Pfad pro Migration einfach (1-2 Datei-Renames).
+
+**Trade-off:** Wenn `eslint-config-next` in Next 16 noch nicht flat-config-kompatibel ist, wird ein `FlatCompat`-Adapter-Layer noetig sein (kurzfristig, bis upstream nachzieht). DEC dafuer wird im SLC-053-Slice-File festgehalten, falls noetig.
+
+#### D. Help-Konsolidierung (SLC-055)
+**Bestand (V4.2):** SLC-050 HelpSheet (shadcn `Sheet` Right-Side, geoeffnet ueber `?`-Trigger im Header, rendert `src/content/help/<page-key>.md` via `react-markdown`). Learning Center (FEAT-029) als separate Page `/dashboard/learning` mit 2 Tabs (z.B. "Getting Started", "Konzepte"). Beide Mechanismen koexistieren — User-Smoke hat das als zwei `?`-Icons konkurrieren-Verwirrung markiert (BL-063).
+
+**Aenderungen V4.3 (DEC-064 Variante 3):**
+- Learning Center bekommt 3. Tab "Diese Seite" der `loadHelpMarkdown(pageKey)` aus SLC-050 wiederverwendet. Tab ist Default-aktiv, wenn URL-Parameter `?tab=this-page&page=<page-key>` gesetzt sind.
+- HelpSheet-Trigger im Header (`?`-Icon) bleibt sichtbar, oeffnet aber nicht mehr das shadcn-Sheet, sondern navigiert per `router.push()` zu `/dashboard/learning?tab=this-page&page=<page-key>` (oder Modal-Variante des Learning-Center, je nach LC-Implementierung).
+- shadcn `Sheet`-Komponente fuer HelpSheet kann entfallen — `HelpTrigger` wird zur Wrapper-Komponente die das Learning Center mit den richtigen Query-Params oeffnet. Cleanup entweder in SLC-055 (wenn klein) oder als BL-XXX nach V4.3.
+- Tooltip-Trigger an spezifischen UI-Elementen (DEC-058 Layer 2) bleibt unveraendert — der Tooltip ist KEIN Help-Trigger, sondern ein "Was ist das?"-Hint. Die Konsolidierung betrifft ausschliesslich den Page-Level-Help.
+
+**Trade-off:** Der ehemalige Sofort-Effekt von "Sheet schiebt von rechts rein, ohne Page-Wechsel" geht verloren — User wird zu /dashboard/learning navigiert (Page-Wechsel oder Modal-Open, je nach LC-Variante). Akzeptabel, weil das Learning Center bereits als zentrale Wissens-Anlaufstelle etabliert ist und die Page-Context-Help dort thematisch besser passt. Wenn der Sofort-Effekt zurueck soll, kann das Learning Center spaeter als Modal/Sheet implementiert werden — V4.3-Out-of-Scope.
+
+#### E. Tooltip-Target-Fix (SLC-055, DEC-067)
+**Bestand (V4.2):** `?`-Button (16x16px Lucide-Icon) im Card-Header. Tooltip-Trigger ist nur das Icon. Hit-Target-Sicke auf Mobile zu klein.
+
+**Aenderungen V4.3 (DEC-067 Variante 2):**
+- shadcn `Tooltip.Trigger` umfasst den ganzen Card-Header (`<header>`-Element oder `<div className="card-header">`-Wrapper).
+- `?`-Icon bleibt visuell unveraendert sichtbar (kein Click-Target-Vergroessern).
+- `tabIndex={0}` + `aria-describedby`-Verknuepfung am Card-Header fuer Screen-Reader.
+- Mobile-Tap auf den Header oeffnet Tooltip; shadcn-`Tooltip` mit `delayDuration={0}` auf Touch (oder controlled `open`-State per Tap).
+
+#### F. ADR State-Maschinen-UPDATE-Pattern (SLC-056, DEC-065)
+Code-loses Architektur-Item. Neuer DEC-065 dokumentiert den Default (`Service-Role-UPDATE` mit `requireXyz()`-Pruefung in Server-Action) und die Ausnahme (RLS-UPDATE-Policy bei rein nutzer-getriebenem UPDATE auf eigene Zeile). Ist Reference-DEC fuer alle zukuenftigen Slices die State-Maschinen einfuehren.
+
+Pflicht-Test pro neuer State-Maschine:
+- 4-Rollen-RLS-Test fuer SELECT-Sichtbarkeit (existierende V4-Test-Matrix-Pflicht).
+- Server-Action-Test fuer UPDATE-Pruefung (Mock unauthorized → erwarte Throw, Mock authorized → erwarte Erfolg).
+
+#### G. Investigation BL-066 Turbopack (SLC-056, DEC-066)
+Spike in eigenem Branch `spike/v43-turbopack-layout-inlining`, max 4h-Box. Output entweder GitHub-Issue-URL beim `vercel/next.js`-Repo (Genuine-Bug) oder Workaround-ADR + KNOWN_ISSUES-Eintrag (erwartetes Verhalten). Branch wird NICHT in main gemergt; Stress-Test-Artefakte bleiben isoliert.
+
+### Datenfluss-Sicht (V4.3)
+
+V4.3 aendert keinen Backend-Datenfluss. Alle Aenderungen sind:
+- **Frontend-Render-Layer** (Reader-UX + Help-Konsolidierung + Tooltip-Trigger).
+- **Worker-Output-Format** (TOC-Anchor-Links + Umlaut-Konsistenz) — der Worker schreibt anders, aber der Datenflussweg (Job-Queue → Worker → Storage) bleibt.
+- **Tooling-Layer** (Convention + Lint-Config) — kein Datenfluss-Effekt.
+- **localStorage** (Search-History) — kein Server-Touch.
+
+RLS-Modell, Auth-Flow, Internal-URL-Strategy, Bridge-Engine, Reminder-Pipeline, Wizard-Flow: alle unveraendert. Pflicht-Gate SC-V4.3-5 (RLS-Matrix bleibt 100% PASS) ist konsequent — wenn ein V4.3-Slice doch ein RLS-Touch braeuchte, ist es kein V4.3-Item per Constraint.
+
+### Externe Dependencies (V4.3)
+
+Keine neue externe Dependency.
+Existierende relevante:
+- `react-markdown` + `remark-gfm` + `rehype-slug` + `rehype-autolink-headings` (DEC-049) — wiederverwendet fuer "Diese Seite"-Tab.
+- `lucide-react` (Icons) — `Clipboard`, `ChevronRight` etc.
+- shadcn-Komponenten — `Tooltip`, `Toast`, ggf. `Sheet`-Cleanup.
+- ESLint 9 + flat-config + `eslint-config-next` (Tooling-Migration).
+- Next.js 16 (`middleware`→`proxy` Convention).
+
+Annahme A-V4.3-3 (`react-markdown` reicht weiter) ist erfuellt.
+
+### Internal URL Strategy (V4.3)
+
+Unveraendert gegenueber V4.2. Help-Konsolidierung navigiert intern zu `/dashboard/learning?tab=this-page&page=<page-key>` — relative URL, kein externer Endpoint. Reader-Permalink kopiert `window.location.href + '#section-anchor'` (browser-relative URL, kein Server-Touch).
+
+### RLS-Modell (V4.3)
+
+UNVERAENDERT. SC-V4.3-5 ist Pflicht-Gate.
+
+### Security / Privacy (V4.3)
+
+- localStorage-Search-History (DEC-063): User-lokal, kein PII-Leak. Suche gegen Snapshot-Content der ohnehin im Browser des Users gerendert wird — kein neues Privacy-Risk.
+- Service-Role-UPDATE-Pattern (DEC-065): Bestaetigt durch ADR. Kein bestehender Code-Refactor noetig; Pattern ist in V4-Slices schon durchgaengig angewendet.
+- Investigation-Branch (DEC-066): Stress-Test-Artefakte bleiben in Spike-Branch, NICHT in main. Kein Production-Risk.
+
+### Constraints und Tradeoffs (V4.3)
+
+**Trade-off 1 — Cross-Snapshot-Suche client-side ohne Server-Index:**
+DEC-063. Skaliert nicht ueber ~10-20 Snapshots gleichzeitig. Akzeptabel fuer V4.3-Tenant-Profile (1-3 aktuelle Snapshots). V5+ kann bei Bedarf einen Postgres-FTS-Index oder pgvector-Lookup nachruesten.
+
+**Trade-off 2 — Help-Konsolidierung bedeutet Page-Wechsel auf /learning:**
+DEC-064. Sofort-Effekt des Side-Sheets geht verloren. Mitigiert durch klare URL-Param-Steuerung und ggf. spaetere Modal-Variante des Learning Centers.
+
+**Trade-off 3 — Pre-V4.3-Snapshots behalten alten TOC-Format:**
+SLC-052. Reader rendert beide Formate dank `components.a`-Override. Re-Generate manuell durch User pro Snapshot, kein Auto-Migrate.
+
+**Trade-off 4 — ESLint-9-Migration-Output kann sich aendern:**
+R-V4.3-3. Pre-/Post-Migration Lint-Output-Snapshot ist Pflicht-AC. Bei Mehr-Warnings: separate Pflicht-Bewertung im Slice-File ob es Bug-Hints sind.
+
+**Trade-off 5 — Investigation BL-066 ohne garantiertes Root-Cause-Outcome:**
+DEC-066 + R-V4.3-5. 4h-Timebox; Workaround-ADR ist akzeptables Outcome.
+
+**Trade-off 6 — Card-Header-Tooltip-Trigger weitet Hit-Target deutlich:**
+DEC-067. Mobile-Tap auf den Header-Bereich aktiviert ggf. ungewollt das Tooltip beim Scrollen — Mitigation: shadcn-`Tooltip` mit `delayDuration` auch auf Touch, oder explicit `pointerEvents`-Steuerung; in /qa pruefen.
+
+**Trade-off 7 — Service-Role-Default-Pattern verlagert Sicherheits-Last in Server-Actions:**
+DEC-065. RLS-Sicht ist nicht mehr die einzige Verteidigungslinie fuer State-UPDATEs. Mitigation: Pflicht-Test pro neuer State-Maschine (RLS-SELECT + Server-Action-UPDATE), 4-Rollen-RLS-Matrix bleibt unveraendert.
+
+### Open technical questions (verbleibend)
+
+Verbleibende Detail-Fragen werden in `/slice-planning V4.3` oder spaeter (`/frontend`/`/backend`) entschieden:
+
+- **Q-V4.3-G (Frontend) — Learning-Center-Modal-vs-Page-Form:** Ist `/dashboard/learning` als eigene Page gebaut (ggf. mit Page-Wechsel) oder als shadcn-Dialog/Sheet aus jeder Page heraus? Empfehlung Architektur: pruefen in SLC-055 anhand des bestehenden FEAT-029-Codes; falls Page → mit Router-Push (mit `?tab=...&page=...`-Query); falls Modal → bleibt im Page-Context. Decision in /frontend SLC-055.
+- **Q-V4.3-H (Frontend) — Reader-Search-UI-Position:** Search-Box im Reader-Header (sticky) oder im Sidebar oben? Empfehlung Architektur: Sidebar oben (passt zur bestehenden TOC-Navigation, weniger Layout-Bruch). Decision in /frontend SLC-054.
+- **Q-V4.3-I (Backend) — Worker-Anchor-Slug-Generation:** Identisch zur Reader-`rehype-slug`-Strategie (kebab-case mit Diacritic-Strip)? Empfehlung Architektur: ja — gleiche Util-Funktion `slugifyHeading(text)` im Worker und im Reader teilen (utils-Module). Decision in /backend SLC-052.
+- **Q-V4.3-J (Tooling) — `eslint-config-next` flat-config-Adapter:** `FlatCompat`-Adapter aus `@eslint/eslintrc` notwendig? Empfehlung Architektur: erst pruefen ob `eslint-config-next@^16` native flat-config liefert; falls nein, `FlatCompat`-Layer als bewusste DEC im Slice-File. Decision in /backend SLC-053.
+
+### Implementation direction
+
+Empfohlene Slice-Reihenfolge (deckungsgleich mit Requirements-Empfehlung):
+
+1. **SLC-053** (Backend/Tooling, ~3 MTs): `middleware`→`proxy`-Rename + Next 16 Convention-Anpassungen + ESLint-9 flat-config-Migration. Pre-Migration Lint-Output-Snapshot (Pflicht-AC). Auth-Middleware-Tests bleiben 100% PASS. Migration-Risiko zuerst, damit nachfolgende Slices auf stabilem Tooling laufen.
+2. **SLC-051** (Frontend, ~5 MTs): Reader-UX-Bundle. `useScrollSpy` + `CopyPermalinkButton` + `ReaderLoadingSkeleton` + Mobile-h1-Wrap + Heading-Anchor-Hover am h1. Pflicht: Browser-Smoke 1280×800 + 375×667.
+3. **SLC-052** (Backend+Templates, ~4 MTs): Worker-Template `INDEX.md.template` auf In-App-Anchors + `slugifyHeading`-Utility-Module + Umlaut-Konsistenz-Sweep + `scripts/audit-umlauts.ts`. Reader behaelt `components.a`-Override fuer alte Snapshots.
+4. **SLC-055** (Frontend, ~4 MTs): Help-Konsolidierung Variante 3 (Learning-Center-Tab "Diese Seite") + Tooltip-Target-Fix Variante 2 (Card-Header als Wrapper-Trigger). Browser-Smoke beide Findings auf Desktop + Mobile.
+5. **SLC-056** (Doku+Spike, ~3 MTs): ADR-Dokumentation State-Maschinen-Pattern (DEC-065 ist schon geschrieben; SLC-056 verlinkt + macht Pflicht-Test-Pattern explizit) + Investigation-Spike Turbopack in `spike/v43-turbopack-layout-inlining`-Branch (4h-Box, Output GitHub-Issue oder Workaround-ADR).
+6. **SLC-054** (Frontend, ~3 MTs): Cross-Snapshot-Suche client-side mit `useSearchHistory` + `ReaderSearchBox` + `localStorage`-Persistenz.
+7. **(kein Slice) BL-067** Berater-Help-Review parallel: User editiert direkt 5 Files unter `src/content/help/*.md`, Push als eigener Commit.
+
+Pflicht-Gates fuer V4.3-Implementation:
+- Keine Schema-Migration. Wenn ein Slice doch eine wuerde, sofort an User eskalieren (V4.3-Constraint).
+- ESLint-Migration-Output (Lint-Warnings) muss vor + nach SLC-053 Snapshot dokumentiert werden (R-V4.3-3-Mitigation).
+- Investigation BL-066 timeboxed 4h, danach Spike-Abschluss-Pflicht (ADR oder GitHub-Issue, R-V4.3-5).
+- Browser-Smoke-Test nach SLC-051 + SLC-055 (Reader-UX + Help-Konsolidierung) auf Desktop + Mobile (SC-V4.3-2 + SC-V4.3-7).
+- 4-Rollen-RLS-Matrix bleibt 100% PASS in /qa pro Slice (SC-V4.3-5).
+- V4.2-Regression-Smoke nach jedem Slice: Wizard pending → completed funktioniert, Cron-Reminder-Pipeline funktioniert weiter, Help-Sheet auf allen 5 Pages erreichbar (SC-V4.3-6).
+
+### Naechster Schritt (V4.3)
+
+`/slice-planning V4.3` — Micro-Task-Schnitt der 6 Slices SLC-051..056 + 1 Content-Item BL-067, mit Pflicht-Gates pro Slice und expliziter Implementation-Reihenfolge.
