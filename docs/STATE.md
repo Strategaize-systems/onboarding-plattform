@@ -18,6 +18,7 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 2. **/go-live V4.2** — Release-Decision mit ISSUE-032 (DKIM) als Pre-Deploy-Pflicht-Gate. User aktiviert DKIM in IONOS-Account vor Cron-Aktivierung.
 3. **/deploy V4.2** als REL-010 — User-Coolify-Deploy + Coolify-Cron-Setup-Anleitung (feedback_cron_job_instructions).
 4. **V4.2-Slices-Stand (5/5 final + Gesamt-QA-PASS):** SLC-046 done+QA-PASS (RPT-115+116), SLC-047 done+QA-PASS+MT-7-PASS (RPT-118+119+120), SLC-048 done+QA-PASS (RPT-121+122), SLC-049 done+QA-PASS (RPT-123+124), SLC-050 done+QA-PASS (RPT-125+126), Gesamt-V4.2 (RPT-127).
+5. **V4.3-Backlog 2026-05-01 erweitert:** BL-060 Tooltip 1/5 Target zu klein (16x16, UX-Improvement) + BL-061 Help-Mechanismen-Konsolidierung (SLC-050 HelpSheet + Learning Center, /ui-update-Entscheidung). Beide aus User-Smoke V4.2 Gesamt-QA, nicht V4.2-blocking.
 6. **V4.3-Backlog-Stand (Maintenance-Sammelrelease):** 9 offene Items (BL-051..059), Start nach V4.2-Release. Neu zu adden: ADR fuer State-Maschinen-UPDATE-Pattern (Service-Role vs RLS-Policy) basierend auf ISSUE-031, plus Investigation Next 16 Turbopack-Layout-Inlining-Anomalie.
 
 ## Active Scope
