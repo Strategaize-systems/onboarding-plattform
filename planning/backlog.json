@@ -485,9 +485,9 @@
       "title": "Capture-Reminders (FEAT-032)",
       "type": "feature",
       "priority": "high",
-      "status": "in_progress",
+      "status": "done",
       "version": "V4.2",
-      "description": "FEAT-032: SLC-048 Backend done /qa PASS 2026-05-01 (RPT-122) — Cron + SMTP + Unsubscribe live, IONOS-SMTP-DKIM verifiziert, Idempotenz live PASS. Auth-Middleware-Bug im /qa entdeckt + gefixt (commit fd9e944). SLC-049 + SLC-050 noch offen: InactiveEmployeesCard + Settings-Opt-Out + Help-Sheet. Naechster Schritt: /frontend SLC-049.",
+      "description": "FEAT-032 RELEASED 2026-05-01 als REL-010. SLC-048 Backend (Cron + SMTP + Unsubscribe) + SLC-049 (InactiveEmployeesCard + Filter + Opt-Out) alle done + QA-PASS. Live-Cron-Run 2026-05-01 08:14 Europe/Berlin: stage1-Reminder an richard@bellaerts.de status='sent', User-bestaetigt Inbox (DKIM via IONOS-Default OK). Idempotenz live verifiziert (`skipped_already_sent: 1`). Coolify-Scheduled-Task `capture-reminders-daily` aktiv (taeglich 09:00 Europe/Berlin).",
       "createdAt": "2026-04-29"
     },
     {
@@ -611,7 +611,7 @@
       "createdAt": "2026-04-29"
     },
     {
-      "id": "BL-060",
+      "id": "BL-062",
       "title": "Tooltip 1/5 Inactive-Badge Hover-Target zu klein (16x16) — UX-Improvement",
       "type": "improvement",
       "priority": "low",
@@ -621,7 +621,7 @@
       "createdAt": "2026-05-01"
     },
     {
-      "id": "BL-061",
+      "id": "BL-063",
       "title": "Help-Mechanismen konsolidieren — SLC-050 HelpSheet + Learning Center vereinen",
       "type": "improvement",
       "priority": "medium",
