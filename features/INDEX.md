@@ -64,6 +64,6 @@
 
 | ID | Feature | Status | Spec | Created |
 |----|---------|--------|------|---------|
-| FEAT-031 | Tenant-Onboarding-Wizard | done | [Spec](FEAT-031-tenant-onboarding-wizard.md) | 2026-04-29 |
-| FEAT-032 | Capture-Reminders | done | [Spec](FEAT-032-capture-reminders.md) | 2026-04-29 |
-| FEAT-033 | In-App-Hilfe | done | [Spec](FEAT-033-in-app-hilfe.md) | 2026-04-29 |
+| FEAT-031 | Tenant-Onboarding-Wizard | deployed | [Spec](FEAT-031-tenant-onboarding-wizard.md) | 2026-04-29 |
+| FEAT-032 | Capture-Reminders | deployed | [Spec](FEAT-032-capture-reminders.md) | 2026-04-29 |
+| FEAT-033 | In-App-Hilfe | deployed | [Spec](FEAT-033-in-app-hilfe.md) | 2026-04-29 |

@@ -52,8 +52,8 @@
     {
       "id": "v4-2",
       "name": "V4.2",
-      "status": "active",
-      "summary": "Tenant Self-Service Onboarding. 3 Features: (1) FEAT-031 Tenant-Onboarding-Wizard (4-Schritte-Erst-Login-Wizard mit Step-Persistenz, Skip-Mechanismen, Multi-Admin-Lock), (2) FEAT-032 Capture-Reminders (E-Mail-Reminder Stufe 1 nach 3 Werktagen, Stufe 2 nach 7 Werktagen, Idempotenz via reminder_log, Opt-Out via user_settings, Coolify-Cron 09:00 Europe/Berlin, In-App-Badge fuer tenant_admin), (3) FEAT-033 In-App-Hilfe (Right-Side-Sheet mit Markdown-Content auf 5 Haupt-Pages, Tooltips an mind. 5 UI-Elementen). Requirements done 2026-04-29, 9 DECs (DEC-V4.2-1..9) als Empfehlung gesetzt, 7 offene Architektur-Fragen (Q-V4.2-A..G). Skizze: 5 Slices SLC-046..050, ~24 Micro-Tasks, 5-7 Tage Implementation. BL-048 + 2 neue BL-Items (BL-060, BL-061). Naechster Schritt: /architecture V4.2.",
+      "status": "released",
+      "summary": "Tenant Self-Service Onboarding RELEASED 2026-05-01 als REL-010. 5 Slices (SLC-046..050), 3 Features (FEAT-031 Wizard + FEAT-032 Reminders + FEAT-033 In-App-Hilfe), 1 Migration (MIG-029). Frontend deployed via 918377a, CRON_SECRET-ENV-Fix via daf9dfd. Coolify-Scheduled-Task `capture-reminders-daily` aktiv. Erster Live-Cron-Run hat stage1-Reminder an richard@bellaerts.de gesendet (Inbox-bestaetigt). Idempotenz funktioniert. Gesamt-/qa (RPT-127), Final-Check (RPT-128), Go-Live (RPT-129), Deploy (RPT-130). ISSUE-032 (DKIM) als FALSE-POSITIVE resolved (IONOS provider-spezifische Selektoren), IMP-246 erfasst. 0 High Risks, 2 Medium V4-Pre-existing, 5 Low. Post-Launch-Window startet 12:00 Europe/Berlin.",
       "order": 8
     },
     {
