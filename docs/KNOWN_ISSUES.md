@@ -286,10 +286,11 @@
 - Followup: Pattern in Architektur-Doku als Standard fuer State-Maschinen-UPDATEs durch tenant_admin dokumentieren. Alternative waere RLS-UPDATE-Policy auf wizard-state-Spalten — ist eine ADR-Entscheidung fuer V4.3.
 
 ### ISSUE-032 — DKIM-Signatur fehlt fuer strategaizetransition.com (V4.2 SLC-048 Pre-Deploy-Pflicht)
-- Status: open
+- Status: resolved
+- Resolution Date: 2026-05-01
 - Severity: High
 - Area: V4.2 / SLC-048 / SMTP / DSGVO-Mail-Reputation
-- Summary: DNS-Audit der Sender-Domain `strategaizetransition.com` (und Subdomain `onboarding.strategaizetransition.com`) zeigt: SPF ist gesetzt (`v=spf1 include:_spf-eu.ionos.com ~all`), DMARC ist gesetzt (`v=DMARC1; p=none`), aber DKIM-Selektoren fehlen vollstaendig. Geprueft (alle leer): `default._domainkey`, `s1._domainkey`, `s2._domainkey`, `s1024`, `s2048`, `k1`, `dk1`, `dk2`, `mx`, `selector1/2`, `ionos1/2`. SMTP-Versand laeuft ueber `smtp.ionos.de:587` mit From `onboarding@strategaizetransition.com`.
-- Impact: Capture-Reminder-Mails (SLC-048) werden ohne DKIM-Signatur auf der From-Domain verschickt. Risiken: (a) Gmail/Yahoo strict-Bulk-Sender-Anforderungen 2024+ fuehren zu Spam-Folder-Zustellung; (b) DMARC-Alignment scheitert (DKIM-`d=ionos.com` vs. From-`strategaizetransition.com`); (c) Spam-Reputation der Sender-Domain leidet bei jeder gesendeten Mail. SLC-048-Wirkung wird damit eingeschraenkt — die Reminder kommen formal an, landen aber bei Gmail-Empfaengern hoeher in Spam.
-- Workaround: Vor erstem Live-Cron-Run im IONOS-Account "DKIM aktivieren fuer strategaizetransition.com" (im IONOS-Webmail/Domain-Bereich, ein Klick). IONOS-Selektoren werden danach automatisch publiziert (typischerweise `s1` und `s2`). Verifikation per `dig +short TXT s1._domainkey.strategaizetransition.com`. Bis dahin: Cron-Job in Coolify auf "disabled" lassen.
-- Next Action: User-Aktion: DKIM in IONOS-Account aktivieren. Danach DNS-Recheck. Cron erst danach aktivieren.
+- Summary: DNS-Audit der Sender-Domain `strategaizetransition.com` zeigte SPF ✓ und DMARC ✓, aber DKIM-Selektoren `s1._domainkey`, `s2._domainkey`, `default._domainkey` und 9 weitere Industry-Standard-Selektoren waren leer. Annahme war: DKIM nicht aktiv.
+- Impact: Capture-Reminder-Mails (SLC-048) wuerden ohne DKIM-Alignment versendet, Spam-Folder-Risiko bei Gmail/Yahoo.
+- Resolution: User-Hinweis auf IONOS-Doku zeigte: IONOS verwendet **provider-spezifische Selektor-Namen** `s1-ionos._domainkey`, `s2-ionos._domainkey`, `s42582890._domainkey` (NICHT die Industry-Standard `s1`/`s2`). Re-Check mit korrekten Selektoren am 2026-05-01 verifizierte: alle 3 IONOS-Selektoren sind als CNAMEs gesetzt + zeigen auf `s1.dkim.ionos.com`/`s2.dkim.ionos.com`/`s42582890.dkim.ionos.com`, Public-Key resolvt sauber als `v=DKIM1; p=MIIBIjAN...`. Domain-Nameserver `ui-dns.*` bestaetigen IONOS-Hosting → DKIM ist per IONOS-Default automatisch publiziert. Reminder-Cron darf direkt aktiviert werden, kein User-Action in IONOS noetig.
+- Followup: SKILL_IMPROVEMENTS — DKIM-Verifikations-Pattern muss provider-spezifisch sein (siehe IMP-XXX neu erfasst).
