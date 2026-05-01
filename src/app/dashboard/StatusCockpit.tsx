@@ -9,6 +9,8 @@ interface Props {
   metrics: CockpitMetrics;
   /** SLC-042: optionale 6. Karte fuer Berater-Review-Status. */
   reviewCard?: ReactNode;
+  /** SLC-049: optionale 7. Karte fuer "Mitarbeiter ohne Aktivitaet". */
+  inactiveCard?: ReactNode;
 }
 
 /**
@@ -21,7 +23,7 @@ interface Props {
  *
  * Alle Karten sind klickbar und fuehren zur jeweiligen Detail-Route.
  */
-export function StatusCockpit({ metrics, reviewCard }: Props) {
+export function StatusCockpit({ metrics, reviewCard, inactiveCard }: Props) {
   const nextStep = computeRecommendedNextStep(metrics);
   const captureHref = metrics.captureSessionId
     ? `/capture/${metrics.captureSessionId}`
@@ -155,6 +157,8 @@ export function StatusCockpit({ metrics, reviewCard }: Props) {
         />
 
         {reviewCard}
+
+        {inactiveCard}
       </div>
     </section>
   );

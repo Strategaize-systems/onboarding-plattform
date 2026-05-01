@@ -2,7 +2,9 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { loadCockpitMetrics } from "@/lib/cockpit/load-metrics";
 import { getReviewSummary } from "@/lib/handbook/get-review-summary";
+import { getInactiveEmployeesCount } from "@/lib/dashboard/inactive-employees";
 import { BlockReviewStatusCard } from "@/components/cockpit/BlockReviewStatusCard";
+import { InactiveEmployeesCard } from "@/components/cockpit/InactiveEmployeesCard";
 import { DashboardClient } from "./dashboard-client";
 import { StatusCockpit } from "./StatusCockpit";
 // SLC-047 Wizard-Trigger — eigentlich ueber dashboard/layout.tsx geplant
@@ -99,9 +101,26 @@ export default async function DashboardPage() {
     );
   }
 
+  // SLC-049 MT-3 — Cockpit-Card "Mitarbeiter ohne Aktivitaet" fuer tenant_admin.
+  // Klick fuehrt zu /admin/team?filter=inactive (MT-4).
+  let inactiveCard: React.ReactNode = null;
+  if (profile.role === "tenant_admin" && profile.tenant_id) {
+    const inactive = await getInactiveEmployeesCount(supabase, profile.tenant_id);
+    inactiveCard = (
+      <InactiveEmployeesCard
+        inactiveCount={inactive.inactiveCount}
+        totalAccepted={inactive.totalAccepted}
+      />
+    );
+  }
+
   const cockpitContent =
     profile.role === "tenant_admin" && metrics ? (
-      <StatusCockpit metrics={metrics} reviewCard={reviewCard} />
+      <StatusCockpit
+        metrics={metrics}
+        reviewCard={reviewCard}
+        inactiveCard={inactiveCard}
+      />
     ) : null;
 
   // SLC-047 — Auto-Trigger Wizard fuer tenant_admin im pending|started state.

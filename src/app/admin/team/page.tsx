@@ -1,5 +1,6 @@
-import { createClient } from "@/lib/supabase/server";
+import Link from "next/link";
 import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
 import {
   Card,
   CardContent,
@@ -21,10 +22,16 @@ import { InvitationActions } from "./InvitationActions";
 
 /**
  * SLC-034 MT-5 — Mitarbeiter-Verwaltung fuer tenant_admin.
+ * SLC-049 MT-4 — Filter `?filter=inactive` fuer Mitarbeiter-Liste.
  *
  * Zeigt:
  *   - aktive Mitarbeiter des Tenants (profiles.role='employee')
+ *     mit Status (active/inactive), accepted_at, letzter Block-Submit
  *   - offene + angenommene + widerrufene Einladungen (employee_invitation)
+ *
+ * URL-State:
+ *   - ohne Query: Tab "Alle" zeigt alle Mitarbeiter
+ *   - ?filter=inactive: Tab "Inaktiv" zeigt nur Mitarbeiter ohne Block-Submit
  *
  * Aktionen:
  *   - Neue Einladung (InviteEmployeeDialog)
@@ -40,6 +47,7 @@ type InvitationRow = {
   status: "pending" | "accepted" | "revoked" | "expired";
   expires_at: string;
   accepted_at: string | null;
+  accepted_user_id: string | null;
   created_at: string;
 };
 
@@ -47,9 +55,30 @@ type EmployeeRow = {
   id: string;
   email: string;
   created_at: string;
+  acceptedAt: string | null;
+  lastBlockSubmit: string | null;
 };
 
-export default async function AdminTeamPage() {
+type FilterValue = "all" | "inactive";
+
+function parseFilter(value: string | string[] | undefined): FilterValue {
+  if (Array.isArray(value)) return parseFilter(value[0]);
+  return value === "inactive" ? "inactive" : "all";
+}
+
+function formatDate(value: string | null): string {
+  if (!value) return "—";
+  return new Date(value).toLocaleDateString("de-DE");
+}
+
+interface PageProps {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}
+
+export default async function AdminTeamPage({ searchParams }: PageProps) {
+  const params = (await searchParams) ?? {};
+  const filter = parseFilter(params.filter);
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -70,7 +99,9 @@ export default async function AdminTeamPage() {
   const [invitationsRes, employeesRes] = await Promise.all([
     supabase
       .from("employee_invitation")
-      .select("id, email, display_name, role_hint, status, expires_at, accepted_at, created_at")
+      .select(
+        "id, email, display_name, role_hint, status, expires_at, accepted_at, accepted_user_id, created_at"
+      )
       .eq("tenant_id", profile.tenant_id)
       .order("created_at", { ascending: false }),
     supabase
@@ -82,10 +113,67 @@ export default async function AdminTeamPage() {
   ]);
 
   const invitations = (invitationsRes.data ?? []) as InvitationRow[];
-  const employees = (employeesRes.data ?? []) as EmployeeRow[];
+  const baseEmployees = (employeesRes.data ?? []) as Array<{
+    id: string;
+    email: string;
+    created_at: string;
+  }>;
+
+  // Map accepted_user_id -> accepted_at fuer Anreicherung
+  const acceptedAtByUserId = new Map<string, string>();
+  for (const inv of invitations) {
+    if (
+      inv.status === "accepted" &&
+      inv.accepted_user_id &&
+      inv.accepted_at
+    ) {
+      acceptedAtByUserId.set(inv.accepted_user_id, inv.accepted_at);
+    }
+  }
+
+  // Letzter Block-Submit pro User aus block_checkpoint
+  const employeeIds = baseEmployees.map((e) => e.id);
+  let lastSubmitByUserId = new Map<string, string>();
+  if (employeeIds.length > 0) {
+    const { data: checkpoints } = await supabase
+      .from("block_checkpoint")
+      .select("created_by, created_at")
+      .in("created_by", employeeIds)
+      .order("created_at", { ascending: false });
+    for (const cp of (checkpoints ?? []) as Array<{
+      created_by: string;
+      created_at: string;
+    }>) {
+      if (!lastSubmitByUserId.has(cp.created_by)) {
+        lastSubmitByUserId.set(cp.created_by, cp.created_at);
+      }
+    }
+  }
+
+  const enrichedEmployees: EmployeeRow[] = baseEmployees.map((e) => ({
+    id: e.id,
+    email: e.email,
+    created_at: e.created_at,
+    acceptedAt: acceptedAtByUserId.get(e.id) ?? null,
+    lastBlockSubmit: lastSubmitByUserId.get(e.id) ?? null,
+  }));
+
+  const visibleEmployees =
+    filter === "inactive"
+      ? enrichedEmployees.filter((e) => !e.lastBlockSubmit)
+      : enrichedEmployees;
+
+  const inactiveCount = enrichedEmployees.filter(
+    (e) => !e.lastBlockSubmit
+  ).length;
 
   const pending = invitations.filter((i) => i.status === "pending");
   const other = invitations.filter((i) => i.status !== "pending");
+
+  const tabBase =
+    "rounded-md px-3 py-1.5 text-sm font-medium transition-colors";
+  const tabActive = "bg-slate-900 text-white";
+  const tabIdle = "text-slate-600 hover:bg-slate-100";
 
   return (
     <div className="space-y-6">
@@ -101,31 +189,83 @@ export default async function AdminTeamPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Aktive Mitarbeiter</CardTitle>
-          <CardDescription>{employees.length} Mitarbeiter mit Login</CardDescription>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <CardTitle>Aktive Mitarbeiter</CardTitle>
+              <CardDescription>
+                {enrichedEmployees.length} mit Login
+                {inactiveCount > 0
+                  ? ` — ${inactiveCount} ohne Block-Submit`
+                  : ""}
+              </CardDescription>
+            </div>
+            <div
+              role="tablist"
+              aria-label="Filter Mitarbeiter"
+              className="flex gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1"
+            >
+              <Link
+                role="tab"
+                aria-selected={filter === "all"}
+                href="/admin/team"
+                className={`${tabBase} ${filter === "all" ? tabActive : tabIdle}`}
+              >
+                Alle
+                <span className="ml-1.5 text-xs opacity-75">
+                  ({enrichedEmployees.length})
+                </span>
+              </Link>
+              <Link
+                role="tab"
+                aria-selected={filter === "inactive"}
+                href="/admin/team?filter=inactive"
+                className={`${tabBase} ${filter === "inactive" ? tabActive : tabIdle}`}
+              >
+                Inaktiv
+                <span className="ml-1.5 text-xs opacity-75">
+                  ({inactiveCount})
+                </span>
+              </Link>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
-          {employees.length === 0 ? (
+          {visibleEmployees.length === 0 ? (
             <p className="text-sm text-slate-500">
-              Noch keine Mitarbeiter. Lade einen ueber den Button oben rechts ein.
+              {filter === "inactive"
+                ? "Keine inaktiven Mitarbeiter — alle haben mindestens einen Block eingereicht."
+                : "Noch keine Mitarbeiter. Lade einen ueber den Button oben rechts ein."}
             </p>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>E-Mail</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead>Beigetreten</TableHead>
+                  <TableHead>Letzter Block-Submit</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {employees.map((e) => (
-                  <TableRow key={e.id}>
-                    <TableCell>{e.email}</TableCell>
-                    <TableCell className="text-slate-500">
-                      {new Date(e.created_at).toLocaleDateString("de-DE")}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {visibleEmployees.map((e) => {
+                  const isInactive = !e.lastBlockSubmit;
+                  return (
+                    <TableRow key={e.id}>
+                      <TableCell>{e.email}</TableCell>
+                      <TableCell>
+                        <Badge variant={isInactive ? "secondary" : "default"}>
+                          {isInactive ? "inaktiv" : "aktiv"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-slate-500">
+                        {formatDate(e.acceptedAt ?? e.created_at)}
+                      </TableCell>
+                      <TableCell className="text-slate-500">
+                        {formatDate(e.lastBlockSubmit)}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}

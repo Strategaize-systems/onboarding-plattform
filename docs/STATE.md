@@ -10,16 +10,16 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: **V4.2 SLC-048 /qa PASS 2026-05-01 (RPT-122).** Live-SMTP-Smoke gegen `richard@bellaerts.de` PASS, DKIM via IONOS auto-signiert, Idempotenz live PASS (2 Trigger heute → 1 Mail), Unsubscribe 3 Cases PASS, 19/19 Unit-Tests gruen. Auth-Middleware-Bug im /qa entdeckt + gefixt (commit fd9e944, Coolify-Redeploy 06:06 UTC) — `isApiCron` + `isApiUnsubscribe` Bypass-Flags ergaenzt. Cron `capture-reminders-daily` muss vom User in Coolify wieder auf `enabled` gesetzt werden.
-- Current Phase: V4.2 3/5 Slices final PASS (SLC-046 + SLC-047 + SLC-048). Naechste Phase: /frontend SLC-049 (InactiveEmployeesCard + Mitarbeiter-Liste-Filter + Settings-Opt-Out-Toggle), kann sofort starten.
+- Current Focus: **V4.2 SLC-049 /frontend code-PASS 2026-05-01 (RPT-123).** InactiveEmployeesCard im Cockpit fuer tenant_admin, `/admin/team?filter=inactive` URL-State-Filter mit Status-Badge + Letzter-Block-Submit-Spalte, neue `/dashboard/settings` Page mit Reminders-Opt-Out-Toggle (Service-Role-Pattern IMP-214). 12/12 Unit-Tests gruen (8 Helper + 4 Server-Action), `npm run build` gruen, TypeScript clean. Slice steht auf `in_progress` weil Browser-Smoke + Live-DB RLS-Test (MT-6) NACH Coolify-Deploy laufen muessen (IMP-215).
+- Current Phase: V4.2 3/5 final PASS + 1/5 code-PASS (SLC-046+SLC-047+SLC-048 done, SLC-049 code-done). Naechste Phase: User-Coolify-Deploy + `/qa SLC-049` (Browser-Smoke + Live-RLS-Test) -> dann `/frontend SLC-050`.
 
 ## Immediate Next Steps
-1. **User-Aktion: Coolify-Cron `capture-reminders-daily` wieder auf `enabled`** (war fuer Smoke-Test pausiert). Cron-Tabelle siehe RPT-121.
-2. **/frontend SLC-049** — InactiveEmployeesCard + Mitarbeiter-Liste-Filter `?filter=inactive` + Settings-Page Opt-Out-Toggle. Profitiert von /qa-PASS SLC-048 (Reminder-Pipeline live), kann sofort starten.
-3. **/frontend SLC-050** — Help-Sheet + 5 Markdown-Files + 5 Tooltips. Letzter, weil Tooltips fuer SLC-047 + SLC-049 Komponenten brauchen.
-4. **Nach SLC-049 + SLC-050:** Gesamt-/qa V4.2 + /final-check + /go-live + /deploy.
-5. **V4.2-Slices-Stand (3/5 final PASS, 2/5 planned):** SLC-046 done+QA-PASS (RPT-115+116), SLC-047 done+QA-PASS+MT-7-PASS (RPT-118+119+120), SLC-048 done+QA-PASS (RPT-121+122), SLC-049+050 noch planned.
-5. **V4.3-Backlog-Stand (Maintenance-Sammelrelease):** 9 offene Items (BL-051..059), Start nach V4.2-Release. Neu zu adden: ADR fuer State-Maschinen-UPDATE-Pattern (Service-Role vs RLS-Policy) basierend auf ISSUE-031, plus Investigation Next 16 Turbopack-Layout-Inlining-Anomalie.
+1. **User-Coolify-Deploy SLC-049** (Container `app-bwkg80w04wgccos48gcws8cs-...` auf 159.69.207.29, neueste main).
+2. **/qa SLC-049** — Browser-Smoke gegen https://onboarding.strategaizetransition.com (Cockpit-Card sichtbar + Tooltip + Klick zu `/admin/team?filter=inactive`, Filter-Tabs, Toggle persistiert ueber Reload, Toast erscheint) + Live-DB RLS-Test `src/lib/db/__tests__/user-settings-cross-user.test.ts` gegen Coolify-Postgres.
+3. **/frontend SLC-050** — Help-Sheet + 5 Markdown-Files + 5 Tooltips. Letzter V4.2-Slice (Tooltips brauchen SLC-047 + SLC-049 Komponenten).
+4. **Nach SLC-050:** Gesamt-/qa V4.2 + /final-check + /go-live + /deploy.
+5. **V4.2-Slices-Stand (3/5 final PASS + 1/5 code-PASS, 1/5 planned):** SLC-046 done+QA-PASS (RPT-115+116), SLC-047 done+QA-PASS+MT-7-PASS (RPT-118+119+120), SLC-048 done+QA-PASS (RPT-121+122), SLC-049 code-done (RPT-123, Browser-Smoke pending), SLC-050 noch planned.
+6. **V4.3-Backlog-Stand (Maintenance-Sammelrelease):** 9 offene Items (BL-051..059), Start nach V4.2-Release. Neu zu adden: ADR fuer State-Maschinen-UPDATE-Pattern (Service-Role vs RLS-Policy) basierend auf ISSUE-031, plus Investigation Next 16 Turbopack-Layout-Inlining-Anomalie.
 
 ## Active Scope
 **V4 — Zwei-Ebenen-Verschmelzung, 6 Features Code-done, 8 Slices Code-done:**
