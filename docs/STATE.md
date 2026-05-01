@@ -10,13 +10,15 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: **V4.2 LIVE als REL-010 2026-05-01 (RPT-130).** Frontend deployed via 918377a (morgens), CRON_SECRET-ENV-Fix deployed via daf9dfd (Container Up healthy 11:19). Coolify-Scheduled-Task aktiv (gestern angelegt) — erster automatischer Run heute 08:14 Europe/Berlin hat stage1-Reminder an richard@bellaerts.de gesendet, **User-bestaetigt Mail in Inbox** (DKIM-Alignment via IONOS-Default funktioniert). Idempotenz-Test: zweiter manueller Trigger liefert `skipped_already_sent: 1` ✓. ISSUE-032 als FALSE-POSITIVE resolved (IMP-246). 0 High Risks at Release-Time, 2 Medium V4-Pre-existing, 5 Low. **Post-Launch-Window 18h startet 2026-05-01 ~12:00 Europe/Berlin.**
-- Current Phase: V4.2 RELEASED als REL-010. Naechste Phase: /post-launch V4.2 (18h Beobachtung, Cron-Run 02.05. 09:00 + 06.05. stage2-Trigger als Pflicht-Verifikation).
+- Current Focus: **V4.3 Requirements done 2026-05-01 (RPT-131).** Maintenance-Sammelrelease mit 15 Items in 6 Kategorien (Reader-UX, Worker-Hygiene, Tooling-Migrations, UX-Findings aus V4.2-Smoke, Architektur-ADRs, Berater-Content-Review). 4 neue BL-Items angelegt: BL-064 ESLint-9 flat-config + BL-065 ADR State-Maschinen-UPDATE-Pattern + BL-066 Spike Turbopack-Layout-Inlining + BL-067 Berater-Help-Review. 10 SCs definiert, 6 Open Questions fuer /architecture. Skizze 6 Slices SLC-051..056 + 1 Content-Item (~22 MTs, 4-5 Tage). Privacy-Page geht NACH V4.3 in eigenen /compliance-Sprint (D-SPLIT). ISSUE-021/022 deferred zu V4.4/V5. V4.2 bleibt Last Stable.
+- Current Phase: V4.3 Requirements done. Naechste Phase: /architecture V4.3 → /slice-planning → /frontend|/backend pro Slice.
 
 ## Immediate Next Steps
-1. **/post-launch V4.2** nach 18h Beobachtungs-Window (~2026-05-02 06:00 Europe/Berlin). Pflicht-Checks: (a) Cron-Run 02.05. 09:00 sauber durch (sollte 0 Mails senden, alle Reminder bereits in reminder_log), (b) error_log auf Cron-Failures, (c) 06.05. stage2-Trigger fuer richard wenn weiterhin kein Block-Submit, (d) Container weiter healthy.
-2. **V4.3-Backlog (Maintenance-Sammelrelease)** — 11+ offene Items: BL-051..059 + BL-060 Tooltip-Target + BL-061 Help-Konsolidierung + ESLint-9 flat-config-Migration + Privacy/Datenschutz/Impressum-Page. Nach /post-launch V4.2 STABLE-Markierung -> /requirements V4.3 oder direkt /architecture wenn Scope klar.
-3. **V4.2-Slices-Stand (5/5 alle Stages PASS + RELEASED):** SLC-046..050 alle done+QA, Gesamt-V4.2 (RPT-127), Final-Check (RPT-128), Go-Live (RPT-129), Deploy (RPT-130).
+1. **/architecture V4.3** — 6 Open Questions Q-V4.3-A..F klaeren: Slice-Bundling, Search-History-Persistenz, Help-Konsolidierungs-Variante (3 Optionen), ADR State-Maschinen-Pattern (Service-Role vs RLS-Policy), Investigation-Branch-Setup, Tooltip-Target-Variante. Output: DEC-Eintraege + Architektur-Section in PRD/ARCHITECTURE.md.
+2. **/slice-planning V4.3** — 6 Slices SLC-051..056 mit Micro-Tasks + Pflicht-Gates (kein Schema-Touch, ESLint-Snapshot vor/nach SLC-053, Investigation 4h-Box).
+3. **Implementation V4.3** ~4-5 Tage. Reihenfolge-Empfehlung: SLC-053 (Migration-Risiko zuerst) → SLC-051 (Reader-UX-Bundle) → SLC-052 (Worker-Hygiene) → SLC-055 (UX-Findings) → SLC-056 (ADR + Spike) → SLC-054 (Cross-Snapshot-Suche). BL-067 (Berater-Help-Review) parallel via direkten Editor-Workflow.
+4. **Nach V4.3-Release:** /compliance-Sprint fuer Privacy/Datenschutz/Impressum-Page (separater Track per D-SPLIT-Decision).
+5. **V4.2-Slices-Stand (RELEASED):** SLC-046..050 alle done+QA+deployed, Gesamt-V4.2 (RPT-127), Final-Check (RPT-128), Go-Live (RPT-129), Deploy (RPT-130).
 6. **V4.3-Backlog-Stand (Maintenance-Sammelrelease):** 9 offene Items (BL-051..059), Start nach V4.2-Release. Neu zu adden: ADR fuer State-Maschinen-UPDATE-Pattern (Service-Role vs RLS-Policy) basierend auf ISSUE-031, plus Investigation Next 16 Turbopack-Layout-Inlining-Anomalie.
 
 ## Active Scope

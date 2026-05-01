@@ -627,7 +627,47 @@
       "priority": "medium",
       "status": "open",
       "version": "V4.3",
-      "description": "Aktuell zwei parallele Help-Bereiche: (a) SLC-050 HelpSheet im Banner top-right (`?`-Icon, Pflichtinhalt Markdown pro Page) und (b) Learning Center floating bottom-right (`?`-Icon, Video-Tutorials + Bedienungsanleitung, existing feature). Beide tragen `?`-Icon-Affordance, was End-User verwirrt. Aufgedeckt im V4.2 Gesamt-/qa 2026-05-01 (User-Feedback: 'Brauchen wir zwei? Das ist verwirrend, koennen wir die nicht zusammenpacken?'). Konkrete Form der Konsolidierung wird in /ui-update oder /requirements V4.3 entschieden. Optionen-Skizze: (1) SLC-050-Inhalte als 3. Tab im Learning Center, (2) Learning Center entfernen + alle Inhalte unter SLC-050 vereinen, (3) Learning Center um page-spezifischen Tab 'Diese Seite' (=SLC-050-Content) ergaenzen. Severity: Medium (UX-Verwirrung, kein Funktionsblocker).",
+      "description": "Aktuell zwei parallele Help-Bereiche: (a) SLC-050 HelpSheet im Banner top-right (`?`-Icon, Pflichtinhalt Markdown pro Page) und (b) Learning Center floating bottom-right (`?`-Icon, Video-Tutorials + Bedienungsanleitung, existing feature). Beide tragen `?`-Icon-Affordance, was End-User verwirrt. Aufgedeckt im V4.2 Gesamt-/qa 2026-05-01 (User-Feedback: 'Brauchen wir zwei? Das ist verwirrend, koennen wir die nicht zusammenpacken?'). Konkrete Konsolidierungs-Variante wird in /architecture V4.3 entschieden. Optionen-Skizze: (1) SLC-050-Inhalte als 3. Tab im Learning Center, (2) Learning Center entfernen + alle Inhalte unter SLC-050 vereinen, (3) Learning Center um page-spezifischen Tab 'Diese Seite' (=SLC-050-Content) ergaenzen. Severity: Medium (UX-Verwirrung, kein Funktionsblocker).",
+      "createdAt": "2026-05-01"
+    },
+    {
+      "id": "BL-064",
+      "title": "ESLint 9 flat-config-Migration",
+      "type": "improvement",
+      "priority": "low",
+      "status": "open",
+      "version": "V4.3",
+      "description": "ESLint 9.39.2 erfordert flat config (`eslint.config.mjs`), Projekt hat aktuell legacy `.eslintrc.json` mit `extends: next/core-web-vitals`. `npm run lint` failt mit 'eslint.config.(js|mjs|cjs) file not found'. Auch `next lint` versagt da Next.js 16 das Subcommand zu einem Directory-Argument verbiegt ('Invalid project directory: lint'). Tooling-Gap aus /final-check V4.2 (RPT-128). Lint-basierte Code-Quality-Verifikation faellt aktuell aus, tsc deckt das groesstenteils ab. Migration: `eslint.config.mjs` mit flat-config-Format anlegen, `extends`-Pattern via `compat`-Helper (wenn Next-Config-Plugin noch legacy) ODER auf neue `@next/eslint-plugin-next` migrieren. .eslintrc.json danach loeschen.",
+      "createdAt": "2026-05-01"
+    },
+    {
+      "id": "BL-065",
+      "title": "ADR fuer State-Maschinen-UPDATE-Pattern (Service-Role vs RLS-Policy)",
+      "type": "improvement",
+      "priority": "medium",
+      "status": "open",
+      "version": "V4.3",
+      "description": "Aus ISSUE-031 (V4.2 SLC-046 Doctor): Wizard-State-UPDATE ueber tenants-Tabelle wurde silent durch RLS geblockt, weil tenants nur SELECT-Policy hatte (kein UPDATE). Fix war createAdminClient() (Service-Role) fuer den UPDATE-Pfad. Pattern muss als ADR (DEC) dokumentiert werden, damit kuenftige State-Maschinen-Updates konsistent gehandhabt werden — ohne dass jeder Implementer die Falle neu entdeckt. Frage: createAdminClient() fuer alle State-UPDATEs ODER RLS-UPDATE-Policies pro Spalte? Der ADR muss beide Optionen evaluieren + finale Empfehlung mit Sicherheits-Tradeoffs liefern. Affected: alle zukuenftigen Tenant-State-, User-State- und Domain-State-Maschinen.",
+      "createdAt": "2026-05-01"
+    },
+    {
+      "id": "BL-066",
+      "title": "Investigation: Next.js 16 Turbopack Layout-Inlining-Anomalie (Spike)",
+      "type": "improvement",
+      "priority": "low",
+      "status": "open",
+      "version": "V4.3",
+      "description": "Aus V4.2 SLC-047 Doctor: dashboard/layout.tsx wurde silent NICHT in den Production-Build eingebaut (Turbopack-Inlining-Verhalten). Workaround in commit 6f774ec (Wizard-Trigger ins page.tsx verschoben). Root-Cause unklar. Spike (timeboxed 4h): minimal-reproducer in eigenem Branch erstellen, Turbopack-Verhalten beobachten, Issue beim Next.js-Repo dokumentieren falls genuine Bug. Output: GitHub-Issue-URL ODER Workaround-Confirmation als ADR. Wenn Bug bestaetigt: Fix abwarten in spaeterer Next-Version, kein eigener Code-Fix in V4.3.",
+      "createdAt": "2026-05-01"
+    },
+    {
+      "id": "BL-067",
+      "title": "Berater-Inhalts-Review fuer SLC-050 Help-Files (5 Markdown-Dateien)",
+      "type": "improvement",
+      "priority": "medium",
+      "status": "open",
+      "version": "V4.3",
+      "description": "User hatte in V4.2 SLC-050 /qa (RPT-126) mit 'final review am Ende V4.2' bestaetigt, dass die 5 Help-Markdown-Files vorlaeufig OK sind aber finale inhaltliche Pruefung im V4.3-Sammelrelease passiert. Dateien: src/content/help/dashboard.md, capture.md, bridge.md, reviews.md, handbook.md (je 180-243 Worter). Review-Pflichten: Begriffs-Konsistenz mit UI, Tonalitaet (Du-Form), keine Doppelungen, fehlende Schritte ergaenzen, ggf. Tooltips am Page-Start ergaenzen. Kein Code-Slice noetig — direkter Editor-Workflow mit Berater (User selbst). Output: aktualisierte 5 .md-Files + Commit.",
       "createdAt": "2026-05-01"
     }
   ]

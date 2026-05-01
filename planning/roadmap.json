@@ -59,8 +59,8 @@
     {
       "id": "v4-3",
       "name": "V4.3",
-      "status": "planned",
-      "summary": "Maintenance-Sammelrelease (Pattern aus V3.1). 9 Items aus V4.1-Browser-Smoke + Final-Check: Reader-UX-Polish (Scroll-Spy, Copy-Permalink, Loading-Skeleton, Cross-Snapshot-Suche, Mobile-h1, Heading-Anchor-Hover), Worker-Output-Hygiene (TOC-Anchor-Links, Umlaut-Konsistenz), Next.js 16 middleware->proxy Convention-Migration. BL-051..059 (re-versioniert von V4.2 auf V4.3 in /requirements V4.2). Skizze: 4 Slices SLC-051..054, ~14 MTs, 2-3 Tage. Keine neuen Features, keine Schema-Aenderungen. Detail-Requirements optional als eigene /requirements V4.3 oder direkt /architecture wenn Scope klar bleibt.",
+      "status": "active",
+      "summary": "Maintenance-Sammelrelease (Pattern aus V3.1). Requirements done 2026-05-01 (RPT-131). 15 Items in 6 Kategorien: A. Reader-UX-Polish 6 Items (BL-051..055, BL-058), B. Worker-Hygiene 2 Items (BL-056, BL-057), C. Tooling-Migrations 2 Items (BL-059 middleware->proxy, BL-064 ESLint-9 flat-config), D. UX-Findings aus V4.2 Smoke 2 Items (BL-062 Tooltip-Target, BL-063 Help-Konsolidierung), E. Architektur 2 Items (BL-065 ADR State-Maschinen, BL-066 Spike Turbopack-Anomalie), F. Content 1 Item (BL-067 Berater-Help-Review). 10 SCs (SC-V4.3-1..10). 6 Open Questions (Q-V4.3-A..F) fuer /architecture. Skizze: 6 Slices SLC-051..056 + 1 Content-Item, ~22 MTs, 4-5 Tage. Keine Schema-Aenderungen, keine neuen Features. Privacy-Page geht in eigenen /compliance-Sprint nach V4.3. Naechster Schritt: /architecture V4.3.",
       "order": 9
     },
     {

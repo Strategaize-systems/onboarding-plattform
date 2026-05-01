@@ -843,15 +843,23 @@ Pflicht-Gates fuer V4.2-Implementation:
 
 ---
 
-## V4.3 — Reader-Polish + Convention-Migration (Maintenance-Sammelrelease)
+## V4.3 — Maintenance-Sammelrelease (Reader-Polish + UX + Tooling + ADR)
 
 ### Problem Statement (V4.3)
-V4.1 hat in Browser-Smoke + Final-Check 9 kleinere Items aufgedeckt, die nicht V4.1-blockierend waren, aber den Reader und die Code-Hygiene weiter verbessern. Sie als V4.3-Sammelrelease zu buendeln folgt dem V3.1-Pattern (Maintenance-Release nach Feature-Release).
+Drei Quellen sammeln V4.x-Schuld an, die nach V4.2-Release (REL-010, 2026-05-01) jetzt gebuendelt abgearbeitet werden soll:
+
+1. **V4.1 Browser-Smoke + Final-Check** lieferte 9 kleinere Items zum Reader und Code-Hygiene (BL-051..059).
+2. **V4.2 Gesamt-/qa User-Smoke** entdeckte 2 UX-Findings: Tooltip-Target zu klein (BL-062) + Help-Mechanismen-Konsolidierung (BL-063).
+3. **V4.2 /final-check + /doctor-Sessions** entdeckte 4 weitere Items: ESLint-9 flat-config-Migration (BL-064), ADR fuer State-Maschinen-UPDATE-Pattern (BL-065), Investigation Turbopack-Layout-Inlining-Anomalie (BL-066), Berater-Inhalts-Review fuer SLC-050 Help-Files (BL-067).
+
+Insgesamt 15 Items — groesser als V3.1 (3 Items) aber strukturell gleicher Pattern: Maintenance ohne neue Features.
 
 ### Goal (V4.3)
-Reader-Erlebnis polieren (UX-Tuning, Mobile-Fix, Worker-Output-Konsistenz) und Next.js 16 Convention-Migration (`middleware`→`proxy`) durchfuehren — alle Items aus V4.1-Browser-Smoke + Final-Check abarbeiten, ohne neue Features einzufuehren.
+Reader-Erlebnis polieren, V4.2-UX-Findings adressieren, Tooling-Gap (ESLint-9) schliessen, State-Maschinen-Pattern als ADR dokumentieren, Investigation Turbopack als Spike abschliessen, Help-Content final mit Berater reviewt. Kein neues Feature, keine Schema-Aenderung.
 
-### V4.3 In Scope
+### V4.3 In Scope (15 Items)
+
+#### A. Reader-UX-Polish (aus V4.1 Browser-Smoke)
 
 | ID | Item | Backlog | Severity |
 |----|------|---------|----------|
@@ -860,65 +868,150 @@ Reader-Erlebnis polieren (UX-Tuning, Mobile-Fix, Worker-Output-Konsistenz) und N
 | V4.3.3 | Reader Loading-Skeleton waehrend Snapshot-Wechsel | BL-053 | Low UX |
 | V4.3.4 | Reader Cross-Snapshot-Suche und Suche-Historie | BL-054 | Low UX |
 | V4.3.5 | Reader Mobile-Polish: h1-Title-Wrap bei 375px | BL-055 | Low Mobile |
+| V4.3.8 | Reader Heading-Anchor-Hover am h1-Titel sichtbar | BL-058 | Low UX |
+
+#### B. Worker-Output-Hygiene
+
+| ID | Item | Backlog | Severity |
+|----|------|---------|----------|
 | V4.3.6 | Worker-Output: TOC-Markdown-Links als In-App-Anchors | BL-056 | Medium Hygiene |
 | V4.3.7 | Umlaut-Konsistenz Templates + Worker + UI | BL-057 | Medium Content |
-| V4.3.8 | Reader Heading-Anchor-Hover am h1-Titel sichtbar | BL-058 | Low UX |
+
+#### C. Tooling-Migrations
+
+| ID | Item | Backlog | Severity |
+|----|------|---------|----------|
 | V4.3.9 | Next.js 16 `middleware`→`proxy` Convention-Migration | BL-059 | Low Hygiene |
+| V4.3.10 | ESLint 9 flat-config-Migration | BL-064 | Low Tooling |
+
+#### D. UX-Findings aus V4.2 Gesamt-/qa
+
+| ID | Item | Backlog | Severity |
+|----|------|---------|----------|
+| V4.3.11 | Tooltip 1/5 Inactive-Badge Hover-Target zu klein 16x16 | BL-062 | Low UX |
+| V4.3.12 | Help-Mechanismen-Konsolidierung (SLC-050 HelpSheet + Learning Center) | BL-063 | Medium UX |
+
+#### E. Architektur-Items
+
+| ID | Item | Backlog | Severity |
+|----|------|---------|----------|
+| V4.3.13 | ADR fuer State-Maschinen-UPDATE-Pattern (Service-Role vs RLS-Policy) | BL-065 | Medium Doku |
+| V4.3.14 | Investigation Next.js 16 Turbopack-Layout-Inlining-Anomalie (Spike) | BL-066 | Low Investigation |
+
+#### F. Content-Pflicht
+
+| ID | Item | Backlog | Severity |
+|----|------|---------|----------|
+| V4.3.15 | Berater-Inhalts-Review fuer 5 SLC-050 Help-Files | BL-067 | Medium Content |
 
 ### V4.3 Out of Scope
-- Neue Features. V4.3 ist explizit Maintenance.
-- Cross-Snapshot-Suche mit Backend-Index. BL-054 wird nur als client-side-aufruefbares History-Feature umgesetzt; ein dedizierter Search-Index ist V5+.
-- Re-Generation aller bestehender Snapshots fuer Umlaut-Konsistenz (BL-057). User entscheidet manuell, welche Demos re-generiert werden sollen — kein Auto-Migrate.
+
+- **Neue Features.** V4.3 ist explizit Maintenance — kein neuer Capture-Mode, kein Wizard-Schritt-Erweiterung, kein neuer Reminder-Channel.
+- **Privacy/Datenschutz/Impressum-Page.** Wird in eigenem `/compliance`-Sprint behandelt (parallel zu V4.3 oder direkt danach). Begruendung: Legal-Texte schreiben + Layout sind strukturell anders als Maintenance-Sweep.
+- **ISSUE-021 (Bridge-Proposal Edit-only-Pfad fehlt) + ISSUE-022 (strategaize_admin /admin/bridge):** Beide sind V4-Pre-existing Feature-Logic-Gaps, die in V5 (Walkthrough-Mode) oder V4.4 als eigene Slice behandelt werden — nicht in Maintenance-Sweep.
+- **Cross-Snapshot-Suche mit Backend-Index.** BL-054 wird nur als client-side History-Feature umgesetzt; dedizierter Search-Index ist V5+.
+- **Re-Generation aller bestehender Snapshots fuer Umlaut-Konsistenz (BL-057).** User entscheidet manuell, welche Demos re-generiert werden sollen — kein Auto-Migrate.
+- **Turbopack-Bug-Fix.** BL-066 ist eine Investigation (Spike timeboxed 4h), kein Fix-Item. Wenn ein genuine Bug bestaetigt wird, wird er beim Next.js-Repo gemeldet — kein Code-Fix in V4.3.
+- **AI-gestuetzte Hilfe / Chatbot.** Ist V5+. V4.3 buendelt nur die existing Help-Mechanismen.
 
 ### Success Criteria (V4.3)
 
 V4.3 ist erfolgreich, wenn ALLE folgenden Kriterien erfuellt sind:
 
-**SC-V4.3-1 — Alle 9 Items abgearbeitet**
-Jedes Item aus V4.3.1..V4.3.9 ist entweder implementiert oder dokumentiert als "won't-fix" mit Begruendung in KNOWN_ISSUES.md.
+**SC-V4.3-1 — Alle 15 Items abgearbeitet**
+Jedes Item aus V4.3.1..V4.3.15 ist entweder implementiert ODER dokumentiert als "won't-fix" mit Begruendung in KNOWN_ISSUES.md ODER (fuer Investigation BL-066) als ADR/GitHub-Issue-URL dokumentiert.
 
 **SC-V4.3-2 — Reader UX-Browser-Smoke besser als V4.1**
-Auf 1280×800 Desktop und 375×667 Mobile keine sichtbaren Layout-Brueche. h1-Title bricht max. 2 Zeilen. Active-Section in Sidebar wird beim Scrollen markiert.
+Auf 1280×800 Desktop und 375×667 Mobile keine sichtbaren Layout-Brueche. h1-Title bricht max. 2 Zeilen. Active-Section in Sidebar wird beim Scrollen markiert. Tooltip-Target Inactive-Badge ist End-User-trefffaehig (~24x24+ oder Card-Header als Trigger).
 
 **SC-V4.3-3 — Worker-Output enthaelt In-App-Anchor-Links**
-INDEX.md im Snapshot enthaelt `[Title](#section-anchor)` statt `[Title](01_section.md)`. Reader verlinkt direkt, kein components.a-Override mehr noetig (wird zur Vereinfachung entfernt).
+INDEX.md im Snapshot enthaelt `[Title](#section-anchor)` statt `[Title](01_section.md)`. Reader verlinkt direkt, kein components.a-Override mehr noetig.
 
-**SC-V4.3-4 — Convention-Migration ohne Funktions-Verlust**
-`src/middleware.ts` ist als `src/proxy.ts` umbenannt + Convention-Anpassungen umgesetzt. Build zeigt keine Deprecation-Warning mehr. Auth-Middleware-Tests bleiben 100% PASS.
+**SC-V4.3-4 — Convention + Tooling-Migrations ohne Funktions-Verlust**
+`src/middleware.ts` ist als `src/proxy.ts` umbenannt + Convention-Anpassungen umgesetzt. Build zeigt keine middleware-Deprecation-Warning mehr. ESLint 9 flat-config aktiv, `npm run lint` laeuft fehlerfrei. Auth-Middleware-Tests bleiben 100% PASS.
 
 **SC-V4.3-5 — RLS-Test-Matrix bleibt gruen**
 Keine Schema-Aenderung in V4.3 (additive UI/Hygiene). RLS-Matrix bleibt 100% PASS.
 
 **SC-V4.3-6 — Keine V4.2-Regression**
-V4.2-Funktionalitaet (Wizard, Reminders, Help) bleibt stabil.
+V4.2-Funktionalitaet (Wizard, Reminders, Help, Bridge, Reader) bleibt stabil. End-to-End Wizard pending → completed funktioniert. Cron-Reminder-Pipeline funktioniert weiter. Help-Sheet auf allen 5 Pages erreichbar.
+
+**SC-V4.3-7 — Help-Konsolidierung loest UX-Verwirrung**
+Nach BL-063-Implementation gibt es genau einen erkennbaren Help-Trigger pro Page (kein "zwei `?`-Icons konkurrieren"-Pattern). Konsolidierungs-Variante ist im /architecture V4.3 entschieden + dokumentiert.
+
+**SC-V4.3-8 — ADR State-Maschinen-Pattern (BL-065) ist verbindlich**
+DEC-XXX in /docs/DECISIONS.md dokumentiert die Wahl zwischen Service-Role-UPDATE vs RLS-UPDATE-Policy fuer State-Maschinen, mit Sicherheits-Tradeoff-Analyse + verbindlicher Empfehlung fuer kuenftige Slices.
+
+**SC-V4.3-9 — Investigation Turbopack-Anomalie hat Output**
+BL-066 produziert entweder eine GitHub-Issue-URL beim Next.js-Repo (genuine Bug) ODER ein Workaround-ADR (Inlining-Verhalten erwartet, Pattern dokumentieren). Kein offenes "wissen wir nicht"-Ende.
+
+**SC-V4.3-10 — Berater-Help-Review-Output**
+5 Help-Markdown-Files final reviewt: keine Doppelungen, Begriffs-Konsistenz mit UI, Du-Form, max 250 Worter pro File. Aktualisierte Files commited unter `src/content/help/*.md`.
 
 ### Constraints (V4.3)
 
-- Keine Schema-Aenderungen.
-- Kein neuer Cron-Job, kein neuer Container.
-- Maintenance-Release-Disziplin: keine Feature-Slices, keine Architektur-Aenderungen.
-- Re-Generation von Demo-Snapshots fuer Umlaut-Konsistenz nur auf User-Trigger, nicht automatisch.
+- **Keine Schema-Aenderungen.** Wenn ein Item DB-Schema beruehrt, ist es kein V4.3-Item.
+- **Kein neuer Cron-Job, kein neuer Container.** Maintenance-Release-Disziplin.
+- **Keine Feature-Slices, keine Architektur-Aenderungen** ueber das ADR (BL-065) hinaus.
+- **Re-Generation von Demo-Snapshots** fuer Umlaut-Konsistenz nur auf User-Trigger.
+- **Investigation-Spikes timeboxed.** BL-066 ist 4h-Box; wenn nicht in 4h aufgeklaert → Workaround-ADR + Issue-Sammlung schliessen.
 
 ### Risks / Assumptions (V4.3)
 
-- **R-V4.3-1 — Convention-Migration bricht Auth-Flow:** Next.js 16 `middleware`→`proxy`-API-Aenderungen sind nicht trivial. Mitigation: Migration in eigenem Slice mit dedizierten Tests, Rollback ist 1-Datei-Rename.
-- **R-V4.3-2 — Worker-Output-Aenderung bricht alte Reader:** Wenn TOC-Format aendert, muessen alte Snapshots ggf. re-rendered werden. Mitigation: Reader behaelt components.a-Override fuer alte Snapshots, neue Snapshots brauchen ihn nicht.
+#### Risiken
+
+- **R-V4.3-1 — Convention-Migration `middleware`→`proxy` bricht Auth-Flow:** Next.js 16 API-Aenderungen sind nicht trivial. Mitigation: eigener Slice mit dedizierten Tests, Rollback ist 1-Datei-Rename.
+- **R-V4.3-2 — Worker-Output-Aenderung bricht alte Reader:** Wenn TOC-Format aendert, muessen alte Snapshots ggf. re-rendered werden. Mitigation: Reader behaelt components.a-Override fuer alte Snapshots; neue Snapshots brauchen ihn nicht.
+- **R-V4.3-3 — ESLint-9-Migration hat Regression-Potential:** Wenn `eslint-config-next` 16.x mit flat config nicht voll kompatibel ist, kann Lint-Output sich aendern (mehr/weniger Warnings). Mitigation: Migration als eigener Slice, vorher Snapshot der Lint-Output-Baseline.
+- **R-V4.3-4 — Help-Konsolidierung-Decision braucht UX-Sense:** BL-063 hat 3 Optionen (Tab im Learning Center, LC entfernen, neuer LC-Tab "Diese Seite"). Falsche Wahl kann SLC-050 Inhalt unsichtbar machen. Mitigation: /architecture V4.3 macht UX-Decision mit User-Confirmation, kein Implementer-Auto-Choice.
+- **R-V4.3-5 — Investigation BL-066 fuehrt zu nichts:** 4h-Box reicht ggf. nicht. Mitigation: ADR mit "kein Root-Cause gefunden, Workaround dokumentiert" ist akzeptables Outcome — kein Open-Ended-Spike.
+
+#### Annahmen
+
+- **A-V4.3-1 — Reader-Komponenten-Architektur ist stabil.** Reader-UX-Polish-Items sind alles inkrementelle CSS/Component-Aenderungen, keine Architektur-Umbau.
+- **A-V4.3-2 — Berater-Review-Aufwand ist klein.** 5 Files × ~250 Worter = ~30 min reine Inhaltspflege durch User. Kein Code-Slice noetig.
+- **A-V4.3-3 — `react-markdown` aus FEAT-028 reicht weiter.** Keine zweite Markdown-Library noetig fuer Help-Konsolidierung.
+- **A-V4.3-4 — Coolify-Cron-Setup aus V4.2 bleibt unveraendert.** V4.3 beruehrt keinen Cron.
 
 ### Open Questions (V4.3)
 
-- **Q-V4.3-A — V4.3 als ein Slice oder mehrere?** Empfehlung: 2-3 Slices (1× Reader-UX-Bundle, 1× Worker+Templates-Bundle, 1× Convention-Migration). Definitiv in /slice-planning.
-- **Q-V4.3-B — Search-History-Persistenz:** localStorage vs. user_settings? Empfehlung: localStorage (V4.3-Maintenance, kein DB-Round-Trip).
+Die folgenden Fragen werden in `/architecture` V4.3 entschieden:
+
+- **Q-V4.3-A — Slice-Bundling:** 4 Slices (Reader-UX + Worker/Templates + Tooling + UX-Findings) ODER 6 Slices (mehr granular)? Empfehlung: 5-6 Slices wegen unterschiedlicher Risiko-Klassen (Migration-Slices brauchen eigene Tests). Definitiv in /slice-planning.
+- **Q-V4.3-B — Search-History-Persistenz (BL-054):** localStorage vs. user_settings? Empfehlung: localStorage (Maintenance-Pattern, kein DB-Round-Trip).
+- **Q-V4.3-C — Help-Konsolidierungs-Variante (BL-063):** (1) SLC-050 als 3. Tab im Learning Center, (2) Learning Center entfernen + alle Inhalte unter SLC-050, (3) Learning Center bekommt Tab "Diese Seite" mit SLC-050-Content. Empfehlung Requirements: Variante 3 (additiv, behaelt beide Mechanismen-Investments). Definitiv in /architecture V4.3 mit User-Confirmation.
+- **Q-V4.3-D — ADR State-Maschinen-Pattern (BL-065) Empfehlung:** Service-Role-UPDATE als Default ODER RLS-UPDATE-Policy pro State-Spalte? Empfehlung Requirements: Service-Role-Default (weil State-UPDATEs immer kontextuell gepruef werden BEFOR sie ausgefuehrt werden — `requireTenantAdmin()` etc.). Definitiv in /architecture mit Sicherheits-Tradeoff.
+- **Q-V4.3-E — Investigation Turbopack (BL-066) Reproduktion:** Eigener Branch oder im main? Empfehlung: eigener Branch, weil Reproduktion ggf. Code-Stress-Test braucht der nicht in main soll.
+- **Q-V4.3-F — Tooltip-Target-Fix (BL-062) Variante:** (1) h-6 w-6 (24x24px) ODER (2) ganzer Card-Header als Tooltip-Trigger (mit Wrapper-Pattern um den `?`-Button) ODER (3) 44x44 transparenter Hit-Bereich. Empfehlung Requirements: Variante 2 (semantisch sauber: Header-Text ist die Sache, der Trigger). Definitiv in /architecture oder direkt /frontend.
 
 ### Slice-Skizze (informativ, finaler Schnitt in /slice-planning)
 
-| Slice | Scope | Geschaetzt |
-|-------|-------|-----------|
-| SLC-051 | Reader-UX-Bundle: Scroll-Spy + Copy-Permalink + Loading-Skeleton + Mobile-h1 + Heading-Anchor-Hover (BL-051..053, BL-055, BL-058) | ~5 MTs |
-| SLC-052 | Worker+Templates-Bundle: Anchor-Links + Umlaut-Konsistenz (BL-056, BL-057) | ~4 MTs |
-| SLC-053 | Convention-Migration `middleware`→`proxy` (BL-059) | ~2 MTs |
-| SLC-054 | Cross-Snapshot-Suche client-side + Search-History localStorage (BL-054) | ~3 MTs |
+| Slice | Scope | Items | Geschaetzt |
+|-------|-------|-------|-----------|
+| SLC-051 | Reader-UX-Bundle: Scroll-Spy + Copy-Permalink + Loading-Skeleton + Mobile-h1 + Heading-Anchor-Hover | BL-051, BL-052, BL-053, BL-055, BL-058 | ~5 MTs |
+| SLC-052 | Worker+Templates-Bundle: Anchor-Links + Umlaut-Konsistenz | BL-056, BL-057 | ~4 MTs |
+| SLC-053 | Convention-Migration `middleware`→`proxy` + ESLint-9 flat-config | BL-059, BL-064 | ~3 MTs |
+| SLC-054 | Cross-Snapshot-Suche client-side + Search-History localStorage | BL-054 | ~3 MTs |
+| SLC-055 | UX-Findings-Bundle: Tooltip-Target-Fix + Help-Konsolidierung | BL-062, BL-063 | ~4 MTs |
+| SLC-056 | Architektur-Bundle: ADR State-Maschinen + Investigation Turbopack-Spike | BL-065, BL-066 | ~3 MTs (1 ADR + 4h Spike) |
+| (kein Slice) | Berater-Help-Review (User direkt, kein Code-Slice) | BL-067 | ~30 min |
 
-4 Slices, ~14 Micro-Tasks, geschaetzt 2-3 Tage Implementation.
+6 Slices + 1 Content-Item, ~22 Micro-Tasks, geschaetzt 4-5 Tage Implementation.
+
+Pflicht-Gates fuer V4.3-Implementation:
+- Keine Schema-Migration. Wenn ein Slice doch eine wuerde, sofort an User eskalieren.
+- ESLint-Migration-Output (Lint-Warnings) muss vor + nach SLC-053 Snapshot dokumentiert werden.
+- Investigation BL-066 timeboxed 4h, danach Spike-Abschluss-Pflicht (ADR oder GitHub-Issue).
+- Browser-Smoke-Test nach SLC-051 + SLC-055 (Reader-UX + Help-Konsolidierung) auf Desktop + Mobile.
 
 ### Delivery Mode (V4.3)
 **SaaS Product** — Maintenance-Release-Cadence wie V3.1.
+
+### Sequencing — V4.3 vs `/compliance`-Sprint
+
+Empfehlung: **sequenziell** mit V4.3 first, dann `/compliance`-Sprint.
+
+Begruendung:
+- V4.3 ist klein + kontrolliert (~4-5 Tage).
+- `/compliance`-Sprint hat eigenen Scope-Charakter (Legal-Texte, Layout, ggf. Footer-Links): besser nicht mit Code-Maintenance gemischt.
+- ISSUE-021/022 bleiben in V4.4 oder V5 (Bridge-Workflow ist Walkthrough-Mode-Thema).
