@@ -10,13 +10,13 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: **V4.2 SLC-050 /frontend code-complete 2026-05-01.** Letzter V4.2-Slice. 5 Help-Markdown-Files unter `src/content/help/` (dashboard/capture/bridge/reviews/handbook, je 182-243 Worter), `loadHelpMarkdown`-Helper mit 3/3 Vitest-PASS, `HelpSheet` (shadcn Sheet + react-markdown + remark-gfm aus FEAT-028) + `HelpTrigger` (?-Icon) auf 5 Pflicht-Pages eingebunden (`/dashboard`, `/capture/[sessionId]`, `/admin/bridge`, `/admin/reviews`, `/dashboard/handbook[/...]`). 5 Pflicht-Tooltips (DEC-058) live: Bridge-Trigger, Approve-Block, Generate-Snapshot, Wizard-Spaeter (neu) + Inactive-Badge (bestehend aus SLC-049). TypeScript-Compile clean. Offen: Browser-Smoke + Berater-Inhalts-Review der Help-Files (Pflicht-Gates aus Slice-Spec) → /qa SLC-050.
-- Current Phase: V4.2 5/5 Slices code-complete (SLC-046 + SLC-047 + SLC-048 + SLC-049 + SLC-050). Naechste Phase: `/qa SLC-050` → Gesamt-/qa V4.2 → /final-check → /go-live → /deploy.
+- Current Focus: **V4.2 SLC-050 /qa PASS 2026-05-01 (RPT-126).** Letzter V4.2-Slice. Live-Browser-Smoke auf prod (commit 918377a deployed): 3/5 Pages live PASS (dashboard+bridge+handbook) inkl. Esc-Close + Mobile-Render 375x667 (Sheet ~90% Width, Markdown perfekt lesbar), 2/5 static-only (reviews=strategaize_admin-only, capture=keine aktive Session). 1/5 Tooltips live PASS (Inactive-Badge), 4/5 static-only (alle gated durch App-State, identischer Radix-Pattern wie live-bestaetigte Variante). 0 Console-Errors. Static QA: Stubs 0, Wiring 5/5, Bundle-Size ~10KB ≪ 25KB, 15/15 ACs gruen, 3/3 Vitest-Tests gruen, tsc clean. Berater-Inhalts-Review: User-OK mit "final review am Ende V4.2".
+- Current Phase: V4.2 5/5 Slices final QA-PASS (SLC-046 + SLC-047 + SLC-048 + SLC-049 + SLC-050). Naechste Phase: Gesamt-/qa V4.2 → /final-check → /go-live → /deploy.
 
 ## Immediate Next Steps
-1. **/qa SLC-050** — Browser-Smoke auf 5 Pflicht-Pages, Mobile-Render-Test (375x667), 5 Tooltip-Hover-Tests, Berater-Inhalts-Review der 5 Help-Files (Pflicht-Gate, kein "passt schon").
-2. **Nach SLC-050 /qa:** Gesamt-/qa V4.2 + /final-check + /go-live + /deploy.
-3. **V4.2-Slices-Stand (5/5 code-complete):** SLC-046 done+QA-PASS (RPT-115+116), SLC-047 done+QA-PASS+MT-7-PASS (RPT-118+119+120), SLC-048 done+QA-PASS (RPT-121+122), SLC-049 done+QA-PASS (RPT-123+124), SLC-050 code-complete (/qa offen).
+1. **Gesamt-/qa V4.2** — alle 5 Slices end-to-end durchspielen (GF-Session → Mitarbeiter → Block → Approve → Snapshot). Dabei werden die 4 noch nicht live-bestaetigten SLC-050-Tooltips natuerlich durchlaufen + /admin/reviews HelpTrigger via strategaize_admin-Login.
+2. **Nach Gesamt-V4.2-QA:** /final-check + /go-live + /deploy V4.2 als REL-010.
+3. **V4.2-Slices-Stand (5/5 final PASS):** SLC-046 done+QA-PASS (RPT-115+116), SLC-047 done+QA-PASS+MT-7-PASS (RPT-118+119+120), SLC-048 done+QA-PASS (RPT-121+122), SLC-049 done+QA-PASS (RPT-123+124), SLC-050 done+QA-PASS (RPT-125+126).
 6. **V4.3-Backlog-Stand (Maintenance-Sammelrelease):** 9 offene Items (BL-051..059), Start nach V4.2-Release. Neu zu adden: ADR fuer State-Maschinen-UPDATE-Pattern (Service-Role vs RLS-Policy) basierend auf ISSUE-031, plus Investigation Next 16 Turbopack-Layout-Inlining-Anomalie.
 
 ## Active Scope
