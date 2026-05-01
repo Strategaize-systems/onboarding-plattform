@@ -40,9 +40,13 @@ export async function updateSession(request: NextRequest) {
   ];
   const isPublicPath = publicPaths.some((p) => pathname.startsWith(p));
   const isApiHealth = pathname === "/api/health";
+  // SLC-048: Cron + Unsubscribe haben eigene Auth (CRON_SECRET / Token im Pfad)
+  // und muessen die Session-Middleware umgehen.
+  const isApiCron = pathname.startsWith("/api/cron/");
+  const isApiUnsubscribe = pathname.startsWith("/api/unsubscribe/");
 
   // Not logged in → redirect to login (unless on public path)
-  if (!user && !isPublicPath && !isApiHealth) {
+  if (!user && !isPublicPath && !isApiHealth && !isApiCron && !isApiUnsubscribe) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
