@@ -71,6 +71,9 @@ services:
       JITSI_JWT_APP_SECRET: ${JITSI_JWT_APP_SECRET}
       NEXT_PUBLIC_JITSI_DOMAIN: ${JITSI_DOMAIN:-meet-onboarding.strategaizetransition.com}
       RECORDING_WEBHOOK_SECRET: ${RECORDING_WEBHOOK_SECRET}
+      # V4.2 SLC-048 Capture-Reminders Cron-Endpoint (x-cron-secret Auth)
+      # Ohne Wert antwortet /api/cron/capture-reminders mit 503 (deaktiviert).
+      CRON_SECRET: ${CRON_SECRET}
     depends_on:
       supabase-db:
         condition: service_healthy

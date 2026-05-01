@@ -10,15 +10,14 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: **V4.2 Gesamt-/qa PASS 2026-05-01 (RPT-127).** End-to-End-Walkthrough auf prod (commit 918377a) mit demo-admin (tenant_admin) + admin (strategaize_admin) durchgezogen. 5/5 HelpSheet-Pages LIVE PASS (dashboard, capture, bridge, reviews, handbook), 3/5 Tooltips LIVE PASS (Inactive-Badge 1/5, Bridge-Trigger 2/5, Wizard-Spaeter 5/5), 2/5 Static (Approve-Block 3/5 + Generate-Snapshot 4/5 — gated by app-state, identischer Radix-Pattern). Wizard E2E pending->started->completed sauber, DB-State verifiziert (state=completed, step=4, completed_at='2026-05-01 09:40:45.266+00'). SC-V4.2-6 InactiveCard-Click→?filter=inactive LIVE PASS. Mobile 375x667 Sheet 90% Width. Console: 0 V4.2-relevante Errors. 0 Blocker. ISSUE-032 (DKIM) bleibt High-Severity Pre-Deploy-Pflicht fuer Cron-Live-Aktivierung.
-- Current Phase: V4.2 alle 5 Slices final QA-PASS + Gesamt-QA-PASS. Naechste Phase: /final-check → /go-live (mit DKIM als Pre-Deploy-Gate) → /deploy als REL-010.
+- Current Focus: **V4.2 /final-check CONDITIONALLY READY 2026-05-01 (RPT-128).** 7-Dimension-Audit: tsc clean, npm audit 3 moderate (postcss bundled, ISSUE-026 wontfix), Secrets-Scan 0, RLS+Tests via Slice-RPT-116/122/126, Health-Route + error_log-Logger present, Reminders mit Unsubscribe/Opt-Out, Bedrock eu-central-1 DSGVO. **FIX in /final-check-Session: CRON_SECRET fehlte in docker-compose.yml app-service ENV (gleiches Pattern wie ISSUE-027), ergaenzt.** Pre-Deploy-Pflichten extern: (1) CRON_SECRET in Coolify-ENV setzen, (2) docker-compose.yml redeployen, (3) ISSUE-032 DKIM in IONOS aktivieren, (4) Coolify-Cron-Setup anlegen.
+- Current Phase: V4.2 alle 5 Slices final QA-PASS + Gesamt-QA-PASS + Final-Check-PASS. Naechste Phase: /go-live (mit 4 Pre-Deploy-Pflicht-Items) → /deploy als REL-010.
 
 ## Immediate Next Steps
-1. **/final-check V4.2** — Repo-Hygiene + Dependencies + Security-Audit + Final-Compile-Check vor Go-Live-Decision.
-2. **/go-live V4.2** — Release-Decision mit ISSUE-032 (DKIM) als Pre-Deploy-Pflicht-Gate. User aktiviert DKIM in IONOS-Account vor Cron-Aktivierung.
-3. **/deploy V4.2** als REL-010 — User-Coolify-Deploy + Coolify-Cron-Setup-Anleitung (feedback_cron_job_instructions).
-4. **V4.2-Slices-Stand (5/5 final + Gesamt-QA-PASS):** SLC-046 done+QA-PASS (RPT-115+116), SLC-047 done+QA-PASS+MT-7-PASS (RPT-118+119+120), SLC-048 done+QA-PASS (RPT-121+122), SLC-049 done+QA-PASS (RPT-123+124), SLC-050 done+QA-PASS (RPT-125+126), Gesamt-V4.2 (RPT-127).
-5. **V4.3-Backlog 2026-05-01 erweitert:** BL-060 Tooltip 1/5 Target zu klein (16x16, UX-Improvement) + BL-061 Help-Mechanismen-Konsolidierung (SLC-050 HelpSheet + Learning Center, /ui-update-Entscheidung). Beide aus User-Smoke V4.2 Gesamt-QA, nicht V4.2-blocking.
+1. **/go-live V4.2** — 4 Pre-Deploy-Pflicht-Items: (1) CRON_SECRET in Coolify-ENV setzen via `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`, (2) Coolify-Redeploy fuer fixed docker-compose.yml (CRON_SECRET-Durchreichung), (3) ISSUE-032 DKIM in IONOS aktivieren + DNS-Recheck, (4) Coolify-Scheduled-Task fuer /api/cron/capture-reminders anlegen (Container=app, `0 9 * * *`).
+2. **/deploy V4.2** als REL-010 — User-Coolify-Deploy + Cron-Setup gemaess Anleitung in RPT-122 + RPT-128.
+3. **V4.2-Slices-Stand (5/5 final + Gesamt-QA-PASS + Final-Check-PASS):** SLC-046 done+QA (RPT-115+116), SLC-047 done+QA+MT-7-PASS (RPT-118+119+120), SLC-048 done+QA (RPT-121+122), SLC-049 done+QA (RPT-123+124), SLC-050 done+QA (RPT-125+126), Gesamt-V4.2 (RPT-127), Final-Check (RPT-128).
+4. **V4.3-Backlog 2026-05-01 erweitert:** BL-060 Tooltip 1/5 Target zu klein (16x16, UX-Improvement) + BL-061 Help-Mechanismen-Konsolidierung (SLC-050 HelpSheet + Learning Center, /ui-update-Entscheidung). Beide aus User-Smoke V4.2 Gesamt-QA, nicht V4.2-blocking. **Add to V4.3:** ESLint-9 flat-config-Migration + Privacy/Datenschutz/Impressum-Page (V4.3 oder eigener /compliance-Skill).
 6. **V4.3-Backlog-Stand (Maintenance-Sammelrelease):** 9 offene Items (BL-051..059), Start nach V4.2-Release. Neu zu adden: ADR fuer State-Maschinen-UPDATE-Pattern (Service-Role vs RLS-Policy) basierend auf ISSUE-031, plus Investigation Next 16 Turbopack-Layout-Inlining-Anomalie.
 
 ## Active Scope
