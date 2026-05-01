@@ -10,15 +10,13 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: **V4.2 SLC-049 /frontend code-PASS 2026-05-01 (RPT-123).** InactiveEmployeesCard im Cockpit fuer tenant_admin, `/admin/team?filter=inactive` URL-State-Filter mit Status-Badge + Letzter-Block-Submit-Spalte, neue `/dashboard/settings` Page mit Reminders-Opt-Out-Toggle (Service-Role-Pattern IMP-214). 12/12 Unit-Tests gruen (8 Helper + 4 Server-Action), `npm run build` gruen, TypeScript clean. Slice steht auf `in_progress` weil Browser-Smoke + Live-DB RLS-Test (MT-6) NACH Coolify-Deploy laufen muessen (IMP-215).
-- Current Phase: V4.2 3/5 final PASS + 1/5 code-PASS (SLC-046+SLC-047+SLC-048 done, SLC-049 code-done). Naechste Phase: User-Coolify-Deploy + `/qa SLC-049` (Browser-Smoke + Live-RLS-Test) -> dann `/frontend SLC-050`.
+- Current Focus: **V4.2 SLC-049 /qa PASS 2026-05-01 (RPT-124).** Live-Browser-Smoke gegen onboarding.strategaizetransition.com bestanden — InactiveEmployeesCard rendert mit korrektem Wert (1 von 1 eingeladenen), Tooltip DEC-058 sichtbar, `/admin/team?filter=inactive` zeigt richard@bellaerts.de mit Badge "inaktiv", Filter-Tabs "Alle/Inaktiv" wechselbar via URL-State, `/dashboard/settings` Toggle persistiert ueber Reload mit timestamp-bestaetigtem DB-Update. Live-DB RLS-Cross-User-Test 2/2 PASS gegen Coolify-Postgres. 13/13 AC erfuellt, 0 Console-Errors, 0 Blocker.
+- Current Phase: V4.2 4/5 Slices final PASS (SLC-046 + SLC-047 + SLC-048 + SLC-049). Naechste Phase: `/frontend SLC-050` (Help-Sheet + 5 Markdown + 5 Tooltips).
 
 ## Immediate Next Steps
-1. **User-Coolify-Deploy SLC-049** (Container `app-bwkg80w04wgccos48gcws8cs-...` auf 159.69.207.29, neueste main).
-2. **/qa SLC-049** — Browser-Smoke gegen https://onboarding.strategaizetransition.com (Cockpit-Card sichtbar + Tooltip + Klick zu `/admin/team?filter=inactive`, Filter-Tabs, Toggle persistiert ueber Reload, Toast erscheint) + Live-DB RLS-Test `src/lib/db/__tests__/user-settings-cross-user.test.ts` gegen Coolify-Postgres.
-3. **/frontend SLC-050** — Help-Sheet + 5 Markdown-Files + 5 Tooltips. Letzter V4.2-Slice (Tooltips brauchen SLC-047 + SLC-049 Komponenten).
-4. **Nach SLC-050:** Gesamt-/qa V4.2 + /final-check + /go-live + /deploy.
-5. **V4.2-Slices-Stand (3/5 final PASS + 1/5 code-PASS, 1/5 planned):** SLC-046 done+QA-PASS (RPT-115+116), SLC-047 done+QA-PASS+MT-7-PASS (RPT-118+119+120), SLC-048 done+QA-PASS (RPT-121+122), SLC-049 code-done (RPT-123, Browser-Smoke pending), SLC-050 noch planned.
+1. **/frontend SLC-050** — Help-Sheet + 5 Markdown-Files + 5 Tooltips. Letzter V4.2-Slice (Tooltips brauchen SLC-047 + SLC-049 Komponenten, beide jetzt live).
+2. **Nach SLC-050:** Gesamt-/qa V4.2 + /final-check + /go-live + /deploy.
+3. **V4.2-Slices-Stand (4/5 final PASS, 1/5 planned):** SLC-046 done+QA-PASS (RPT-115+116), SLC-047 done+QA-PASS+MT-7-PASS (RPT-118+119+120), SLC-048 done+QA-PASS (RPT-121+122), SLC-049 done+QA-PASS (RPT-123+124), SLC-050 noch planned.
 6. **V4.3-Backlog-Stand (Maintenance-Sammelrelease):** 9 offene Items (BL-051..059), Start nach V4.2-Release. Neu zu adden: ADR fuer State-Maschinen-UPDATE-Pattern (Service-Role vs RLS-Policy) basierend auf ISSUE-031, plus Investigation Next 16 Turbopack-Layout-Inlining-Anomalie.
 
 ## Active Scope
