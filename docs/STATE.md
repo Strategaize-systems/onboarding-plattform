@@ -10,13 +10,13 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: **V4.2 SLC-049 /qa PASS 2026-05-01 (RPT-124).** Live-Browser-Smoke gegen onboarding.strategaizetransition.com bestanden — InactiveEmployeesCard rendert mit korrektem Wert (1 von 1 eingeladenen), Tooltip DEC-058 sichtbar, `/admin/team?filter=inactive` zeigt richard@bellaerts.de mit Badge "inaktiv", Filter-Tabs "Alle/Inaktiv" wechselbar via URL-State, `/dashboard/settings` Toggle persistiert ueber Reload mit timestamp-bestaetigtem DB-Update. Live-DB RLS-Cross-User-Test 2/2 PASS gegen Coolify-Postgres. 13/13 AC erfuellt, 0 Console-Errors, 0 Blocker.
-- Current Phase: V4.2 4/5 Slices final PASS (SLC-046 + SLC-047 + SLC-048 + SLC-049). Naechste Phase: `/frontend SLC-050` (Help-Sheet + 5 Markdown + 5 Tooltips).
+- Current Focus: **V4.2 SLC-050 /frontend code-complete 2026-05-01.** Letzter V4.2-Slice. 5 Help-Markdown-Files unter `src/content/help/` (dashboard/capture/bridge/reviews/handbook, je 182-243 Worter), `loadHelpMarkdown`-Helper mit 3/3 Vitest-PASS, `HelpSheet` (shadcn Sheet + react-markdown + remark-gfm aus FEAT-028) + `HelpTrigger` (?-Icon) auf 5 Pflicht-Pages eingebunden (`/dashboard`, `/capture/[sessionId]`, `/admin/bridge`, `/admin/reviews`, `/dashboard/handbook[/...]`). 5 Pflicht-Tooltips (DEC-058) live: Bridge-Trigger, Approve-Block, Generate-Snapshot, Wizard-Spaeter (neu) + Inactive-Badge (bestehend aus SLC-049). TypeScript-Compile clean. Offen: Browser-Smoke + Berater-Inhalts-Review der Help-Files (Pflicht-Gates aus Slice-Spec) → /qa SLC-050.
+- Current Phase: V4.2 5/5 Slices code-complete (SLC-046 + SLC-047 + SLC-048 + SLC-049 + SLC-050). Naechste Phase: `/qa SLC-050` → Gesamt-/qa V4.2 → /final-check → /go-live → /deploy.
 
 ## Immediate Next Steps
-1. **/frontend SLC-050** — Help-Sheet + 5 Markdown-Files + 5 Tooltips. Letzter V4.2-Slice (Tooltips brauchen SLC-047 + SLC-049 Komponenten, beide jetzt live).
-2. **Nach SLC-050:** Gesamt-/qa V4.2 + /final-check + /go-live + /deploy.
-3. **V4.2-Slices-Stand (4/5 final PASS, 1/5 planned):** SLC-046 done+QA-PASS (RPT-115+116), SLC-047 done+QA-PASS+MT-7-PASS (RPT-118+119+120), SLC-048 done+QA-PASS (RPT-121+122), SLC-049 done+QA-PASS (RPT-123+124), SLC-050 noch planned.
+1. **/qa SLC-050** — Browser-Smoke auf 5 Pflicht-Pages, Mobile-Render-Test (375x667), 5 Tooltip-Hover-Tests, Berater-Inhalts-Review der 5 Help-Files (Pflicht-Gate, kein "passt schon").
+2. **Nach SLC-050 /qa:** Gesamt-/qa V4.2 + /final-check + /go-live + /deploy.
+3. **V4.2-Slices-Stand (5/5 code-complete):** SLC-046 done+QA-PASS (RPT-115+116), SLC-047 done+QA-PASS+MT-7-PASS (RPT-118+119+120), SLC-048 done+QA-PASS (RPT-121+122), SLC-049 done+QA-PASS (RPT-123+124), SLC-050 code-complete (/qa offen).
 6. **V4.3-Backlog-Stand (Maintenance-Sammelrelease):** 9 offene Items (BL-051..059), Start nach V4.2-Release. Neu zu adden: ADR fuer State-Maschinen-UPDATE-Pattern (Service-Role vs RLS-Policy) basierend auf ISSUE-031, plus Investigation Next 16 Turbopack-Layout-Inlining-Anomalie.
 
 ## Active Scope

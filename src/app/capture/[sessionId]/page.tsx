@@ -6,6 +6,8 @@ import { getTemplateById } from "@/lib/db/template-queries";
 import { BlockList } from "./block-list";
 import type { BlockCheckpointInput } from "@/lib/capture/derive-block-status";
 import { resolveCaptureMode } from "@/components/capture-modes/registry";
+import { HelpTrigger } from "@/components/help/HelpTrigger";
+import { loadHelpMarkdown } from "@/lib/help/load";
 
 export default async function CaptureSessionPage({
   params,
@@ -170,11 +172,17 @@ export default async function CaptureSessionPage({
             ← Zurück zum Dashboard
           </Link>
 
-          <div className="mb-8">
-            <h1 className="text-2xl font-bold text-slate-900">{template.name}</h1>
-            <p className="text-muted-foreground mt-1">
-              Version {session.template_version} · {template.blocks.length} Blöcke
-            </p>
+          <div className="mb-8 flex items-start justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-bold text-slate-900">{template.name}</h1>
+              <p className="text-muted-foreground mt-1">
+                Version {session.template_version} · {template.blocks.length} Blöcke
+              </p>
+            </div>
+            <HelpTrigger
+              pageKey="capture"
+              markdown={loadHelpMarkdown("capture")}
+            />
           </div>
 
           <BlockList

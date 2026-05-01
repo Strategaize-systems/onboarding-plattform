@@ -17,6 +17,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { inviteEmployee } from "@/app/admin/team/actions";
 import {
@@ -245,14 +251,26 @@ export function Step3EmployeeInvite({
       )}
 
       <div className="flex flex-col gap-2 pt-2 sm:flex-row sm:justify-end">
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={onSkipStep}
-          disabled={busy}
-        >
-          Später einladen
-        </Button>
+        <TooltipProvider delayDuration={150}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={onSkipStep}
+                disabled={busy}
+              >
+                Später einladen
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent
+              side="top"
+              className="max-w-xs text-xs leading-snug"
+            >
+              Du kannst den Wizard jederzeit abschliessen
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
         <Button type="button" onClick={() => void handleSubmit()} disabled={busy}>
           {submitting ? (
             <>

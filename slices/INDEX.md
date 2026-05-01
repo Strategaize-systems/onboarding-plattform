@@ -149,7 +149,7 @@
 | SLC-047 | [Wizard-Modal Frontend (4 Steps + Skip + Auto-Trigger)](SLC-047-wizard-modal-frontend.md) | FEAT-031 | done | High | 2026-04-29 |
 | SLC-048 | [Capture-Reminders Backend (Cron + SMTP + Unsubscribe)](SLC-048-reminders-cron-backend.md) | FEAT-032 | done | High | 2026-04-29 |
 | SLC-049 | [Cockpit-Card + Mitarbeiter-Filter + Opt-Out-Toggle](SLC-049-cockpit-card-filter-optout.md) | FEAT-032 | done | Medium | 2026-04-29 |
-| SLC-050 | [Help-Sheet + 5 Markdown-Files + 5 Tooltips](SLC-050-help-sheet-tooltips.md) | FEAT-033 | planned | Medium | 2026-04-29 |
+| SLC-050 | [Help-Sheet + 5 Markdown-Files + 5 Tooltips](SLC-050-help-sheet-tooltips.md) | FEAT-033 | done | Medium | 2026-04-29 |
 
 ### V4.2 Execution Order
 - **SLC-046** (Backend-Foundation, Blocker): MIG-029 atomare 3-Block-Migration (tenants ALTER + reminder_log + user_settings) + Wizard-Server-Actions + Layout-Helper. **Blocker fuer alle V4.2-Slices** weil das Schema fuer reminder_log und user_settings hier schon live geht (Variante A aus /architecture V4.2). Pflicht-Gates: 4-Rollen-RLS-Matrix-Erweiterung (16 Test-Faelle), Multi-Admin-Lock-Race-Test, Trigger-Soft-Fail-Test, Migration-Live-Deploy auf Hetzner.

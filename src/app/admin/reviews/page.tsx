@@ -12,6 +12,8 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { listPendingReviews } from "@/lib/reviews/list-pending-reviews";
 import { PendingReviewsTable } from "./PendingReviewsTable";
+import { HelpTrigger } from "@/components/help/HelpTrigger";
+import { loadHelpMarkdown } from "@/lib/help/load";
 
 export default async function CrossTenantReviewsPage() {
   const supabase = await createClient();
@@ -36,12 +38,15 @@ export default async function CrossTenantReviewsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-slate-900">Pending Reviews</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Alle Mitarbeiter-Bloecke ueber alle Tenants, die auf Berater-Pruefung warten.
-          Sortiert nach Eintreff-Reihenfolge (aelteste zuerst).
-        </p>
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">Pending Reviews</h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Alle Mitarbeiter-Bloecke ueber alle Tenants, die auf Berater-Pruefung warten.
+            Sortiert nach Eintreff-Reihenfolge (aelteste zuerst).
+          </p>
+        </div>
+        <HelpTrigger pageKey="reviews" markdown={loadHelpMarkdown("reviews")} />
       </div>
 
       <div className="flex items-center gap-4 text-xs text-slate-500">

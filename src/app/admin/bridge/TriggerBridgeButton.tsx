@@ -4,6 +4,12 @@ import { useTransition } from "react";
 import { Loader2, Play, RotateCw } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { triggerBridgeRun } from "./actions";
 
 interface Props {
@@ -39,28 +45,37 @@ export function TriggerBridgeButton({
   }
 
   return (
-    <Button
-      onClick={handleClick}
-      disabled={pending || disabled}
-      size={size}
-      variant={variant}
-    >
-      {pending ? (
-        <>
-          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-          Wird gestartet…
-        </>
-      ) : hasPreviousRun ? (
-        <>
-          <RotateCw className="h-4 w-4 mr-2" />
-          Bridge erneut ausfuehren
-        </>
-      ) : (
-        <>
-          <Play className="h-4 w-4 mr-2" />
-          Bridge ausfuehren
-        </>
-      )}
-    </Button>
+    <TooltipProvider delayDuration={150}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            onClick={handleClick}
+            disabled={pending || disabled}
+            size={size}
+            variant={variant}
+          >
+            {pending ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Wird gestartet…
+              </>
+            ) : hasPreviousRun ? (
+              <>
+                <RotateCw className="h-4 w-4 mr-2" />
+                Bridge erneut ausfuehren
+              </>
+            ) : (
+              <>
+                <Play className="h-4 w-4 mr-2" />
+                Bridge ausfuehren
+              </>
+            )}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom" className="max-w-xs text-xs leading-snug">
+          Erzeugt Mitarbeiter-Capture-Vorschlaege aus GF-Blueprint
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }

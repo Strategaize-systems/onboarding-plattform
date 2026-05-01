@@ -22,6 +22,8 @@ import {
 } from "@/lib/handbook/load-snapshot-content";
 import { ReaderShell } from "@/components/handbook/ReaderShell";
 import type { ReaderSnapshotMeta } from "@/components/handbook/types";
+import { HelpTrigger } from "@/components/help/HelpTrigger";
+import { loadHelpMarkdown } from "@/lib/help/load";
 
 interface PageProps {
   params: Promise<{ snapshotId: string }>;
@@ -127,6 +129,11 @@ export default async function HandbookReaderPage({ params }: PageProps) {
     isStale = (count ?? 0) > 0;
   }
 
+  const helpMarkdown = loadHelpMarkdown("handbook");
+  const helpTrigger = (
+    <HelpTrigger pageKey="handbook" markdown={helpMarkdown} />
+  );
+
   // Wenn Snapshot nicht "ready" → eigene Reader-Hint-View ohne Markdown-Load.
   if (snapshotRow.status !== "ready" || !snapshotRow.storage_path) {
     return (
@@ -154,6 +161,7 @@ export default async function HandbookReaderPage({ params }: PageProps) {
         captureSessionId={snapshotRow.capture_session_id as string}
         isLargeSnapshot={false}
         totalMarkdownBytes={0}
+        helpTrigger={helpTrigger}
       />
     );
   }
@@ -202,6 +210,7 @@ export default async function HandbookReaderPage({ params }: PageProps) {
       captureSessionId={snapshotRow.capture_session_id as string}
       isLargeSnapshot={isLargeSnapshot}
       totalMarkdownBytes={totalMarkdownBytes}
+      helpTrigger={helpTrigger}
     />
   );
 }

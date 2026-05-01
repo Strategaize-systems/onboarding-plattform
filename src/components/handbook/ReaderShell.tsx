@@ -12,7 +12,14 @@
 // Mobile: Sidebar collapsiert via useState. Desktop: Sidebar fix 320px breit.
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   ArrowLeft,
   AlertTriangle,
@@ -50,6 +57,8 @@ interface ReaderShellProps {
   isLargeSnapshot: boolean;
   /** SLC-045 MT-2: Anzeigewert (KB) fuer das Banner. */
   totalMarkdownBytes: number;
+  /** SLC-050 MT-4: optionaler Help-Trigger im Header (vom Server vorgerendert). */
+  helpTrigger?: ReactNode;
 }
 
 const SECTION_ID_PREFIX = "handbook-section-";
@@ -78,6 +87,7 @@ export function ReaderShell({
   captureSessionId,
   isLargeSnapshot,
   totalMarkdownBytes,
+  helpTrigger,
 }: ReaderShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -236,6 +246,7 @@ export function ReaderShell({
                   ZIP herunterladen
                 </a>
               )}
+              {helpTrigger}
             </div>
           </div>
 

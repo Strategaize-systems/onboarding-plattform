@@ -6,6 +6,8 @@ import { BridgeProposalList } from "./BridgeProposalList";
 import { BridgeRunList } from "./BridgeRunList";
 import { StaleBanner } from "./StaleBanner";
 import { TriggerBridgeButton } from "./TriggerBridgeButton";
+import { HelpTrigger } from "@/components/help/HelpTrigger";
+import { loadHelpMarkdown } from "@/lib/help/load";
 import type {
   BridgeProposalRow,
   BridgeRunRow,
@@ -85,11 +87,14 @@ export default async function AdminBridgePage() {
   if (!sessionData) {
     return (
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Bridge</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Verteile Folge-Aufgaben aus deiner GF-Erhebung an dein Team.
-          </p>
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <h1 className="text-2xl font-semibold text-slate-900">Bridge</h1>
+            <p className="mt-1 text-sm text-slate-500">
+              Verteile Folge-Aufgaben aus deiner GF-Erhebung an dein Team.
+            </p>
+          </div>
+          <HelpTrigger pageKey="bridge" markdown={loadHelpMarkdown("bridge")} />
         </div>
         <Card>
           <CardHeader>
@@ -176,11 +181,14 @@ export default async function AdminBridgePage() {
             Folge-Aufgaben aus deiner GF-Erhebung an dein Team verteilen.
           </p>
         </div>
-        <TriggerBridgeButton
-          captureSessionId={captureSessionId}
-          hasPreviousRun={hasPreviousRun}
-          disabled={isRunning}
-        />
+        <div className="flex items-center gap-2">
+          <TriggerBridgeButton
+            captureSessionId={captureSessionId}
+            hasPreviousRun={hasPreviousRun}
+            disabled={isRunning}
+          />
+          <HelpTrigger pageKey="bridge" markdown={loadHelpMarkdown("bridge")} />
+        </div>
       </div>
 
       {isStale && <StaleBanner captureSessionId={captureSessionId} />}

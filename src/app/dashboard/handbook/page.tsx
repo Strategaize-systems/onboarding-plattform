@@ -21,6 +21,8 @@ import {
   Loader2,
 } from "lucide-react";
 import { HandbookSelectionShell } from "@/components/handbook/HandbookSelectionShell";
+import { HelpTrigger } from "@/components/help/HelpTrigger";
+import { loadHelpMarkdown } from "@/lib/help/load";
 
 interface HandbookListRow {
   id: string;
@@ -122,19 +124,25 @@ export default async function HandbookSelectionPage() {
           </Link>
         </div>
 
-        <header className="flex items-start gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-primary/10">
-            <BookOpen className="h-5 w-5 text-brand-primary-dark" />
+        <header className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-primary/10">
+              <BookOpen className="h-5 w-5 text-brand-primary-dark" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-semibold text-slate-900">
+                Unternehmerhandbuch
+              </h1>
+              <p className="text-sm text-slate-500">
+                Konsolidierte Handbuch-Versionen aus deiner GF-Erhebung und den
+                Mitarbeiter-Beitraegen.
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-semibold text-slate-900">
-              Unternehmerhandbuch
-            </h1>
-            <p className="text-sm text-slate-500">
-              Konsolidierte Handbuch-Versionen aus deiner GF-Erhebung und den
-              Mitarbeiter-Beitraegen.
-            </p>
-          </div>
+          <HelpTrigger
+            pageKey="handbook"
+            markdown={loadHelpMarkdown("handbook")}
+          />
         </header>
 
         {snapshots.length === 0 ? (

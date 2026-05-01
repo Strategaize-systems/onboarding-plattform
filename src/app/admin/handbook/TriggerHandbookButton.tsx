@@ -27,6 +27,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 import { triggerHandbookSnapshot } from "./actions";
 
@@ -99,24 +105,36 @@ export function TriggerHandbookButton({
 
   return (
     <>
-      <Button onClick={handleClick} disabled={pending || disabled}>
-        {pending ? (
-          <>
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            Wird gestartet…
-          </>
-        ) : hasPreviousSnapshot ? (
-          <>
-            <RotateCw className="h-4 w-4 mr-2" />
-            Neu generieren
-          </>
-        ) : (
-          <>
-            <BookOpen className="h-4 w-4 mr-2" />
-            Unternehmerhandbuch generieren
-          </>
-        )}
-      </Button>
+      <TooltipProvider delayDuration={150}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button onClick={handleClick} disabled={pending || disabled}>
+              {pending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Wird gestartet…
+                </>
+              ) : hasPreviousSnapshot ? (
+                <>
+                  <RotateCw className="h-4 w-4 mr-2" />
+                  Neu generieren
+                </>
+              ) : (
+                <>
+                  <BookOpen className="h-4 w-4 mr-2" />
+                  Unternehmerhandbuch generieren
+                </>
+              )}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent
+            side="bottom"
+            className="max-w-xs text-xs leading-snug"
+          >
+            Generiert das Unternehmerhandbuch aus aktuellem Stand
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
 
       {requiresConfirm && reviewSummary && (
         <AlertDialog

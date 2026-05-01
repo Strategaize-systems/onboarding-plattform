@@ -14,6 +14,8 @@ import { StatusCockpit } from "./StatusCockpit";
 import { getWizardStateForCurrentUser } from "@/lib/wizard/get-wizard-state";
 import { Wizard, type WizardTemplate } from "@/components/onboarding-wizard/Wizard";
 import { clampStep } from "@/components/onboarding-wizard/wizard-helpers";
+import { HelpTrigger } from "@/components/help/HelpTrigger";
+import { loadHelpMarkdown } from "@/lib/help/load";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -152,6 +154,9 @@ export default async function DashboardPage() {
     );
   }
 
+  // SLC-050 — In-App-Hilfe Trigger im Header.
+  const helpMarkdown = loadHelpMarkdown("dashboard");
+
   return (
     <>
       <DashboardClient
@@ -159,6 +164,9 @@ export default async function DashboardPage() {
         initialSessions={sessions}
         initialGapCounts={gapCounts}
         cockpitContent={cockpitContent}
+        headerActions={
+          <HelpTrigger pageKey="dashboard" markdown={helpMarkdown} />
+        }
       />
       {wizardOverlay}
     </>

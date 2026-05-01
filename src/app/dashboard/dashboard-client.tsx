@@ -41,6 +41,7 @@ interface DashboardClientProps {
   initialSessions?: CaptureSession[];
   initialGapCounts?: Record<string, number>;
   cockpitContent?: ReactNode;
+  headerActions?: ReactNode;
 }
 
 export function DashboardClient({
@@ -48,6 +49,7 @@ export function DashboardClient({
   initialSessions = [],
   initialGapCounts = {},
   cockpitContent,
+  headerActions,
 }: DashboardClientProps) {
   const t = useTranslations();
   const locale = useLocale();
@@ -95,6 +97,9 @@ export function DashboardClient({
               <h1 className="text-2xl font-bold text-slate-900 tracking-tight">{t("dashboard.title")}</h1>
               <p className="text-sm text-slate-500 mt-0.5">{t("dashboard.subtitle")}</p>
             </div>
+            {headerActions && (
+              <div className="flex items-center gap-2">{headerActions}</div>
+            )}
           </div>
         </header>
 

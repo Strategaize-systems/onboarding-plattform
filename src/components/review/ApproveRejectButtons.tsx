@@ -23,6 +23,12 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   approveBlockReview,
   rejectBlockReview,
 } from "@/app/admin/blocks/[blockKey]/review/actions";
@@ -83,23 +89,35 @@ export function ApproveRejectButtons({
 
   return (
     <>
-      <div className="flex flex-wrap gap-2">
-        <Button
-          onClick={() => setMode("approve")}
-          disabled={pending || currentStatus === "approved"}
-        >
-          <Check className="mr-2 h-4 w-4" />
-          Approve
-        </Button>
-        <Button
-          variant="outline"
-          onClick={() => setMode("reject")}
-          disabled={pending || currentStatus === "rejected"}
-        >
-          <X className="mr-2 h-4 w-4" />
-          Reject
-        </Button>
-      </div>
+      <TooltipProvider delayDuration={150}>
+        <div className="flex flex-wrap gap-2">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                onClick={() => setMode("approve")}
+                disabled={pending || currentStatus === "approved"}
+              >
+                <Check className="mr-2 h-4 w-4" />
+                Approve
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent
+              side="bottom"
+              className="max-w-xs text-xs leading-snug"
+            >
+              Approve = Mitarbeiter-Antworten fliessen ins Handbuch
+            </TooltipContent>
+          </Tooltip>
+          <Button
+            variant="outline"
+            onClick={() => setMode("reject")}
+            disabled={pending || currentStatus === "rejected"}
+          >
+            <X className="mr-2 h-4 w-4" />
+            Reject
+          </Button>
+        </div>
+      </TooltipProvider>
 
       <AlertDialog
         open={mode !== null}

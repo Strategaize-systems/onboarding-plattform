@@ -495,9 +495,9 @@
       "title": "In-App-Hilfe (FEAT-033)",
       "type": "feature",
       "priority": "medium",
-      "status": "in_progress",
+      "status": "done",
       "version": "V4.2",
-      "description": "Requirements done 2026-04-29 als FEAT-033. Right-Side Help-Sheet (shadcn/ui) mit Markdown-Inhalten pro Hauptansicht (5 Pages: /dashboard, /capture, /admin/bridge, /admin/reviews, /dashboard/handbook). Markdown-Files unter /content/help/<page-key>.md, statisch gebundelt. Tooltips an mind. 5 UI-Elementen. Wiederverwendung react-markdown aus FEAT-028. 10 ACs, 2 DECs. Naechster Schritt: /architecture V4.2.",
+      "description": "FEAT-033 done 2026-05-01 via SLC-050. 5 Help-Markdown-Files (src/content/help/*.md, je 180-243 Worter, Berater-Inhalts-Review steht aus), loadHelpMarkdown-Helper + 3/3 Vitest-PASS, HelpSheet (shadcn Sheet + react-markdown + remark-gfm) + HelpTrigger (?-Icon) auf 5 Pflicht-Pages eingebunden, 4 neue Tooltips (Bridge-Trigger, Approve-Block, Generate-Snapshot, Wizard-Spaeter) + 1 bestehender (Inactive-Badge aus SLC-049). TypeScript clean, Browser-Smoke + Berater-Inhalts-Review = QA-Gates. Letzter V4.2-Slice.",
       "createdAt": "2026-04-29"
     },
     {
