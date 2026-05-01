@@ -487,7 +487,7 @@
       "priority": "high",
       "status": "in_progress",
       "version": "V4.2",
-      "description": "Requirements done 2026-04-29 als FEAT-032. Automatische E-Mail-Reminder fuer Mitarbeiter (employee-Rolle) mit pendentem Capture-Task: Stufe 1 nach 3 Werktagen, Stufe 2 nach 7 Werktagen Inaktivitaet. Bestehender Supabase-Auth-SMTP. Coolify-Cron 09:00 Europe/Berlin. Idempotenz via reminder_log-Unique-Constraint, Opt-Out via user_settings + Unsubscribe-Link. tenant_admin bekommt KEINE E-Mail (DEC-V4.2-4), stattdessen In-App-Badge auf /dashboard. 10 ACs, 4 DECs. Naechster Schritt: /architecture V4.2.",
+      "description": "FEAT-032: SLC-048 Backend done /qa PASS 2026-05-01 (RPT-122) — Cron + SMTP + Unsubscribe live, IONOS-SMTP-DKIM verifiziert, Idempotenz live PASS. Auth-Middleware-Bug im /qa entdeckt + gefixt (commit fd9e944). SLC-049 + SLC-050 noch offen: InactiveEmployeesCard + Settings-Opt-Out + Help-Sheet. Naechster Schritt: /frontend SLC-049.",
       "createdAt": "2026-04-29"
     },
     {

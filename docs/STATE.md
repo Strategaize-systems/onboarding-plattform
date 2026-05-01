@@ -10,15 +10,15 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: **V4.2 SLC-048 /backend code-complete 2026-04-30 (RPT-121).** Cron-Endpoint `/api/cron/capture-reminders` + workdaysSince-Helper + sendReminder + Unsubscribe-Endpoint fertig. 19 neue Vitest-Cases gruen (inkl. Pflicht-Idempotenz-Test SC-V4.2-12). Build PASS mit stub-ENVs. ENV `CRON_SECRET` in `.env.deploy.example` dokumentiert. Pflicht-Gates fuer /qa noch offen: Live-SMTP-Test mit Test-Mitarbeiter, SPF/DKIM-Pre-Check, Coolify-Cron-Anlage durch User. Coolify-Cron-Tabelle im Slice-Report dokumentiert.
-- Current Phase: V4.2 2/5 Slices final PASS (SLC-046 + SLC-047) + 1/5 Slice code-complete (SLC-048). Naechste Phase: User-Coolify-Deploy + ENV-Setup `CRON_SECRET` + /qa SLC-048 (Live-SMTP-Test + DNS-Audit).
+- Current Focus: **V4.2 SLC-048 /qa PASS 2026-05-01 (RPT-122).** Live-SMTP-Smoke gegen `richard@bellaerts.de` PASS, DKIM via IONOS auto-signiert, Idempotenz live PASS (2 Trigger heute → 1 Mail), Unsubscribe 3 Cases PASS, 19/19 Unit-Tests gruen. Auth-Middleware-Bug im /qa entdeckt + gefixt (commit fd9e944, Coolify-Redeploy 06:06 UTC) — `isApiCron` + `isApiUnsubscribe` Bypass-Flags ergaenzt. Cron `capture-reminders-daily` muss vom User in Coolify wieder auf `enabled` gesetzt werden.
+- Current Phase: V4.2 3/5 Slices final PASS (SLC-046 + SLC-047 + SLC-048). Naechste Phase: /frontend SLC-049 (InactiveEmployeesCard + Mitarbeiter-Liste-Filter + Settings-Opt-Out-Toggle), kann sofort starten.
 
 ## Immediate Next Steps
-1. **User-Coolify-Deploy + ENV-Setup `CRON_SECRET`** — neue ENV (32-byte hex) in Coolify setzen, dann Redeploy. Coolify-Cron-Anlage NICHT vor erfolgreichem Live-SMTP-Test (Pflicht-Gate). Coolify-Tabelle siehe RPT-121.
-2. **/qa SLC-048** — 1) `npm run test` gruen (auf Coolify-DB via node:20-Container), 2) Live-SMTP-Test: Test-Mitarbeiter mit `accepted_at = today - 3 Werktage` anlegen, Cron-Endpoint manuell triggern, Mail-Empfang verifizieren, 3) SPF/DKIM-DNS-Audit fuer onboarding.strategaizetransition.com (falls fehlt: ISSUE in KNOWN_ISSUES + V4.2-Pre-Deploy-Pflicht), 4) Cron-Idempotenz-Browser-Smoke (zwei manuelle POSTs am selben Tag → 0 Doppel-Mails). Erst bei PASS Coolify-Cron tatsaechlich aktivieren.
-3. **/frontend SLC-049** — InactiveEmployeesCard + Mitarbeiter-Liste-Filter `?filter=inactive` + Settings-Page Opt-Out-Toggle. Profitiert von /qa-PASS SLC-048 (Reminder-Pipeline live), kann aber parallel starten.
-4. **/frontend SLC-050** — Help-Sheet + 5 Markdown-Files + 5 Tooltips. Letzter, weil Tooltips fuer SLC-047 + SLC-049 Komponenten brauchen.
-5. **V4.2-Slices-Stand (2/5 final PASS, 1/5 code-complete, 2/5 planned):** SLC-046 done+QA-PASS (RPT-115+116), SLC-047 done+QA-PASS+MT-7-PASS (RPT-118+119+120), SLC-048 backend code-complete (RPT-121), SLC-049+050 noch planned.
+1. **User-Aktion: Coolify-Cron `capture-reminders-daily` wieder auf `enabled`** (war fuer Smoke-Test pausiert). Cron-Tabelle siehe RPT-121.
+2. **/frontend SLC-049** — InactiveEmployeesCard + Mitarbeiter-Liste-Filter `?filter=inactive` + Settings-Page Opt-Out-Toggle. Profitiert von /qa-PASS SLC-048 (Reminder-Pipeline live), kann sofort starten.
+3. **/frontend SLC-050** — Help-Sheet + 5 Markdown-Files + 5 Tooltips. Letzter, weil Tooltips fuer SLC-047 + SLC-049 Komponenten brauchen.
+4. **Nach SLC-049 + SLC-050:** Gesamt-/qa V4.2 + /final-check + /go-live + /deploy.
+5. **V4.2-Slices-Stand (3/5 final PASS, 2/5 planned):** SLC-046 done+QA-PASS (RPT-115+116), SLC-047 done+QA-PASS+MT-7-PASS (RPT-118+119+120), SLC-048 done+QA-PASS (RPT-121+122), SLC-049+050 noch planned.
 5. **V4.3-Backlog-Stand (Maintenance-Sammelrelease):** 9 offene Items (BL-051..059), Start nach V4.2-Release. Neu zu adden: ADR fuer State-Maschinen-UPDATE-Pattern (Service-Role vs RLS-Policy) basierend auf ISSUE-031, plus Investigation Next 16 Turbopack-Layout-Inlining-Anomalie.
 
 ## Active Scope
