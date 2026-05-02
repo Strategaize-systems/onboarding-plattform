@@ -525,7 +525,7 @@
       "title": "Reader Polish: Active-Section-Scroll-Spy in Sidebar",
       "type": "improvement",
       "priority": "medium",
-      "status": "in_progress",
+      "status": "done",
       "version": "V4.3",
       "description": "Wenn der User durch das Handbuch scrollt, soll die linke Sidebar-Section-Liste die aktuell sichtbare Section automatisch markieren (Scroll-Spy via IntersectionObserver). Aufwand klein, UX-Wert hoch. Aus SLC-045 Open Points dokumentiert (Scope-Disziplin: war kein Pflicht-Item).",
       "createdAt": "2026-04-29"
@@ -535,7 +535,7 @@
       "title": "Reader Polish: Copy-Permalink-Button pro Section",
       "type": "improvement",
       "priority": "low",
-      "status": "in_progress",
+      "status": "done",
       "version": "V4.3",
       "description": "Pro Section ein Copy-Button im Section-Hero, der den Permalink (URL inkl. Section-Anchor-Hash) in die Zwischenablage kopiert. Aktuell muss der User das Heading-Anchor-Hover-Symbol nutzen (SLC-045 MT-3). Aufwand klein, hilft beim Teilen einzelner Section-Links.",
       "createdAt": "2026-04-29"
@@ -545,7 +545,7 @@
       "title": "Reader Polish: Loading-Skeleton waehrend Snapshot-Wechsel",
       "type": "improvement",
       "priority": "low",
-      "status": "in_progress",
+      "status": "done",
       "version": "V4.3",
       "description": "Beim Klick auf einen Snapshot in der Versionen-Liste laedt die naechste Page neu. Waehrend dieser Zeit ist die Reader-Flaeche leer. Skeleton-Loader wuerde Wartezeit ueberbruecken. Server-Component re-renders sind schnell genug fuer V4.1, aber bei grossen Snapshots (>300KB) sichtbar.",
       "createdAt": "2026-04-29"
@@ -565,7 +565,7 @@
       "title": "Reader Mobile-Polish: h1-Title-Wrap bei 375px",
       "type": "improvement",
       "priority": "low",
-      "status": "in_progress",
+      "status": "done",
       "version": "V4.3",
       "description": "Auf 375px Mobile-Viewport bricht der h1-Titel im Reader-Header in 4 Zeilen weil prose-h1:text-3xl bei dieser Container-Breite zu gross ist. Funktional kein Problem (kein Overflow, Sidebar collapsed sauber, alles erreichbar), nur optisch suboptimal. Fix: prose-h1:text-2xl sm:prose-h1:text-3xl als Mobile-Override im PROSE_CLASSES-Block. Aufgedeckt im V4.1 Browser-Smoke 2026-04-29.",
       "createdAt": "2026-04-29"
@@ -595,7 +595,7 @@
       "title": "Reader Heading-Anchor-Hover am h1-Titel sichtbar machen",
       "type": "improvement",
       "priority": "low",
-      "status": "in_progress",
+      "status": "done",
       "version": "V4.3",
       "description": "Heading-Anchor-Hover-Indicator (#-Symbol bei Hover) erscheint korrekt bei h2/h3-Headings, aber nicht zuverlaessig am h1-Titel des Reader-Inhaltsverzeichnisses (vermutlich CSS-Specificity-Issue mit prose-h1:mt-0 oder Hit-Bereich zu klein). Funktional nicht-blockierend. Aufgedeckt im V4.1 Browser-Smoke 2026-04-29 (Punkt 5a).",
       "createdAt": "2026-04-29"

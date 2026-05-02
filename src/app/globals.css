@@ -108,11 +108,18 @@
 
 /* Heading-Anchor: append-Verhalten von rehype-autolink-headings haengt
    <a class="heading-anchor"><span class="heading-anchor-icon">#</span></a>
-   an jedes Heading. Default unsichtbar; bei Hover ueber das Heading sichtbar. */
+   an jedes Heading. Default unsichtbar; bei Hover ueber das Heading sichtbar.
+   SLC-051 MT-6: Hit-Area auf min h-6 w-6 (inline-flex) damit das #-Symbol
+   am h1 sichtbar/klickbar wird (BL-058). */
 .handbook-prose :is(h1, h2, h3, h4, h5, h6) {
   position: relative;
 }
 .handbook-prose a.heading-anchor {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.5rem;
+  min-width: 1.5rem;
   margin-left: 0.5rem;
   opacity: 0;
   transition: opacity 0.15s ease-in-out;
@@ -122,6 +129,7 @@
   font-size: 0.85em;
   padding: 0 0.25rem;
   border-radius: 0.25rem;
+  vertical-align: middle;
 }
 .handbook-prose :is(h1, h2, h3, h4, h5, h6):hover a.heading-anchor,
 .handbook-prose a.heading-anchor:focus {
@@ -130,6 +138,27 @@
 .handbook-prose a.heading-anchor:hover {
   background-color: rgb(238 242 255); /* indigo-50 */
   color: rgb(67 56 202); /* indigo-700 */
+}
+
+/* SLC-051 MT-3 + MT-4 — Copy-Permalink-Button neben h2/h3 (rendered via
+   CopyPermalinkButton-Komponente). Visibility-Logik analog zu .heading-anchor:
+   unsichtbar default, sichtbar bei Hover ueber das umgebende Heading oder
+   Focus auf den Button selbst. Mobile-Tap (Touch-only): :focus-visible reicht
+   nicht — wir lassen das Default-Tap-Verhalten von <button> auf Touch greifen,
+   die Mobile-Sichtbarkeit wird im Browser-Smoke verifiziert. */
+.handbook-prose :is(h2, h3) .heading-permalink-button {
+  vertical-align: middle;
+}
+.handbook-prose :is(h2, h3):hover .heading-permalink-button,
+.handbook-prose .heading-permalink-button:focus {
+  opacity: 1;
+}
+
+/* Print-Anpassung: Permalink-Button hat im Druck keinen Sinn. */
+@media print {
+  .handbook-prose .heading-permalink-button {
+    display: none !important;
+  }
 }
 
 /* Search-Match-Highlights aus highlight-rehype-plugin.ts */

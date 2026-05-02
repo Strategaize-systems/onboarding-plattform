@@ -34,6 +34,7 @@ import { HandbookReader } from "./HandbookReader";
 import { ReaderSidebar } from "./ReaderSidebar";
 import { SearchInput, type SearchInputHandle } from "./SearchInput";
 import { SearchResultsList } from "./SearchResultsList";
+import { useScrollSpy } from "./use-scroll-spy";
 import type {
   ReaderSnapshotHeaderInfo,
   ReaderSnapshotMeta,
@@ -113,6 +114,16 @@ export function ReaderShell({
       el.classList.remove("handbook-search-match-flash");
     }, 1500);
   }, []);
+
+  // SLC-051 MT-2 — Scroll-Spy: ID-Liste der Article-Anchor-Targets in DOM-Order.
+  // INDEX-Article zuerst, dann Sections in der gleichen Reihenfolge wie HandbookReader rendert.
+  const headingIds = useMemo(() => {
+    const ids: string[] = [];
+    if (indexMarkdown) ids.push(sectionDomId("__index"));
+    for (const s of sections) ids.push(sectionDomId(s.sectionKey));
+    return ids;
+  }, [sections, indexMarkdown]);
+  const activeSectionDomId = useScrollSpy(headingIds);
 
   // Section-Title-Map fuer die Treffer-Liste (sectionKey → Title).
   const sectionTitleMap = useMemo(() => {
@@ -208,6 +219,8 @@ export function ReaderShell({
           snapshots={snapshotList}
           activeSnapshotId={snapshotId}
           onSectionSelect={handleSectionSelect}
+          activeSectionDomId={activeSectionDomId}
+          sectionDomIdFn={sectionDomId}
         />
       </aside>
 

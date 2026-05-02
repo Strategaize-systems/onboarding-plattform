@@ -25,6 +25,10 @@ interface ReaderSidebarProps {
   snapshots: ReaderSnapshotMeta[];
   activeSnapshotId: string;
   onSectionSelect: (sectionKey: string) => void;
+  /** SLC-051 MT-2 — DOM-ID der aktuell beim Lesen sichtbaren Section. */
+  activeSectionDomId?: string | null;
+  /** SLC-051 MT-2 — Mapper sectionKey → erwartete DOM-ID (= sectionDomId-Helper). */
+  sectionDomIdFn?: (sectionKey: string) => string;
 }
 
 function StatusIcon({ status }: { status: SnapshotStatus }) {
@@ -42,6 +46,8 @@ export function ReaderSidebar({
   snapshots,
   activeSnapshotId,
   onSectionSelect,
+  activeSectionDomId,
+  sectionDomIdFn,
 }: ReaderSidebarProps) {
   const router = useRouter();
 
@@ -78,24 +84,47 @@ export function ReaderSidebar({
             </p>
           ) : (
             <ul className="space-y-0.5">
-              {sections.map((section) => (
-                <li key={section.filename}>
-                  <button
-                    type="button"
-                    onClick={() => onSectionSelect(section.sectionKey)}
-                    className="flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-sm text-slate-700 transition-colors hover:bg-slate-100"
-                    data-testid="reader-sidebar-section"
-                  >
-                    <span className="truncate">
-                      <span className="mr-1.5 text-xs font-mono text-slate-400">
-                        {String(section.order).padStart(2, "0")}
+              {sections.map((section) => {
+                const sectionDomId = sectionDomIdFn
+                  ? sectionDomIdFn(section.sectionKey)
+                  : null;
+                const isActive =
+                  !!sectionDomId &&
+                  !!activeSectionDomId &&
+                  sectionDomId === activeSectionDomId;
+                return (
+                  <li key={section.filename}>
+                    <button
+                      type="button"
+                      onClick={() => onSectionSelect(section.sectionKey)}
+                      className={`flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors ${
+                        isActive
+                          ? "bg-brand-primary/10 text-brand-primary-dark font-semibold"
+                          : "text-slate-700 hover:bg-slate-100"
+                      }`}
+                      data-testid="reader-sidebar-section"
+                      data-active={isActive ? "true" : undefined}
+                      aria-current={isActive ? "location" : undefined}
+                    >
+                      <span className="truncate">
+                        <span
+                          className={`mr-1.5 text-xs font-mono ${
+                            isActive ? "text-brand-primary-dark" : "text-slate-400"
+                          }`}
+                        >
+                          {String(section.order).padStart(2, "0")}
+                        </span>
+                        {section.title}
                       </span>
-                      {section.title}
-                    </span>
-                    <ChevronRight className="h-3.5 w-3.5 flex-shrink-0 text-slate-300" />
-                  </button>
-                </li>
-              ))}
+                      <ChevronRight
+                        className={`h-3.5 w-3.5 flex-shrink-0 ${
+                          isActive ? "text-brand-primary" : "text-slate-300"
+                        }`}
+                      />
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>

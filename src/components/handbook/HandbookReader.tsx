@@ -32,6 +32,7 @@ import { Pencil } from "lucide-react";
 
 import type { SectionFile } from "@/lib/handbook/load-snapshot-content";
 import { highlightRehypePlugin } from "@/lib/handbook/highlight-rehype-plugin";
+import { CopyPermalinkButton } from "./copy-permalink-button";
 
 interface HandbookReaderProps {
   sections: SectionFile[];
@@ -44,11 +45,13 @@ interface HandbookReaderProps {
 
 // Premium-Look Tailwind-prose-Modifiers — Brand-Hierarchie + bessere Lesbarkeit.
 // `handbook-prose` triggert die globalen Anchor-/Search-Styles in app/globals.css.
+// SLC-051 MT-6: prose-h1 schrumpft auf Mobile (375px) auf text-2xl + text-balance,
+// damit der Hero-h1-Titel im INDEX max. 2 Zeilen bricht statt 4.
 const PROSE_CLASSES = [
   "prose prose-slate max-w-none handbook-prose",
   // Heading-Hierarchie
   "prose-headings:scroll-mt-24 prose-headings:tracking-tight prose-headings:text-slate-900",
-  "prose-h1:text-3xl prose-h1:font-bold prose-h1:mb-4 prose-h1:mt-0",
+  "prose-h1:text-2xl sm:prose-h1:text-3xl prose-h1:font-bold prose-h1:mb-4 prose-h1:mt-0 prose-h1:[text-wrap:balance] prose-h1:[word-break:break-word]",
   "prose-h2:text-xl prose-h2:font-bold prose-h2:mt-12 prose-h2:mb-5 prose-h2:pb-2 prose-h2:border-b prose-h2:border-slate-200",
   "prose-h3:text-base prose-h3:font-semibold prose-h3:uppercase prose-h3:tracking-wider prose-h3:text-brand-primary-dark prose-h3:mt-8 prose-h3:mb-3",
   "prose-h4:text-base prose-h4:font-semibold prose-h4:text-slate-800 prose-h4:mt-6 prose-h4:mb-2",
@@ -150,8 +153,11 @@ function CustomLink(
 // rehype-autolink-headings: append-Verhalten haengt einen klickbaren <a>-Link
 // (Klasse `heading-anchor`) an jedes Heading. Sichtbar nur bei Hover via
 // globals.css. Klick kopiert den Anchor-Hash in die URL.
+// SLC-051 MT-6: explicit `test` auf h1..h3 sodass das Verhalten dokumentiert ist
+// (default waere h1..h6, aber wir wollen die Auswahl bewusst eng halten).
 const AUTOLINK_OPTIONS = {
   behavior: "append" as const,
+  test: ["h1" as const, "h2" as const, "h3" as const],
   properties: {
     className: ["heading-anchor"],
     "aria-label": "Direkt-Link zu diesem Heading",
@@ -163,6 +169,42 @@ const AUTOLINK_OPTIONS = {
     children: [{ type: "text" as const, value: "#" }],
   },
 };
+
+// SLC-051 MT-4 — h2/h3-Override mit zusaetzlichem CopyPermalinkButton neben
+// dem Auto-Anchor. Der Button erscheint im DOM nach dem Heading-Text und nach
+// dem rehype-Anchor (rehype haengt seinen <a> als letztes children-Element an).
+// Visibility-Logik (opacity 0 → 100 bei Heading-Hover) liegt in globals.css.
+function H2WithPermalink({
+  id,
+  className,
+  children,
+  ...rest
+}: ComponentPropsWithoutRef<"h2">) {
+  return (
+    <h2 {...rest} id={id} className={className}>
+      {children}
+      {typeof id === "string" && id.length > 0 ? (
+        <CopyPermalinkButton headingId={id} />
+      ) : null}
+    </h2>
+  );
+}
+
+function H3WithPermalink({
+  id,
+  className,
+  children,
+  ...rest
+}: ComponentPropsWithoutRef<"h3">) {
+  return (
+    <h3 {...rest} id={id} className={className}>
+      {children}
+      {typeof id === "string" && id.length > 0 ? (
+        <CopyPermalinkButton headingId={id} />
+      ) : null}
+    </h3>
+  );
+}
 
 export function HandbookReader({
   sections,
@@ -198,6 +240,8 @@ export function HandbookReader({
                 a: (props) => (
                   <CustomLink {...props} sectionDomIdFn={sectionDomIdFn} />
                 ),
+                h2: H2WithPermalink,
+                h3: H3WithPermalink,
               }}
             >
               {indexMarkdown}
@@ -265,6 +309,8 @@ export function HandbookReader({
                     a: (props) => (
                       <CustomLink {...props} sectionDomIdFn={sectionDomIdFn} />
                     ),
+                    h2: H2WithPermalink,
+                    h3: H3WithPermalink,
                   }}
                 >
                   {stripLeadingH1(section.markdown)}
