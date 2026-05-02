@@ -605,7 +605,7 @@
       "title": "Next.js 16 middleware->proxy Convention-Migration",
       "type": "improvement",
       "priority": "low",
-      "status": "in_progress",
+      "status": "done",
       "version": "V4.3",
       "description": "Next.js 16.2.4 deprecated die `middleware`-File-Convention zugunsten `proxy`. Build zeigt `The middleware file convention is deprecated`. Nicht funktional blockierend, aber sollte vor Next 17-Bump migriert werden. Migration: `src/middleware.ts` -> `src/proxy.ts`, Convention-Anpassungen in API-Signatur. Aufgedeckt in /final-check V4.1 (RPT-110) und /go-live V4.1 (RPT-111).",
       "createdAt": "2026-04-29"
@@ -635,7 +635,7 @@
       "title": "ESLint 9 flat-config-Migration",
       "type": "improvement",
       "priority": "low",
-      "status": "in_progress",
+      "status": "done",
       "version": "V4.3",
       "description": "ESLint 9.39.2 erfordert flat config (`eslint.config.mjs`), Projekt hat aktuell legacy `.eslintrc.json` mit `extends: next/core-web-vitals`. `npm run lint` failt mit 'eslint.config.(js|mjs|cjs) file not found'. Auch `next lint` versagt da Next.js 16 das Subcommand zu einem Directory-Argument verbiegt ('Invalid project directory: lint'). Tooling-Gap aus /final-check V4.2 (RPT-128). Lint-basierte Code-Quality-Verifikation faellt aktuell aus, tsc deckt das groesstenteils ab. Migration: `eslint.config.mjs` mit flat-config-Format anlegen, `extends`-Pattern via `compat`-Helper (wenn Next-Config-Plugin noch legacy) ODER auf neue `@next/eslint-plugin-next` migrieren. .eslintrc.json danach loeschen.",
       "createdAt": "2026-05-01"
@@ -669,6 +669,16 @@
       "version": "V4.3",
       "description": "User hatte in V4.2 SLC-050 /qa (RPT-126) mit 'final review am Ende V4.2' bestaetigt, dass die 5 Help-Markdown-Files vorlaeufig OK sind aber finale inhaltliche Pruefung im V4.3-Sammelrelease passiert. Dateien: src/content/help/dashboard.md, capture.md, bridge.md, reviews.md, handbook.md (je 180-243 Worter). Review-Pflichten: Begriffs-Konsistenz mit UI, Tonalitaet (Du-Form), keine Doppelungen, fehlende Schritte ergaenzen, ggf. Tooltips am Page-Start ergaenzen. Kein Code-Slice noetig — direkter Editor-Workflow mit Berater (User selbst). Output: aktualisierte 5 .md-Files + Commit.",
       "createdAt": "2026-05-01"
+    },
+    {
+      "id": "BL-068",
+      "title": "V4.4 Lint-Sweep — 7 Pre-existing-Errors aus SLC-053 ESLint-9-Migration",
+      "type": "improvement",
+      "priority": "medium",
+      "status": "open",
+      "version": null,
+      "description": "Aus SLC-053 (V4.3 ESLint-9 flat-config-Migration, RPT-134) sichtbar gemacht: 7 Pre-existing react-hooks-Errors + 6 Warnings im V2-V4.2-Code, die seit Wochen unentdeckt waren weil next lint in Next 16 broken war. Errors: (1) BridgeProposalEditDialog.tsx:66 setState in useEffect (V4 Bridge), (2) EvidenceFileList.tsx:186 Date.now() in render (V2 Evidence — kann FALSE-POSITIVE sein, neue React-19/react-hooks-Plugin-Regel sehr strikt), (3) FileUploadZone.tsx:57+64 uploadFile accessed-before-declared (V2 Evidence — REAL hoisting/TDZ-Risk), (4) jitsi-meeting.tsx:103 setIframeError() in catch-Block of useEffect (V3 Dialogue), (5+6) SearchResultsList.tsx:30 unescaped-entities (V4.1 Reader, Style), (7) shadcn sidebar.tsx:665 Math.random in useMemo (Library, FALSE-POSITIVE). Warnings: 3x unused-eslint-disable-directives in document-parser.ts + claim-loop.ts, 1x missing dep useCallback in FileUploadZone, 1x alt-text in EvidenceFileList, 2x anonymous-default-export in eslint.config.mjs/email-stub.mjs (low-prio Style). V4.3 Slice-Disziplin: Lint-Sweep ist Out-of-Scope. V4.4 oder eigener Maintenance-Sprint. Empfohlene Reihenfolge: zuerst pruefen welche Errors True-Positive vs False-Positive sind (insbesondere Math.random/Date.now-Pattern bei react-hooks/purity-Plugin), dann True-Positive fixen, False-Positive akzeptieren via Inline-Disable mit Begruendung. Aufwand-Schaetzung: ~2-3h pro Datei mit Code-Touch + Tests.",
+      "createdAt": "2026-05-02"
     }
   ]
 }
