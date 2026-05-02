@@ -689,6 +689,66 @@
       "version": "V4.4",
       "description": "audit-umlauts.mjs aus SLC-052 zeigt 328 Vorkommnisse in sql/migrations/046_seed_demo_template.sql (Demo-Template-Seed). Datei-Edit hat keine Wirkung auf bereits in der Live-DB stehenden Daten — braucht separate UPDATE-Migration die templates.blocks/sop_prompt JSONB-Felder umlaut-korrigiert. Out-of-scope SLC-052 (Hygiene-Code-Slice, kein Daten-Slice).",
       "createdAt": "2026-05-02"
+    },
+    {
+      "id": "BL-070",
+      "title": "Capture-Mode `external_validation` Foundation (Cross-Repo Pre-Condition fuer IS V9 Venture-Layer)",
+      "type": "feature",
+      "priority": "low",
+      "status": "open",
+      "version": null,
+      "description": "Cross-Repo-Aufgabe ausgeloest durch IS V6+ Discovery RPT-013 (StrategAIze Intelligence Studio). Neuer Capture-Mode `external_validation` parallel zu den bestehenden Modi (questionnaire, dialogue, evidence, walkthrough_stub). Erweitert CAPTURE_MODE_REGISTRY um Eintrag mit basePath `/external-validation`, workerJobType `external_validation_extraction`, displayName, productive: true. Output ist NICHT ein normales KU sondern ein strukturiertes Profil-Objekt (Operator Profile bei founder/operator-Templates, Market Insight bei market_participant/industry_expert-Templates). RBAC-Erweiterung: neuer Role-Typ `external_participant` (Befragter, einmal-token-Login analog Demo-Tenant-Pattern); Tenant ist die User-Org, der Befragte ist NICHT der Tenant-Owner. Foundation-Slice: Schema-Erweiterung capture_session.capture_mode-Enum + neue Tabelle external_participation_token + RLS-Adaptionen. **Pre-Condition fuer IS V9** — kann aber unabhaengig vor V9-Start gebaut werden. Versionierung offen: vermutlich Onboarding-V6 oder V7 (nach V5 Walkthrough/Diary).",
+      "createdAt": "2026-05-02"
+    },
+    {
+      "id": "BL-071",
+      "title": "Template `founder_assessment` (Cross-Repo Pre-Condition fuer IS V9)",
+      "type": "feature",
+      "priority": "low",
+      "status": "open",
+      "version": null,
+      "description": "Cross-Repo-Aufgabe ausgeloest durch IS V6+ Discovery RPT-013. Neues Template fuer Capture-Mode external_validation: 5-7 Bloecke fuer Operator-/Gruender-Tauglichkeits-Pruefung. Block-Skizze: (1) Lebens-/Operator-Fit (Freiheitsverstaendnis, Standardisierungs-Bereitschaft), (2) Track Record (frueheres Bauen, Skalieren, Exits), (3) Personalitaet (Zusammenarbeit, Konfliktverhalten, Selbstwahrnehmung), (4) Kapital-Verstaendnis (CAP-Tabelle, Verwaesserung, Bootstrap-vs-Investor), (5) Standardisierungs-Bereitschaft (Bauen-an-System statt an-Person), (6) Lebens-Kompatibilitaet als Operator (Familienmodell, Mobilitaet, Kapazitaet), optional (7) Domain-Spezifika. Diagnosis-Schema: Operator-Profile-JSON (kompatibel mit IS V8 Operator-Profile-Object). SOP nicht relevant — Output ist Profil, nicht Prozess. Aufwand inkl. KI-Prompt-Tuning ~3-5 Tage.",
+      "createdAt": "2026-05-02"
+    },
+    {
+      "id": "BL-072",
+      "title": "Template `operator_assessment` (Cross-Repo Pre-Condition fuer IS V9)",
+      "type": "feature",
+      "priority": "low",
+      "status": "open",
+      "version": null,
+      "description": "Cross-Repo-Aufgabe ausgeloest durch IS V6+ Discovery RPT-013. Neues Template fuer Capture-Mode external_validation: 4-5 Bloecke fuer Bewerbung als Operator fuer ein bestehendes Vehikel. Block-Skizze: (1) Vehikel-Verstaendnis (was wird betrieben, Erloeslogik, aktuelle Lage), (2) Operator-Erfahrung (relevante Vergangenheit, was wurde geleitet, was nicht), (3) Bedingungen (Equity, Salary, Zeitdimension, Exklusivitaet), (4) Standardisierungs-Bereitschaft (System-statt-Person), optional (5) Risk-Profile + Conflict-Resolution. Diagnosis-Schema: Operator-Match-JSON mit Score gegen Vehikel-Anforderungen. Aufwand ~2-4 Tage.",
+      "createdAt": "2026-05-02"
+    },
+    {
+      "id": "BL-073",
+      "title": "Template `market_participant_interview` (Cross-Repo Pre-Condition fuer IS V9)",
+      "type": "feature",
+      "priority": "low",
+      "status": "open",
+      "version": null,
+      "description": "Cross-Repo-Aufgabe ausgeloest durch IS V6+ Discovery RPT-013. Neues Template fuer Capture-Mode external_validation: 4-5 Bloecke fuer Marktteilnehmer-Interview (potenzieller Kunde / Buyer / User). Block-Skizze: (1) Pain Points (heutige Realitaet, Schmerzhoehe, Frequenz), (2) Adoption (was wurde versucht, was klappte, was nicht), (3) Buying Behavior (Kaufprozess, Decision Maker, Budget-Realitaet), (4) Konkurrenz-Realitaet (welche Loesungen kennt der Markt heute), optional (5) Demographics + Verifikation. Diagnosis-Schema: Market-Insight-JSON (Schmerz-Score, Pay-Willingness, Konkurrenz-Map). Output fliesst in IS V8 Research-Task finding_summary. Aufwand ~2-3 Tage.",
+      "createdAt": "2026-05-02"
+    },
+    {
+      "id": "BL-074",
+      "title": "Template `industry_expert_interview` (Cross-Repo Pre-Condition fuer IS V9)",
+      "type": "feature",
+      "priority": "low",
+      "status": "open",
+      "version": null,
+      "description": "Cross-Repo-Aufgabe ausgeloest durch IS V6+ Discovery RPT-013. Neues Template fuer Capture-Mode external_validation: 3-4 Bloecke fuer Domain-Expert-Sicht. Block-Skizze: (1) Markt-Trajektorie (wo geht die Branche hin, Hype vs. dauerhaft), (2) Tech-Bedrohungen (was wird die Branche entwerten oder neu definieren), (3) Regulierung (was kommt, was schraenkt ein), optional (4) Operator-Profil-Empfehlung (welcher Typ ist hier erfolgreich). Diagnosis-Schema: Industry-Outlook-JSON. Output fliesst in IS V8 Research-Task finding_summary. Aufwand ~2-3 Tage.",
+      "createdAt": "2026-05-02"
+    },
+    {
+      "id": "BL-075",
+      "title": "External-Validation Export-API + Trigger-Endpoint (Cross-Repo Pre-Condition fuer IS V9)",
+      "type": "feature",
+      "priority": "low",
+      "status": "open",
+      "version": null,
+      "description": "Cross-Repo-Aufgabe ausgeloest durch IS V6+ Discovery RPT-013. Zwei Endpoints fuer IS-Onboarding-Integration: (1) POST /api/internal/external-validation-sessions: erlaubt IS aus Knopfdruck eine neue Capture-Session anzulegen mit Template-ID + invitee_email + invitee_role + return_callback_url. Auth: INTERNAL_API_TOKEN. Response: session_id + invitation_link. (2) GET /api/export/external-validation: erlaubt IS-Pull-Worker (analog FEAT-001 SLC-010 Export-Pattern) Profile-Snapshots seit Timestamp X mit Mode-Filter. Snapshots sind die finalen Diagnosis-Layer-JSONs (Operator-Profile / Market-Insight / Industry-Outlook). Idempotenz via session_id. Pre-Condition: BL-070 (Capture-Mode) + BL-071..074 (Templates).",
+      "createdAt": "2026-05-02"
     }
   ]
 }
