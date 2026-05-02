@@ -10,16 +10,15 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: **V4.3 SLC-053 done 2026-05-02 (RPT-134).** Tooling-Migrations abgeschlossen: `src/middleware.ts` → `src/proxy.ts` per `git mv` + Funktion `middleware()` → `proxy()` umbenannt (Next 16 Convention). ESLint-9 flat-config-Migration mit nativem `eslint-config-next@16.1.1` (kein FlatCompat noetig — Q-V4.3-J nativ). `package.json` `lint`-Script auf `eslint .` umgestellt. `.eslintrc.json` geloescht. BL-059 + BL-064 auf `done`. NEUER BL-068 angelegt fuer V4.4-Lint-Sweep: 7 Pre-existing react-hooks-Errors + 6 Warnings in V2-V4.2-Code wurden durch die Migration sichtbar gemacht (per R-V4.3-3-Mitigation Out-of-Scope V4.3, Folge-BL). 336/336 ENV-unabhaengige Vitest-Tests gruen, 0 Tests gebrochen durch proxy-Rename. TypeScript-Compile gruen. Keine middleware-Deprecation-Warning mehr im Build. V4.2 bleibt Last Stable. V4.3 1/6 Slices done.
-- Current Phase: V4.3 SLC-053 done. Naechste Phase: /qa SLC-053 (Pflicht), dann /frontend SLC-051 (Reader-UX-Bundle).
+- Current Focus: **V4.3 SLC-053 done + /qa Code-side PASS 2026-05-02 (RPT-134 + RPT-135).** Tooling-Migrations abgeschlossen: `src/middleware.ts` → `src/proxy.ts` (Next 16 Convention), ESLint-9 flat-config nativ (kein FlatCompat). BL-059 + BL-064 done. BL-068 NEU angelegt fuer V4.4-Lint-Sweep (7 Pre-existing react-hooks-Errors + 6 Warnings in V2-V4.2-Code, per R-V4.3-3-Mitigation Out-of-Scope V4.3). 336/336 ENV-unabh. Vitest-Tests gruen, 0 Tests gebrochen durch proxy-Rename. TypeScript-Compile gruen, keine middleware-Deprecation-Warning mehr. /qa SLC-053 Code-side PASS (0 Blocker/High/Medium, 1× Low inline gefixt = Comment-Mehrdeutigkeit). Live-Smoke (Coolify-Deploy + Browser-Login + V4.2-Regression + RLS-Matrix) wird mit Gesamt-V4.3-Deploy (REL-011) nach SLC-054 gebuendelt — kein SLC-053-Standalone-Deploy noetig. V4.2 bleibt Last Stable. V4.3 1/6 Slices done.
+- Current Phase: V4.3 SLC-053 done + /qa Code-side PASS. Naechste Phase: /frontend SLC-051 (Reader-UX-Bundle).
 
 ## Immediate Next Steps
-1. **/qa SLC-053** — Verifikation Pflicht-Gates: Auth-Flow funktioniert (proxy-Convention akzeptiert), keine middleware-Deprecation-Warning im Build, Lint-Tooling laeuft erfolgreich (Pre-existing-Findings als BL-068 abgespalten), V4.2-Regression-Smoke. Auf Coolify Deploy + Browser-Login-Smoke (lokal nicht moeglich ohne ENV).
-2. **/frontend SLC-051** (Reader-UX-Bundle) — 6 Micro-Tasks: useScrollSpy + CopyPermalinkButton + ReaderLoadingSkeleton + Mobile-h1-Wrap + h1-Heading-Anchor-Hover. Browser-Smoke 1280×800 + 375×667 Pflicht (SC-V4.3-2).
-3. **Implementation V4.3 in Reihenfolge (per DEC-062):** SLC-053 ✓ → SLC-051 → SLC-052 (Worker+Templates) → SLC-055 (UX-Findings) → SLC-056 (ADR + Spike) → SLC-054 (Cross-Search). Nach jedem Slice: /qa Pflicht.
-4. **BL-067 Berater-Help-Review** parallel via direkten Editor-Workflow (5 Markdown-Files unter `src/content/help/`); kein Code-Slice noetig.
-5. **Nach SLC-054:** Gesamt-V4.3-/qa, /final-check, /go-live, /deploy als REL-011.
-6. **Nach V4.3-Release:** /compliance-Sprint fuer Privacy/Datenschutz/Impressum-Page (separater Track per D-SPLIT-Decision). BL-068 (Lint-Sweep) als V4.4 oder eigener Maintenance-Sprint.
+1. **/frontend SLC-051** (Reader-UX-Bundle) — 6 Micro-Tasks: useScrollSpy + CopyPermalinkButton + ReaderLoadingSkeleton + Mobile-h1-Wrap + h1-Heading-Anchor-Hover. Browser-Smoke 1280×800 + 375×667 Pflicht (SC-V4.3-2).
+2. **Implementation V4.3 in Reihenfolge (per DEC-062):** SLC-053 ✓ → SLC-051 → SLC-052 (Worker+Templates) → SLC-055 (UX-Findings) → SLC-056 (ADR + Spike) → SLC-054 (Cross-Search). Nach jedem Slice: /qa Pflicht.
+3. **BL-067 Berater-Help-Review** parallel via direkten Editor-Workflow (5 Markdown-Files unter `src/content/help/`); kein Code-Slice noetig.
+4. **Nach SLC-054:** Gesamt-V4.3-/qa (Bundle-Live-Smoke aller Slices inkl. SLC-053-Auth-Flow), /final-check, /go-live, /deploy als REL-011.
+5. **Nach V4.3-Release:** /compliance-Sprint fuer Privacy/Datenschutz/Impressum-Page (separater Track per D-SPLIT-Decision). BL-068 (Lint-Sweep) als V4.4 oder eigener Maintenance-Sprint.
 5. **V4.2-Slices-Stand (RELEASED):** SLC-046..050 alle done+QA+deployed, Gesamt-V4.2 (RPT-127), Final-Check (RPT-128), Go-Live (RPT-129), Deploy (RPT-130).
 6. **V4.3-Backlog-Stand (Maintenance-Sammelrelease):** 9 offene Items (BL-051..059), Start nach V4.2-Release. Neu zu adden: ADR fuer State-Maschinen-UPDATE-Pattern (Service-Role vs RLS-Policy) basierend auf ISSUE-031, plus Investigation Next 16 Turbopack-Layout-Inlining-Anomalie.
 
