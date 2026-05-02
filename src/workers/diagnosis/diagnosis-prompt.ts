@@ -8,21 +8,21 @@ import type {
 
 const DEFAULT_DIAGNOSIS_SYSTEM_PROMPT = `Du bist ein erfahrener M&A-Berater und strategischer Analyst. Du erstellst aus verdichteten Knowledge Units eine strukturierte Diagnose pro Unterthema eines Analyse-Blocks.
 
-Deine Diagnose dient als Meeting-Vorbereitung fuer ein Gespraech zwischen strategaize-Berater und Auftraggeber (Geschaeftsfuehrer, Inhaber). Sie muss:
-- Evidenzbasiert sein: Jede Bewertung muss sich auf konkrete Knowledge Units stuetzen
-- Ehrlich sein: Keine beschoenigenden Formulierungen, klare Benennung von Schwaechen
-- Handlungsorientiert sein: Klare Empfehlungen und naechste Schritte
+Deine Diagnose dient als Meeting-Vorbereitung für ein Gespräch zwischen strategaize-Berater und Auftraggeber (Geschäftsführer, Inhaber). Sie muss:
+- Evidenzbasiert sein: Jede Bewertung muss sich auf konkrete Knowledge Units stützen
+- Ehrlich sein: Keine beschönigenden Formulierungen, klare Benennung von Schwächen
+- Handlungsorientiert sein: Klare Empfehlungen und nächste Schritte
 - Priorisierend sein: Ampel, Reifegrad und 90-Tage-Relevanz helfen bei der Fokussierung im Meeting
 
 Bewertungs-Skalen:
 - Ampel: green = solide, yellow = Handlungsbedarf, red = kritisch
-- Reifegrad: 0 = nicht vorhanden, 3-4 = rudimentaer, 5-6 = fragil, 7-8 = solide, 9-10 = vorbildlich
-- Risiko: 0 = kein Risiko, 10 = existenzielles Risiko fuer Exit/Uebernahme
+- Reifegrad: 0 = nicht vorhanden, 3-4 = rudimentär, 5-6 = fragil, 7-8 = solide, 9-10 = vorbildlich
+- Risiko: 0 = kein Risiko, 10 = existenzielles Risiko für Exit/Übernahme
 - Hebel: 0 = keine Wirkung, 10 = maximale Wirkung auf Exit-Readiness
-- Relevanz 90d: high = in 90 Tagen angehen, medium = 3-6 Monate, low = spaeter
+- Relevanz 90d: high = in 90 Tagen angehen, medium = 3-6 Monate, low = später
 - Aufwand: S = Stunden/Tage, M = Wochen, L = Monate
 
-Antworte IMMER mit einem JSON-Objekt im vorgegebenen Format. Antworte NUR mit dem JSON — kein Markdown, keine Erklaerungen.`;
+Antworte IMMER mit einem JSON-Objekt im vorgegebenen Format. Antworte NUR mit dem JSON — kein Markdown, keine Erklärungen.`;
 
 interface KnowledgeUnitSummary {
   title: string;
@@ -91,22 +91,22 @@ export function buildDiagnosisUserPrompt(
   // Quality context
   let qualityContext = "";
   if (qualityReport) {
-    qualityContext = `\n## Qualitaetsbewertung\n- Overall Score: ${qualityReport.overall_score ?? "n/a"}\n- Recommendation: ${qualityReport.recommendation ?? "n/a"}\n`;
+    qualityContext = `\n## Qualitätsbewertung\n- Overall Score: ${qualityReport.overall_score ?? "n/a"}\n- Recommendation: ${qualityReport.recommendation ?? "n/a"}\n`;
   }
 
-  return `# Diagnose-Generierung fuer Block ${blockKey}: ${blockTitle}
+  return `# Diagnose-Generierung für Block ${blockKey}: ${blockTitle}
 
 ## Knowledge Units (verdichtete Analyse-Ergebnisse)
 
 ${kuList}
 ${qualityContext}
-## Unterthemen fuer diesen Block
+## Unterthemen für diesen Block
 
 ${subtopicList}
 
 ## Aufgabe
 
-Erstelle eine strukturierte Diagnose fuer Block "${blockTitle}" (Key: ${blockKey}). Analysiere die Knowledge Units und fuelle fuer JEDES der ${subtopics.length} Unterthemen die folgenden Bewertungsfelder aus:
+Erstelle eine strukturierte Diagnose für Block "${blockTitle}" (Key: ${blockKey}). Analysiere die Knowledge Units und fülle für JEDES der ${subtopics.length} Unterthemen die folgenden Bewertungsfelder aus:
 
 1. ist_situation — Beschreibung des Ist-Zustands
 2. ampel — green / yellow / red
@@ -114,19 +114,19 @@ Erstelle eine strukturierte Diagnose fuer Block "${blockTitle}" (Key: ${blockKey
 4. risiko — 0-10
 5. hebel — 0-10
 6. relevanz_90d — high / medium / low
-7. empfehlung — Konkrete Massnahme
+7. empfehlung — Konkrete Maßnahme
 8. belege — Referenzen zu KUs
-9. owner — LEER LASSEN (wird im Meeting gefuellt)
+9. owner — LEER LASSEN (wird im Meeting gefüllt)
 10. aufwand — S / M / L
 11. naechster_schritt — Erster konkreter Schritt
-12. abhaengigkeiten — Abhaengigkeiten oder Blocker (leer wenn keine)
+12. abhaengigkeiten — Abhängigkeiten oder Blocker (leer wenn keine)
 13. zielbild — Definition of Done
 
-Beruecksichtige besonders:
+Berücksichtige besonders:
 - Ordne KUs den Unterthemen anhand der zugeordneten Fragen-Keys zu
 - Wenn ein Unterthema kaum KU-Material hat: markiere es ehrlich (niedrige Confidence, Ampel yellow/red)
-- Leere Felder bei "owner" sind gewollt (wird im Meeting befuellt)
-- Jede Bewertung muss durch mindestens eine KU gestuetzt sein ("belege"-Feld)
+- Leere Felder bei "owner" sind gewollt (wird im Meeting befüllt)
+- Jede Bewertung muss durch mindestens eine KU gestützt sein ("belege"-Feld)
 
 Antworte NUR mit dem JSON-Objekt. Verwende die exakten subtopic keys und field keys wie vorgegeben.`;
 }

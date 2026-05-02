@@ -12,7 +12,8 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "seed:admin": "node scripts/seed-admin.mjs",
-    "build:worker": "node scripts/build-worker.mjs"
+    "build:worker": "node scripts/build-worker.mjs",
+    "audit:umlauts": "node scripts/audit-umlauts.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-bedrock-runtime": "^3.1024.0",

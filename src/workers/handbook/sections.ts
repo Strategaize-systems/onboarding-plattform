@@ -6,6 +6,7 @@
 // Filterung der drei Quell-Tabellen erfolgt deterministisch aus section.sources[].filter.
 // Der Renderer erzeugt KEIN ZIP, er liefert nur Markdown-Strings je Section-File.
 
+import { slugifyHeading } from "@/lib/handbook/slugify";
 import type {
   CrossLink,
   DiagnosisRow,
@@ -31,6 +32,7 @@ interface RenderSectionInput {
   sops: SopRow[];
   crossLinksFromSection: CrossLink[];
   sectionFileMap: Record<string, string>;
+  sectionAnchorMap: Record<string, string>;
 }
 
 export interface RenderedSection {
@@ -46,7 +48,7 @@ export interface RenderedSection {
  * `{order:02d}_{section.key}.md`.
  */
 export function renderSection(input: RenderSectionInput): RenderedSection {
-  const { section, knowledgeUnits, diagnoses, sops, crossLinksFromSection, sectionFileMap } = input;
+  const { section, knowledgeUnits, diagnoses, sops, crossLinksFromSection, sectionFileMap, sectionAnchorMap } = input;
 
   const filteredKus = filterKnowledgeUnits(section.sources, knowledgeUnits);
   const filteredDiags = filterDiagnoses(section.sources, diagnoses);
@@ -57,6 +59,17 @@ export function renderSection(input: RenderSectionInput): RenderedSection {
   // 1. Section-Header
   lines.push(`# ${section.title}`);
   lines.push("");
+
+  // SLC-052 MT-2 — In-App-Anchor fuer In-Reader-Navigation. Reader strippt den
+  // h1 (HandbookReader.stripLeadingH1), daher kann rehype-slug den Section-Title
+  // nicht direkt zur Anchor-ID machen. Inline-HTML-Anchor (rehype-raw rendert es)
+  // ueberlebt das Strippen, weil er getrennte Markdown-Node ist. Pattern wie bei
+  // subtopic/block-Anchors weiter unten.
+  const sectionSlug = sectionAnchorMap[section.key];
+  if (sectionSlug) {
+    lines.push(`<a id="section-${sectionSlug}"></a>`);
+    lines.push("");
+  }
 
   // 2. Intro-Template
   if (section.render.intro_template && section.render.intro_template.trim().length > 0) {
@@ -385,6 +398,21 @@ export function buildSectionFileMap(sections: HandbookSection[]): Record<string,
   const out: Record<string, string> = {};
   for (const s of [...sections].sort((a, b) => a.order - b.order)) {
     out[s.key] = `${pad2(s.order)}_${s.key}.md`;
+  }
+  return out;
+}
+
+/**
+ * SLC-052 MT-2 — Pro Section ein Slug aus dem section.title (nicht section.key),
+ * damit die Anchor-ID mit rehype-slug-Output uebereinstimmt (gleicher Algorithmus
+ * via github-slugger, siehe lib/handbook/slugify.ts). Der Worker injiziert pro
+ * Section ein <a id="section-{slug}"></a> nach dem h1, der TOC im INDEX nutzt
+ * `[Title](#section-{slug})`.
+ */
+export function buildSectionAnchorMap(sections: HandbookSection[]): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const s of sections) {
+    out[s.key] = slugifyHeading(s.title);
   }
   return out;
 }

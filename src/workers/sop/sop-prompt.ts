@@ -32,7 +32,7 @@ Antworte IMMER mit einem JSON-Objekt in folgendem Format:
   "fallbacks": ["[Fallback-Option 1]", "..."]
 }
 
-Antworte NUR mit dem JSON — kein Markdown, keine Erklaerungen.`;
+Antworte NUR mit dem JSON — kein Markdown, keine Erklärungen.`;
 
 interface KnowledgeUnitSummary {
   title: string;
@@ -72,10 +72,10 @@ export function buildSopUserPrompt(params: BuildSopPromptParams): string {
 
   let qualityContext = "";
   if (qualityReport) {
-    qualityContext = `\n## Qualitaetsbewertung\n- Overall Score: ${qualityReport.overall_score ?? "n/a"}\n- Recommendation: ${qualityReport.recommendation ?? "n/a"}\n`;
+    qualityContext = `\n## Qualitätsbewertung\n- Overall Score: ${qualityReport.overall_score ?? "n/a"}\n- Recommendation: ${qualityReport.recommendation ?? "n/a"}\n`;
   }
 
-  return `# SOP-Generierung fuer Block ${blockKey}: ${blockTitle}
+  return `# SOP-Generierung für Block ${blockKey}: ${blockTitle}
 
 ## Knowledge Units (verdichtete Analyse-Ergebnisse)
 
@@ -83,13 +83,13 @@ ${kuList}
 ${qualityContext}
 ## Aufgabe
 
-Erstelle einen konkreten, umsetzbaren SOP fuer Block "${blockTitle}" basierend auf den obigen Knowledge Units. Der SOP soll die identifizierten Findings, Risiken und Handlungsempfehlungen in einen strukturierten Handlungsplan uebersetzen.
+Erstelle einen konkreten, umsetzbaren SOP für Block "${blockTitle}" basierend auf den obigen Knowledge Units. Der SOP soll die identifizierten Findings, Risiken und Handlungsempfehlungen in einen strukturierten Handlungsplan übersetzen.
 
-Beruecksichtige besonders:
+Berücksichtige besonders:
 - Findings mit hohem Risiko oder niedriger Maturity
 - Konkrete Empfehlungen aus den Knowledge Units
-- Abhaengigkeiten zwischen den Schritten
-- Realistische Zeitrahmen fuer ein mittelstaendisches Unternehmen
+- Abhängigkeiten zwischen den Schritten
+- Realistische Zeitrahmen für ein mittelständisches Unternehmen
 
 Antworte NUR mit dem JSON-Objekt.`;
 }

@@ -52,8 +52,31 @@ describe("renderHandbook", () => {
     const idx = result.files[HANDBOOK_INDEX_FILENAME];
     expect(idx).toContain("# Unternehmerhandbuch — Beispiel GmbH");
     expect(idx).toContain("_Generiert am 2026-04-27 08:00 UTC_");
-    expect(idx).toContain("[Geschaeftsmodell](01_geschaeftsmodell.md)");
-    expect(idx).toContain("[Operatives Tagesgeschaeft](02_operatives.md)");
+    // SLC-052 MT-2 — TOC-Links sind In-App-Anchors `#section-{slug}`.
+    expect(idx).toContain("[Geschaeftsmodell](#section-geschaeftsmodell)");
+    expect(idx).toContain("[Operatives Tagesgeschaeft](#section-operatives-tagesgeschaeft)");
+  });
+
+  it("SLC-052 MT-2 — Section-Body enthaelt Inline-Anchor nach dem h1", () => {
+    const result = renderHandbook(baseInput());
+    const sectionA = result.files["01_geschaeftsmodell.md"];
+    const sectionB = result.files["02_operatives.md"];
+    expect(sectionA).toContain("# Geschaeftsmodell");
+    expect(sectionA).toContain('<a id="section-geschaeftsmodell"></a>');
+    expect(sectionB).toContain("# Operatives Tagesgeschaeft");
+    expect(sectionB).toContain('<a id="section-operatives-tagesgeschaeft"></a>');
+  });
+
+  it("SLC-052 MT-2 — Section-Anchor steht direkt nach dem h1 (vor jeder anderen Inhalt-Zeile)", () => {
+    const result = renderHandbook(baseInput());
+    const sectionA = result.files["01_geschaeftsmodell.md"];
+    const lines = sectionA.split("\n");
+    const h1Index = lines.findIndex((l) => l.startsWith("# "));
+    const anchorIndex = lines.findIndex((l) => l.includes('<a id="section-'));
+    expect(h1Index).toBeGreaterThanOrEqual(0);
+    expect(anchorIndex).toBeGreaterThan(h1Index);
+    // Zwischen h1 und Anchor darf nur eine leere Zeile liegen.
+    expect(anchorIndex - h1Index).toBe(2);
   });
 
   it("filtert KUs nach block_keys + exclude_source (GF-Sicht ignoriert employee_questionnaire)", () => {

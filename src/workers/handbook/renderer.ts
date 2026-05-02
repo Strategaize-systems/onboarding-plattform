@@ -5,7 +5,7 @@
 // Output: Record<filename, markdownString> + Counts.
 
 import { buildIndexMarkdown } from "./index-builder";
-import { buildSectionFileMap, renderSection } from "./sections";
+import { buildSectionAnchorMap, buildSectionFileMap, renderSection } from "./sections";
 import type {
   HandbookSection,
   RendererInput,
@@ -20,6 +20,7 @@ export function renderHandbook(input: RendererInput): RendererOutput {
   );
 
   const sectionFileMap = buildSectionFileMap(sortedSections);
+  const sectionAnchorMap = buildSectionAnchorMap(sortedSections);
   const crossLinks = input.schema.cross_links ?? [];
 
   const files: Record<string, string> = {};
@@ -38,6 +39,7 @@ export function renderHandbook(input: RendererInput): RendererOutput {
       sops: input.sops,
       crossLinksFromSection: linksFromSection,
       sectionFileMap,
+      sectionAnchorMap,
     });
     files[rendered.filename] = rendered.markdown;
     kuCount += rendered.knowledgeUnitCount;
@@ -48,6 +50,7 @@ export function renderHandbook(input: RendererInput): RendererOutput {
   files[INDEX_FILENAME] = buildIndexMarkdown({
     sections: sortedSections,
     sectionFileMap,
+    sectionAnchorMap,
     tenantName: input.tenantName,
     generatedAt: input.generatedAt,
   });

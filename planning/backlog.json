@@ -575,7 +575,7 @@
       "title": "Worker-Output: TOC-Markdown-Links als In-App-Anchors statt .md-Datei-Pfade",
       "type": "improvement",
       "priority": "medium",
-      "status": "in_progress",
+      "status": "done",
       "version": "V4.3",
       "description": "Handbuch-Worker schreibt im INDEX.md die TOC-Links als [Title](01_section.md). Im Reader fuehrt das zu 404 weil die .md-URL relativ aufgeloest wird. SLC-045 iter-2 hat das im Render-Path via components.a-Override gefixt (commit 6188a23) — funktioniert, aber die ZIP-Download-Variante leidet darunter nicht. Sauberer: Worker schreibt direkt In-App-Anchor-Links und der ZIP-Download-Pfad nutzt Post-Processing.",
       "createdAt": "2026-04-29"
@@ -585,7 +585,7 @@
       "title": "Umlaut-Konsistenz Templates + Worker + UI",
       "type": "improvement",
       "priority": "medium",
-      "status": "in_progress",
+      "status": "done",
       "version": "V4.3",
       "description": "Templates-Schema (Section-Titel) und Worker-Output verwenden ae/oe/ue statt richtigen Umlauten. Markdown kann Umlaute problemlos. Stoert die User-Sicht im Reader. Fix: Templates konsistent umstellen + Worker-Prompts angleichen + UI-Strings konsistent. Optional Re-Generation der Demo-Snapshots damit alte ZIPs auch korrekt sind. User-Frage im V4.1 Browser-Smoke 2026-04-29.",
       "createdAt": "2026-04-29"
@@ -678,6 +678,16 @@
       "status": "open",
       "version": null,
       "description": "Aus SLC-053 (V4.3 ESLint-9 flat-config-Migration, RPT-134) sichtbar gemacht: 7 Pre-existing react-hooks-Errors + 6 Warnings im V2-V4.2-Code, die seit Wochen unentdeckt waren weil next lint in Next 16 broken war. Errors: (1) BridgeProposalEditDialog.tsx:66 setState in useEffect (V4 Bridge), (2) EvidenceFileList.tsx:186 Date.now() in render (V2 Evidence — kann FALSE-POSITIVE sein, neue React-19/react-hooks-Plugin-Regel sehr strikt), (3) FileUploadZone.tsx:57+64 uploadFile accessed-before-declared (V2 Evidence — REAL hoisting/TDZ-Risk), (4) jitsi-meeting.tsx:103 setIframeError() in catch-Block of useEffect (V3 Dialogue), (5+6) SearchResultsList.tsx:30 unescaped-entities (V4.1 Reader, Style), (7) shadcn sidebar.tsx:665 Math.random in useMemo (Library, FALSE-POSITIVE). Warnings: 3x unused-eslint-disable-directives in document-parser.ts + claim-loop.ts, 1x missing dep useCallback in FileUploadZone, 1x alt-text in EvidenceFileList, 2x anonymous-default-export in eslint.config.mjs/email-stub.mjs (low-prio Style). V4.3 Slice-Disziplin: Lint-Sweep ist Out-of-Scope. V4.4 oder eigener Maintenance-Sprint. Empfohlene Reihenfolge: zuerst pruefen welche Errors True-Positive vs False-Positive sind (insbesondere Math.random/Date.now-Pattern bei react-hooks/purity-Plugin), dann True-Positive fixen, False-Positive akzeptieren via Inline-Disable mit Begruendung. Aufwand-Schaetzung: ~2-3h pro Datei mit Code-Touch + Tests.",
+      "createdAt": "2026-05-02"
+    },
+    {
+      "id": "BL-069",
+      "title": "SQL-Migration 046_seed_demo_template.sql Daten-Backfill (Umlaute in Live-DB)",
+      "type": "improvement",
+      "priority": "low",
+      "status": "open",
+      "version": "V4.4",
+      "description": "audit-umlauts.mjs aus SLC-052 zeigt 328 Vorkommnisse in sql/migrations/046_seed_demo_template.sql (Demo-Template-Seed). Datei-Edit hat keine Wirkung auf bereits in der Live-DB stehenden Daten — braucht separate UPDATE-Migration die templates.blocks/sop_prompt JSONB-Felder umlaut-korrigiert. Out-of-scope SLC-052 (Hygiene-Code-Slice, kein Daten-Slice).",
       "createdAt": "2026-05-02"
     }
   ]
