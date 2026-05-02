@@ -186,3 +186,42 @@ Begruendung:
 - Ein DEPLOY-Run statt zwei reduziert Drift-Risiko.
 - Schema-Foundation komplett vor Slice-Implementation — SLC-048 kann direkt mit Code starten ohne weiteren DB-Schritt.
 - RLS-Policies regeln Sichtbarkeit von Anfang an korrekt — keine Halb-Schema-Phase.
+
+## V4.3 Slices (Maintenance-Sammelrelease)
+
+| ID | Slice | Feature | Status | Priority | Created |
+|----|-------|---------|--------|----------|---------|
+| SLC-051 | [Reader-UX-Bundle (Scroll-Spy + Permalink + Skeleton + Mobile-h1 + h1-Anchor-Hover)](SLC-051-reader-ux-bundle.md) | V4.3 | planned | Medium | 2026-05-01 |
+| SLC-052 | [Worker+Templates-Hygiene (TOC-Anchor-Links + Umlaut-Konsistenz)](SLC-052-worker-templates-hygiene.md) | V4.3 | planned | Medium | 2026-05-01 |
+| SLC-053 | [Tooling-Migrations (middleware->proxy + ESLint-9 flat-config)](SLC-053-tooling-migrations.md) | V4.3 | planned | High | 2026-05-01 |
+| SLC-054 | [Cross-Snapshot-Suche client-side + Search-History localStorage](SLC-054-cross-snapshot-search.md) | V4.3 | planned | Low | 2026-05-01 |
+| SLC-055 | [UX-Findings-Bundle (Tooltip-Target-Fix + Help-Konsolidierung)](SLC-055-ux-findings-bundle.md) | V4.3 | planned | Medium | 2026-05-01 |
+| SLC-056 | [ADR State-Maschinen-Pattern + Spike Turbopack-Layout-Inlining](SLC-056-adr-and-spike.md) | V4.3 | planned | Medium | 2026-05-01 |
+
+### V4.3 Execution Order (per DEC-062)
+
+Reihenfolge: **SLC-053 → SLC-051 → SLC-052 → SLC-055 → SLC-056 → SLC-054**
+
+- **SLC-053** (Tooling, ERSTER Slice): Migration-Risiko zuerst. Nachfolgende Slices laufen auf stabilem Tooling. Pflicht-Gates: Pre/Post Lint-Output-Snapshots dokumentieren, Auth-Middleware/Proxy-Tests 100% PASS, `npm run build` ohne Deprecation-Warning.
+- **SLC-051** (Frontend Reader-UX): Reader-UX-Bundle (Scroll-Spy + Permalink + Skeleton + Mobile-h1 + h1-Anchor-Hover). Browser-Smoke 1280×800 + 375×667 Pflicht (SC-V4.3-2).
+- **SLC-052** (Backend+Templates): Worker-Output-Hygiene + Umlaut-Konsistenz. `slugifyHeading`-Util-Module geteilt mit Reader (Q-V4.3-I). User-Pflicht: Demo-Snapshot manuell re-generaten zur Verifikation.
+- **SLC-055** (Frontend UX-Findings): Help-Konsolidierung Variante 3 (Learning-Center bekommt Tab "Diese Seite") + Tooltip-Target-Fix Variante 2 (Card-Header als Wrapper-Trigger). Browser-Smoke beide Findings auf Desktop + Mobile (SC-V4.3-7 + SC-V4.3-2).
+- **SLC-056** (Architektur+Spike): ADR-Doku-Erweiterung + Spike Investigation Turbopack-Layout-Inlining in eigenem Branch (DEC-066, 4h-Box). Spike-Output Pflicht: GitHub-Issue ODER Workaround-ADR.
+- **SLC-054** (Frontend Cross-Snapshot-Search): Letzter V4.3-Code-Slice. Reader-Suche client-side ueber alle Snapshots + localStorage-History. Performance-Warning bei vielen Snapshots.
+
+**Parallelisierbar:**
+- SLC-056 Spike kann parallel zu SLC-054 laufen (kein Code-Overlap).
+- BL-067 (Berater-Help-Review, Content-Only, kein Code-Slice) parallel via direkten Editor-Workflow.
+
+**Pflicht-Gates fuer V4.3:**
+- Keine Schema-Migration (SC-V4.3-5). Wenn ein Slice doch eine wuerde, sofort an User eskalieren.
+- ESLint-Output-Snapshot vor + nach SLC-053 (R-V4.3-3-Mitigation).
+- Investigation BL-066 timeboxed 4h (R-V4.3-5).
+- Browser-Smoke-Test nach SLC-051 + SLC-055 (Reader-UX + Help-Konsolidierung) auf Desktop + Mobile.
+- 4-Rollen-RLS-Matrix bleibt 100% PASS in /qa pro Slice.
+- V4.2-Regression-Smoke pro Slice (SC-V4.3-6).
+- Gesamt-V4.3-/qa nach SLC-054 (SC-V4.3-1..10 vollstaendig verifiziert).
+
+### V4.3 BL-067 Berater-Help-Review (Content-Only)
+
+BL-067 ist KEIN Code-Slice — direkter Editor-Workflow vom User selbst. 5 Help-Markdown-Files unter `src/content/help/*.md` (dashboard.md, capture.md, bridge.md, reviews.md, handbook.md). Aktualisierte Files werden als eigener Commit hinterlegt. Kann parallel zu jedem V4.3-Slice laufen.
