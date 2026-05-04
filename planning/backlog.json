@@ -555,9 +555,9 @@
       "title": "Reader Cross-Snapshot-Suche und Suche-Historie",
       "type": "improvement",
       "priority": "low",
-      "status": "in_progress",
+      "status": "done",
       "version": "V4.3",
-      "description": "SLC-045 hat client-side Single-Snapshot-Suche umgesetzt. Cross-Snapshot-Suche (alle Snapshots eines Tenants) braucht serverseitige Pre-Indexierung oder einen Search-Index. Search-History (letzte 5 Queries pro User) ist optional. Beides war bewusst out-of-scope (Slice-Spec).",
+      "description": "SLC-045 hat client-side Single-Snapshot-Suche umgesetzt. Cross-Snapshot-Suche (alle Snapshots eines Tenants) braucht serverseitige Pre-Indexierung oder einen Search-Index. Search-History (letzte 5 Queries pro User) ist optional. Beides war bewusst out-of-scope (Slice-Spec). Erledigt via SLC-054 (DEC-063 localStorage-only, kein Backend-Index).",
       "createdAt": "2026-04-29"
     },
     {

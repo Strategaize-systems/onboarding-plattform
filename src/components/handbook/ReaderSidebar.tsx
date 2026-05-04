@@ -17,17 +17,24 @@ import {
   AlertCircle,
 } from "lucide-react";
 
+import { ReaderSearchBox } from "./ReaderSearchBox";
 import type { ReaderSnapshotMeta, SnapshotStatus } from "./types";
 import type { SectionFile } from "@/lib/handbook/load-snapshot-content";
+import type { CrossSearchSnapshot } from "@/lib/handbook/cross-snapshot-search";
 
 interface ReaderSidebarProps {
   sections: SectionFile[];
   snapshots: ReaderSnapshotMeta[];
+  /** SLC-054 MT-4: Body-Inhalte aller "ready" Tenant-Snapshots fuer Cross-Search-Box. */
+  crossSearchSnapshots: CrossSearchSnapshot[];
   activeSnapshotId: string;
   onSectionSelect: (sectionKey: string) => void;
   /** SLC-051 MT-2 — DOM-ID der aktuell beim Lesen sichtbaren Section. */
   activeSectionDomId?: string | null;
-  /** SLC-051 MT-2 — Mapper sectionKey → erwartete DOM-ID (= sectionDomId-Helper). */
+  /**
+   * SLC-051 MT-2 / SLC-054 MT-3 — Mapper sectionKey → erwartete DOM-ID
+   * (= sectionDomId-Helper). Pflicht fuer den Cross-Search-Click-Navigation-Pfad.
+   */
   sectionDomIdFn?: (sectionKey: string) => string;
 }
 
@@ -44,6 +51,7 @@ function StatusIcon({ status }: { status: SnapshotStatus }) {
 export function ReaderSidebar({
   sections,
   snapshots,
+  crossSearchSnapshots,
   activeSnapshotId,
   onSectionSelect,
   activeSectionDomId,
@@ -69,6 +77,15 @@ export function ReaderSidebar({
           ← Dashboard
         </Link>
       </div>
+
+      {sectionDomIdFn && (
+        <div className="flex-shrink-0 border-b border-slate-200 px-3 py-3">
+          <ReaderSearchBox
+            snapshots={crossSearchSnapshots}
+            sectionDomIdFn={sectionDomIdFn}
+          />
+        </div>
+      )}
 
       <div className="flex-1 overflow-y-auto px-3 py-4">
         <div className="mb-6">

@@ -44,11 +44,14 @@ import {
   extractSnippetsFromMarkdown,
   type SectionSearchResult,
 } from "@/lib/handbook/search";
+import type { CrossSearchSnapshot } from "@/lib/handbook/cross-snapshot-search";
 
 interface ReaderShellProps {
   snapshotId: string;
   snapshotMeta: ReaderSnapshotHeaderInfo;
   snapshotList: ReaderSnapshotMeta[];
+  /** SLC-054 MT-4: Body-Inhalte aller "ready" Tenant-Snapshots fuer Cross-Search. */
+  crossSearchSnapshots: CrossSearchSnapshot[];
   sections: SectionFile[];
   indexMarkdown: string | null;
   isStale: boolean;
@@ -81,6 +84,7 @@ export function ReaderShell({
   snapshotId,
   snapshotMeta,
   snapshotList,
+  crossSearchSnapshots,
   sections,
   indexMarkdown,
   isStale,
@@ -217,6 +221,7 @@ export function ReaderShell({
         <ReaderSidebar
           sections={sections}
           snapshots={snapshotList}
+          crossSearchSnapshots={crossSearchSnapshots}
           activeSnapshotId={snapshotId}
           onSectionSelect={handleSectionSelect}
           activeSectionDomId={activeSectionDomId}

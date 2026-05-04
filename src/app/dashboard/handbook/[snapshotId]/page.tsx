@@ -20,6 +20,8 @@ import {
   loadSnapshotContent,
   type SectionFile,
 } from "@/lib/handbook/load-snapshot-content";
+import { loadCrossSearchSnapshots } from "@/lib/handbook/load-cross-search-snapshots";
+import type { CrossSearchSnapshot } from "@/lib/handbook/cross-snapshot-search";
 import { ReaderShell } from "@/components/handbook/ReaderShell";
 import type { ReaderSnapshotMeta } from "@/components/handbook/types";
 import { HelpTrigger } from "@/components/help/HelpTrigger";
@@ -83,10 +85,12 @@ export default async function HandbookReaderPage({ params }: PageProps) {
     : profile.tenant_id;
 
   // Snapshot-Liste fuer ReaderSidebar (alle Snapshots desselben Tenants).
+  // SLC-054: storage_path zusaetzlich, damit der Cross-Search-Loader die ZIPs
+  // direkt nachladen kann — kein zweiter DB-Roundtrip noetig.
   const { data: snapshotListRaw } = await adminClient
     .from("handbook_snapshot")
     .select(
-      "id, status, storage_size_bytes, section_count, knowledge_unit_count, diagnosis_count, sop_count, created_at, capture_session_id",
+      "id, status, storage_size_bytes, storage_path, section_count, knowledge_unit_count, diagnosis_count, sop_count, created_at, capture_session_id",
     )
     .eq("tenant_id", tenantIdForList)
     .order("created_at", { ascending: false });
@@ -108,6 +112,29 @@ export default async function HandbookReaderPage({ params }: PageProps) {
       isActive: row.id === snapshotRow.id,
     }),
   );
+
+  // SLC-054 MT-4: Body-Inhalte aller "ready"-Snapshots fuer client-side
+  // Cross-Search. Sind nicht alle Snapshots "ready", werden nur die Ready-en
+  // gesucht — generating/failed werden vom Loader uebersprungen.
+  let crossSearchSnapshots: CrossSearchSnapshot[] = [];
+  try {
+    crossSearchSnapshots = await loadCrossSearchSnapshots(
+      (snapshotListRaw ?? []).map((row) => ({
+        id: row.id as string,
+        status: row.status as ReaderSnapshotMeta["status"],
+        storage_path: (row.storage_path as string | null) ?? null,
+        created_at: row.created_at as string,
+        formattedCreatedAt: dateFormatter.format(
+          new Date(row.created_at as string),
+        ),
+      })),
+    );
+  } catch (err) {
+    console.warn(
+      "[handbook/page] Cross-Search-Snapshots konnten nicht geladen werden:",
+      err,
+    );
+  }
 
   // Tenant-Name fuer Header (best-effort).
   const { data: tenantRow } = await adminClient
@@ -154,6 +181,7 @@ export default async function HandbookReaderPage({ params }: PageProps) {
           metadata: parseMetadata(snapshotRow.metadata),
         }}
         snapshotList={snapshotList}
+        crossSearchSnapshots={crossSearchSnapshots}
         sections={[]}
         indexMarkdown={null}
         isStale={false}
@@ -203,6 +231,7 @@ export default async function HandbookReaderPage({ params }: PageProps) {
         metadata: parseMetadata(snapshotRow.metadata),
       }}
       snapshotList={snapshotList}
+      crossSearchSnapshots={crossSearchSnapshots}
       sections={sections}
       indexMarkdown={indexMarkdown}
       isStale={isStale}
