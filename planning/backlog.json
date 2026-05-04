@@ -645,7 +645,7 @@
       "title": "ADR fuer State-Maschinen-UPDATE-Pattern (Service-Role vs RLS-Policy)",
       "type": "improvement",
       "priority": "medium",
-      "status": "in_progress",
+      "status": "done",
       "version": "V4.3",
       "description": "Aus ISSUE-031 (V4.2 SLC-046 Doctor): Wizard-State-UPDATE ueber tenants-Tabelle wurde silent durch RLS geblockt, weil tenants nur SELECT-Policy hatte (kein UPDATE). Fix war createAdminClient() (Service-Role) fuer den UPDATE-Pfad. Pattern muss als ADR (DEC) dokumentiert werden, damit kuenftige State-Maschinen-Updates konsistent gehandhabt werden — ohne dass jeder Implementer die Falle neu entdeckt. Frage: createAdminClient() fuer alle State-UPDATEs ODER RLS-UPDATE-Policies pro Spalte? Der ADR muss beide Optionen evaluieren + finale Empfehlung mit Sicherheits-Tradeoffs liefern. Affected: alle zukuenftigen Tenant-State-, User-State- und Domain-State-Maschinen.",
       "createdAt": "2026-05-01"
@@ -655,7 +655,7 @@
       "title": "Investigation: Next.js 16 Turbopack Layout-Inlining-Anomalie (Spike)",
       "type": "improvement",
       "priority": "low",
-      "status": "in_progress",
+      "status": "done",
       "version": "V4.3",
       "description": "Aus V4.2 SLC-047 Doctor: dashboard/layout.tsx wurde silent NICHT in den Production-Build eingebaut (Turbopack-Inlining-Verhalten). Workaround in commit 6f774ec (Wizard-Trigger ins page.tsx verschoben). Root-Cause unklar. Spike (timeboxed 4h): minimal-reproducer in eigenem Branch erstellen, Turbopack-Verhalten beobachten, Issue beim Next.js-Repo dokumentieren falls genuine Bug. Output: GitHub-Issue-URL ODER Workaround-Confirmation als ADR. Wenn Bug bestaetigt: Fix abwarten in spaeterer Next-Version, kein eigener Code-Fix in V4.3.",
       "createdAt": "2026-05-01"

@@ -1,5 +1,14 @@
 # Known Issues
 
+### ISSUE-033 — Vermutete Turbopack-Layout-Inlining-Anomalie (V4.2 SLC-047, im Minimal-Case nicht reproduzierbar)
+- Status: wontfix
+- Severity: Low
+- Area: V4.3 / SLC-056 / Next.js 16 Turbopack
+- Summary: V4.2 SLC-047 (Wizard-Modal) zeigte ein Symptom, dass ein im `dashboard/layout.tsx` platzierter Wizard-Auto-Trigger sich nicht erwartet verhielt. Vermutung: Turbopack inlinet Layout-Code in Page-Bundle und Layout-State wird beim Page-Wechsel resettet. SLC-056-Spike (Branch `spike/v43-turbopack-layout-inlining`) hat einen Minimal-Reproducer gebaut (`src/app/spike-bl066/{layout,page}.tsx` mit useState-Counter), Build mit Next 16.2.4 + Turbopack zeigt: Layout und Page bekommen JEWEILS EIGENE Server-Chunks, kein Inline-Leak. Anomalie im Minimal-Case nicht reproduzierbar. Spike-Timebox: ~3:17 min (deutlich unter 4h).
+- Impact: Gering. V4.2 SLC-047 hat den Workaround in Production etabliert (Wizard-Trigger im page.tsx statt layout.tsx, commit `6f774ec`). System funktioniert stabil.
+- Workaround: Wizard-/Modal-/Auto-Trigger-Komponenten in V4.2 und neuer werden defensiv im page.tsx (Server-Component-Boundary klar) angesiedelt, nicht im layout.tsx. Pattern bleibt verbindlich bis ein neues Symptom auftritt mit klar reproduzierbaren Trigger-Bedingungen.
+- Next Action: Keine. Falls Symptom in V5+ erneut auftritt, gezielter Spike mit den spezifischen Bedingungen aus dem neuen Bug-Report. Mögliche Such-Bereiche: Modal-Mount-Order, RSC-Boundaries, client-state-collocation in komplexen Layouts.
+
 ### ISSUE-001 — secrets-onboarding.txt liegt untracked im Repo-Root
 - Status: resolved
 - Resolution Date: 2026-04-14
