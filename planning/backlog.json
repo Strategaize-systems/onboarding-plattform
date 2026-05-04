@@ -615,7 +615,7 @@
       "title": "Tooltip 1/5 Inactive-Badge Hover-Target zu klein (16x16) — UX-Improvement",
       "type": "improvement",
       "priority": "low",
-      "status": "in_progress",
+      "status": "done",
       "version": "V4.3",
       "description": "Der Tooltip-Trigger-Button auf der InactiveEmployeesCard (`?`-Symbol) ist mit `h-4 w-4` nur 16x16px gross. Tooltip wiring + content sind technisch korrekt (live verifiziert via Playwright-Hover, Content 'Mitarbeiter mit accepted Invitation aber ohne Block-Submit' rendert), aber End-User trifft den Bereich praktisch kaum — Tooltip erscheint im manuellen Hover oft nicht. Aufgedeckt im V4.2 Gesamt-/qa Browser-Smoke 2026-05-01 (User-Feedback). Fix-Optionen: (1) Target auf h-6 w-6 (24x24) vergroessern, (2) ganzen Card-Header-Text als Tooltip-Trigger nutzen, (3) Touch-Target 44x44 mit transparentem Hit-Bereich um den `?`. Severity: Low (Funktion da, UX-Hindernis).",
       "createdAt": "2026-05-01"
@@ -625,7 +625,7 @@
       "title": "Help-Mechanismen konsolidieren — SLC-050 HelpSheet + Learning Center vereinen",
       "type": "improvement",
       "priority": "medium",
-      "status": "in_progress",
+      "status": "done",
       "version": "V4.3",
       "description": "Aktuell zwei parallele Help-Bereiche: (a) SLC-050 HelpSheet im Banner top-right (`?`-Icon, Pflichtinhalt Markdown pro Page) und (b) Learning Center floating bottom-right (`?`-Icon, Video-Tutorials + Bedienungsanleitung, existing feature). Beide tragen `?`-Icon-Affordance, was End-User verwirrt. Aufgedeckt im V4.2 Gesamt-/qa 2026-05-01 (User-Feedback: 'Brauchen wir zwei? Das ist verwirrend, koennen wir die nicht zusammenpacken?'). Konkrete Konsolidierungs-Variante wird in /architecture V4.3 entschieden. Optionen-Skizze: (1) SLC-050-Inhalte als 3. Tab im Learning Center, (2) Learning Center entfernen + alle Inhalte unter SLC-050 vereinen, (3) Learning Center um page-spezifischen Tab 'Diese Seite' (=SLC-050-Content) ergaenzen. Severity: Medium (UX-Verwirrung, kein Funktionsblocker).",
       "createdAt": "2026-05-01"

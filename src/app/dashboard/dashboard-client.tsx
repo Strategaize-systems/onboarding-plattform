@@ -12,7 +12,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { FileText, Menu, X, Clock, PlayCircle, CheckCircle2, MessageSquare, ClipboardList, FileUp, Mic } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
 import { HelpButton } from "@/components/help-button";
-import { LearningCenterPanel } from "@/components/learning-center/learning-center-panel";
 import { DashboardSidebar } from "@/components/dashboard-sidebar";
 
 interface Profile {
@@ -56,7 +55,6 @@ export function DashboardClient({
   const [sessions] = useState<CaptureSession[]>(initialSessions);
   const loading = false;
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [learningCenterOpen, setLearningCenterOpen] = useState(false);
   const [gapCounts] = useState<Record<string, number>>(initialGapCounts);
 
   const sidebar = <DashboardSidebar profile={profile} activePage="capture" />;
@@ -209,11 +207,7 @@ export function DashboardClient({
       </div>
 
       {/* Learning Center */}
-      <HelpButton onClick={() => setLearningCenterOpen(true)} />
-      <LearningCenterPanel
-        open={learningCenterOpen}
-        onOpenChange={setLearningCenterOpen}
-      />
+      <HelpButton />
     </div>
   );
 }

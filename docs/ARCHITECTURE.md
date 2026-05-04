@@ -3536,6 +3536,8 @@ Pflicht-Test pro neuer State-Maschine:
 - 4-Rollen-RLS-Test fuer SELECT-Sichtbarkeit (existierende V4-Test-Matrix-Pflicht).
 - Server-Action-Test fuer UPDATE-Pruefung (Mock unauthorized → erwarte Throw, Mock authorized → erwarte Erfolg).
 
+**Detail-Pattern + Code-Beispiele**: siehe **Anhang B — State-Machine-UPDATE-Pattern** (am Dokument-Ende). Der Anhang ist ab V4.3 verbindliche Referenz fuer alle neuen Slices, die eine State-Spalte (`status`, `phase`, `wizard_status`, etc.) einfuehren oder aendern.
+
 #### G. Investigation BL-066 Turbopack (SLC-056, DEC-066)
 Spike in eigenem Branch `spike/v43-turbopack-layout-inlining`, max 4h-Box. Output entweder GitHub-Issue-URL beim `vercel/next.js`-Repo (Genuine-Bug) oder Workaround-ADR + KNOWN_ISSUES-Eintrag (erwartetes Verhalten). Branch wird NICHT in main gemergt; Stress-Test-Artefakte bleiben isoliert.
 
@@ -3630,3 +3632,180 @@ Pflicht-Gates fuer V4.3-Implementation:
 ### Naechster Schritt (V4.3)
 
 `/slice-planning V4.3` — Micro-Task-Schnitt der 6 Slices SLC-051..056 + 1 Content-Item BL-067, mit Pflicht-Gates pro Slice und expliziter Implementation-Reihenfolge.
+
+## Anhang B — State-Machine-UPDATE-Pattern (verbindlich ab V4.3)
+
+**Eingefuehrt mit:** SLC-056 / DEC-065
+**Geltungsbereich:** Alle Slices ab V4.3, die eine State-Spalte (`status`, `phase`, `wizard_status`, `bridge_run.status`, `block_review.status`, etc.) einfuehren oder aendern. Bestehende V4/V4.1/V4.2-State-Maschinen sind regelkonform und brauchen keinen Refactor (per DEC-065).
+
+### Default-Pattern: Service-Role-UPDATE in Server-Action
+
+**Wann:** Default fuer alle State-Transitionen, deren Pruefung mehr Application-Context braucht als die DB allein hat (Rolle, Tenant, Owner-Beziehung, erlaubte Transition).
+
+**Warum:** Pruefung in TS ist bullet-proof testbar, kennt den vollen User-Context, und vermeidet Duplikation der State-Transition-Tabelle in plpgsql.
+
+**Code-Beispiel-Snippet (illustrativ, real-Implementation referenziert die echten requireXyz-Helper):**
+
+```typescript
+// src/app/admin/bridge/actions.ts
+"use server";
+
+import { createSupabaseServiceClient } from "@/lib/supabase/admin";
+import { requireTenantAdmin } from "@/lib/auth/guards";
+
+const ALLOWED_TRANSITIONS: Record<string, string[]> = {
+  pending:     ["in_progress", "cancelled"],
+  in_progress: ["completed", "failed", "cancelled"],
+  completed:   [],
+  failed:      ["pending"],   // Retry erlaubt
+  cancelled:   [],
+};
+
+export async function setBridgeRunStatus(
+  runId: string,
+  newStatus: string,
+): Promise<{ ok: true } | { error: string }> {
+  // 1. Auth + Application-Context-Pruefung
+  const { user, tenantId } = await requireTenantAdmin();
+
+  // 2. State-Transition-Validierung (Server-Side, nicht in DB)
+  const supabase = createSupabaseServiceClient();
+  const { data: row, error: readErr } = await supabase
+    .from("bridge_run")
+    .select("status, tenant_id")
+    .eq("id", runId)
+    .single();
+  if (readErr || !row) return { error: "not_found" };
+  if (row.tenant_id !== tenantId) return { error: "forbidden" };
+  if (!ALLOWED_TRANSITIONS[row.status]?.includes(newStatus)) {
+    return { error: `invalid_transition_${row.status}_to_${newStatus}` };
+  }
+
+  // 3. Service-Role-UPDATE (umgeht RLS bewusst, weil Auth-Pruefung schon greift)
+  const { error: updErr } = await supabase
+    .from("bridge_run")
+    .update({ status: newStatus, updated_at: new Date().toISOString() })
+    .eq("id", runId);
+  if (updErr) return { error: updErr.message };
+
+  return { ok: true };
+}
+```
+
+**Was hier sichtbar ist:**
+1. **Auth-Guard** (`requireTenantAdmin`) liefert User + tenantId aus Session. Wirft bei nicht-eingeloggt / falsche Rolle.
+2. **State-Transition-Tabelle** lebt in TS-Objekt — leicht refactorbar, leicht testbar, in DB nicht dupliziert.
+3. **Service-Role-Client** wird erst nach erfolgreicher Auth-Pruefung benutzt. Davor: keine DB-Touches.
+4. **Tenant-Match-Check** (`row.tenant_id !== tenantId`) ist defensiv — RLS-Bypass bedeutet, der Server muss diese Pruefung selbst machen.
+5. **UPDATE** ist atomic, nutzt den Service-Role-Client.
+
+### Ausnahme: RLS-UPDATE-Policy bei rein nutzer-getriebenem UPDATE auf eigene Zeile
+
+**Wann:** Wenn der UPDATE-Pfad die Bedingung "user_id = auth.uid()" als einzige Auth-Bedingung hat, und keine Application-Context-Pruefung erforderlich ist (keine Rolle-Pruefung, keine Cross-Row-Validierung, kein State-Transition-Graph).
+
+**Warum erlaubt:** Die RLS-Policy ist hier eine 1:1-Spiegelung der Auth-Anforderung. Keine Duplikations-Last, keine Drift-Gefahr. Server-Action darf direkt mit `createClient()` (User-Context) arbeiten.
+
+**Code-Beispiel-Snippet:**
+
+```typescript
+// src/app/dashboard/settings/actions.ts
+"use server";
+
+import { createClient } from "@/lib/supabase/server";
+
+export async function setReminderOptOut(
+  optedOut: boolean,
+): Promise<{ ok: true } | { error: string }> {
+  const supabase = await createClient(); // User-Client mit auth.uid()
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "unauthenticated" };
+
+  // RLS-Policy auf user_settings:
+  //   USING (user_id = auth.uid())
+  //   WITH CHECK (user_id = auth.uid())
+  // Stellt sicher: User kann nur die eigene Zeile UPDATEn.
+  const { error } = await supabase
+    .from("user_settings")
+    .upsert(
+      { user_id: user.id, reminder_opt_out: optedOut },
+      { onConflict: "user_id" },
+    );
+  if (error) return { error: error.message };
+
+  return { ok: true };
+}
+```
+
+**Was hier sichtbar ist:**
+1. **User-Client** (`createClient`, kein Service-Role) — auth.uid() ist im Request-Context greifbar.
+2. **RLS-Policy** auf `user_settings.user_id = auth.uid()` macht die Sicherheit.
+3. Kein State-Graph-Check noetig — `reminder_opt_out` ist binaer, jede Transition ist erlaubt.
+4. Server-Action ist trivial — fast ein 1:1-Pass-through.
+
+**Begruendungs-Pflicht:** Wenn die Ausnahme genutzt wird, muss der Slice-File einen DEC-Eintrag oder eine knappe Begruendung im Slice-Spec enthalten ("rein nutzer-getrieben, 1:1-User-Owner, kein State-Graph").
+
+### Pflicht-Test-Pattern (pro neuer State-Maschine)
+
+Jede neue State-Maschine MUSS zwei Test-Layer haben:
+
+**Test 1 — 4-Rollen-RLS-SELECT-Test (existierende V4-Pflicht):**
+- Tenant A Admin sieht nur Tenant A Rows.
+- Tenant B Admin sieht nur Tenant B Rows.
+- Employee von Tenant A sieht nur eigene Rows (oder Sichtperimeter per Slice).
+- Anonym / Strategaize-Admin: per Slice-Spec.
+
+Test laeuft gegen Live-DB (Coolify-Postgres) mit den 4 Rollen. Pflicht-Erweiterung der bestehenden RLS-Test-Matrix.
+
+**Test 2 — Server-Action-UPDATE-Test (neu Pflicht ab V4.3):**
+Mindestens drei Cases pro Server-Action:
+
+```typescript
+import { describe, it, expect, vi } from "vitest";
+import { setBridgeRunStatus } from "@/app/admin/bridge/actions";
+
+describe("setBridgeRunStatus", () => {
+  it("Unauthorized → wirft / liefert error", async () => {
+    vi.mocked(requireTenantAdmin).mockRejectedValue(new Error("forbidden"));
+    await expect(setBridgeRunStatus("run-x", "completed")).rejects.toThrow();
+  });
+
+  it("Authorized + erlaubte Transition → ok:true", async () => {
+    vi.mocked(requireTenantAdmin).mockResolvedValue({ user: {...}, tenantId: "t-a" });
+    // Mock supabase row mit status='in_progress', tenant_id='t-a'
+    const result = await setBridgeRunStatus("run-x", "completed");
+    expect(result).toEqual({ ok: true });
+  });
+
+  it("Authorized + verbotene Transition → error", async () => {
+    vi.mocked(requireTenantAdmin).mockResolvedValue({ user: {...}, tenantId: "t-a" });
+    // Mock supabase row mit status='completed' (kein outgoing edge)
+    const result = await setBridgeRunStatus("run-x", "in_progress");
+    expect(result).toMatchObject({ error: expect.stringContaining("invalid_transition") });
+  });
+
+  it("Authorized aber Tenant-Mismatch → error", async () => {
+    vi.mocked(requireTenantAdmin).mockResolvedValue({ user: {...}, tenantId: "t-b" });
+    // Mock supabase row mit tenant_id='t-a'
+    const result = await setBridgeRunStatus("run-x", "completed");
+    expect(result).toEqual({ error: "forbidden" });
+  });
+});
+```
+
+### Migration-Path fuer bestehende V4/V4.1/V4.2-Slices
+
+**Kein Refactor-Pflicht.** Bestehende Service-Role-UPDATEs in V4-Slices (`bridge_run.status`, `block_review.status`, `wizard_status`, etc.) sind regelkonform — sie folgen dem Default-Pattern de facto schon, auch ohne formalen ADR.
+
+Wenn ein bestehender Slice in einer Folge-Iteration ohnehin angefasst wird (z.B. Bug-Fix), darf der Refactor opportunistisch erfolgen — nicht verpflichtend.
+
+### Lokal-Override / Begruendungs-Pflicht
+
+Ein Slice darf vom Default-Pattern abweichen (z.B. RLS-UPDATE-Policy fuer eine State-Maschine, die nicht "rein nutzer-getrieben" ist) — **nur** mit Slice-File-DEC, der explizit:
+1. die abweichende Wahl benennt,
+2. die Begruendung skizziert (warum Default nicht passt),
+3. die Test-Pflicht mit angepasstem Mock-Schema dokumentiert.
+
+Beispiel-Skizze:
+> "DEC-XYZ: SLC-AAB nutzt RLS-UPDATE-Policy fuer `xyz_table.status`, weil State-Graph trivial (binaer) und Owner-Beziehung 1:1 zu `auth.uid()`. Pflicht-Test 2 reduziert auf 'authorized → ok' + 'unauthenticated → error', kein Cross-Row-Test noetig."
+
+Drift-Risiko: Wenn diese Ausnahmen sich haeufen, IMP in `docs/SKILL_IMPROVEMENTS.md` eintragen → Pattern ggf. anpassen.

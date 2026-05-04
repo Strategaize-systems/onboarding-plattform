@@ -49,7 +49,7 @@ export function TenantAdminShell({ profile, children }: Props) {
         </div>
       </div>
 
-      <HelpButton onClick={() => {}} />
+      <HelpButton />
     </div>
   );
 }
