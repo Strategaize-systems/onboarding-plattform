@@ -321,3 +321,43 @@ Der uebernommene Blueprint-Stand ist noch nicht auf einer Onboarding-Plattform-I
 - Risk: Mittel. Backfill auf `tenants` laeuft auf alle bestehenden Tenants (geschaetzt <50 Rows) — Standard-UPDATE. Backfill auf `user_settings` laeuft auf alle bestehenden auth.users (geschaetzt <100 Rows) — INSERT-with-token-default. Beide Backfills sind idempotent via ON CONFLICT bzw. WHERE-Filter. Trigger `tg_create_user_settings` ist passive (auf auth.users), koennte bei Bug auth.users-INSERT blockieren — Mitigation: SECURITY DEFINER + EXCEPTION-Block fuer Soft-Fail (analog tg_block_review_pending_on_employee_submit aus MIG-028). Migration via base64-pipe + `psql -U postgres` als root auf Hetzner-Container (Standard-Pattern aus rules/sql-migration-hetzner.md, MIG-027/MIG-028).
 - Rollback Notes: `DROP TRIGGER IF EXISTS tg_create_user_settings_on_auth_users_insert ON auth.users; DROP FUNCTION IF EXISTS public.tg_create_user_settings(); DROP TABLE IF EXISTS public.user_settings CASCADE; DROP TABLE IF EXISTS public.reminder_log CASCADE; ALTER TABLE public.tenants DROP COLUMN IF EXISTS onboarding_wizard_state, DROP COLUMN IF EXISTS onboarding_wizard_step, DROP COLUMN IF EXISTS onboarding_wizard_completed_at; DROP INDEX IF EXISTS idx_tenants_wizard_state;` Rollback-Reihenfolge: 1. Coolify Cron-Job pausieren (sonst weitere Reminder-Versuche), 2. App-Image revert auf pre-V4.2 (Wizard-Server-Actions/HelpSheet/Cockpit-Card werden ignoriert), 3. SQL-Rollback (DROPs), 4. ENV CRON_SECRET wieder entfernen. Pre-V4.2-Stand bleibt voll funktional, weil V4.2 rein additiv ist.
 - Live-Deploy: 2026-04-30 auf Hetzner-Onboarding-Server (159.69.207.29) als Variante A (Single-File 080_v42_self_service.sql) per base64-pipe + `psql -U postgres` (sql-migration-hetzner.md). Verifikation: `\d tenants` 3 neue Spalten + Index, `\d reminder_log` + `\d user_settings` Schemas + Policies aktiv. Backfills idempotent: tenants `UPDATE 1` (1 pre-V4.2 Tenant auf 'completed'), user_settings `INSERT 0 3` (3 bestehende auth.users → 64-char Token). Trigger live (verifiziert: smoke-test count=1, soft-fail-test auth.users-INSERT geht trotz simulated exception durch).
+
+### MIG-030 — V4.4 BL-069 Umlaut-Backfill fuer Demo-Template (Migration 081)
+- Date: 2026-05-05 (skizziert in /architecture V4.4, apply in /backend SLC-062)
+- Scope: Reine DML-Migration auf bestehender Tabelle `template`. Korrigiert 328 Umlaut-Vorkommnisse (`ae`/`oe`/`ue`/`ss` → `ä`/`ö`/`ü`/`ß`) in den JSONB-Feldern `template.blocks` und `template.sop_prompt` fuer das einzige betroffene Demo-Template (`slug='mitarbeiter_wissenserhebung'`, aus 046_seed_demo_template.sql). Andere Templates werden nicht angefasst.
+- Reason: SLC-052 (V4.3) hat die Source-Datei `sql/migrations/046_seed_demo_template.sql` umlaut-konsistent gemacht, aber Daten-Edits in der Source-Datei haben keine Wirkung auf bereits in der Live-DB gestandenen Daten. Audit-Tool `scripts/audit-umlauts.mjs` zeigt 328 Vorkommnisse in den Live-Werten.
+- Affected Areas: `template.blocks` (JSONB), `template.sop_prompt` (JSONB), nur Row mit `slug='mitarbeiter_wissenserhebung'`. Keine Schema-DDL-Aenderung. Keine FK-Implikation. Andere Tabellen unangetastet.
+- Risk: Niedrig. Single-Row-UPDATE auf einer System-managed-Template-Row. Pre-Apply-Pflicht: Backup oder `\copy template TO 'pre-mig-030.csv'`. Falsche Wort-Klassifikation in der curated word-list wuerde semantisch falschen Replace bewirken (z.B. "neue" → "nü") — Mitigation: Wortliste wird in SLC-062 MT-1 aus echtem Audit-Output extrahiert + per-Wort manuell verifiziert.
+- Rollback Notes: `\copy template FROM 'pre-mig-030.csv'` (Pre-Apply-Snapshot). Alternativ: SQL-Rollback-Migration mit reversem Mapping (`'würden' → 'wuerden'`, etc.) — aber unnoetig wenn Backup vorhanden.
+- Format-Skizze (final in /backend SLC-062 MT-2):
+  ```sql
+  -- 081_v44_umlaut_backfill_demo_template.sql
+  DO $migrate_umlauts$
+  DECLARE
+    v_blocks_text text;
+    v_sop_text text;
+  BEGIN
+    SELECT blocks::text, sop_prompt::text 
+    INTO v_blocks_text, v_sop_text
+    FROM template 
+    WHERE slug = 'mitarbeiter_wissenserhebung';
+    
+    -- Curated word-list aus audit-umlauts.mjs gegen Live-DB extrahiert (SLC-062 MT-1)
+    v_blocks_text := replace(v_blocks_text, 'wuerden', 'würden');
+    v_blocks_text := replace(v_blocks_text, 'wuerde', 'würde');
+    v_blocks_text := replace(v_blocks_text, 'koennte', 'könnte');
+    -- ... weitere Mappings
+    
+    v_sop_text := replace(v_sop_text, 'wuerden', 'würden');
+    -- ... gleiche Mappings
+    
+    UPDATE template 
+    SET 
+      blocks = v_blocks_text::jsonb,
+      sop_prompt = v_sop_text::jsonb 
+    WHERE slug = 'mitarbeiter_wissenserhebung';
+    
+    RAISE NOTICE 'MIG-030: umlaut-backfill done for mitarbeiter_wissenserhebung template.';
+  END $migrate_umlauts$;
+  ```
+  Apply per `sql-migration-hetzner.md`-Pattern: base64-Pipe + `psql -U postgres` ueber Coolify-Container. Verifikation: `node scripts/audit-umlauts.mjs` mit angepasstem Source (Live-DB-Export statt Datei) → 0 Vorkommnisse.

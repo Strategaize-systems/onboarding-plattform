@@ -3809,3 +3809,78 @@ Beispiel-Skizze:
 > "DEC-XYZ: SLC-AAB nutzt RLS-UPDATE-Policy fuer `xyz_table.status`, weil State-Graph trivial (binaer) und Owner-Beziehung 1:1 zu `auth.uid()`. Pflicht-Test 2 reduziert auf 'authorized → ok' + 'unauthenticated → error', kein Cross-Row-Test noetig."
 
 Drift-Risiko: Wenn diese Ausnahmen sich haeufen, IMP in `docs/SKILL_IMPROVEMENTS.md` eintragen → Pattern ggf. anpassen.
+
+## V4.4 Architecture Addendum — Pre-V5-Hygiene (Lint-Sweep + Daten-Backfill + Berater-Review)
+
+### Scope
+
+V4.4 ist Maintenance ohne Architektur-Aenderung. Drei Hygiene-Items werden auf einer stabilen V4.3-Basis adressiert:
+
+1. **BL-068 Lint-Sweep** — 7 Errors + 6 Warnings im V2-V4.2-Code, jetzt wo `npm run lint` durch SLC-053 wieder funktioniert. Kein Architektur-Touch, kein Behaviour-Change ueber das hinaus, was die Lint-Regel praeskribiert.
+2. **BL-069 SQL-Backfill 046_seed_demo_template** — 328 Umlaut-Vorkommnisse in templates.blocks/sop_prompt JSONB-Feldern (Live-DB). Reine Daten-Korrektur, kein DDL.
+3. **BL-067 Berater-Inhalts-Review** — 5 Help-Markdown-Files unter `src/content/help/`. Content-Only, User-Editor-Workflow.
+
+### V4.4 Architectural Constraints
+
+Aus `/requirements V4.4` als verbindlich uebernommen + in /architecture bestaetigt:
+
+- **Keine Schema-DDL.** BL-069 ist DML (`UPDATE template SET blocks=...` auf JSONB-Werten).
+- **Keine neuen Container, keine neuen Cron-Jobs.** Maintenance-Disziplin wie V3.1 / V4.3.
+- **Keine Verhaltens-Aenderung ueber Lint-Regel-Praeskription hinaus.** BL-068-Fixes sind code-neutral.
+- **BL-068-False-Positives nur fuer Library-/shadcn-Code** akzeptiert (siehe DEC-070).
+
+### Lint-Sweep-Strategie (BL-068)
+
+Per-Item-Klassifikation in DEC-070 zementiert. Zusammenfassung:
+
+- **6 TRUE-POSITIVE Errors** (BridgeProposalEditDialog setState-in-effect, FileUploadZone use-before-declared, jitsi-meeting setState-in-effect, SearchResultsList unescaped-quotes × 2) → echte Fixes.
+- **1 TRUE-POSITIVE-aber-Inline-Disable** (EvidenceFileList Date.now-in-render) → Inline-Disable mit Begruendung "intended freshness check, V4.4 ohne UX-Change". Proper-Fix als V5+-Backlog-Item.
+- **1 FALSE-POSITIVE Error** (sidebar.tsx Math.random in useMemo) → Inline-Disable, weil shadcn-Library-Code mit intendierter Skeleton-Width-Randomisierung.
+- **6 TRUE-POSITIVE Warnings** (Anonymous-Export, alt-text, useCallback-missing-dep, 3 × unused-eslint-disable) → alle echte Fixes.
+
+Output-Erwartung nach SLC-061: `npm run lint` liefert **0 Errors, 0 Warnings**.
+
+### Daten-Backfill-Strategie (BL-069)
+
+**MIG-030** (Datei `sql/migrations/081_v44_umlaut_backfill_demo_template.sql`, siehe MIGRATIONS.md fuer Skizze).
+
+Gewaehltes Format (DEC-071): **PL/pgSQL DO-Block mit curated word-list `replace()` ueber JSONB::text-Roundtrip**.
+
+Begruendung gegen alternative Ansaetze:
+- **Blunt `replace(blocks::text, 'ae', 'ä')`** — verboten, zerstoert deutsch-englische Wortgrenzen wie "neue", "Steuer", "treuer". Risiko zu hoch.
+- **`jsonb_set` per explizitem Pfad** — 328 Vorkommnisse × Pfade ist nicht praktikabel.
+- **DELETE + Re-INSERT aus 046** — verboten wegen FK-Constraints (capture_session.template_id), riskiert Daten-Verlust.
+- **Programmatisches PL/pgSQL-Walk** — verbose, schwer lesbar.
+
+Curated-Word-List wird in **SLC-062 MT-1** extrahiert: audit-umlauts.mjs gegen Live-DB-Export (templates.blocks/sop_prompt als Text) laufen lassen, Output liefert die Wort-Treffer. Aus Treffer-Liste wird `(suspect_word -> correct_word)` Mapping gebaut, in MIG-030 hartkodiert.
+
+**Idempotenz:** Re-Run der Migration liefert keine Aenderungen, weil bereits korrigierte Worte nicht mehr gemappt werden. Audit nach Apply liefert **0 Vorkommnisse**.
+
+**Risiko-Profil:**
+- Live-DB-UPDATE auf einer Tabelle (`template`) → 1 Row betroffen (slug=`mitarbeiter_wissenserhebung`). Andere Templates unangetastet.
+- Verifikation post-Apply: `audit-umlauts.mjs` extrahiert blocks/sop_prompt aus Live-DB → 0 Vorkommnisse.
+- Rollback: Pre-Apply-Snapshot der beiden JSONB-Felder (per `\copy template TO 'pre-mig-030.csv'`) → bei Bedarf re-import. **DB-Backup vor Apply Pflicht.**
+
+### Berater-Review-Strategie (BL-067)
+
+DEC-072: **User editiert direkt im Repo.** Kein Code-Slice, kein Review-Doc-Iteration. 5 Files unter `src/content/help/{dashboard,capture,bridge,reviews,handbook}.md`, je ~200-250 Worter, Editier-Aufwand geschaetzt 30 min total.
+
+Kein Architektur-Impact. Keine Mock-Faehigkeit, keine Test-Auswirkung. Files werden in normalem Commit + Push integriert.
+
+### V4.4 Slice-Bundling
+
+DEC-073: **2 Slices** (SLC-061 Lint-Sweep + SLC-062 SQL-Backfill) + 1 Content-Item (BL-067 ohne Slice).
+
+Begruendung gegen 1-Slice-All-In:
+- Lint-Sweep ist Code-Touch in 7 Files unter `src/`, mit Verifikations-Pfad `npm run lint && npm run build && npm run test`.
+- SQL-Backfill ist DB-Touch in `template`-Tabelle, mit Verifikations-Pfad `audit-umlauts.mjs gegen Live-DB`.
+- Unterschiedliche Risk-Klassen + Rollback-Pfade (Code vs. Daten) → eigene Slices, eigene QA.
+
+### Migration-Path fuer V5
+
+V5 (Walkthrough-Mode) startet nach V4.4-Release mit:
+- 0 Lint-Errors (V4.4 SLC-061 Resultat).
+- Demo-Daten umlaut-konsistent (V4.4 SLC-062 Resultat).
+- 5 Help-Files inhaltlich review-finalisiert (BL-067).
+
+V4.4 ist explizit minimaler Scope und blockiert V5 nur fuer den Zeitraum von 1-2 Implementierungstagen.

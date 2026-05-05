@@ -346,3 +346,39 @@
 - Status: accepted
 - Reason: V4.2 SLC-047 (Wizard-Modal-Frontend) zeigte ein Symptom, das vermutet wurde als "Turbopack inlined Layout-Code in Page-Bundles und State im Layout wird beim Page-Wechsel ungewollt resettet". Der Workaround in V4.2 commit `6f774ec` war: Wizard-Auto-Trigger nicht im `dashboard/layout.tsx`, sondern im `dashboard/page.tsx` ansiedeln. SLC-056 Spike (Branch `spike/v43-turbopack-layout-inlining`, commits `014ad28` + `f0239a9`) hat einen Minimal-Reproducer gebaut: 2-Datei-Setup `src/app/spike-bl066/{layout,page}.tsx`, jeweils mit eigenem `useState`-Counter. Build mit Next 16.2.4 + Turbopack + dummy-SUPABASE-ENVs zeigt: Layout und Page bekommen JEWEILS EIGENE Server-Chunks (`.next/server/chunks/ssr/src_app_spike-bl066_layout_tsx_*.js` und `..._page_tsx_*.js`). Der Layout-Counter-Code-String findet sich NUR im Layout-Chunk, kein Inline-Leak in Page-Chunk. Damit ist die in V4.2 vermutete "Turbopack-Layout-Inlining"-Anomalie im Minimal-Case nicht reproduzierbar. Spike-Timebox: Start 14:23:39, End 14:26:56 (~3:17 min) — deutlich unter der 4h-Box.
 - Consequence: (a) **Workaround in Production bleibt** — V4.2-Pattern (Wizard-Trigger im page.tsx, nicht layout.tsx) bleibt als bewusste Architektur-Wahl bestehen; nicht aufgrund Turbopack-Inlining sondern weil die spezifischen Trigger-Bedingungen der ursprueglichen Anomalie unbekannt sind und der Workaround robust ist. (b) **Keine GitHub-Issue beim vercel/next.js-Repo** — ohne reproduzierbares Minimal-Repro waere die Issue nicht sinnvoll. Falls das Symptom in V5+ erneut auftritt, neuer Spike mit konkretem Repro-Trigger noetig. (c) **KNOWN_ISSUES-Eintrag** ISSUE-033 dokumentiert die historische Beobachtung + Workaround als akzeptierter Pre-existing-Issue (Status: wontfix). (d) **Spike-Branch bleibt im Repo** (NICHT geloescht, NICHT in main gemergt) als Nachvollziehbarkeits-Artefakt. (e) **Offen fuer V5+:** Wenn neue Symptom-Reports kommen, gezielter Spike mit den spezifischen Bedingungen aus dem Report — Modal-Mount-Order, RSC-Boundaries, oder client-state-collocation in komplexen Layouts sind moegliche Suchbereiche. Lessons-Learned: Doppelunterstrich-Folder (`__spike__`) ist Next.js Private-Folder-Konvention und wird aus Routing ausgeschlossen — Reproducer-Folder duerfen keinen `__`-Prefix haben (im Slice-Report RPT-142 Lessons-Learned dokumentiert).
+
+## DEC-070 — BL-068 Lint-Sweep: Per-Item True-/False-Positive-Klassifikation
+- Status: accepted
+- Reason: ESLint-9 + flat-config (SLC-053) hat 7 Errors + 6 Warnings im V2-V4.2-Code aufgedeckt. Vor V4.4-Implementation muss klar sein, welche Findings echte Bugs (TRUE-POSITIVE → fix) und welche akzeptable Library-Patterns (FALSE-POSITIVE → Inline-Disable mit Begruendung) sind, damit /backend SLC-061 ohne weitere Klaerung durchlaufen kann.
+- Consequence: Per-Item-Klassifikation:
+  - **E1** `BridgeProposalEditDialog.tsx:66` setState-in-effect → TRUE-POSITIVE → Fix per setTimeout-Entkopplung oder useState-Init-Pattern.
+  - **E2** `EvidenceFileList.tsx:186` Date.now in render → TRUE-POSITIVE-aber-Inline-Disable mit Begruendung "intended freshness check, kein UX-Change in V4.4-Scope". Proper-Fix mit `useState + setInterval` als V5+ Backlog-Item.
+  - **E3** `FileUploadZone.tsx:57+64` access-before-declared → TRUE-POSITIVE → Fix per Definitions-Reihenfolge umkehren.
+  - **E4** `jitsi-meeting.tsx:103` setState-in-effect-catch → TRUE-POSITIVE → Fix per setTimeout-Entkopplung oder error-state-pattern.
+  - **E5+E6** `SearchResultsList.tsx:30` unescaped-quotes → TRUE-POSITIVE → `"` → `&quot;` (zwei Vorkommnisse).
+  - **E7** `sidebar.tsx:665` Math.random in useMemo → FALSE-POSITIVE (shadcn-Library-Code, intendierte Skeleton-Width-Randomisierung) → Inline-Disable mit Begruendung.
+  - **W1-W6** alle TRUE-POSITIVE → fix.
+  - Inline-Disable nur fuer Library-/shadcn-Code (sidebar) ODER mit explizit-dokumentierter Begruendung (EvidenceFileList Date.now). Nie in `src/lib/`, `src/app/...actions.ts` ohne strenge Begruendung.
+
+## DEC-071 — BL-069 Migration-Format: PL/pgSQL DO-Block mit curated word-list `replace()`-Roundtrip
+- Status: accepted
+- Reason: 328 Umlaut-Vorkommnisse in templates.blocks/sop_prompt JSONB. Blunt `replace(blocks::text, 'ae', 'ä')` zerstoert deutsch-englische Wortgrenzen ("neue" → "nü", "Steuer" → "Stür" — falsch). `jsonb_set` per Pfad ist bei 328 Vorkommnissen nicht praktikabel. DELETE+Re-INSERT bricht FK-Constraints (capture_session.template_id). Programmatisches Walk verbose und schwer lesbar.
+- Consequence: MIG-030 (Datei `sql/migrations/081_v44_umlaut_backfill_demo_template.sql`) implementiert PL/pgSQL DO-Block mit folgendem Pattern:
+  1. `SELECT blocks::text, sop_prompt::text INTO v_blocks, v_sop FROM template WHERE slug='mitarbeiter_wissenserhebung'`.
+  2. Curated `replace()`-Mapping pro identifiziertem Wort (Wortliste extrahiert in SLC-062 MT-1 via audit-umlauts.mjs gegen Live-DB).
+  3. `UPDATE template SET blocks=v_blocks::jsonb, sop_prompt=v_sop::jsonb WHERE slug='mitarbeiter_wissenserhebung'`.
+  Idempotent: Re-Run liefert keine Aenderungen weil korrigierte Worte nicht mehr matchen. Verifikation: `audit-umlauts.mjs gegen Live-DB-Export` liefert 0 Vorkommnisse. Pre-Apply-Pflicht: DB-Backup oder `\copy template TO 'pre-mig-030.csv'` zur Rollback-Sicherheit.
+
+## DEC-072 — BL-067 Berater-Inhalts-Review: User editiert direkt im Repo
+- Status: accepted
+- Reason: BL-067 ist Content-Only (5 Help-Markdown-Files je ~200-250 Worter). Ein Review-Doc-Iteration mit Vorschlaegen + User-Abstimmung wuerde die einfache Editier-Aufgabe (~30 min) kuenstlich aufwaendiger machen. Berater-Hat sitzt beim User selbst — keine zweite Person im Loop.
+- Consequence: BL-067 ist KEIN Code-Slice und KEIN Review-Doc-Iteration. User editiert die 5 Files direkt im Repo unter `src/content/help/{dashboard,capture,bridge,reviews,handbook}.md`, prueft Begriffs-Konsistenz, Du-Form, Doppelungen, max 250 Worter pro File. Output: aktualisierte Files als normalem Commit + Push, parallel zu SLC-061/062 oder danach. SC-V4.4-4 wird in der Gesamt-V4.4-/qa kontrolliert (Diff der 5 Files vs. Pre-V4.4-State erwartet > 0).
+
+## DEC-073 — V4.4 Slice-Bundling: 2 Slices (SLC-061 Lint-Sweep + SLC-062 SQL-Backfill) + 1 Content-Item (BL-067 ohne Slice)
+- Status: accepted
+- Reason: Lint-Sweep ist Code-Touch in 7 Files unter `src/`, Verifikations-Pfad `npm run lint && npm run build && npm run test`. SQL-Backfill ist DB-Touch in `template`-Tabelle, Verifikations-Pfad `audit-umlauts.mjs gegen Live-DB`. Unterschiedliche Risk-Klassen + Rollback-Pfade rechtfertigen eigene Slices mit eigenem /qa-Schritt. 1-Slice-All-In wuerde Rollback-Reaktion bei einem Lint-Fix-Bug schwerer machen (DB-Migration ist da nicht reversibel "mal eben").
+- Consequence: Slice-Plan V4.4:
+  - **SLC-061 Lint-Sweep** — 7 Files in `src/` editieren (BridgeProposalEditDialog, EvidenceFileList, FileUploadZone, jitsi-meeting, SearchResultsList, sidebar, email-stub.mjs, document-parser.ts, claim-loop.ts). Per-Item per DEC-070-Klassifikation. Verifikation: `npm run lint` 0/0. **~6 MTs.**
+  - **SLC-062 SQL-Backfill** — MIG-030 (Datei 081) anlegen + apply auf Hetzner-Coolify-Supabase per base64-Pattern + audit-Verifikation. **~3 MTs.**
+  - **BL-067 Berater-Help-Review** — Kein Slice, User-direkt-Edit, parallel.
+  Reihenfolge frei: SLC-061 + SLC-062 sind unabhaengig. Empfehlung: SLC-061 first (kein DB-Touch, schneller QA-Loop), SLC-062 second (DB-Apply braucht User + Backup). BL-067 jederzeit.

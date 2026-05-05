@@ -1104,14 +1104,12 @@ BL-069 ist DML (UPDATE auf JSONB-Felder), kein DDL. Keine `ALTER TABLE`, keine n
 - **A-V4.4-3 — Berater-Review-Aufwand ist klein.** 5 Files × ~250 Worter = ~30 min reine Inhaltspflege durch User. Kein Code-Slice.
 - **A-V4.4-4 — Coolify-Cron-Setup aus V4.2 bleibt unveraendert.** V4.4 beruehrt keinen Cron.
 
-### Open Questions (V4.4)
+### Open Questions (V4.4) — RESOLVED in /architecture V4.4 (RPT-152)
 
-Die folgenden Fragen werden in `/architecture` V4.4 entschieden:
-
-- **Q-V4.4-A — BL-068 FALSE-POSITIVE-Policy:** Welche der 7 Errors sind echt vs. Plugin-Strict? Empfehlung Requirements: alle einzeln pruefen, Default-Annahme = True-Positive, FALSE-POSITIVE braucht Library-Code-Begruendung. Definitiv in /architecture mit konkretem Per-Item-Ergebnis.
-- **Q-V4.4-B — BL-069 Migration-Format:** UPDATE-statement mit explizitem `replace(blocks::text, ...)` ODER Migration via Programm-Code (Node-Script im Worker-Container)? Empfehlung Requirements: SQL-only mit gezieltem `jsonb_set` pro betroffenem Pfad — sicher, nachvollziehbar. Definitiv in /architecture.
-- **Q-V4.4-C — BL-067 Review-Form:** User editiert direkt im Repo ODER Review-Doc mit Vorschlaegen, dann User abstimmt? Empfehlung Requirements: User editiert direkt — Berater-Hat ist beim User. Definitiv vor /architecture mit User-Confirmation.
-- **Q-V4.4-D — Slice-Bundling:** 1 Slice (alles in einem) ODER 2 Slices (Lint-Sweep separat von SQL-Backfill)? Empfehlung Requirements: 2 Slices, weil Lint-Sweep code-touch und SQL-Backfill DB-touch ist — unterschiedliche Risk-Klassen + Rollback-Pfade. BL-067 ist kein Slice.
+- **Q-V4.4-A — BL-068 FALSE-POSITIVE-Policy:** RESOLVED via **DEC-070**. Per-Item-Klassifikation: 6 TRUE-POSITIVE Errors (echte Fixes), 1 TRUE-POSITIVE-aber-Inline-Disable (EvidenceFileList Date.now in render — V4.4 ohne UX-Change), 1 FALSE-POSITIVE (sidebar.tsx Math.random in shadcn-Library-Code), 6 TRUE-POSITIVE Warnings (alle echte Fixes).
+- **Q-V4.4-B — BL-069 Migration-Format:** RESOLVED via **DEC-071** + **MIG-030**. PL/pgSQL DO-Block mit curated word-list `replace()` ueber JSONB::text-Roundtrip. Wortliste wird in SLC-062 MT-1 aus audit-umlauts.mjs gegen Live-DB extrahiert. Idempotent. `jsonb_set` per Pfad als nicht-praktikabel verworfen (328 Vorkommnisse), DELETE+Re-INSERT als unsafe verworfen (FK-Constraints).
+- **Q-V4.4-C — BL-067 Review-Form:** RESOLVED via **DEC-072**. User editiert direkt im Repo unter `src/content/help/*.md`. Kein Review-Doc-Iteration. Kein Code-Slice.
+- **Q-V4.4-D — Slice-Bundling:** RESOLVED via **DEC-073**. 2 Slices: SLC-061 Lint-Sweep + SLC-062 SQL-Backfill. BL-067 ist kein Slice (Content-only). Empfohlene Reihenfolge: SLC-061 first (schneller QA-Loop, kein DB-Touch), SLC-062 second (DB-Apply braucht User + Backup).
 
 ### Slice-Skizze (informativ, finaler Schnitt in /slice-planning)
 
