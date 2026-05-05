@@ -675,7 +675,7 @@
       "title": "V4.4 Lint-Sweep — 7 Pre-existing-Errors aus SLC-053 ESLint-9-Migration",
       "type": "improvement",
       "priority": "medium",
-      "status": "in_progress",
+      "status": "done",
       "version": "V4.4",
       "description": "Aus SLC-053 (V4.3 ESLint-9 flat-config-Migration, RPT-134) sichtbar gemacht: 7 Pre-existing react-hooks-Errors + 6 Warnings im V2-V4.2-Code, die seit Wochen unentdeckt waren weil next lint in Next 16 broken war. Errors: (1) BridgeProposalEditDialog.tsx:66 setState in useEffect (V4 Bridge), (2) EvidenceFileList.tsx:186 Date.now() in render (V2 Evidence — kann FALSE-POSITIVE sein, neue React-19/react-hooks-Plugin-Regel sehr strikt), (3) FileUploadZone.tsx:57+64 uploadFile accessed-before-declared (V2 Evidence — REAL hoisting/TDZ-Risk), (4) jitsi-meeting.tsx:103 setIframeError() in catch-Block of useEffect (V3 Dialogue), (5+6) SearchResultsList.tsx:30 unescaped-entities (V4.1 Reader, Style), (7) shadcn sidebar.tsx:665 Math.random in useMemo (Library, FALSE-POSITIVE). Warnings: 3x unused-eslint-disable-directives in document-parser.ts + claim-loop.ts, 1x missing dep useCallback in FileUploadZone, 1x alt-text in EvidenceFileList, 2x anonymous-default-export in eslint.config.mjs/email-stub.mjs (low-prio Style). V4.3 Slice-Disziplin: Lint-Sweep ist Out-of-Scope. V4.4 oder eigener Maintenance-Sprint. Empfohlene Reihenfolge: zuerst pruefen welche Errors True-Positive vs False-Positive sind (insbesondere Math.random/Date.now-Pattern bei react-hooks/purity-Plugin), dann True-Positive fixen, False-Positive akzeptieren via Inline-Disable mit Begruendung. Aufwand-Schaetzung: ~2-3h pro Datei mit Code-Touch + Tests.",
       "createdAt": "2026-05-02"
