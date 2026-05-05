@@ -224,4 +224,28 @@ Reihenfolge: **SLC-053 → SLC-051 → SLC-052 → SLC-055 → SLC-056 → SLC-0
 
 ### V4.3 BL-067 Berater-Help-Review (Content-Only)
 
-BL-067 ist KEIN Code-Slice — direkter Editor-Workflow vom User selbst. 5 Help-Markdown-Files unter `src/content/help/*.md` (dashboard.md, capture.md, bridge.md, reviews.md, handbook.md). Aktualisierte Files werden als eigener Commit hinterlegt. Kann parallel zu jedem V4.3-Slice laufen.
+BL-067 ist KEIN Code-Slice — direkter Editor-Workflow vom User selbst. 5 Help-Markdown-Files unter `src/content/help/*.md` (dashboard.md, capture.md, bridge.md, reviews.md, handbook.md). Aktualisierte Files werden als eigener Commit hinterlegt. **In V4.4 verschoben** — kann parallel zu SLC-061 + SLC-062 laufen.
+
+## V4.4 Slices (Pre-V5-Hygiene Maintenance)
+
+| ID | Slice | Feature | Status | Priority | Created |
+|----|-------|---------|--------|----------|---------|
+| SLC-061 | [Lint-Sweep V2-V4.2 Pre-existing Errors+Warnings](SLC-061-lint-sweep.md) | V4.4 | planned | Medium | 2026-05-05 |
+| SLC-062 | [SQL-Backfill 046_seed_demo_template Umlaute (MIG-030)](SLC-062-sql-backfill-umlauts.md) | V4.4 | planned | Low | 2026-05-05 |
+
+### V4.4 Execution Order (per DEC-073)
+
+Reihenfolge: **SLC-061 → SLC-062**
+
+- **SLC-061** (Lint-Sweep, ERSTER Slice): Code-Touch in 7-9 Files unter `src/`, schneller Lint-Loop. Verifikation `npm run lint` 0/0 + `npm run build` + `npm run test`. Pflicht-Gates: Pre/Post Lint-Output-Snapshots, Inline-Disables nur in 2 Files (sidebar.tsx + EvidenceFileList.tsx) per DEC-070.
+- **SLC-062** (SQL-Backfill, ZWEITER Slice): MIG-030 anlegen + Hetzner-Apply via base64-Pattern + Post-Apply-Audit. Pre-Apply-Backup-Pflicht. Verifikation: `audit-umlauts.mjs` post-Apply = 0 Vorkommnisse. Idempotenz: 2. Apply produziert keinen DML-Drift.
+
+**Parallelisierbar:**
+- BL-067 (Berater-Help-Review, Content-Only) jederzeit parallel via direkten Editor-Workflow vom User. Kein Code-Slice.
+
+**Pflicht-Gates fuer V4.4:**
+- Keine Schema-DDL (SC-V4.4-6). Wenn ein Slice doch DDL braucht → eskalieren.
+- Pre/Post Lint-Snapshot fuer SLC-061.
+- Pre-Apply-Backup + Post-Apply-Audit fuer SLC-062.
+- V4.3-Regression-Smoke pro Slice (Reader, Help-Sheet, Cross-Search, Bridge-Edit, Jitsi-Meeting).
+- Gesamt-V4.4-/qa nach SLC-062 (SC-V4.4-1..6 vollstaendig verifiziert).
