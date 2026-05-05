@@ -1015,3 +1015,127 @@ Begruendung:
 - V4.3 ist klein + kontrolliert (~4-5 Tage).
 - `/compliance`-Sprint hat eigenen Scope-Charakter (Legal-Texte, Layout, ggf. Footer-Links): besser nicht mit Code-Maintenance gemischt.
 - ISSUE-021/022 bleiben in V4.4 oder V5 (Bridge-Workflow ist Walkthrough-Mode-Thema).
+
+## V4.4 — Maintenance-Sammelrelease (Pre-V5-Hygiene)
+
+### Problem Statement (V4.4)
+Nach V4.3 (REL-011, 2026-05-05) sind drei kleine Hygiene-Punkte offen, die vor dem Start von V5 (Walkthrough-Mode) abgearbeitet werden sollen, damit V5 auf sauberer Code- und Daten-Basis startet:
+
+1. **BL-067 — Berater-Inhalts-Review der 5 Help-Markdown-Files.** Aus V4.3 verschoben (Content-Only, kein Code-Slice).
+2. **BL-068 — Lint-Sweep.** 7 Pre-existing react-hooks-Errors + 6 Warnings im V2-V4.2-Code, sichtbar gemacht durch SLC-053 ESLint-9-Migration. Wochenlang unentdeckt weil `next lint` in Next 16 broken war.
+3. **BL-069 — SQL-Backfill 046_seed_demo_template Umlaute.** 328 Vorkommnisse in `templates.blocks` / `sop_prompt` JSONB-Feldern in der Live-DB. SLC-052-Datei-Edit hat keine Wirkung auf bereits stehende Daten — separate UPDATE-Migration noetig.
+
+Pattern: gleiches Vorgehen wie V3.1 (3 Items) und V4.3 (15 Items), nur kleiner — keine neuen Features, keine neuen Container, keine neuen Cron-Jobs, kein Schema-Touch.
+
+### Goal (V4.4)
+Drei Hygiene-Items abarbeiten + V4.x-Codebase auf eslint-clean + Live-DB umlaut-konsistent. Output: V5 startet ohne Pre-existing-Lint-Fehler-Schuld + ohne Demo-Daten-Inkonsistenzen.
+
+### V4.4 In Scope (3 Items)
+
+#### A. Code-Hygiene
+
+| ID | Item | Backlog | Severity |
+|----|------|---------|----------|
+| V4.4.1 | Lint-Sweep — 7 react-hooks-Errors + 6 Warnings im V2-V4.2-Code | BL-068 | Medium Hygiene |
+
+#### B. Daten-Hygiene
+
+| ID | Item | Backlog | Severity |
+|----|------|---------|----------|
+| V4.4.2 | SQL-Backfill 046_seed_demo_template — 328 Umlaut-Vorkommnisse in templates.blocks/sop_prompt JSONB | BL-069 | Low Daten |
+
+#### C. Content-Pflicht (User-Editor-Workflow)
+
+| ID | Item | Backlog | Severity |
+|----|------|---------|----------|
+| V4.4.3 | Berater-Inhalts-Review fuer 5 SLC-050 Help-Files (User direkt) | BL-067 | Medium Content |
+
+### V4.4 Out of Scope
+
+- **Neue Features.** V4.4 ist explizit Maintenance — kein neuer Capture-Mode, kein Wizard-Schritt, keine Bridge-UX.
+- **ISSUE-021 (Bridge-Proposal Edit-only-Pfad fehlt) + ISSUE-022 (strategaize_admin /admin/bridge):** Beide bleiben in V5 oder spaeter (Bridge-Workflow-Thema, gehoert zum Walkthrough-Capture-Mode-Stack).
+- **Privacy/Datenschutz/Impressum-Page.** Bleibt im eigenen `/compliance`-Sprint (Pre-Production-Compliance-Gate, explizit aufgeschoben per User-Decision).
+- **Re-Generation aller bestehender Demo-Snapshots nach BL-069-Backfill.** Backfill korrigiert nur templates.blocks/sop_prompt; Demo-Snapshots bleiben in dem Zustand, in dem sie der Worker erzeugt hat. User entscheidet manuell, ob Re-Generation noetig ist.
+- **Lint-Regel-Verschaerfung / neue ESLint-Plugins.** V4.4 bringt nur die existing Regeln zum Greenfield-Stand. Plugin-Erweiterung ist V5+.
+- **AI-gestuetzte Help-Inhalts-Review.** BL-067 ist vollstaendig User-Editor-Aufgabe.
+
+### Success Criteria (V4.4)
+
+V4.4 ist erfolgreich, wenn ALLE folgenden Kriterien erfuellt sind:
+
+**SC-V4.4-1 — Lint-Output 0 Errors**
+Nach BL-068 liefert `npm run lint` 0 Errors. Verbleibende Warnings (FALSE-POSITIVE-Akzeptanz mit Inline-`eslint-disable-next-line`-Kommentar plus Begruendung) sind dokumentiert und auf max. 3 reduziert.
+
+**SC-V4.4-2 — Build/Typecheck/Tests bleiben gruen**
+`npm run build`, `npm run typecheck`, `npm run test` laufen weiter ohne Fehler. Keine Regression durch Lint-Fixes (z.B. ungewollte Hook-Reorder, useEffect-Dependency-Aenderung mit Verhaltens-Drift).
+
+**SC-V4.4-3 — Live-DB Umlaut-konsistent**
+Nach BL-069 zeigt `audit-umlauts.mjs` (oder vergleichbares SQL-Audit) auf der Live-Coolify-DB **0 Vorkommnisse** in `templates.blocks` und `templates.sop_prompt` fuer das Default-Template (id: Exit-Readiness). Idempotenz: Re-Run der Migration produziert keine doppelten Aenderungen.
+
+**SC-V4.4-4 — Berater-Help-Review-Output**
+5 Help-Markdown-Files final reviewt: Begriffs-Konsistenz mit UI, Du-Form, max 250 Worter pro File, keine Doppelungen mit anderen Help-Files. Aktualisierte Files commited unter `src/content/help/*.md`.
+
+**SC-V4.4-5 — Keine V4.3-Regression**
+V4.3-Funktionalitaet (Reader, Help-Sheet, Cross-Search, Worker-Anchor-TOC) bleibt stabil. Smoke nach Deploy bestaetigt: alle 5 Help-Pages erreichbar, Reader laedt, Cross-Search liefert Treffer.
+
+**SC-V4.4-6 — Kein Schema-Touch ueber Daten-UPDATE hinaus**
+BL-069 ist DML (UPDATE auf JSONB-Felder), kein DDL. Keine `ALTER TABLE`, keine neue Spalte, keine neue Policy.
+
+### Constraints (V4.4)
+
+- **Keine Schema-DDL-Aenderungen.** BL-069 ist reines Daten-UPDATE auf bestehenden JSONB-Feldern.
+- **Kein neuer Cron-Job, kein neuer Container, kein neuer Service.** Maintenance-Disziplin.
+- **Kein Feature-Slice.** Wenn ein Item User-sichtbares Verhalten aendert, ist es V5-Material.
+- **BL-068 darf keine Verhaltens-Aenderung herbeifuehren.** Lint-Fixes sind code-neutral. Bei FALSE-POSITIVE Inline-Disable mit Begruendung.
+
+### Risks / Assumptions (V4.4)
+
+#### Risiken
+
+- **R-V4.4-1 — Lint-Fix produziert Verhaltens-Regression:** `setIframeError() in catch-Block of useEffect` (BL-068 Item 4) ist eine echte react-hooks-Verletzung — Fix-Pattern muss klar sein (z.B. setState aus catch in eigenem useEffect-Cleanup). Mitigation: Pre-Fix-Snapshot der Component-Behavior + Browser-Smoke nach Fix.
+- **R-V4.4-2 — JSONB-UPDATE-Migration ist nicht-idempotent geschrieben:** Wenn die Migration ohne `WHERE`-Filter auf bereits-korrigierte Werte laeuft, gibt's keinen Schaden, aber der Audit muss das nachweisen. Mitigation: Migration `WHERE name LIKE '%ae%' OR ...` filtern oder als reversibles Replace (`replace(blocks::text, 'ae', 'ä')` ist nicht safe → besser zielgerichtetes JSONB-Update mit explizitem Mapping).
+- **R-V4.4-3 — UPDATE auf templates-Tabelle bricht laufende Sessions:** Wenn ein User gerade ein Template-Block bearbeitet, koennte die UPDATE-Aenderung am Display ankommen ohne Reload. Mitigation: Migration in Off-Peak-Window oder mit User-Ankuendigung.
+- **R-V4.4-4 — FALSE-POSITIVE-Identifikation falsch:** Wenn BL-068 Item 7 (`Math.random in useMemo` in shadcn sidebar.tsx) als FALSE-POSITIVE akzeptiert wird, aber der gleiche Pattern in unserem eigenen Code echt waere, droht unbewusste Fehl-Akzeptanz. Mitigation: Inline-Disable nur fuer Library-Code (`shadcn`-Komponenten, generated), niemals in `src/lib/` oder `src/app/`.
+
+#### Annahmen
+
+- **A-V4.4-1 — Lint-Fix-Aufwand bleibt unter 4h gesamt.** 7 Errors × ~30min + 6 Warnings × ~15min = ~5h, aber einige Fixes sind 1-Liner. Realistisch ~3-4h.
+- **A-V4.4-2 — BL-069 betrifft nur 1 Default-Template (Exit-Readiness).** Andere Templates wurden nicht aus 046_seed produziert. Wenn weitere Templates Umlaut-Inkonsistenz haben → eigenes Backlog-Item, nicht V4.4-Scope.
+- **A-V4.4-3 — Berater-Review-Aufwand ist klein.** 5 Files × ~250 Worter = ~30 min reine Inhaltspflege durch User. Kein Code-Slice.
+- **A-V4.4-4 — Coolify-Cron-Setup aus V4.2 bleibt unveraendert.** V4.4 beruehrt keinen Cron.
+
+### Open Questions (V4.4)
+
+Die folgenden Fragen werden in `/architecture` V4.4 entschieden:
+
+- **Q-V4.4-A — BL-068 FALSE-POSITIVE-Policy:** Welche der 7 Errors sind echt vs. Plugin-Strict? Empfehlung Requirements: alle einzeln pruefen, Default-Annahme = True-Positive, FALSE-POSITIVE braucht Library-Code-Begruendung. Definitiv in /architecture mit konkretem Per-Item-Ergebnis.
+- **Q-V4.4-B — BL-069 Migration-Format:** UPDATE-statement mit explizitem `replace(blocks::text, ...)` ODER Migration via Programm-Code (Node-Script im Worker-Container)? Empfehlung Requirements: SQL-only mit gezieltem `jsonb_set` pro betroffenem Pfad — sicher, nachvollziehbar. Definitiv in /architecture.
+- **Q-V4.4-C — BL-067 Review-Form:** User editiert direkt im Repo ODER Review-Doc mit Vorschlaegen, dann User abstimmt? Empfehlung Requirements: User editiert direkt — Berater-Hat ist beim User. Definitiv vor /architecture mit User-Confirmation.
+- **Q-V4.4-D — Slice-Bundling:** 1 Slice (alles in einem) ODER 2 Slices (Lint-Sweep separat von SQL-Backfill)? Empfehlung Requirements: 2 Slices, weil Lint-Sweep code-touch und SQL-Backfill DB-touch ist — unterschiedliche Risk-Klassen + Rollback-Pfade. BL-067 ist kein Slice.
+
+### Slice-Skizze (informativ, finaler Schnitt in /slice-planning)
+
+| Slice | Scope | Items | Geschaetzt |
+|-------|-------|-------|-----------|
+| SLC-061 | Lint-Sweep — alle 7 Errors + 6 Warnings einzeln pruefen, fix oder dokumentierte FALSE-POSITIVE-Akzeptanz | BL-068 | ~6 MTs (1 pro Datei + Verifikation) |
+| SLC-062 | SQL-Backfill 046_seed_demo_template Umlaut-Korrektur — Migration + Live-DB-Apply + Audit-Verifikation | BL-069 | ~3 MTs (Migration schreiben + Apply + Re-Run-Idempotenz-Test) |
+| (kein Slice) | Berater-Help-Review (User direkt, kein Code-Slice) | BL-067 | ~30 min |
+
+2 Slices + 1 Content-Item, ~9 Micro-Tasks, geschaetzt 1-2 Tage Implementation.
+
+Pflicht-Gates fuer V4.4-Implementation:
+- Keine Schema-DDL-Aenderung. Wenn BL-069 doch DDL braucht → eskalieren.
+- Vor + nach SLC-061: `npm run lint` Output-Snapshot dokumentieren (Errors + Warnings count).
+- Vor + nach SLC-062: `audit-umlauts.mjs`-Output dokumentieren (Vorkommnisse-Anzahl).
+- Nach Deploy: V4.3-Regression-Smoke (Reader + Help-Sheet + Cross-Search reachable).
+- Berater-Review BL-067 kann jederzeit eingeschoben werden.
+
+### Delivery Mode (V4.4)
+**SaaS Product** — Maintenance-Release-Cadence wie V3.1 / V4.3.
+
+### Sequencing — V4.4 → V5
+
+V4.4 ist explizit als Pre-V5-Hygiene scopiert. V5 (Walkthrough-Mode) startet nach V4.4-Release, weil:
+- Pre-existing Lint-Errors wuerden in V5 mitwachsen — besser jetzt schliessen.
+- Demo-Daten-Inkonsistenz waere fuer V5-Stakeholder-Demos sichtbar — besser jetzt korrigieren.
+- Berater-Help-Review schaetzungsweise 30min — kein Grund, V5 dafuer zu blocken, kann auch parallel zu V5 laufen.

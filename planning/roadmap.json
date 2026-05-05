@@ -66,8 +66,8 @@
     {
       "id": "v4-4",
       "name": "V4.4",
-      "status": "planned",
-      "summary": "Maintenance-Sammelrelease vor V5-Start (Pattern aus V3.1 / V4.3). Sammelt Pre-V5-Hygiene-Items, damit V5 (Walkthrough-Mode) auf sauberer Basis startet. Scope-Skizze: BL-067 Berater-Inhalts-Review der 5 Help-Markdown-Files (Content-Only, kein Code-Slice — direkter Editor-Workflow vom User), BL-068 Lint-Sweep (7 Pre-existing react-hooks-Errors + 6 Warnings im V2-V4.2-Code, sichtbar gemacht durch SLC-053 ESLint-9-Migration), BL-069 SQL-Migration 046 Daten-Backfill (328 Umlaut-Vorkommnisse in templates.blocks/sop_prompt JSONB-Feldern, Live-DB-Update). Naechster Schritt: /requirements V4.4.",
+      "status": "active",
+      "summary": "Maintenance-Sammelrelease vor V5-Start (Pattern aus V3.1 / V4.3). Pre-V5-Hygiene, damit V5 (Walkthrough-Mode) auf sauberer Basis startet. /requirements done 2026-05-05 (RPT-151) — 3 Items in 3 Kategorien: BL-068 Lint-Sweep (7 react-hooks-Errors + 6 Warnings im V2-V4.2-Code), BL-069 SQL-Backfill 046 Umlaute (328 Vorkommnisse in templates.blocks/sop_prompt JSONB Live-DB-UPDATE), BL-067 Berater-Inhalts-Review (Content-Only, kein Code-Slice). 6 SCs (SC-V4.4-1..6), 4 Risks + 4 Annahmen, 4 Open Questions fuer /architecture. Slice-Skizze: 2 Slices (SLC-061 Lint-Sweep + SLC-062 SQL-Backfill) + 1 Content-Item, ~9 MTs, 1-2 Tage. Naechster Schritt: /architecture V4.4.",
       "order": 10
     },
     {
