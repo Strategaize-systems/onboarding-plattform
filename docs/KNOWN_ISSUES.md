@@ -1,5 +1,14 @@
 # Known Issues
 
+### ISSUE-034 — wizard-actions.test.ts Mock-Drift aus V4.2 ISSUE-031 Fix (createAdminClient nicht gemockt)
+- Status: open
+- Severity: Medium
+- Area: V4.2 Test-Coverage / Pre-V4.3-Drift in V4.3 Gesamt-/qa entdeckt
+- Summary: `src/app/dashboard/__tests__/wizard-actions.test.ts:62-67` mockt nur `createClient` aus `@/lib/supabase/server`. V4.2-Commit `d1978ca` (ISSUE-031 fix) hat `wizard-actions.ts` aber auf `createAdminClient` aus `@/lib/supabase/admin` umgestellt fuer den UPDATE-Pfad. Mock greift nicht mehr → echter Service-Role-Client laeuft → Test FAIL mit `Error: supabaseUrl is required.`. 9/9 Tests in der Datei betroffen.
+- Impact: Test-Suite zeigt false-negatives in wizard-State-Maschine. Spec-Logik ist live korrekt (V4.2-Browser-Smoke 2026-04-30 user-bestaetigt PASS), aber Tests koennten kuenftige State-Maschinen-Regressionen NICHT mehr fangen. NICHT V4.3-Bug — V4.3-Code unbetroffen, V4.3-Release nicht blockiert.
+- Workaround: Live-Verifikation des Wizards bei jedem V4.x-Release als Browser-Smoke einplanen, bis Test-Mock korrigiert ist.
+- Next Action: Hotfix oder V4.4-Item: vi.mock fuer `@/lib/supabase/admin` mit `createAdminClient` ergaenzen, identische Builder-Mock-Struktur wie bestehender Mock wiederverwenden. ~30-60min. Erkannt in V4.3 Gesamt-/qa (RPT-147).
+
 ### ISSUE-033 — Vermutete Turbopack-Layout-Inlining-Anomalie (V4.2 SLC-047, im Minimal-Case nicht reproduzierbar)
 - Status: wontfix
 - Severity: Low

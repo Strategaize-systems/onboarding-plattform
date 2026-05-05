@@ -9,16 +9,17 @@
 Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdichtung. Ermoeglicht mehrere Capture-Modi (Fragebogen, Meeting, Voice, etc.) und Template-basierte Produktvarianten (z.B. Exit-Readiness, Immobilien-Onboarding). Ab V4: Zwei-Ebenen-Verschmelzung (GF-Blueprint + Mitarbeiter-Capture + Unternehmerhandbuch-Output).
 
 ## Current State
-- High-Level State: implementing
-- Current Focus: **V4.3 Bundle-Live-Smoke PASS 2026-05-05 (RPT-146).** Alle 6 V4.3-Slices end-to-end gegen Live-Instance verifiziert mit zwei echten Worker-erzeugten Snapshots (Strategaize-Business-Case GF-Blueprint, 9 Bloecke / 27 KUs / 9 Diagnosen, 8 Sektionen). Test-Fixture als wiederverwendbares SQL unter `test-fixtures/v43-bundle-smoke/seed-strategaize-business-case.sql` abgelegt. Verifizierte Slices: SLC-053 Auth-Middleware-Proxy (Magic-Link-Login), SLC-051 Reader-UX (Scroll-Spy via aria-current="location" + TOC-Permalink + Mobile-h1), SLC-052 TOC-Anchor-Slugs umlaut-konsistent (`section-fuehrung--organisation`, `section-prozesse--ablaeufe`, `section-vertraege--compliance` etc.), SLC-054 Cross-Snapshot-Search differenziert V1 vs V2 sauber ("Q4/2026 verschoben" → V2 only, "Stellvertreter-Hire bis Q3" → V1 only), SLC-055 Help-Konsolidierung (3-Tab Learning-Center mit "Diese Seite") + Tooltip-Target-Fix (cursor-help wrapper 241px breit), SLC-056 ADR/Spike Doku-only. V4.2-Regression PASS (Cockpit-Cards + Reminder-Card + Tooltip + Capture-Session-Link). 0 Console-Errors. 0 Blocker, 0 High, 0 Medium, 2 Low (section_count=8 statt 9 wegen Schema-Konsolidierung; Cross-Search "2 Treffer" durch Title+Body-Score-Doppelzaehlung — beide bewusst). Ready fuer Gesamt-V4.3-/qa → /final-check → /go-live → /deploy als REL-011.
-- Current Phase: V4.3 Bundle-Live-Smoke PASS. Naechste Phase: Gesamt-V4.3-/qa → /final-check → /go-live → /deploy als REL-011.
+- High-Level State: qa
+- Current Focus: **V4.3 Gesamt-/qa PASS 2026-05-05 (RPT-147).** Alle 10 SC-V4.3 erfuellt (9 PASS + 1 DEFERRED nicht-blockierend SC-V4.3-10 Berater-Help-Review-Track parallel zum Code-Release). Vitest gegen Coolify-DB **526/535 PASS**, 9 FAIL ausschliesslich in `wizard-actions.test.ts` durch Pre-V4.2-Test-Mock-Drift (V4.2 ISSUE-031-Fix `d1978ca` schaltete `wizard-actions.ts` auf `createAdminClient`, Test mockt nur `createClient` → Mock greift nicht — NICHT V4.3-Regression, Live-Code via V4.2-Browser-Smoke 2026-04-30 user-bestaetigt). Stub-Scan 0 Findings in 31 V4.3-Production-Files. Wiring 4/4 Haupt-Ketten verifiziert: Worker→Reader Anchor-Konsistenz, Cross-Snapshot-Search Pipeline, Scroll-Spy+Permalink, Help-API+Learning-Center. V4.3-Constraints alle eingehalten (kein Schema-Touch, kein neuer Cron, kein neuer Container, Spike timeboxed 3:17min). 0 Blocker, 0 High, 1 Medium (M1 wizard-actions Mock-Drift, in V4.4 oder Hotfix), 2 Low (Pre-existing SchemaKonsolidierung+Cross-Search-Score, beide bewusst). Ready fuer **/final-check**.
+- Current Phase: V4.3 Gesamt-/qa PASS. Naechste Phase: /final-check → /go-live → /deploy als REL-011.
 
 ## Immediate Next Steps
-1. **/qa SLC-054** Code-side + Browser-Smoke (Cross-Snapshot-Search Desktop + Mobile + LocalStorage-Persistenz + 4-Rollen-RLS-Matrix-Regression).
-2. **Implementation V4.3 in Reihenfolge (per DEC-062):** SLC-053 ✓ → SLC-051 ✓ → SLC-052 ✓ → SLC-055 ✓ → SLC-056 ✓ → SLC-054 ✓ — alle 6 V4.3-Slices code-side done.
-3. **BL-067 Berater-Help-Review** parallel via direkten Editor-Workflow (5 Markdown-Files unter `src/content/help/`); kein Code-Slice noetig.
-4. **Nach /qa SLC-054:** Gesamt-V4.3-Bundle-Live-Smoke aller 6 Slices inkl. SLC-053-Auth-Flow + neuer Cross-Search-Box, Gesamt-V4.3-/qa, /final-check, /go-live, /deploy als REL-011.
-5. **Nach V4.3-Release:** /compliance-Sprint fuer Privacy/Datenschutz/Impressum-Page (separater Track per D-SPLIT-Decision). BL-068 (Lint-Sweep) als V4.4 oder eigener Maintenance-Sprint.
+1. **/final-check V4.3** — Pre-Release Hygiene-Check (npm audit, postcss-Drift, ENV-Vars-Drift in compose.yml, Build-Reproducibility). Erwartung: CONDITIONAL READY analog V4.2 RPT-128.
+2. **/go-live V4.3** — Release-Risk-Assessment + Rollback-Notes als Draft.
+3. **/deploy V4.3 als REL-011** — User-manueller Coolify-Deploy auf onboarding.strategaizetransition.com.
+4. **Hotfix oder V4.4: ISSUE-034** (Medium) — Mock-Wrapper auf `createAdminClient` in `wizard-actions.test.ts` ergaenzen, ~30-60min.
+5. **BL-067 Berater-Help-Review** parallel via direkten Editor-Workflow (5 Markdown-Files unter `src/content/help/`); kein Code-Slice noetig.
+6. **Nach V4.3-Release:** /compliance-Sprint fuer Privacy/Datenschutz/Impressum-Page (separater Track per D-SPLIT-Decision). BL-068 (Lint-Sweep) als V4.4 oder eigener Maintenance-Sprint.
 5. **V4.2-Slices-Stand (RELEASED):** SLC-046..050 alle done+QA+deployed, Gesamt-V4.2 (RPT-127), Final-Check (RPT-128), Go-Live (RPT-129), Deploy (RPT-130).
 6. **V4.3-Backlog-Stand (Maintenance-Sammelrelease):** 9 offene Items (BL-051..059), Start nach V4.2-Release. Neu zu adden: ADR fuer State-Maschinen-UPDATE-Pattern (Service-Role vs RLS-Policy) basierend auf ISSUE-031, plus Investigation Next 16 Turbopack-Layout-Inlining-Anomalie.
 
