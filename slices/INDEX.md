@@ -222,9 +222,9 @@ Reihenfolge: **SLC-053 → SLC-051 → SLC-052 → SLC-055 → SLC-056 → SLC-0
 - V4.2-Regression-Smoke pro Slice (SC-V4.3-6).
 - Gesamt-V4.3-/qa nach SLC-054 (SC-V4.3-1..10 vollstaendig verifiziert).
 
-### V4.3 BL-067 Berater-Help-Review (Content-Only)
+### BL-067 Berater-Help-Review (Content-Only, deferred)
 
-BL-067 ist KEIN Code-Slice — direkter Editor-Workflow vom User selbst. 5 Help-Markdown-Files unter `src/content/help/*.md` (dashboard.md, capture.md, bridge.md, reviews.md, handbook.md). Aktualisierte Files werden als eigener Commit hinterlegt. **In V4.4 verschoben** — kann parallel zu SLC-061 + SLC-062 laufen.
+BL-067 ist KEIN Code-Slice — direkter Editor-Workflow vom User selbst. 5 Help-Markdown-Files unter `src/content/help/*.md` (dashboard.md, capture.md, bridge.md, reviews.md, handbook.md). **Status: deferred (kein Release-Pinning)** seit /post-launch V4.4 (RPT-162, 2026-05-05). Wird abgeschlossen sobald User die inhaltliche Review macht; laeuft parallel zu V5+ ohne Release-Bindung.
 
 ## V4.4 Slices (Pre-V5-Hygiene Maintenance)
 

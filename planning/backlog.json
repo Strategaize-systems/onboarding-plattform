@@ -665,9 +665,9 @@
       "title": "Berater-Inhalts-Review fuer SLC-050 Help-Files (5 Markdown-Dateien)",
       "type": "improvement",
       "priority": "medium",
-      "status": "in_progress",
-      "version": "V4.4",
-      "description": "Aus V4.3 verschoben in V4.4 Maintenance-Sprint 2026-05-05 (V4.3-Code-Release done, BL-067 ist Content-Only und wandert in den naechsten Maintenance-Schnitt). User hatte in V4.2 SLC-050 /qa (RPT-126) mit 'final review' bestaetigt, dass die 5 Help-Markdown-Files vorlaeufig OK sind aber finale inhaltliche Pruefung im naechsten Sammelrelease passiert. Dateien: src/content/help/dashboard.md, capture.md, bridge.md, reviews.md, handbook.md (je 180-243 Worter). Review-Pflichten: Begriffs-Konsistenz mit UI, Tonalitaet (Du-Form), keine Doppelungen, fehlende Schritte ergaenzen, ggf. Tooltips am Page-Start ergaenzen. Kein Code-Slice noetig — direkter Editor-Workflow mit Berater (User selbst). Output: aktualisierte 5 .md-Files + Commit.",
+      "status": "deferred",
+      "version": null,
+      "description": "Content-Only Item — direkter User-Editor-Workflow ohne Release-Bindung. Aus V4.4 Pinning entfernt 2026-05-05 nach /post-launch V4.4 (RPT-162) — V4.4 ist released, BL-067 laeuft parallel weiter. 5 Help-Markdown-Files unter src/content/help/*.md (dashboard.md, capture.md, bridge.md, reviews.md, handbook.md, je 180-243 Worter). Review-Pflichten: Begriffs-Konsistenz mit UI, Tonalitaet (Du-Form), keine Doppelungen, fehlende Schritte ergaenzen, ggf. Tooltips am Page-Start ergaenzen. Kein Code-Slice noetig. Output: aktualisierte 5 .md-Files + Commit. Wird abgeschlossen sobald User die inhaltliche Review macht.",
       "createdAt": "2026-05-01"
     },
     {
