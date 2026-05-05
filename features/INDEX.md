@@ -67,3 +67,18 @@
 | FEAT-031 | Tenant-Onboarding-Wizard | deployed | [Spec](FEAT-031-tenant-onboarding-wizard.md) | 2026-04-29 |
 | FEAT-032 | Capture-Reminders | deployed | [Spec](FEAT-032-capture-reminders.md) | 2026-04-29 |
 | FEAT-033 | In-App-Hilfe | deployed | [Spec](FEAT-033-in-app-hilfe.md) | 2026-04-29 |
+
+## V5 Features (Walkthrough-Mode MVP — Capture + Berater-Review)
+
+| ID | Feature | Status | Spec | Created |
+|----|---------|--------|------|---------|
+| FEAT-034 | Walkthrough Capture-Session (Web-only Recording) | planned | [Spec](FEAT-034-walkthrough-capture-session.md) | 2026-05-05 |
+| FEAT-035 | Walkthrough Whisper-Transkription | planned | [Spec](FEAT-035-walkthrough-whisper-transcription.md) | 2026-05-05 |
+| FEAT-036 | Walkthrough Berater-Review (Manual Approval-Gate) | planned | [Spec](FEAT-036-walkthrough-berater-review.md) | 2026-05-05 |
+
+## V5.1 Features (Walkthrough AI-Pipeline + Handbuch-Integration)
+
+| ID | Feature | Status | Spec | Created |
+|----|---------|--------|------|---------|
+| FEAT-037 | Walkthrough AI-Pipeline (PII-Redaction + Schritt-Extraktion) | planned | [Spec](FEAT-037-walkthrough-ai-pipeline.md) | 2026-05-05 |
+| FEAT-038 | Walkthrough Handbuch-Integration | planned | [Spec](FEAT-038-walkthrough-handbuch-integration.md) | 2026-05-05 |

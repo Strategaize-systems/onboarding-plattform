@@ -759,6 +759,66 @@
       "version": null,
       "description": "Bei /post-launch V4.3+V4.4 (RPT-162, 2026-05-05) entdeckt: reminder_log zeigt 4× Stage1 an gleichen Empfaenger an 4 aufeinanderfolgenden Tagen (01-04.05.) plus Stage2 heute. V4.2-Spec sagt 'Stufe 1 nach 3 Werktagen, Stufe 2 nach 7 Werktagen, Idempotenz' — Verhalten widerspricht der Spec. UNIQUE-Constraint blockiert nur Mehrfach-Send pro Tag, nicht ueber Tage. Investigation-Punkte: (a) Wie ermittelt der Cron, ob Stage1 schon gesendet wurde? (b) Wird reminder_log nach gleichem employee_user_id+reminder_stage ohne sent_date-Filter gequeryt? (c) Ist die Cron-Logik buggy oder die UNIQUE-Constraint zu schwach? Hotfix-Bedarf vor Pre-Production-Cutover (Spam-Reputation-Risiko bei Echt-Kunden). Im Pilot/Internal-Test-Mode unkritisch. Verweis: ISSUE-035 in /docs/KNOWN_ISSUES.md.",
       "createdAt": "2026-05-05"
+    },
+    {
+      "id": "BL-077",
+      "title": "FEAT-034 Walkthrough Capture-Session (Web-only Recording)",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V5",
+      "description": "Walkthrough-Mode MVP: Mitarbeiter zeichnet Bildschirm + Mikrofon via getDisplayMedia + getUserMedia auf, Aufnahme landet im walkthroughs-Storage-Bucket. Kein Software-Install. Tech-Stack-Decision User 2026-05-05: Web-only, kein Browser-Extension/Electron/Native. Out of Scope V5: Klick-Tracking, DOM-Snapshots, Selektor-Erfassung (V6+ falls Kundenwunsch). Slice-Skizze: SLC-071. ~6-8 MTs.",
+      "createdAt": "2026-05-05"
+    },
+    {
+      "id": "BL-078",
+      "title": "FEAT-035 Walkthrough Whisper-Transkription",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V5",
+      "description": "Audio-Spur einer Walkthrough-Session wird durch Self-hosted Whisper-Container transkribiert. Reusiert Whisper-Adapter aus V2 (FEAT-015 / DEC-018). Neuer Job-Type walkthrough_transcribe. Transkript landet als knowledge_unit mit source='walkthrough_transcript'. Slice-Skizze: SLC-072. ~3-4 MTs.",
+      "createdAt": "2026-05-05"
+    },
+    {
+      "id": "BL-079",
+      "title": "FEAT-036 Walkthrough Berater-Review (Manual Approval-Gate)",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V5",
+      "description": "Berater-UI fuer manuelle Sichtung + Approval von Walkthrough-Sessions. Cross-Tenant-Sicht /admin/walkthroughs + Pro-Tenant-Sicht /admin/tenants/[id]/walkthroughs. Pflicht-Checkbox vor Approve: 'keine kundenspezifischen oder sensitiven Inhalte sichtbar'. RLS: Roh-Aufnahmen NUR fuer Berater + Aufnehmer sichtbar bis Approve. Pattern-Reuse aus V4.1 block_review. Slice-Skizze: SLC-073. ~5-6 MTs.",
+      "createdAt": "2026-05-05"
+    },
+    {
+      "id": "BL-080",
+      "title": "V5 Walkthrough-Capture-Session-Datenmodell + RLS-Matrix-Tests + Registry-Update",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V5",
+      "description": "walkthrough_session-Datenmodell (Tabelle oder capture_session-Erweiterung — /architecture klaert), CAPTURE_MODE_REGISTRY-Eintrag fuer 'walkthrough' (ersetzt walkthrough_stub-Spike als beworbenen Mode), RLS-Matrix-Tests (4 Rollen × 3 Operationen). Slice-Skizze: SLC-074. ~4-5 MTs.",
+      "createdAt": "2026-05-05"
+    },
+    {
+      "id": "BL-081",
+      "title": "FEAT-037 Walkthrough AI-Pipeline (PII-Redaction + Schritt-Extraktion)",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V5.1",
+      "description": "Whisper-Transkript einer Walkthrough-Session durchlaeuft 2-stufige Bedrock-Claude-Pipeline (eu-central-1): (1) PII-Redaction-Pass mit konservativer Pattern-Liste maskiert sensitive Daten zu Platzhaltern ([KUNDE], [EMAIL], [BETRAG], [ID], [INTERN]); (2) Schritt-Extraktion-Pass produziert SopStep-Liste + Knowledge-Units. Sequenzielle Worker-Jobs nach walkthrough_review.approved. PII-Pattern-Library mit synthetischer Test-Suite. Slice-Skizze: SLC-075 + SLC-076. ~9-11 MTs.",
+      "createdAt": "2026-05-05"
+    },
+    {
+      "id": "BL-082",
+      "title": "FEAT-038 Walkthrough Handbuch-Integration",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V5.1",
+      "description": "Approved Walkthroughs erscheinen im Unternehmerhandbuch unter neuer Section 'Walkthroughs' mit Schritt-Liste + Embed-Link zum Roh-Video (Storage-Proxy-Pattern aus V4.1 ISSUE-025 Resolution). Berater-Review-UI bekommt KI-Vorschlaege (FEAT-037) als editierbare Vorlage; Berater editiert vor Approve. Toggle 'Original-Transkript anzeigen' mit Audit-Log. Section-Position konfigurierbar pro Template. Slice-Skizze: SLC-077. ~6-7 MTs.",
+      "createdAt": "2026-05-05"
     }
   ]
 }
