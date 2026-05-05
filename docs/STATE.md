@@ -11,15 +11,14 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 ## Current State
 - High-Level State: stable
 - Current Focus: **V4.3 RELEASED 2026-05-05 als REL-011 (RPT-150).** Deploy-Commit `77b3852` (HEAD-Snapshot, App-Code-State identisch zu `0843362` — 77b3852 enthaelt nur Doku-Update RPT-149 + REL-011-Draft + STATE-Phase). User-Coolify-Redeploy 2026-05-05 ~10:53 Europe/Berlin durch. Live-Smoke (RPT-150) PASS auf alle 6 Server-Checks: app+worker Up healthy 2min nach Redeploy, `https://onboarding.strategaizetransition.com/login` HTTP 200 TTFB 107ms (V4.1-Stable-Vergleichsbasis: 86-149ms), `/api/health` `{"status":"ok"}`, error_log 0 errors/fatals letzte 15min, worker+app-Logs 0 FATAL/ERROR/Crash, Worker-Bedrock-ENV korrekt geladen (eu-central-1 + Claude-Sonnet-4). Reader-Browser-Smoke (Check 5) ist User-Pflichteil — Reader-UX + Cross-Search + Help-Sheet bleiben fuer User-Bestaetigung im 24-48h-Fenster offen. 24-48h Post-Launch-Window startet 2026-05-05 ~10:55. **V4.3 bleibt im Internal-Test-Mode** wie V5.1+ Business-System bis Pre-Production-Compliance-Gate (Anwaltspruefung + Privacy-Page + Azure-EU + ISSUE-042-Pattern, explizit aufgeschoben per User-Decision).
-- Current Phase: V4.3 Released + Post-Launch-Window 24-48h laeuft. V4.4 /requirements + /architecture + /slice-planning done 2026-05-05 (RPT-151+152+153). **V4.4 2/2 Slices done 2026-05-05** — SLC-061 (RPT-154+155) + SLC-062 (RPT-156+157). MIG-030 live auf Hetzner-Coolify (Migration 081), 7E+6W → 0/0 Lint, 535/535 Vitest gruen post-Migration. Branch direkt auf `main`, kein Worktree. Code-Releases: 188095f → cf3183d → bcd4af8. Naechste Phase: Gesamt-V4.4-/qa + /final-check + /go-live + /deploy V4.4 als REL-012.
+- Current Phase: V4.3 Released + Post-Launch-Window 24-48h laeuft. V4.4 /requirements + /architecture + /slice-planning done 2026-05-05 (RPT-151+152+153). **V4.4 2/2 Slices done 2026-05-05** — SLC-061 (RPT-154+155) + SLC-062 (RPT-156+157). **Gesamt-V4.4-/qa 2026-05-05 PASS (RPT-158)** — SC-V4.4-1/2/3/5/6 verifiziert, SC-V4.4-4 (BL-067 Berater-Help-Review) DEFERRED parallel per User. Browser-Smoke V4.3-Regression PASS (Reader, Help-Sheet 3-Tab, Cross-Search 20/9, Capture-Block-Listing mit Umlauten). Demo-Snapshot-Re-Generation gegenstandslos (0 Demo-Template-Snapshots existieren). MIG-030 live auf Hetzner-Coolify (Migration 081), 7E+6W → 0/0 Lint, 535/535 Vitest gruen post-Migration. Branch direkt auf `main`, kein Worktree. Code-Releases: 188095f → cf3183d → bcd4af8 → 1833d24. Naechste Phase: /final-check + /go-live + /deploy V4.4 als REL-012.
 
 ## Immediate Next Steps
-1. **Gesamt-V4.4-/qa** — beide Slices SLC-061+062 zusammen, SC-V4.4-1..6 verifizieren inkl. V4.3-Regression-Browser-Smoke (Reader, Help-Sheet, Cross-Search, Bridge-Edit, Jitsi-Init, FileUpload, Capture-Block-Render mit korrekten Umlauten). Empfohlen in **fresh Session** (siehe Handoff).
-2. **/final-check V4.4** → **/go-live V4.4** → **/deploy V4.4 als REL-012**.
-3. **User-Browser-Smoke V4.3** — Login + `/dashboard/handbook/<id>` Reader laden, Cross-Search-Box reachable, Help-Sheet-Tabs wechseln. Kann parallel laufen.
+1. **/final-check V4.4** — Hygiene + Dependencies + Security-Audit auf V4.4-Sammelrelease.
+2. **/go-live V4.4** → **/deploy V4.4 als REL-012**.
+3. **BL-067 Berater-Help-Review** parallel via direkten Editor-Workflow (5 Markdown-Files unter `src/content/help/`); kein Code-Slice noetig.
 4. **/post-launch V4.3** nach 24-48h Stable-Window — Container-Logs, error_log, 06.05. 09:00 Cron-Run `capture-reminders-daily` pruefen.
-5. **BL-067 Berater-Help-Review** parallel via direkten Editor-Workflow (5 Markdown-Files unter `src/content/help/`); kein Code-Slice noetig.
-6. **/requirements V5** (Walkthrough-Mode) nach V4.4-Release als REL-012.
+5. **/requirements V5** (Walkthrough-Mode) nach V4.4-Release als REL-012.
 
 ## Active Scope
 **V4 — Zwei-Ebenen-Verschmelzung, 6 Features Code-done, 8 Slices Code-done:**
