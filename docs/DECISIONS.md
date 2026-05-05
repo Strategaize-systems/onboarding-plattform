@@ -382,3 +382,28 @@
   - **SLC-062 SQL-Backfill** — MIG-030 (Datei 081) anlegen + apply auf Hetzner-Coolify-Supabase per base64-Pattern + audit-Verifikation. **~3 MTs.**
   - **BL-067 Berater-Help-Review** — Kein Slice, User-direkt-Edit, parallel.
   Reihenfolge frei: SLC-061 + SLC-062 sind unabhaengig. Empfehlung: SLC-061 first (kein DB-Touch, schneller QA-Loop), SLC-062 second (DB-Apply braucht User + Backup). BL-067 jederzeit.
+
+## DEC-074 — V5 Walkthrough-Datenmodell: eigene Tabelle `walkthrough_session` mit FK zu `capture_session`
+- Status: accepted
+- Reason: Walkthrough hat eine eigenstaendige Status-Maschine (`recording → uploading → uploaded → transcribing → pending_review → approved | rejected | failed`) und Walkthrough-spezifische Felder (`storage_path`, `duration_sec`, `recorded_at`, `reviewer_user_id`, `privacy_checkbox_confirmed`, `transcript_knowledge_unit_id`). Diese in `capture_session` zu erweitern wuerde die Tabelle aufblaehen und alle bestehenden Mode-Reads belasten. Privacy-Verschaerfung (R-V5-3) erfordert eine eigene RLS-Policy "Aufnehmer + tenant_admin only", die in den bestehenden capture_session-Policies bestehende Mode-Reads brechen wuerde. Pattern existiert bereits seit V3 mit `dialogue_session` (DEC-026) — gleicher Begruendungs-Stack, gleiche Loesung.
+- Consequence: Migration 083 erstellt `walkthrough_session` (FK zu `capture_session ON DELETE CASCADE`, FK zu `tenants ON DELETE CASCADE`, FK zu `auth.users` fuer recorded_by + reviewer + transcript_knowledge_unit). `capture_session.capture_mode='walkthrough'` bleibt der Mode-Marker. Worker-Pipeline registriert sich ueber Job-Type-Konvention `walkthrough_transcribe`. RLS-Matrix ist 4-Rollen × 4-Operationen = 16 Faelle und ist Pflicht-Gate fuer V5-Release (SC-V5-4).
+
+## DEC-075 — V5 Walkthrough-Storage-Codec: WebM/VP9 + Opus only, kein MP4-Transcoding
+- Status: accepted
+- Reason: MediaRecorder-Output ist auf Chrome/Edge/Firefox nativ WebM/VP9+Opus — keine Transcoding-Stage in der Pipeline noetig. HTML5 `<video>` spielt WebM/VP9 nativ in allen Ziel-Browsern (Safari ab Version 16, dokumentierter Constraint im PRD: "Empfohlen Chrome/Edge/Firefox"). MP4-Transcoding via ffmpeg-Worker wuerde +CPU, +Speicher (2x Storage), +Pipeline-Stage, +Failure-Mode hinzufuegen ohne klaren V5-Bedarf.
+- Consequence: Storage-Bucket `walkthroughs` setzt `allowed_mime_types=ARRAY['video/webm']`. Worker extrahiert Audio-Spur via ffmpeg fuer Whisper (das ist KEIN Transcoding, nur Audio-Demux). Bei spaeterem Kundenwunsch (etwa Sales-Demo auf altem Safari) ist optionales ffmpeg-Transcoding-Job in V5.2 additiv ohne Architektur-Aenderung.
+
+## DEC-076 — V5 Walkthrough-Max-Dauer: 30 Minuten Hard-Cap, zweistufig durchgesetzt
+- Status: accepted
+- Reason: 30min WebM/VP9 ≈ 150-300 MB pro Session. Bei 100 Sessions/Monat = 15-30 GB Storage-Wachstum (R-V5-1). Whisper bei 1.5x Realtime = 45min Bearbeitungszeit pro 30min-Walkthrough — gerade noch akzeptabel asynchron. 60min wuerde Storage verdoppeln und Whisper-Backlog-Risiko verdoppeln. 15min ist fuer reale Onboarding-Walkthroughs (Datev-Export, CRM-Auftrags-Anlage) zu kurz (typisch 12-25min).
+- Consequence: Browser-MediaRecorder bekommt `setTimeout(autoStopAt30Min)` als Hard-Stop, UI zeigt Restzeit + Warnung bei 25min. DB hat `walkthrough_session.duration_sec CHECK <= 1800` als Defense-in-Depth. Server Action `confirmWalkthroughUploaded` validiert ebenfalls Fast-Fail. Bei UI-Bypass (manipuliertes Frontend) wird der Eintrag DB-seitig abgelehnt.
+
+## DEC-077 — V5 Walkthrough-Upload-Strategie: Direct-Upload via Supabase Signed URL + Pflicht-Privacy-Checkbox
+- Status: accepted
+- Reason: 150-300 MB durch Next.js Server Actions ist nicht praktikabel — Default-Body-Limit ist 4MB, Coolify-Timeout-Risiko, doppelte Memory-Last (Browser → App-Container → Storage). Direct-Upload via signed URL ist Browser-Standard fuer grosse Uploads (Pattern: signed POST/PUT mit kurzer TTL, tenant-isolierter Pfad-Praefix, Bucket-RLS als Defense-in-Depth). Fuer Approve-Pfad: ohne Pflicht-Bestaetigung "keine sensitiven Inhalte sichtbar" durch Berater darf approved nicht moeglich sein — sonst untergraeben wir R-V5-3-Mitigation.
+- Consequence: 3 Server Actions: `requestWalkthroughUpload(captureSessionId)` erzeugt walkthrough_session + signed Upload-URL (15min TTL, Pfad `<tenantId>/<walkthroughId>/recording.webm`). `confirmWalkthroughUploaded({walkthroughSessionId, durationSec, fileSizeBytes})` setzt Status `uploaded` + queued Whisper-Job. `approveOrRejectWalkthrough` validiert `privacyCheckboxConfirmed=true` fuer decision='approved' (sonst HTTP 422). Defense-in-Depth: UI-Block + Server-Side-Validation + DB-Check. Audit-Log ueber `error_log` mit category='walkthrough_review'.
+
+## DEC-078 — V5 Walkthrough-Audio-Mix: Mic-only, kein Screen-Audio
+- Status: accepted
+- Reason: `getDisplayMedia({audio:true})` wird in Firefox nicht unterstuetzt — bricht Cross-Browser-Konsistenz. Chromium braucht User-Checkbox "Audio teilen", die typisch nicht aktiviert wird. Audio-Mix (Screen + Mic) bringt Echo-Cancellation- und Pegel-Mismatch-Komplexitaet, die Whisper-Inputs verschlechtert. Onboarding-Walkthroughs erfassen prozessuales Wissen via verbal-erklaerenden Mitarbeiter — System-Sounds (Klingelton, Alert) sind selten Teil des Wissens.
+- Consequence: Recording-UI ruft `navigator.mediaDevices.getDisplayMedia({video: true, audio: false})` (Screen-Spur ohne System-Audio) UND `navigator.mediaDevices.getUserMedia({audio: true})` (Mic-Spur) und kombiniert beide zu einem MediaStream. MediaRecorder mit `mimeType='video/webm;codecs=vp9,opus'`. Bei spaeterem Bedarf (Software-Tutorials mit System-Sound-Demo) kann V5.2 eine optionale Toggle "System-Audio einschliessen" nachreichen — additive Erweiterung, kein V5-Blocker.

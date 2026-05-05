@@ -362,3 +362,64 @@ Der uebernommene Blueprint-Stand ist noch nicht auf einer Onboarding-Plattform-I
   ```
   Apply per `sql-migration-hetzner.md`-Pattern: base64-Pipe + `psql -U postgres` ueber Coolify-Container. Verifikation: `node scripts/audit-umlauts-livedb.mjs` (SLC-062 MT-1 Helper, scant Live-DB-Dump-Files) → 0 TRUE-POSITIVE-Worte, 22 verbleibende FALSE-POSITIVE-Worte (Wissen/Prozesse/etc., korrektes Deutsch).
 - Live-Deploy: 2026-05-05 auf Hetzner-Onboarding-Server (159.69.207.29) per base64-Pipe + `psql -U postgres` (sql-migration-hetzner.md). Pre-Apply-Backup CSV als `/opt/onboarding-plattform-backups/pre-mig-030_20260505_131019.csv` (14032 bytes, slug+id+blocks+sop_prompt). Apply-Output: `MIG-030 blocks md5 changed=t (6286be... → 0954...), sop_prompt md5 changed=t (5e6b... → 013d...), DO`. Post-Audit auf Live-DB: 22 unique suspect words / 33 occurrences — alle FALSE-POSITIVE (Wissen 9, Prozesse 3, Lernquellen 2, ..., müssen, Passwörter, Verbesserungsvorschläge inkl. Post-Replace-Strings die noch ss enthalten). **TRUE-POSITIVE post-apply: 0.** Idempotenz-Test (2. Apply): blocks+sop md5 stable (changed=f), no DML-Drift. Backup-Datei bleibt im /opt/onboarding-plattform-backups/ als Recovery-Point.
+
+### MIG-031 — V5 Walkthrough-Mode Schema + Storage-Bucket (Migrations 082+083+084, planned)
+- Date: 2026-05-05 (geplant in /architecture V5; Apply in /backend SLC-071 nach User-Backup)
+- Scope: Drei additive Migrations fuer V5-MVP. Keine Schema-Aenderung an bestehenden Tabellen ausser CHECK-Constraint-Erweiterungen, die rein additive Werte zulassen.
+  - **Migration 082 — `082_v5_walkthrough_capture_mode.sql`**: erweitert `capture_session_capture_mode_check` um `'walkthrough'` (V4 hatte nur `'walkthrough_stub'` Spike). Erweitert `knowledge_unit_source_check` um `'walkthrough_transcript'`. Beide CHECK-Erweiterungen sind rueckwaerts-kompatibel — bestehende Rows bleiben gueltig.
+  - **Migration 083 — `083_v5_walkthrough_session.sql`**: CREATE TABLE `walkthrough_session` mit FKs (tenant_id → tenants ON DELETE CASCADE, capture_session_id → capture_session ON DELETE CASCADE, recorded_by_user_id + reviewer_user_id → auth.users, transcript_knowledge_unit_id → knowledge_unit ON DELETE SET NULL). 4 Indizes (tenant, capture, recorded_by, partial pending_review). 3 RLS-Policies (SELECT/INSERT/UPDATE) entsprechend 4-Rollen-Matrix DEC-074. Hard-Cap 30min via `CHECK (duration_sec IS NULL OR duration_sec <= 1800)` (DEC-076).
+  - **Migration 084 — `084_v5_walkthrough_storage_bucket.sql`**: INSERT INTO storage.buckets (`walkthroughs`, public=false, file_size_limit=524288000, allowed_mime_types=ARRAY['video/webm']) mit ON CONFLICT DO NOTHING (DEC-075). 3 Storage-RLS-Policies (insert/select/delete) entsprechend Tenant-Isolation per Pfad-Praefix.
+- Reason: V5 erfordert eine eigene Walkthrough-Datenstruktur (DEC-074), produktiven `walkthrough` Capture-Mode (Loesung des V4-`walkthrough_stub`-Spike), und einen tenant-isolierten Storage-Bucket fuer Roh-Aufnahmen (R-V5-3 Privacy). Splitting in 3 Files erlaubt unabhaengiges Rollback (Bucket vs. Tabelle vs. CHECK-Erweiterung) und konsistente per-Migration-Verifikation.
+- Affected Areas: 
+  - `public.capture_session.capture_mode` CHECK (additive Erweiterung um `'walkthrough'`)
+  - `public.knowledge_unit.source` CHECK (additive Erweiterung um `'walkthrough_transcript'`)
+  - Neue Tabelle `public.walkthrough_session` mit RLS aktiviert
+  - Neuer Storage-Bucket `walkthroughs` mit 3 Policies
+  - Worker-Code: neuer Job-Handler `walkthrough_transcribe` (kein DDL, nur App-Code in /backend SLC-072)
+  - RLS-Test-Matrix erweitert um `walkthrough_session` (4 Rollen × 4 Operationen = 16 Faelle, Pflicht in /qa SLC-074, SC-V5-4)
+- Risk: Niedrig-Mittel. Migration 082 ist reine CHECK-Erweiterung (additive Werte, keine bestehenden Rows betroffen). Migration 083 ist Greenfield-Tabelle (keine Backfill-Notwendigkeit, keine FK-Konflikte mit bestehenden Daten — beim Apply-Zeitpunkt existieren keine `walkthrough`-Sessions). Migration 084 ist Bucket+Storage-Policy — Pre-Existenz-Pruefung durch ON CONFLICT bzw. CREATE POLICY IF NOT EXISTS. Apply-Pattern ist Standard `sql-migration-hetzner.md` (base64-Pipe + `psql -U postgres` ueber Coolify-Container). Pre-Apply-Pflicht: keine, da nur additive Strukturen — ein Backup vor jeder Migration ist trotzdem User-Standard.
+- Rollback Notes: 
+  - **082 Rollback**: `ALTER TABLE capture_session DROP CONSTRAINT capture_session_capture_mode_check; ALTER TABLE capture_session ADD CONSTRAINT capture_session_capture_mode_check CHECK (capture_mode IS NULL OR capture_mode IN ('questionnaire','evidence','dialogue','employee_questionnaire','walkthrough_stub'));` (gleichermassen fuer knowledge_unit_source_check ohne `'walkthrough_transcript'`). Voraussetzung: keine `capture_session` mit `capture_mode='walkthrough'` und keine `knowledge_unit` mit `source='walkthrough_transcript'` existiert (sonst CHECK schlaegt fehl).
+  - **083 Rollback**: `DROP TABLE IF EXISTS public.walkthrough_session CASCADE;` (CASCADE entfernt FKs).
+  - **084 Rollback**: `DELETE FROM storage.buckets WHERE id='walkthroughs';` (entfernt Bucket; Storage-Files muessen vorab via API geloescht werden, sonst orphan).
+  - Rollback-Reihenfolge bei Komplett-Revert: 1. App-Image revert auf pre-V5 (Server Actions/UIs ignorieren walkthrough_session). 2. Coolify-Cleanup-Cron pausieren. 3. Storage-Files manuell entfernen (`supabaseAdmin.storage.from('walkthroughs').remove([...])`). 4. SQL-Rollback in Reihenfolge 084 → 083 → 082.
+- Format-Skizze (final in /backend SLC-071 MT-1):
+  ```sql
+  -- 082_v5_walkthrough_capture_mode.sql (idempotent)
+  ALTER TABLE public.capture_session
+    DROP CONSTRAINT IF EXISTS capture_session_capture_mode_check;
+  ALTER TABLE public.capture_session
+    ADD CONSTRAINT capture_session_capture_mode_check
+    CHECK (capture_mode IS NULL OR capture_mode IN (
+      'questionnaire','evidence','dialogue',
+      'employee_questionnaire','walkthrough_stub','walkthrough'
+    ));
+  ALTER TABLE public.knowledge_unit
+    DROP CONSTRAINT IF EXISTS knowledge_unit_source_check;
+  ALTER TABLE public.knowledge_unit
+    ADD CONSTRAINT knowledge_unit_source_check
+    CHECK (source IN (
+      'questionnaire','exception','ai_draft','meeting_final','manual',
+      'evidence','dialogue','employee_questionnaire','walkthrough_transcript'
+    ));
+  ```
+  ```sql
+  -- 083_v5_walkthrough_session.sql (idempotent via IF NOT EXISTS)
+  CREATE TABLE IF NOT EXISTS public.walkthrough_session (...full DDL siehe ARCHITECTURE.md V5-Sektion);
+  CREATE INDEX IF NOT EXISTS idx_walkthrough_session_tenant ...;
+  -- ... weitere Indizes
+  ALTER TABLE public.walkthrough_session ENABLE ROW LEVEL SECURITY;
+  -- 3 RLS-Policies (DROP IF EXISTS + CREATE)
+  ```
+  ```sql
+  -- 084_v5_walkthrough_storage_bucket.sql (idempotent via ON CONFLICT)
+  INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+  VALUES ('walkthroughs', 'walkthroughs', false, 524288000, ARRAY['video/webm'])
+  ON CONFLICT (id) DO UPDATE SET
+    public=EXCLUDED.public,
+    file_size_limit=EXCLUDED.file_size_limit,
+    allowed_mime_types=EXCLUDED.allowed_mime_types;
+  -- 3 Storage-RLS-Policies (DROP IF EXISTS + CREATE)
+  ```
+  Apply per `sql-migration-hetzner.md`-Pattern in `/backend` SLC-071: base64-Pipe + `psql -U postgres` ueber Coolify-Container. Verifikation: `\dt walkthrough_session` zeigt Tabelle + 3 Policies, `SELECT * FROM storage.buckets WHERE id='walkthroughs'` liefert 1 Row, `\d capture_session` zeigt erweiterten CHECK.
+- Live-Deploy: offen (geplant fuer /backend SLC-071 nach User-Backup-Bestaetigung).

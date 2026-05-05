@@ -3884,3 +3884,513 @@ V5 (Walkthrough-Mode) startet nach V4.4-Release mit:
 - 5 Help-Files inhaltlich review-finalisiert (BL-067).
 
 V4.4 ist explizit minimaler Scope und blockiert V5 nur fuer den Zeitraum von 1-2 Implementierungstagen.
+
+---
+
+## V5 Architecture Addendum — Walkthrough-Mode MVP (Capture + Berater-Review)
+
+### Status
+
+Architecture done 2026-05-05 nach /architecture V5 mit User-Sign-Off zu Q-V5-A..E. KI-Pipeline (PII-Redaction, Schritt-Extraktion, Handbuch-Integration) ist explizit **V5.1** und wird nach V5-Release in eigenem /architecture-Run ergaenzt.
+
+### Architektur-Zusammenfassung V5
+
+V5 fuegt einen fuenften produktiven Capture-Mode `walkthrough` hinzu — vollstaendig **browser-nativ** ueber `getDisplayMedia` + `getUserMedia`, ohne Browser-Extension, ohne Native-Build, ohne Server-Transcoding.
+
+Vier strukturelle Bausteine:
+
+1. **Neue Tabelle `walkthrough_session`** (FK zu `capture_session`) mit eigener Status-Maschine und eigener RLS-Policy. Pattern analog `dialogue_session` aus V3.
+2. **Neuer Storage-Bucket `walkthroughs`** (tenant-isoliert, signed-URL-only, kein Public-Access), Pfad `<tenant_id>/<walkthrough_session_id>/recording.webm`.
+3. **Direct-Upload-Pfad** vom Browser via signed URL (15min TTL) — kein Body durch Next.js Server Actions.
+4. **Whisper-Adapter wird wiederverwendet** — neuer Job-Type `walkthrough_transcribe` mit eigenem Worker-Handler, Output ist `knowledge_unit` mit `source='walkthrough_transcript'`.
+
+Approval ist **manuell** in V5: Berater sieht Roh-Aufnahme + Whisper-Transkript, bestaetigt per Pflicht-Checkbox "keine kundenspezifischen oder sensitiven Inhalte sichtbar", approved oder rejected. Kein KI-Pfad in V5 — der kommt in V5.1.
+
+### Service-Topologie V5
+
+| Service | Aenderung in V5 |
+|---------|------------------|
+| Web App (Next.js) | Neue Routen: `/employee/capture/walkthrough/[id]` (Recording-UI), `/admin/walkthroughs` (Cross-Tenant-Pending-Liste), `/admin/walkthroughs/[id]` (Detail+Approve), `/admin/tenants/[id]/walkthroughs` (Pro-Tenant). 3 neue Server Actions: `requestWalkthroughUpload`, `confirmWalkthroughUploaded`, `approveOrRejectWalkthrough`. |
+| Worker Container | Neuer Job-Handler `walkthrough_transcribe` (laedt WebM aus Storage → extrahiert Audio via ffmpeg → Whisper-Adapter → speichert Transcript-KU). |
+| Supabase Storage | Neuer Bucket `walkthroughs` mit RLS-Policies (siehe Bucket-Section). |
+| Supabase Postgres | Neue Tabelle `walkthrough_session` + CHECK-Erweiterungen auf `capture_session.capture_mode` und `knowledge_unit.source`. |
+| AWS Bedrock | **Keine Aenderung in V5** — Bedrock kommt erst in V5.1 fuer PII-Redaction + Schritt-Extraktion. |
+| Self-hosted Whisper | Wiederverwendung, keine Container-Aenderung. |
+
+### Datenmodell V5
+
+#### `walkthrough_session` (neu) — DEC-074
+
+Eigene Tabelle mit FK auf `capture_session`. Walkthrough-spezifische Status-Maschine + Privacy-Policy. Pattern analog `dialogue_session` (V3 DEC-026).
+
+```sql
+CREATE TABLE walkthrough_session (
+  id                          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id                   uuid        NOT NULL REFERENCES tenants ON DELETE CASCADE,
+  capture_session_id          uuid        NOT NULL REFERENCES capture_session ON DELETE CASCADE,
+
+  -- Aufnehmer (Mitarbeiter oder GF, der die Session laeuft)
+  recorded_by_user_id         uuid        NOT NULL REFERENCES auth.users,
+
+  -- Storage
+  storage_path                text,                                                 -- "walkthroughs/<tenant>/<id>/recording.webm" (gesetzt nach Upload-Confirm)
+  storage_bucket              text        NOT NULL DEFAULT 'walkthroughs',
+  duration_sec                integer     CHECK (duration_sec IS NULL OR duration_sec <= 1800),  -- DEC-076 Hard-Cap 30min
+  file_size_bytes             bigint,
+  mime_type                   text        DEFAULT 'video/webm',
+
+  -- Status-Maschine
+  status                      text        NOT NULL DEFAULT 'recording'
+                              CHECK (status IN (
+                                'recording',         -- Browser nimmt aktiv auf (UI-State)
+                                'uploading',         -- Browser uploaded zur signed URL
+                                'uploaded',          -- Upload bestaetigt, Whisper-Job queued
+                                'transcribing',      -- Whisper laeuft
+                                'pending_review',    -- Whisper fertig, wartet auf Berater
+                                'approved',          -- Berater hat approved
+                                'rejected',          -- Berater hat rejected
+                                'failed'             -- Upload/Transcription fehlgeschlagen
+                              )),
+
+  -- Whisper-Output (Transkript wird zusaetzlich als knowledge_unit mit source='walkthrough_transcript' persistiert,
+  -- hier liegt nur der Header fuer schnelle Status-Polling-UI)
+  transcript_started_at       timestamptz,
+  transcript_completed_at     timestamptz,
+  transcript_model            text,                                                 -- z.B. 'whisper-medium'
+  transcript_knowledge_unit_id uuid REFERENCES knowledge_unit ON DELETE SET NULL,
+
+  -- Berater-Review (V5: manuell, V5.1: KI-augmented)
+  reviewer_user_id            uuid        REFERENCES auth.users,
+  reviewed_at                 timestamptz,
+  privacy_checkbox_confirmed  boolean     DEFAULT false,                            -- DEC-077 Pflicht-Bestaetigung vor Approve
+  reviewer_note               text,                                                 -- kurz, V5.2+ ggf. Markdown
+  rejection_reason            text,
+
+  recorded_at                 timestamptz NOT NULL DEFAULT now(),
+  created_at                  timestamptz NOT NULL DEFAULT now(),
+  updated_at                  timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_walkthrough_session_tenant       ON walkthrough_session(tenant_id);
+CREATE INDEX idx_walkthrough_session_capture      ON walkthrough_session(capture_session_id);
+CREATE INDEX idx_walkthrough_session_recorded_by  ON walkthrough_session(recorded_by_user_id);
+CREATE INDEX idx_walkthrough_session_status_pending
+  ON walkthrough_session(tenant_id, recorded_at DESC)
+  WHERE status = 'pending_review';
+```
+
+**Constraints:**
+- `duration_sec <= 1800` (DEC-076 Hard-Cap 30min als DB-Schutz; UI setzt MediaRecorder-Auto-Stopp).
+- `status='approved'` impliziert `privacy_checkbox_confirmed=true` AND `reviewer_user_id IS NOT NULL` (UPDATE-Trigger oder Server-Side-Validation).
+- `status='approved' OR status='rejected'` impliziert `reviewed_at IS NOT NULL`.
+
+#### Schema-Erweiterungen bestehender Tabellen
+
+```sql
+-- capture_session: 'walkthrough' wird produktiver Mode (V4 hatte nur 'walkthrough_stub')
+ALTER TABLE capture_session
+  DROP CONSTRAINT capture_session_capture_mode_check;
+ALTER TABLE capture_session
+  ADD CONSTRAINT capture_session_capture_mode_check
+  CHECK (capture_mode IS NULL OR capture_mode IN (
+    'questionnaire',
+    'evidence',
+    'dialogue',
+    'employee_questionnaire',
+    'walkthrough_stub',   -- bleibt als Architektur-Beispiel im Code, nicht mehr in UI
+    'walkthrough'         -- NEU V5 (produktiv)
+  ));
+
+-- knowledge_unit.source: neue Quelle fuer Whisper-Transkript
+ALTER TABLE knowledge_unit
+  DROP CONSTRAINT knowledge_unit_source_check;
+ALTER TABLE knowledge_unit
+  ADD CONSTRAINT knowledge_unit_source_check
+  CHECK (source IN (
+    'questionnaire', 'exception', 'ai_draft', 'meeting_final', 'manual',
+    'evidence', 'dialogue',
+    'employee_questionnaire',
+    'walkthrough_transcript'  -- NEU V5
+  ));
+```
+
+### Capture-Mode-Registry-Update
+
+`src/components/capture-modes/walkthrough_stub/` bleibt als Code-Baseline erhalten (Architektur-Beispiel-Eintrag, dokumentiert SC-V4-6). Neue Implementierung lebt unter `src/components/capture-modes/walkthrough/`. Der Registry-Eintrag `walkthrough` wird neu hinzugefuegt; der `walkthrough_stub`-Eintrag wird aus der UI-Anzeige entfernt (nur noch Code-Doku-Beispiel).
+
+### Storage-Bucket `walkthroughs`
+
+#### Bucket-Konfiguration
+
+```sql
+-- Supabase Storage: Bucket-Eintrag
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'walkthroughs',
+  'walkthroughs',
+  false,                                      -- KEIN Public-Access (R-V5-3 Privacy)
+  524288000,                                  -- 500 MB Hard-Cap (Sicherheits-Puffer ueber 30min/300MB)
+  ARRAY['video/webm']                         -- DEC-075 nur WebM/VP9 in V5
+);
+```
+
+#### Bucket-RLS-Policies
+
+```sql
+-- INSERT: nur recorded_by oder strategaize_admin
+CREATE POLICY "walkthroughs_bucket_insert" ON storage.objects
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    bucket_id = 'walkthroughs'
+    AND (
+      -- Pfad-Praefix muss tenant_id des aufnehmenden Users sein
+      (storage.foldername(name))[1] IN (
+        SELECT tenant_id::text FROM tenant_user WHERE user_id = auth.uid()
+      )
+    )
+  );
+
+-- SELECT (signed-URL-Generierung erlaubt es nur fuer berechtigte User):
+-- Pre-Approve: nur recorded_by_user_id + tenant_admin des Tenants + strategaize_admin
+-- Post-Approve: gleiche Policy (V5 — keine breitere Sichtbarkeit, weil PII noch nicht redacted ist)
+CREATE POLICY "walkthroughs_bucket_select" ON storage.objects
+  FOR SELECT TO authenticated
+  USING (
+    bucket_id = 'walkthroughs'
+    AND EXISTS (
+      SELECT 1 FROM walkthrough_session ws
+      WHERE ws.storage_path = name
+        AND (
+          ws.recorded_by_user_id = auth.uid()
+          OR (auth.jwt()->>'role') = 'strategaize_admin'
+          OR (
+            ws.tenant_id IN (
+              SELECT tenant_id FROM tenant_user
+              WHERE user_id = auth.uid() AND role IN ('tenant_admin')
+            )
+          )
+        )
+    )
+  );
+
+-- DELETE: nur strategaize_admin (Lifecycle/Cleanup) oder Auto-Delete-Job (service_role)
+CREATE POLICY "walkthroughs_bucket_delete" ON storage.objects
+  FOR DELETE TO authenticated
+  USING (
+    bucket_id = 'walkthroughs'
+    AND (auth.jwt()->>'role') = 'strategaize_admin'
+  );
+```
+
+#### Pfad-Konvention
+
+`<tenant_id>/<walkthrough_session_id>/recording.webm`
+
+Beispiel: `walkthroughs/4f1a.../9c3e.../recording.webm`. Tenant-Isolation per Pfad-Praefix + Bucket-RLS doppelt abgesichert.
+
+#### Lifecycle-Policy (V5-Light, MIG-031 Teil)
+
+- `status='rejected'` → Auto-Delete der Storage-Datei nach 30 Tagen (Coolify-Scheduled-Task `walkthrough-cleanup-daily`, idempotent).
+- `status='approved'` → keine Auto-Loeschung in V5 (Retention wird im Pre-Production-Compliance-Gate bewertet).
+- `status='failed'` → Auto-Delete nach 7 Tagen.
+
+Implementierung des Cleanup-Jobs erfolgt in SLC-074 (Capture-Session-Integration + Cleanup).
+
+### Upload-Strategie (Direct-Upload via signed URL) — DEC-077
+
+Server-Proxy via Server Actions ist fuer 150–300 MB Body **nicht praktikabel** (Next.js 4MB Body-Default, Coolify-Timeout-Risiko, doppelte Memory-Last). Direct-Upload ueber signed URL ist Browser-Standard fuer grosse Uploads.
+
+#### Pre-Upload-Phase (Server Action)
+
+```typescript
+// src/app/actions/walkthrough.ts
+'use server';
+
+export async function requestWalkthroughUpload(input: {
+  captureSessionId: string;
+  estimatedDurationSec: number;
+}): Promise<{ walkthroughSessionId: string; uploadUrl: string; storagePath: string }> {
+  const { user, tenantId } = await requireAuth();
+  // Validierung: estimatedDurationSec <= 1800, captureSession gehoert zu user oder seinem Tenant
+  // INSERT walkthrough_session mit status='recording', recorded_by_user_id=user.id
+  // storage_path = "<tenantId>/<walkthroughId>/recording.webm" (vorab reserviert)
+  // signed Upload-URL via supabaseAdmin.storage.from('walkthroughs').createSignedUploadUrl(path, { upsert: false })
+  // TTL: 15min (Default-Supabase-Signed-Upload)
+  // Server Action gibt {walkthroughSessionId, uploadUrl, storagePath} zurueck
+}
+```
+
+#### Browser-Upload
+
+Browser POSTet das WebM-Blob direkt an die signed URL. Kein Next.js-Hop. Fortschritt via `XMLHttpRequest.upload.onprogress` fuer UI-Indikator.
+
+#### Confirm-Phase (Server Action)
+
+```typescript
+export async function confirmWalkthroughUploaded(input: {
+  walkthroughSessionId: string;
+  durationSec: number;
+  fileSizeBytes: number;
+}): Promise<void> {
+  // Validierung: walkthroughSession gehoert zu user, status='recording'|'uploading'
+  // durationSec <= 1800 (DB-CHECK fangs ab, hier Fast-Fail)
+  // UPDATE walkthrough_session SET storage_path, duration_sec, file_size_bytes, status='uploaded'
+  // INSERT ai_jobs (job_type='walkthrough_transcribe', payload={walkthroughSessionId})
+  // Worker pollt ai_jobs, transkribiert, setzt status='transcribing' → 'pending_review'
+}
+```
+
+#### Approve/Reject (Server Action)
+
+```typescript
+export async function approveOrRejectWalkthrough(input: {
+  walkthroughSessionId: string;
+  decision: 'approved' | 'rejected';
+  privacyCheckboxConfirmed: boolean;
+  reviewerNote?: string;
+  rejectionReason?: string;
+}): Promise<void> {
+  // Validierung: requireRole(['strategaize_admin', 'tenant_admin'])
+  // decision='approved' verlangt privacyCheckboxConfirmed=true (DEC-077, sonst HTTP 422)
+  // walkthroughSession.status muss 'pending_review' sein
+  // UPDATE walkthrough_session SET status, reviewer_user_id, reviewed_at, privacy_checkbox_confirmed, reviewer_note, rejection_reason
+  // Audit-Log: error_log mit category='walkthrough_review', user_id=reviewer, walkthrough_session_id, decision
+}
+```
+
+### Data Flow V5
+
+#### Flow 1 — Walkthrough Aufnahme (Mitarbeiter)
+
+```
+Browser (Mitarbeiter)
+  → /employee/capture/walkthrough/[capture_session_id]
+       → Klick "Walkthrough starten"
+            → navigator.mediaDevices.getDisplayMedia({ video: true, audio: false })   // Screen-Spur ohne System-Audio (DEC-078)
+            → navigator.mediaDevices.getUserMedia({ audio: true })                    // Mic-Spur
+            → Stream-Combine: ein VideoTrack + ein AudioTrack zu MediaStream
+            → MediaRecorder({ mimeType: 'video/webm;codecs=vp9,opus' })              // DEC-075
+            → setTimeout(autoStopAt30Min) als Hard-Stop
+       → Recording laeuft (UI: Pause/Resume/Stopp + Restzeit + Mic-Pegel optional)
+       → Bei Stopp:
+            → MediaRecorder gibt Blob (video/webm)
+            → Server Action requestWalkthroughUpload({captureSessionId, estimatedDurationSec})
+                 → Returns: walkthroughSessionId, signed uploadUrl, storagePath
+            → Browser PUT Blob → signed URL (XHR mit Progress-Bar)
+            → Server Action confirmWalkthroughUploaded({walkthroughSessionId, durationSec, fileSizeBytes})
+                 → walkthrough_session.status='uploaded'
+                 → ai_jobs INSERT job_type='walkthrough_transcribe'
+       → UI redirect zu /employee/walkthroughs/[walkthroughSessionId] (Status-Polling-Page)
+```
+
+#### Flow 2 — Whisper-Transkription (Worker, asynchron)
+
+```
+Worker pollt ai_jobs WHERE job_type='walkthrough_transcribe' AND status='pending'
+  → walkthrough_session laden
+  → status='transcribing', transcript_started_at=now()
+  → Storage Download: WebM-Blob (Service-Role) → /tmp/<id>.webm
+  → ffmpeg extract Audio-Spur: -vn -acodec libopus -b:a 64k → /tmp/<id>.opus
+       (Audio-only-Submit reduziert Whisper-Payload um ~95%)
+  → POST /transcribe an Self-hosted Whisper (siehe DEC-018)
+  → Whisper liefert Transkript-Text (medium-Modell, DE, no language detection)
+  → INSERT knowledge_unit (
+       tenant_id, capture_session_id, source='walkthrough_transcript',
+       unit_type='observation', confidence='medium', body=transcript_text,
+       evidence_refs={ walkthrough_session_id }
+     )
+  → UPDATE walkthrough_session SET
+       transcript_completed_at, transcript_model='whisper-medium',
+       transcript_knowledge_unit_id, status='pending_review'
+  → /tmp Cleanup
+```
+
+#### Flow 3 — Berater-Review (manueller Approve-Pfad)
+
+```
+Browser (strategaize_admin oder tenant_admin)
+  → /admin/walkthroughs (cross-tenant) oder /admin/tenants/[id]/walkthroughs (per Tenant)
+       → Liste: alle walkthrough_session WHERE status='pending_review' ORDER BY recorded_at ASC
+       → Klick auf Eintrag
+            → /admin/walkthroughs/[id]
+                 → HTML5 video src=signedDownloadUrl (15min TTL, Server-side erzeugt)
+                 → Transkript-Anzeige (knowledge_unit.body)
+                 → Pflicht-Checkbox: "Ich habe geprueft: keine kundenspezifischen oder sensitiven Inhalte sichtbar"
+                 → Approve / Reject Buttons (Approve disabled solange Checkbox unchecked)
+       → Klick "Approve" oder "Reject"
+            → Server Action approveOrRejectWalkthrough(...)
+                 → UPDATE walkthrough_session
+                 → Audit-Log error_log INSERT
+       → Liste-Refresh
+```
+
+#### Flow 4 — Cleanup-Job (Coolify-Scheduled-Task)
+
+```
+Coolify Cron: walkthrough-cleanup-daily (0 3 * * * Europe/Berlin)
+  → Container app, Command: node -e "fetch('http://localhost:3000/api/cron/walkthrough-cleanup', {headers:{Authorization:'Bearer '+process.env.CRON_SECRET}})"
+  → Endpoint validiert CRON_SECRET
+  → Query 1: SELECT walkthrough_session WHERE status='rejected' AND reviewed_at < NOW() - INTERVAL '30 days'
+  → Query 2: SELECT walkthrough_session WHERE status='failed' AND created_at < NOW() - INTERVAL '7 days'
+  → Pro Eintrag: supabaseAdmin.storage.from('walkthroughs').remove([storage_path])
+  → DELETE walkthrough_session-Eintrag (oder soft-delete via status='deleted', je SLC-074-Entscheidung)
+  → Audit-Log error_log
+```
+
+### RLS-Modell V5
+
+#### `walkthrough_session` 4-Rollen-Matrix
+
+| Rolle | SELECT | INSERT | UPDATE (Approve/Reject) | UPDATE (Status-Wechsel via Worker) |
+|-------|--------|--------|-------------------------|-----------------------------------|
+| `strategaize_admin` | alle Tenants | alle Tenants | alle Tenants | service_role only |
+| `tenant_admin` | nur eigener Tenant | eigener Tenant | nur eigener Tenant | nein |
+| `tenant_member` (Default-Mitarbeiter) | nur eigene `recorded_by_user_id` | eigene Sessions | nein | nein |
+| `employee` | nur eigene `recorded_by_user_id` | eigene Sessions | nein | nein |
+
+```sql
+-- SELECT-Policy
+CREATE POLICY "walkthrough_session_select" ON walkthrough_session
+  FOR SELECT TO authenticated
+  USING (
+    -- strategaize_admin sieht alle
+    (auth.jwt()->>'role') = 'strategaize_admin'
+    OR
+    -- tenant_admin sieht eigenen Tenant
+    (
+      (auth.jwt()->>'role') = 'tenant_admin'
+      AND tenant_id IN (SELECT tenant_id FROM tenant_user WHERE user_id = auth.uid())
+    )
+    OR
+    -- tenant_member / employee sieht nur eigene Aufnahmen
+    recorded_by_user_id = auth.uid()
+  );
+
+-- INSERT-Policy: nur eigene Aufnahmen, eigener Tenant
+CREATE POLICY "walkthrough_session_insert" ON walkthrough_session
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    recorded_by_user_id = auth.uid()
+    AND tenant_id IN (SELECT tenant_id FROM tenant_user WHERE user_id = auth.uid())
+  );
+
+-- UPDATE-Policy: Approve/Reject nur strategaize_admin oder tenant_admin (eigener Tenant)
+-- Worker-Status-Updates ('uploading' → 'uploaded' → 'transcribing' → 'pending_review') laufen via service_role
+CREATE POLICY "walkthrough_session_update_review" ON walkthrough_session
+  FOR UPDATE TO authenticated
+  USING (
+    (auth.jwt()->>'role') = 'strategaize_admin'
+    OR (
+      (auth.jwt()->>'role') = 'tenant_admin'
+      AND tenant_id IN (SELECT tenant_id FROM tenant_user WHERE user_id = auth.uid())
+    )
+  );
+```
+
+#### Test-Matrix Pflicht (SC-V5-4)
+
+Vitest-Integration-Test gegen Coolify-DB (Pattern: coolify-test-setup.md). 4 Rollen × 4 Operationen (Create/SelectOwn/SelectOther/Approve) = 16 Faelle, alle erwarteten Permission-Denials per SAVEPOINT-Pattern.
+
+### Security / Privacy V5
+
+#### Pre-Approve-Sicht (R-V5-3 Privacy-Leak Mitigation)
+
+- Roh-WebM ist NUR fuer `recorded_by_user_id` + `tenant_admin` (eigener Tenant) + `strategaize_admin` lesbar.
+- Roh-Transkript (knowledge_unit `source='walkthrough_transcript'`) folgt derselben RLS — `tenant_member` ohne Bezug zur Session sieht es **nicht**.
+- Kein Public-URL, kein Embed-Code, keine Cross-Tenant-Sichtbarkeit.
+
+#### Privacy-Checkbox als Pflicht-Stufe (DEC-077)
+
+Approve ohne `privacy_checkbox_confirmed=true` schlaegt server-side mit HTTP 422 fehl. UI-Block + Server-Side-Validation (Defense-in-Depth). Audit-Log enthaelt User, Timestamp, Decision, Checkbox-Status.
+
+#### Storage-Lifecycle
+
+`status='rejected'` → 30 Tage → Auto-Delete (Storage + DB-Eintrag). Verhindert dauerhaft gespeicherte rejected-Aufnahmen, die irrelevant aber sensitiv sind.
+
+#### DSGVO-Posture
+
+- Speicherort: Self-hosted Coolify+Supabase auf Hetzner Frankfurt — DSGVO-konform.
+- Whisper: Self-hosted Container, keine Datenuebertragung an Drittanbieter.
+- Bedrock kommt NICHT in V5 zum Einsatz — V5 ist KI-frei (Whisper ist Transkriptions-Pipeline, nicht generative KI).
+- V5.1 fuegt Bedrock fuer PII-Redaction hinzu — eu-central-1 (existing-konform).
+
+### Constraints und Tradeoffs V5
+
+#### Constraint — Browser-Kompatibilitaet (DEC-075)
+
+WebM/VP9+Opus only. Safari <16 ist explizit nicht Pflicht. Bei spaeterem Safari-Bedarf ist optionales ffmpeg-Transcoding-Job in V5.2 additiv. **Tradeoff bewusst:** weniger Browser-Reichweite vs. keine Server-Transcoding-Komplexitaet.
+
+#### Constraint — 30min Hard-Cap (DEC-076)
+
+Storage-Wachstum (R-V5-1: 15-30 GB / 100 Sessions) und Whisper-Backlog (45min/Session bei 1.5x Realtime) wuerden bei 60min ungeprueft eskalieren. **Tradeoff bewusst:** lange Walkthroughs muessen auf 2 Sessions geschnitten werden — akzeptabel, weil Onboarding-Walkthroughs typisch 12-25min sind.
+
+#### Constraint — Mic-only (DEC-078)
+
+Screen-Audio aus `getDisplayMedia({audio:true})` wird in Firefox nicht unterstuetzt; Chrome braucht User-Checkbox "Audio teilen", die typisch nicht aktiviert wird. **Tradeoff bewusst:** System-Sounds gehen verloren (selten relevant fuer Onboarding-Wissen). Bei spaeterem Bedarf (Software-Tutorials mit Klingelton/Alert) als V5.2-Option additiv.
+
+#### Constraint — Direct-Upload (DEC-077)
+
+150–300 MB durch Next.js Server Actions waere nicht praktikabel (4MB-Body-Default, Coolify-Timeout). **Tradeoff bewusst:** signed URLs sind kurzlebig (15min TTL) und tenant-isoliert — dadurch RLS-Aequivalent auf Storage-Ebene gewaehrleistet.
+
+#### Constraint — Manueller Approve-Pfad (V5)
+
+V5 hat KEINEN KI-Vorschlag. Berater muss Roh-Transkript komplett selbst lesen + per Hand pruefen. **Tradeoff bewusst:** Privacy-First in V5, KI-Geschwindigkeit in V5.1. Risiko: Berater-Review-Aufwand pro Walkthrough = ~Realtime der Aufnahme (30min Walkthrough = 30min Review). V5.1 reduziert das auf ~5-10min via PII-redacted Schritt-Vorschlag.
+
+### V5 Decisions (Cross-Reference)
+
+- **DEC-074** — Walkthrough-Datenmodell: eigene Tabelle `walkthrough_session` mit FK zu `capture_session`, kein capture_session-Erweiterungs-Pattern.
+- **DEC-075** — Walkthrough-Storage-Codec: WebM/VP9+Opus only, kein MP4-Transcoding in V5.
+- **DEC-076** — Walkthrough-Max-Dauer: 30 Minuten Hard-Cap, durchgesetzt im Browser (MediaRecorder Auto-Stopp) UND DB (CHECK `duration_sec <= 1800`).
+- **DEC-077** — Walkthrough-Upload-Strategie: Direct-Upload via Supabase Storage Signed URL (15min TTL), kein Server-Proxy. Plus: Approve verlangt `privacy_checkbox_confirmed=true` als DB+Server-Side-Validation.
+- **DEC-078** — Walkthrough-Audio-Mix: Mic-only (`getUserMedia audio:true` + `getDisplayMedia audio:false`), kein Screen-Audio.
+
+### Open Technical Questions V5
+
+Alle 5 Q-V5-A..E sind durch DEC-074..078 geklaert. **Keine offenen technischen Fragen** zur V5-MVP-Architektur.
+
+V5.1-spezifische Open Questions (Q-V5.1-A..C zu Bedrock-Modell, PII-Pattern-Liste, Original-vs-Redacted-Storage) bleiben fuer eigenes /architecture V5.1 nach V5-Live-Feedback offen.
+
+### Migrations-Plan V5
+
+**MIG-031** (siehe MIGRATIONS.md) buendelt:
+
+- Migration 082 — `082_v5_walkthrough_capture_mode.sql`: CHECK-Erweiterung `capture_session.capture_mode` um `'walkthrough'` + `knowledge_unit.source` um `'walkthrough_transcript'`.
+- Migration 083 — `083_v5_walkthrough_session.sql`: CREATE TABLE `walkthrough_session` + Indizes + RLS-Policies (4 Rollen).
+- Migration 084 — `084_v5_walkthrough_storage_bucket.sql`: INSERT INTO storage.buckets + 3 Storage-RLS-Policies (insert/select/delete).
+
+Alle 3 Migrations sind idempotent (`IF NOT EXISTS` / `DROP CONSTRAINT IF EXISTS` / Bucket-Upsert via `ON CONFLICT DO NOTHING`).
+
+### Recommended Implementation Direction
+
+#### Slice-Empfehlung (an /slice-planning V5)
+
+PRD-Skizze (4 Slices SLC-071..074) bleibt nach Architektur-Pruefung tragfaehig. Architektur-bedingte Verfeinerung:
+
+| Slice | Scope (architektur-praezisiert) | Geschaetzt |
+|-------|----------------------------------|------------|
+| SLC-071 | Migration 082+083+084 + Storage-Bucket-Setup + Walkthrough-Capture-UI (`/employee/capture/walkthrough/[id]`) + getDisplayMedia/getUserMedia + MediaRecorder + 30min Auto-Stopp + Direct-Upload (signed URL) + Server Actions `requestWalkthroughUpload` + `confirmWalkthroughUploaded` | ~7-9 MTs |
+| SLC-072 | Worker-Handler `walkthrough_transcribe` + ffmpeg Audio-Extract + Whisper-Adapter-Wiederverwendung + knowledge_unit Persistierung (`source='walkthrough_transcript'`) + Status-Maschine `transcribing → pending_review` + Status-Polling-API | ~4-5 MTs |
+| SLC-073 | Berater-Review-UI: `/admin/walkthroughs` + `/admin/tenants/[id]/walkthroughs` + `/admin/walkthroughs/[id]` mit HTML5-video + Transkript-Anzeige + Pflicht-Checkbox + Server Action `approveOrRejectWalkthrough` + Audit-Log + Cockpit-Card "Pending Walkthroughs" | ~5-6 MTs |
+| SLC-074 | Capture-Mode-Registry-Update (`walkthrough` als produktiver Eintrag, `walkthrough_stub` aus UI entfernt) + 4-Rollen-RLS-Test-Matrix (16 Faelle, SAVEPOINT-Pattern) + Cleanup-Job (Coolify-Scheduled-Task) + Lint/Build/Test gruen | ~4-5 MTs |
+
+**Gesamt:** 4 Slices, ~20-25 MTs, geschaetzt **~2 Wochen Implementation** (entspricht PRD-Skizze).
+
+#### Sequencing
+
+1. **SLC-071 zuerst** — Migration + Capture-UI + Upload-Pfad. Voraussetzung fuer SLC-072 (sonst nichts zum Transkribieren).
+2. **SLC-072** — Worker-Pfad. Voraussetzung fuer SLC-073 (sonst nichts zum Reviewen).
+3. **SLC-073** — Review-UI. Voraussetzung fuer Gesamt-QA.
+4. **SLC-074** — Integration + RLS-Test-Matrix + Cleanup. Vor /final-check.
+
+#### Pflicht-Gates fuer V5-Release
+
+- **SC-V5-4 RLS-Matrix gruen** (16 Faelle Vitest gegen Coolify-DB).
+- **SC-V5-1 Mitarbeiter-Self-Test**: Nicht-Tech-User-Smoke (User selbst) ueber gesamten Capture-Pfad (Permission-Prompts → Recording → Stopp → Upload → Status-Polling → Transkript sichtbar).
+- **SC-V5-3 Berater-Review-Smoke** ueber alle 3 Routen (cross-tenant, per-tenant, detail) inkl. Approve/Reject mit + ohne Checkbox.
+- **SC-V5-5 Code-Quality**: 0 Lint-Errors, 0 Lint-Warnings, alle Vitest gruen, `npm audit --omit=dev` = 0 Vulns.
+
+### Naechster Schritt V5
+
+`/slice-planning V5` — die 4 Slice-Empfehlungen oben in finale SLC-071..074-Files zerlegen, MTs nummerieren, Slice-INDEX.md updaten, BL-077..080 → `in_progress` setzen.
+
+V5.1 (`/requirements V5.1` ist bereits done, `/architecture V5.1` offen) wird nach V5-Release angegangen.
