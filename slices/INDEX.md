@@ -191,12 +191,12 @@ Begruendung:
 
 | ID | Slice | Feature | Status | Priority | Created |
 |----|-------|---------|--------|----------|---------|
-| SLC-051 | [Reader-UX-Bundle (Scroll-Spy + Permalink + Skeleton + Mobile-h1 + h1-Anchor-Hover)](SLC-051-reader-ux-bundle.md) | V4.3 | done | Medium | 2026-05-01 |
-| SLC-052 | [Worker+Templates-Hygiene (TOC-Anchor-Links + Umlaut-Konsistenz)](SLC-052-worker-templates-hygiene.md) | V4.3 | done | Medium | 2026-05-01 |
-| SLC-053 | [Tooling-Migrations (middleware->proxy + ESLint-9 flat-config)](SLC-053-tooling-migrations.md) | V4.3 | done | High | 2026-05-01 |
-| SLC-054 | [Cross-Snapshot-Suche client-side + Search-History localStorage](SLC-054-cross-snapshot-search.md) | V4.3 | done | Low | 2026-05-01 |
-| SLC-055 | [UX-Findings-Bundle (Tooltip-Target-Fix + Help-Konsolidierung)](SLC-055-ux-findings-bundle.md) | V4.3 | done | Medium | 2026-05-01 |
-| SLC-056 | [ADR State-Maschinen-Pattern + Spike Turbopack-Layout-Inlining](SLC-056-adr-and-spike.md) | V4.3 | done | Medium | 2026-05-01 |
+| SLC-051 | [Reader-UX-Bundle (Scroll-Spy + Permalink + Skeleton + Mobile-h1 + h1-Anchor-Hover)](SLC-051-reader-ux-bundle.md) | V4.3 | deployed | Medium | 2026-05-01 |
+| SLC-052 | [Worker+Templates-Hygiene (TOC-Anchor-Links + Umlaut-Konsistenz)](SLC-052-worker-templates-hygiene.md) | V4.3 | deployed | Medium | 2026-05-01 |
+| SLC-053 | [Tooling-Migrations (middleware->proxy + ESLint-9 flat-config)](SLC-053-tooling-migrations.md) | V4.3 | deployed | High | 2026-05-01 |
+| SLC-054 | [Cross-Snapshot-Suche client-side + Search-History localStorage](SLC-054-cross-snapshot-search.md) | V4.3 | deployed | Low | 2026-05-01 |
+| SLC-055 | [UX-Findings-Bundle (Tooltip-Target-Fix + Help-Konsolidierung)](SLC-055-ux-findings-bundle.md) | V4.3 | deployed | Medium | 2026-05-01 |
+| SLC-056 | [ADR State-Maschinen-Pattern + Spike Turbopack-Layout-Inlining](SLC-056-adr-and-spike.md) | V4.3 | deployed | Medium | 2026-05-01 |
 
 ### V4.3 Execution Order (per DEC-062)
 
