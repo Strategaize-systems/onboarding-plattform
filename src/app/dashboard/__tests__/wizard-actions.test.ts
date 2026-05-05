@@ -1,6 +1,11 @@
 // SLC-046 MT-2 — Tests fuer Wizard Server-Actions.
 //
-// Strategie: createClient() ist gemockt, da next/headers cookies im Test-Kontext fehlen.
+// Strategie: createClient() (RLS-aware, fuer profiles SELECT in requireTenantAdmin)
+// UND createAdminClient() (Service-Role, fuer alle tenants UPDATE-Pfade) sind beide gemockt.
+// Hintergrund: V4.2 ISSUE-031-Fix (Commit d1978ca) hat den UPDATE-Pfad auf Service-Role
+// umgestellt, weil tenants keine UPDATE-RLS-Policy hatte. Der Mock muss deshalb auch den
+// Admin-Client abdecken — ohne diesen Mock verlangt der echte Service-Role-Client
+// SUPABASE_URL/SERVICE_ROLE_KEY zur Laufzeit (ISSUE-034).
 // Tests pruefen:
 //   - Cross-Role-Check (DEC-051): nur tenant_admin, nicht strategaize_admin / member / employee.
 //   - Atomares Multi-Admin-Lock auf setWizardStarted (rowCount=0 → alreadyStarted=true).
@@ -62,6 +67,18 @@ vi.mock("next/cache", () => ({
 vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn(async () => ({
     auth: { getUser: mocks.getUserMock },
+    from: mocks.fromMock,
+  })),
+}));
+
+// ISSUE-034 (2026-05-05): wizard-actions.ts schaltete in V4.2 (Commit d1978ca, ISSUE-031-Fix)
+// alle UPDATE-Pfade auf createAdminClient() um. Der Mock muss diese Factory ebenfalls
+// abdecken, sonst laeuft der echte Service-Role-Client und failt mit "supabaseUrl is required".
+// createAdminClient ist sync (im Gegensatz zu createClient), gibt direkt den Client zurueck.
+// Wir routen die from()-Aufrufe ueber den gleichen fromMock — der unterscheidet bereits
+// tenants → updateMock und profiles → profileSelectMock anhand des Tabellen-Namens.
+vi.mock("@/lib/supabase/admin", () => ({
+  createAdminClient: vi.fn(() => ({
     from: mocks.fromMock,
   })),
 }));
