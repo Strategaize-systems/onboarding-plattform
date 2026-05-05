@@ -60,29 +60,36 @@
       "id": "v4-3",
       "name": "V4.3",
       "status": "released",
-      "summary": "Maintenance-Sammelrelease RELEASED 2026-05-05 als REL-011. 6 Slices (SLC-051..056) all deployed. Reader-UX-Polish (Scroll-Spy + Permalink + Skeleton + Mobile-h1 + h1-Anchor-Hover), Worker+Templates-Hygiene (slugifyHeading + In-App-Anchor-TOC + Umlaut-Konsistenz), Tooling-Migrations (middleware->proxy + ESLint-9 flat-config), Cross-Snapshot-Suche client-side + localStorage-History, UX-Findings-Bundle (Help-Konsolidierung 3-Tab-Sheet + Tooltip-Card-Header-Wrapper), ADR State-Maschinen-Pattern + Spike Turbopack-Layout-Inlining. 9 V4.3-DECs (DEC-062..069). Keine Schema-Migration, keine neuen Container, keine neuen Cron-Jobs. Bundle-Live-Smoke (RPT-146), Gesamt-/qa (RPT-147), Final-Check (RPT-148), Go-Live (RPT-149), Deploy (RPT-150). Deploy-Commit 77b3852. Live-Smoke 6/6 Server-Checks PASS, TTFB 107ms. 0 V4.3-eingefuehrte Risks. 1 Medium Pre-V4.2-carry-over (ISSUE-034 Mock-Drift). BL-067 (Berater-Help-Review, Content-Only) bleibt offen — direkter Editor-Workflow vom User parallel zum Code-Release. V4.3 bleibt Internal-Test-Mode bis Pre-Production-Compliance-Gate.",
+      "summary": "Maintenance-Sammelrelease RELEASED 2026-05-05 als REL-011. 6 Slices (SLC-051..056) all deployed. Reader-UX-Polish (Scroll-Spy + Permalink + Skeleton + Mobile-h1 + h1-Anchor-Hover), Worker+Templates-Hygiene (slugifyHeading + In-App-Anchor-TOC + Umlaut-Konsistenz), Tooling-Migrations (middleware->proxy + ESLint-9 flat-config), Cross-Snapshot-Suche client-side + localStorage-History, UX-Findings-Bundle (Help-Konsolidierung 3-Tab-Sheet + Tooltip-Card-Header-Wrapper), ADR State-Maschinen-Pattern + Spike Turbopack-Layout-Inlining. 9 V4.3-DECs (DEC-062..069). Keine Schema-Migration, keine neuen Container, keine neuen Cron-Jobs. Bundle-Live-Smoke (RPT-146), Gesamt-/qa (RPT-147), Final-Check (RPT-148), Go-Live (RPT-149), Deploy (RPT-150). Deploy-Commit 77b3852. Live-Smoke 6/6 Server-Checks PASS, TTFB 107ms. 0 V4.3-eingefuehrte Risks. ISSUE-034 (Mock-Drift) durch Hotfix b1c7d95 resolved 2026-05-05. BL-067 (Berater-Help-Review) in V4.4 verschoben. V4.3 bleibt Internal-Test-Mode bis Pre-Production-Compliance-Gate.",
       "order": 9
+    },
+    {
+      "id": "v4-4",
+      "name": "V4.4",
+      "status": "planned",
+      "summary": "Maintenance-Sammelrelease vor V5-Start (Pattern aus V3.1 / V4.3). Sammelt Pre-V5-Hygiene-Items, damit V5 (Walkthrough-Mode) auf sauberer Basis startet. Scope-Skizze: BL-067 Berater-Inhalts-Review der 5 Help-Markdown-Files (Content-Only, kein Code-Slice — direkter Editor-Workflow vom User), BL-068 Lint-Sweep (7 Pre-existing react-hooks-Errors + 6 Warnings im V2-V4.2-Code, sichtbar gemacht durch SLC-053 ESLint-9-Migration), BL-069 SQL-Migration 046 Daten-Backfill (328 Umlaut-Vorkommnisse in templates.blocks/sop_prompt JSONB-Feldern, Live-DB-Update). Naechster Schritt: /requirements V4.4.",
+      "order": 10
     },
     {
       "id": "v5",
       "name": "V5",
       "status": "planned",
-      "summary": "Walkthrough-Mode (Screen-Capture + Think-Aloud) als zusaetzlicher Capture-Modus. Architektur-Hooks dafuer wurden in V4 vorbereitet (Capture-Mode-Erweiterungs-Schnittstelle). Benoetigt vorher Technologie-Entscheidungs-Spike (Browser-Extension vs. Electron vs. Native). Versionsnummer ehemals V4 (vor 2026-04-23 Re-Numerierung).",
-      "order": 10
+      "summary": "Walkthrough-Mode (Screen-Capture + Think-Aloud) als zusaetzlicher Capture-Modus. Architektur-Hooks dafuer wurden in V4 vorbereitet (Capture-Mode-Erweiterungs-Schnittstelle). Benoetigt vorher Technologie-Entscheidungs-Spike (Browser-Extension vs. Electron vs. Native). Versionsnummer ehemals V4 (vor 2026-04-23 Re-Numerierung). Start nach V4.4-Maintenance-Release.",
+      "order": 11
     },
     {
       "id": "v6",
       "name": "V6",
       "status": "planned",
       "summary": "Diary-Mode (zeitlich verteilte In-Situ-Aufnahmen, Mobile/PWA) als zusaetzlicher Capture-Modus. Architektur-Hooks dafuer wurden in V4 vorbereitet. Versionsnummer ehemals V5 (vor 2026-04-23 Re-Numerierung).",
-      "order": 11
+      "order": 12
     },
     {
       "id": "v7",
       "name": "V7+",
       "status": "planned",
       "summary": "Queroptionen: Process-Mining-Connector, kollaborative Annotation, Anomalie-Flagging, Prozess-Simulation. Versionsnummer ehemals V6+ (vor 2026-04-23 Re-Numerierung).",
-      "order": 12
+      "order": 13
     }
   ]
 }

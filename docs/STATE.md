@@ -11,16 +11,14 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 ## Current State
 - High-Level State: stable
 - Current Focus: **V4.3 RELEASED 2026-05-05 als REL-011 (RPT-150).** Deploy-Commit `77b3852` (HEAD-Snapshot, App-Code-State identisch zu `0843362` — 77b3852 enthaelt nur Doku-Update RPT-149 + REL-011-Draft + STATE-Phase). User-Coolify-Redeploy 2026-05-05 ~10:53 Europe/Berlin durch. Live-Smoke (RPT-150) PASS auf alle 6 Server-Checks: app+worker Up healthy 2min nach Redeploy, `https://onboarding.strategaizetransition.com/login` HTTP 200 TTFB 107ms (V4.1-Stable-Vergleichsbasis: 86-149ms), `/api/health` `{"status":"ok"}`, error_log 0 errors/fatals letzte 15min, worker+app-Logs 0 FATAL/ERROR/Crash, Worker-Bedrock-ENV korrekt geladen (eu-central-1 + Claude-Sonnet-4). Reader-Browser-Smoke (Check 5) ist User-Pflichteil — Reader-UX + Cross-Search + Help-Sheet bleiben fuer User-Bestaetigung im 24-48h-Fenster offen. 24-48h Post-Launch-Window startet 2026-05-05 ~10:55. **V4.3 bleibt im Internal-Test-Mode** wie V5.1+ Business-System bis Pre-Production-Compliance-Gate (Anwaltspruefung + Privacy-Page + Azure-EU + ISSUE-042-Pattern, explizit aufgeschoben per User-Decision).
-- Current Phase: V4.3 Released — Post-Launch-Window 24-48h. Naechste Phase: /post-launch nach 06.05. 09:00 Cron-Run + Container-Log-Window.
+- Current Phase: V4.3 Released — Post-Launch-Window 24-48h laeuft. V4.4 (Maintenance-Sammelrelease) ist als naechste Version geplant, dann V5 (Walkthrough-Mode).
 
 ## Immediate Next Steps
 1. **User-Browser-Smoke V4.3** — Login + `/dashboard/handbook/<id>` Reader laden, Cross-Search-Box reachable, Help-Sheet-Tabs wechseln. Belegt SC-V4.3-2 + SC-V4.3-7 live.
 2. **/post-launch V4.3** nach 24-48h Stable-Window — Container-Logs, error_log, 06.05. 09:00 Cron-Run `capture-reminders-daily` pruefen, Reader-Smoke User-Bestaetigung einsammeln.
-4. **Hotfix oder V4.4: ISSUE-034** (Medium) — Mock-Wrapper auf `createAdminClient` in `wizard-actions.test.ts` ergaenzen, ~30-60min.
-5. **BL-067 Berater-Help-Review** parallel via direkten Editor-Workflow (5 Markdown-Files unter `src/content/help/`); kein Code-Slice noetig.
-6. **Nach V4.3-Release:** /compliance-Sprint fuer Privacy/Datenschutz/Impressum-Page (separater Track per D-SPLIT-Decision). BL-068 (Lint-Sweep) als V4.4 oder eigener Maintenance-Sprint.
-5. **V4.2-Slices-Stand (RELEASED):** SLC-046..050 alle done+QA+deployed, Gesamt-V4.2 (RPT-127), Final-Check (RPT-128), Go-Live (RPT-129), Deploy (RPT-130).
-6. **V4.3-Backlog-Stand (Maintenance-Sammelrelease):** 9 offene Items (BL-051..059), Start nach V4.2-Release. Neu zu adden: ADR fuer State-Maschinen-UPDATE-Pattern (Service-Role vs RLS-Policy) basierend auf ISSUE-031, plus Investigation Next 16 Turbopack-Layout-Inlining-Anomalie.
+3. **/requirements V4.4** (Maintenance-Sammelrelease) — Pattern wie V3.1/V4.3. Scope: BL-067 Berater-Inhalts-Review (5 Help-Markdown-Files, Content-Only, User-Editor-Workflow), BL-068 Lint-Sweep (7 react-hooks-Errors + 6 Warnings im V2-V4.2-Code), BL-069 SQL-Backfill 046_seed_demo_template Umlaute (328 Vorkommnisse in templates.blocks/sop_prompt JSONB).
+4. **/requirements V5** (Walkthrough-Mode) nach V4.4 — Capture-Mode-Hooks aus V4 sind ready. Vorher Technologie-Spike (Browser-Extension vs. Electron vs. Native).
+5. **Resolved 2026-05-05:** ISSUE-034 (wizard-actions.test.ts Mock-Drift) durch Hotfix b1c7d95 — vi.mock fuer @/lib/supabase/admin ergaenzt, 19/19 Tests PASS.
 
 ## Active Scope
 **V4 — Zwei-Ebenen-Verschmelzung, 6 Features Code-done, 8 Slices Code-done:**
