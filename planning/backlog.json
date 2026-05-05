@@ -749,6 +749,16 @@
       "version": null,
       "description": "Cross-Repo-Aufgabe ausgeloest durch IS V6+ Discovery RPT-013. Zwei Endpoints fuer IS-Onboarding-Integration: (1) POST /api/internal/external-validation-sessions: erlaubt IS aus Knopfdruck eine neue Capture-Session anzulegen mit Template-ID + invitee_email + invitee_role + return_callback_url. Auth: INTERNAL_API_TOKEN. Response: session_id + invitation_link. (2) GET /api/export/external-validation: erlaubt IS-Pull-Worker (analog FEAT-001 SLC-010 Export-Pattern) Profile-Snapshots seit Timestamp X mit Mode-Filter. Snapshots sind die finalen Diagnosis-Layer-JSONs (Operator-Profile / Market-Insight / Industry-Outlook). Idempotenz via session_id. Pre-Condition: BL-070 (Capture-Mode) + BL-071..074 (Templates).",
       "createdAt": "2026-05-02"
+    },
+    {
+      "id": "BL-076",
+      "title": "capture-reminders Cron-Idempotenz-Logik pruefen + Hotfix (ISSUE-035)",
+      "type": "fix",
+      "priority": "medium",
+      "status": "open",
+      "version": null,
+      "description": "Bei /post-launch V4.3+V4.4 (RPT-162, 2026-05-05) entdeckt: reminder_log zeigt 4× Stage1 an gleichen Empfaenger an 4 aufeinanderfolgenden Tagen (01-04.05.) plus Stage2 heute. V4.2-Spec sagt 'Stufe 1 nach 3 Werktagen, Stufe 2 nach 7 Werktagen, Idempotenz' — Verhalten widerspricht der Spec. UNIQUE-Constraint blockiert nur Mehrfach-Send pro Tag, nicht ueber Tage. Investigation-Punkte: (a) Wie ermittelt der Cron, ob Stage1 schon gesendet wurde? (b) Wird reminder_log nach gleichem employee_user_id+reminder_stage ohne sent_date-Filter gequeryt? (c) Ist die Cron-Logik buggy oder die UNIQUE-Constraint zu schwach? Hotfix-Bedarf vor Pre-Production-Cutover (Spam-Reputation-Risiko bei Echt-Kunden). Im Pilot/Internal-Test-Mode unkritisch. Verweis: ISSUE-035 in /docs/KNOWN_ISSUES.md.",
+      "createdAt": "2026-05-05"
     }
   ]
 }

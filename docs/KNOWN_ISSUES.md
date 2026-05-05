@@ -1,5 +1,14 @@
 # Known Issues
 
+### ISSUE-035 — reminder_log Stage1-Mehrfach-Send ueber Tage (V4.2-Carry-Over)
+- Status: open
+- Severity: Medium
+- Area: V4.2 / SLC-048 / capture-reminders Cron-Logik
+- Summary: Beim /post-launch V4.3+V4.4 (RPT-162, 2026-05-05) wurde im `reminder_log` festgestellt, dass an `richard@bellaerts.de` an 4 aufeinanderfolgenden Tagen (01-04.05.) jeweils Stage1-Reminder gesendet wurden, plus heute (05.05.) ein Stage2. V4.2-Spec sagt "Stufe 1 nach 3 Werktagen, Stufe 2 nach 7 Werktagen, Idempotenz". UNIQUE-Constraint auf `(employee_user_id, reminder_stage, sent_date)` verhindert nur Mehrfach-Send pro Tag, nicht aber Mehrfach-Send-Stage1 ueber Tage.
+- Impact: Spam-Reputation-Risiko bei Echt-Kunden (4× tgl. Reminder = anwender-feindlich). Im Pilot/Internal-Test-Mode bislang ohne sichtbaren Schaden, aber Pre-Production-Blocker fuer den Pre-Production-Compliance-Gate. NICHT V4.3- oder V4.4-induziert — Cron-Code unveraendert seit V4.2 SLC-048.
+- Workaround: Aktuell keiner — Pilot-Betrieb mit nur einem Test-Empfaenger, real-world Folge im Internal-Test-Mode minimal.
+- Next Action: BL-076 — Investigation: capture-reminders Cron-Idempotenz-Logik in `src/workers/cron/capture-reminders.ts` (oder aequivalent) pruefen. Fragen: (a) wie ermittelt der Cron, ob Stage1 schon gesendet wurde? (b) wird `reminder_log` nach gleichem `employee_user_id+reminder_stage` ohne sent_date-Filter gequeryt? (c) ist die Logik buggy oder die UNIQUE-Constraint zu schwach? Hotfix vor Pre-Production-Cutover.
+
 ### ISSUE-034 — wizard-actions.test.ts Mock-Drift aus V4.2 ISSUE-031 Fix (createAdminClient nicht gemockt)
 - Status: resolved
 - Severity: Medium

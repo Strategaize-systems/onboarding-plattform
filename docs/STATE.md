@@ -10,15 +10,14 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: stable
-- Current Focus: **V4.4 RELEASED 2026-05-05 als REL-012 (RPT-161).** Deploy-Commit `9be520b`, Image-Tag `bwkg80w04wgccos48gcws8cs_app:9be520b685788ecdd23a784c4c32bb483e88736c`. User-Coolify-Redeploy 2026-05-05 ~14:18 Europe/Berlin durch. Live-Smoke 5/5 PASS: app+worker Up `(healthy)` 1min nach Redeploy, `/login` HTTP 200 TTFB 97.6ms (V4.3-Vergleichsbasis: 107ms — leicht besser), `/api/health` `{"status":"ok"}`, error_log + container logs 0 FATAL/ERROR/Crash letzte 5min, Worker-Bedrock-ENV korrekt geladen (eu-central-1 + Claude-Sonnet-4). 24-48h Post-Launch-Window laeuft bis 2026-05-07 ~14:18. **V4.4 bleibt im Internal-Test-Mode** bis Pre-Production-Compliance-Gate (aufgeschoben per User-Decision).
-- Current Phase: V4.4 RELEASED + Post-Launch-Window laeuft. Code-Releases im V4.4-Range: 188095f → cf3183d → bcd4af8 → 1833d24 → 233f4c0 → 859da80 → 9c1757b → 9be520b (Deploy-Commit). 2 Slices SLC-061+SLC-062 done, 4 V4.4-DECs (DEC-070..073), MIG-030 live + idempotent + Backup vorhanden. Naechste Phase: /post-launch V4.3 (faellig ab 2026-05-06 ~10:55) + /post-launch V4.4 (faellig ab 2026-05-06 ~14:18) + /requirements V5 (Walkthrough-Mode) nach Post-Launch-Stable.
+- Current Focus: **V4.3 Post-Launch STABLE + V4.4 Post-Launch INITIAL PASS (RPT-162, 2026-05-05 ~14:32).** /post-launch V4.3+V4.4 als kombinierter Lauf durchgezogen (User-Direktive trotz V4.4-Window erst 13min). V4.3-Bewertung belastbar (~27h36min Window): 0 Errors/Fatals/Warns in error_log seit Deploy, 0 Errors in app+worker container logs 24h-Fenster, erster regulaerer Cron-Run `capture-reminders-daily` heute 09:00 sauber, /login HTTP 200 TTFB 98.7ms, 0 Hotfix-Auslosungen. V4.4-Bewertung initial (13min Window): 0 Errors, Container-IDs stabil, Worker-Bedrock-ENV korrekt, HTTP-TTFB sogar besser als Deploy-Baseline — Re-Check 2026-05-06 ~14:18 empfohlen. **1 V4.2-Carry-Over-Anomalie entdeckt**: reminder_log zeigt 4× Stage1-Reminder an gleichen Empfaenger an 4 aufeinanderfolgenden Tagen (ISSUE-035, BL-076, severity Medium, NICHT V4.3/V4.4-induziert). **V4.3 + V4.4 bleiben im Internal-Test-Mode** bis Pre-Production-Compliance-Gate (aufgeschoben per User-Decision).
+- Current Phase: V4.3 Post-Launch STABLE + V4.4 Post-Launch INITIAL PASS. V4.4-Code-Releases im Range: 188095f → cf3183d → bcd4af8 → 1833d24 → 233f4c0 → 859da80 → 9c1757b → 9be520b (Deploy-Commit). 2 Slices SLC-061+SLC-062 done, 4 V4.4-DECs (DEC-070..073), MIG-030 live + idempotent + Backup vorhanden. Naechste Phase: /requirements V5 (Walkthrough-Mode) — V4.3+V4.4 Post-Launch ist ausreichend belastbar fuer den V5-Schritt.
 
 ## Immediate Next Steps
-1. **Beobachtung 24-48h Post-Launch-Window V4.4** — keine Action noetig, nur Monitoring.
-2. **/post-launch V4.3** nach 24-48h V4.3-Window (faellig ab 2026-05-06 ~10:55) — Cron-Run `capture-reminders-daily`, container logs, error_log.
-3. **/post-launch V4.4** nach 24-48h V4.4-Window (faellig ab 2026-05-06 ~14:18).
+1. **/requirements V5** (Walkthrough-Mode) — Post-Launch-Sequenz fuer V4.3+V4.4 ist mit RPT-162 ausreichend abgedeckt.
+2. **V4.4 Re-Check** 2026-05-06 ~14:18 (ad-hoc HTTP-Smoke + error_log-Query, kein eigenes /post-launch noetig).
+3. **BL-076 Investigation** capture-reminders Cron-Idempotenz-Logik pruefen, ggf. Hotfix vor Pre-Production-Cutover (V5-Backlog).
 4. **BL-067 Berater-Help-Review** parallel via direkten Editor-Workflow (5 Markdown-Files unter `src/content/help/`); kein Code-Slice noetig.
-5. **/requirements V5** (Walkthrough-Mode) nach Post-Launch-Stable.
 
 ## Active Scope
 **V4 — Zwei-Ebenen-Verschmelzung, 6 Features Code-done, 8 Slices Code-done:**
