@@ -66,8 +66,8 @@
     {
       "id": "v4-4",
       "name": "V4.4",
-      "status": "active",
-      "summary": "Maintenance-Sammelrelease vor V5-Start. SLC-061 (Lint-Sweep 7E+6W → 0/0) + SLC-062 (SQL-Backfill MIG-030 Umlauten Demo-Template, live appliziert) beide /backend + /qa PASS 2026-05-05 (RPT-154..157). Gesamt-V4.4-/qa PASS 2026-05-05 (RPT-158): SC-V4.4-1/2/3/5/6 verifiziert, SC-V4.4-4 (BL-067 Berater-Help-Review) DEFERRED parallel per User. Browser-Smoke V4.3-Regression PASS (Reader, Help-Sheet 3-Tab, Cross-Search 20/9, Capture-Block-Listing korrekte Umlaute). 535/535 Vitest gruen post-MIG-030. Bereit fuer /final-check + /go-live + /deploy als REL-012.",
+      "status": "released",
+      "summary": "Maintenance-Sammelrelease RELEASED 2026-05-05 als REL-012. Deploy-Commit `9be520b`, Image-Tag `bwkg80w04wgccos48gcws8cs_app:9be520b685788ecdd23a784c4c32bb483e88736c`. 2 Slices SLC-061 (Lint-Sweep 7E+6W → 0/0) + SLC-062 (SQL-Backfill MIG-030 Umlauten Demo-Template, live appliziert), 4 V4.4-DECs (DEC-070..073). Gesamt-/qa PASS (RPT-158), Final-Check READY (RPT-159), Go-Live GO (RPT-160), Deploy RELEASED (RPT-161). Live-Smoke 5/5 PASS: app+worker Up `(healthy)`, /login HTTP 200 TTFB 97.6ms (V4.3-Vergleichsbasis: 107ms), /api/health ok, 0 FATAL/ERROR/Crash, Worker-Bedrock-ENV korrekt geladen. 0 V4.4-eingefuehrte Risks. 24-48h Post-Launch-Window startet 2026-05-05 ~14:18. V4.4 bleibt Internal-Test-Mode.",
       "order": 10
     },
     {
