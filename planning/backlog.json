@@ -685,7 +685,7 @@
       "title": "SQL-Migration 046_seed_demo_template.sql Daten-Backfill (Umlaute in Live-DB)",
       "type": "improvement",
       "priority": "low",
-      "status": "open",
+      "status": "in_progress",
       "version": "V4.4",
       "description": "audit-umlauts.mjs aus SLC-052 zeigt 328 Vorkommnisse in sql/migrations/046_seed_demo_template.sql (Demo-Template-Seed). Datei-Edit hat keine Wirkung auf bereits in der Live-DB stehenden Daten — braucht separate UPDATE-Migration die templates.blocks/sop_prompt JSONB-Felder umlaut-korrigiert. Out-of-scope SLC-052 (Hygiene-Code-Slice, kein Daten-Slice).",
       "createdAt": "2026-05-02"

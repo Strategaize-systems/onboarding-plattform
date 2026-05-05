@@ -231,7 +231,7 @@ BL-067 ist KEIN Code-Slice — direkter Editor-Workflow vom User selbst. 5 Help-
 | ID | Slice | Feature | Status | Priority | Created |
 |----|-------|---------|--------|----------|---------|
 | SLC-061 | [Lint-Sweep V2-V4.2 Pre-existing Errors+Warnings](SLC-061-lint-sweep.md) | V4.4 | done | Medium | 2026-05-05 |
-| SLC-062 | [SQL-Backfill 046_seed_demo_template Umlaute (MIG-030)](SLC-062-sql-backfill-umlauts.md) | V4.4 | planned | Low | 2026-05-05 |
+| SLC-062 | [SQL-Backfill 046_seed_demo_template Umlaute (MIG-030)](SLC-062-sql-backfill-umlauts.md) | V4.4 | in_progress | Low | 2026-05-05 |
 
 ### V4.4 Execution Order (per DEC-073)
 
