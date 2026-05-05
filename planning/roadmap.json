@@ -67,7 +67,7 @@
       "id": "v4-4",
       "name": "V4.4",
       "status": "active",
-      "summary": "Maintenance-Sammelrelease vor V5-Start (Pattern aus V3.1 / V4.3). Pre-V5-Hygiene, damit V5 (Walkthrough-Mode) auf sauberer Basis startet. /requirements (RPT-151), /architecture (RPT-152, DEC-070..073, MIG-030 skizziert) und /slice-planning (RPT-153, SLC-061+SLC-062) done 2026-05-05. 3 Items in 3 Kategorien: BL-068 Lint-Sweep (7 react-hooks-Errors + 6 Warnings im V2-V4.2-Code), BL-069 SQL-Backfill 046 Umlaute (328 Vorkommnisse in templates.blocks/sop_prompt JSONB Live-DB-UPDATE per MIG-030), BL-067 Berater-Inhalts-Review (Content-Only, kein Code-Slice). 6 SCs (SC-V4.4-1..6). Slice-Plan: 2 Slices (SLC-061 Lint-Sweep ~6 MTs + SLC-062 SQL-Backfill ~3 MTs) + 1 Content-Item BL-067, ~1-2 Tage Implementation. Naechster Schritt: /backend SLC-061.",
+      "summary": "Maintenance-Sammelrelease vor V5-Start. SLC-061 (Lint-Sweep 7E+6W → 0/0) + SLC-062 (SQL-Backfill MIG-030 Umlauten Demo-Template, live appliziert) beide /backend + /qa PASS 2026-05-05 (RPT-154..157). Gesamt-V4.4-/qa PASS 2026-05-05 (RPT-158): SC-V4.4-1/2/3/5/6 verifiziert, SC-V4.4-4 (BL-067 Berater-Help-Review) DEFERRED parallel per User. Browser-Smoke V4.3-Regression PASS (Reader, Help-Sheet 3-Tab, Cross-Search 20/9, Capture-Block-Listing korrekte Umlaute). 535/535 Vitest gruen post-MIG-030. Bereit fuer /final-check + /go-live + /deploy als REL-012.",
       "order": 10
     },
     {
