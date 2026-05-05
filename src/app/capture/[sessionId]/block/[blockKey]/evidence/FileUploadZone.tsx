@@ -35,6 +35,55 @@ export function FileUploadZone({
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const uploadFile = useCallback(
+    async (file: File) => {
+      setQueue((prev) =>
+        prev.map((q) =>
+          q.file === file ? { ...q, status: "uploading" as const } : q
+        )
+      );
+
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("blockKey", blockKey);
+
+        const res = await fetch(
+          `/api/capture/${sessionId}/evidence/upload`,
+          { method: "POST", body: formData }
+        );
+
+        if (!res.ok) {
+          const body = await res.json().catch(() => null);
+          const msg = body?.error?.message ?? `Upload fehlgeschlagen (${res.status})`;
+          setQueue((prev) =>
+            prev.map((q) =>
+              q.file === file ? { ...q, status: "error" as const, error: msg } : q
+            )
+          );
+          return;
+        }
+
+        const result: UploadResult = await res.json();
+        setQueue((prev) =>
+          prev.map((q) =>
+            q.file === file ? { ...q, status: "done" as const, result } : q
+          )
+        );
+        onUploadComplete?.(result);
+      } catch {
+        setQueue((prev) =>
+          prev.map((q) =>
+            q.file === file
+              ? { ...q, status: "error" as const, error: "Netzwerkfehler" }
+              : q
+          )
+        );
+      }
+    },
+    [sessionId, blockKey, onUploadComplete]
+  );
+
   const addFiles = useCallback(
     (files: FileList | File[]) => {
       const newItems: QueuedFile[] = [];
@@ -58,54 +107,8 @@ export function FileUploadZone({
         }
       }
     },
-    [sessionId, blockKey]
+    [uploadFile]
   );
-
-  const uploadFile = async (file: File) => {
-    setQueue((prev) =>
-      prev.map((q) =>
-        q.file === file ? { ...q, status: "uploading" as const } : q
-      )
-    );
-
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("blockKey", blockKey);
-
-      const res = await fetch(
-        `/api/capture/${sessionId}/evidence/upload`,
-        { method: "POST", body: formData }
-      );
-
-      if (!res.ok) {
-        const body = await res.json().catch(() => null);
-        const msg = body?.error?.message ?? `Upload fehlgeschlagen (${res.status})`;
-        setQueue((prev) =>
-          prev.map((q) =>
-            q.file === file ? { ...q, status: "error" as const, error: msg } : q
-          )
-        );
-        return;
-      }
-
-      const result: UploadResult = await res.json();
-      setQueue((prev) =>
-        prev.map((q) =>
-          q.file === file ? { ...q, status: "done" as const, result } : q
-        )
-      );
-      onUploadComplete?.(result);
-    } catch (err) {
-      setQueue((prev) =>
-        prev.map((q) =>
-          q.file === file
-            ? { ...q, status: "error" as const, error: "Netzwerkfehler" }
-            : q
-        )
-      );
-    }
-  };
 
   const removeFromQueue = (file: File) => {
     setQueue((prev) => prev.filter((q) => q.file !== file));

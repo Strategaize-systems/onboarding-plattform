@@ -662,6 +662,7 @@ const SidebarMenuSkeleton = React.forwardRef<
 >(({ className, showIcon = false, ...props }, ref) => {
   // Random width between 50 to 90%.
   const width = React.useMemo(() => {
+    // eslint-disable-next-line react-hooks/purity -- shadcn library code: intentional skeleton-width randomization for visual variety, not a purity violation in product context.
     return `${Math.floor(Math.random() * 40) + 50}%`
   }, [])
 

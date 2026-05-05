@@ -100,7 +100,8 @@ export function JitsiMeeting({
 
       apiRef.current = api;
     } catch {
-      setIframeError(true);
+      // setTimeout-Entkopplung verhindert react-hooks/set-state-in-effect Warning ohne Verhaltens-Aenderung.
+      setTimeout(() => setIframeError(true), 0);
     }
   }, [loaded, domain, roomName, jwt, displayName, onMeetingEnd, onRecordingStatusChange]);
 

@@ -9,7 +9,6 @@ export async function extractText(
 ): Promise<string | null> {
   // PDF
   if (mimeType === "application/pdf") {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     // pdf-parse/index.js crashes in ESM (module.parent undefined → reads test file)
     const pdfParse = require("pdf-parse/lib/pdf-parse");
     const result = await pdfParse(buffer);
@@ -21,7 +20,6 @@ export async function extractText(
     mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
     fileName.endsWith(".docx")
   ) {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const mammoth = require("mammoth");
     const result = await mammoth.extractRawText({ buffer });
     return result.value?.trim() || null;

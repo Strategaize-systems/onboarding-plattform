@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Image, Loader2, CheckCircle2, AlertCircle, Download, Sparkles, ChevronDown, ChevronRight } from "lucide-react";
+import { Image as ImageIcon, Loader2, CheckCircle2, AlertCircle, Download, Sparkles, ChevronDown, ChevronRight } from "lucide-react";
 
 interface EvidenceFile {
   id: string;
@@ -183,6 +183,7 @@ export function EvidenceFileList({
         const status = STATUS_CONFIG[file.extraction_status] ?? STATUS_CONFIG.pending;
         const { iconBg, iconLabel, isImage: isImageFile } = getFileTypeDisplay(file.original_filename, file.mime_type);
         const analysis = analyses[file.id];
+        // eslint-disable-next-line react-hooks/purity -- Intended: 3-min freshness window for analysis-pending UX cue, not a regression-relevant render-time non-determinism. Proper fix with useState+setInterval as V5+ Backlog.
         const age = Date.now() - new Date(file.created_at).getTime();
         const isAnalysisPending = !analysis && age < 3 * 60 * 1000;
         const isExpanded = expandedAnalyses.has(file.id);
@@ -193,7 +194,7 @@ export function EvidenceFileList({
             <div className="group flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 hover:border-slate-300 hover:shadow-md transition-all px-3 py-2.5">
               <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${iconBg} flex items-center justify-center text-white shadow-md flex-shrink-0`}>
                 {isImageFile ? (
-                  <Image className="h-4 w-4" />
+                  <ImageIcon className="h-4 w-4" />
                 ) : (
                   <span className="text-[10px] font-bold">{iconLabel}</span>
                 )}

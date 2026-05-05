@@ -2,4 +2,5 @@
 export async function sendMail() {
   return { ok: true };
 }
-export default { sendMail };
+const emailStub = { sendMail };
+export default emailStub;

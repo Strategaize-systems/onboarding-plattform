@@ -27,7 +27,7 @@ export function SearchResultsList({
   if (totalMatches === 0) {
     return (
       <div className="rounded-md border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
-        Keine Treffer fuer "{query}".
+        Keine Treffer fuer &quot;{query}&quot;.
       </div>
     );
   }

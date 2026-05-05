@@ -42,7 +42,6 @@ export async function startClaimLoop(
 
   let typeIndex = 0;
 
-  // eslint-disable-next-line no-constant-condition
   while (true) {
     try {
       // Round-robin across job types

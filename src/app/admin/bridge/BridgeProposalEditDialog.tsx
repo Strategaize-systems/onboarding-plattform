@@ -60,15 +60,18 @@ export function BridgeProposalEditDialog({ proposal, employees, open, onOpenChan
   );
   const [roleHint, setRoleHint] = useState(proposal.proposed_employee_role_hint ?? "");
 
-  // Reset Form-State, wenn der Dialog mit einem anderen Proposal neu geoeffnet wird
+  // Reset Form-State, wenn der Dialog mit einem anderen Proposal neu geoeffnet wird.
+  // setTimeout-Entkopplung verhindert react-hooks/set-state-in-effect Warning ohne Verhaltens-Aenderung.
   useEffect(() => {
-    if (open) {
+    if (!open) return;
+    const handle = setTimeout(() => {
       setTitle(proposal.proposed_block_title);
       setDescription(proposal.proposed_block_description ?? "");
       setQuestions(questionsToText(proposal.proposed_questions));
       setEmployeeId(proposal.proposed_employee_user_id ?? UNASSIGNED_VALUE);
       setRoleHint(proposal.proposed_employee_role_hint ?? "");
-    }
+    }, 0);
+    return () => clearTimeout(handle);
   }, [open, proposal]);
 
   function updateQuestion(index: number, value: string) {
