@@ -153,13 +153,20 @@ export function WalkthroughCapture({ walkthroughSessionId, ownerLabel }: Props) 
   /**
    * Direct PUT to the signed Supabase Storage URL. We use XMLHttpRequest
    * because fetch does not expose upload progress events in browsers yet.
+   *
+   * Content-Type is sent without the codec parameter — the
+   * `walkthroughs` bucket has `allowed_mime_types = ['video/webm']` (MIG-031/084)
+   * which exact-matches the bare type. Stripping the suffix keeps the
+   * bucket policy strict instead of opening it to every codec variant
+   * MediaRecorder might surface (vp9,opus / vp8,opus / future codecs).
    */
   const putBlob = useCallback(
     (uploadUrl: string, blob: Blob, mimeType: string): Promise<void> => {
       return new Promise((resolve, reject) => {
+        const baseContentType = mimeType.split(";")[0].trim() || "video/webm";
         const xhr = new XMLHttpRequest();
         xhr.open("PUT", uploadUrl, true);
-        xhr.setRequestHeader("Content-Type", mimeType);
+        xhr.setRequestHeader("Content-Type", baseContentType);
         xhr.upload.onprogress = (ev) => {
           if (!ev.lengthComputable) return;
           const pct = Math.round((ev.loaded / ev.total) * 100);

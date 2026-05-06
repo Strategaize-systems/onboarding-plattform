@@ -1,5 +1,13 @@
 # Known Issues
 
+### ISSUE-038 — Walkthrough-Upload HTTP 415 invalid_mime_type (codec-Suffix vs Bucket-Filter)
+- Status: resolved
+- Severity: High
+- Area: V5 Option 2 / SLC-075 / Storage-Bucket / WalkthroughCapture Content-Type
+- Summary: Nach Hotfix von ISSUE-036 Round 1+2 (Hairpin-NAT + apikey) deckte User-Smoke Round 3 den naechsten Bug auf: PUT scheitert mit `HTTP 400 {"statusCode":"415","error":"invalid_mime_type","message":"mime type video/webm;codecs=vp9,opus is not supported"}`. Bucket `walkthroughs` ist mit `allowed_mime_types = ARRAY['video/webm']` angelegt (MIG-031/084) — exact-match. MediaRecorder sendet aber `video/webm;codecs=vp9,opus` (preferred) bzw. `video/webm;codecs=vp8,opus` (fallback) als Content-Type-Header → Bucket-Filter rejected.
+- Impact: AC-12 weiter blockiert.
+- Resolution: Hotfix 2026-05-06 in `/doctor SLC-075` Round 3 (RPT-177). Client-side strippen den Codec-Suffix beim PUT-Header in `src/components/capture-modes/walkthrough/WalkthroughCapture.tsx` `putBlob()`: `mimeType.split(";")[0].trim()` → `video/webm`. Blob behaelt den vollen MIME-Type fuer client-side State, nur der HTTP-Header wird gestripped — RFC 7231 erlaubt das. Bucket-Filter bleibt strict (Security-by-Design statt Codec-Whitelist-Pflege). 0 zusaetzliche Vitest-Cases (logic ist im React-Component, pure-logic-Test in walkthrough-capture-logic.ts unbetroffen).
+
 ### ISSUE-037 — Walkthrough-Sidebar-Eintrag fehlt (SLC-075-Implementation-Luecke)
 - Status: resolved
 - Severity: Low

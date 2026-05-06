@@ -10,8 +10,8 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: **V5 Option 2 SLC-075 /doctor Round 2 done 2026-05-06 (RPT-176)**. Round 1 (Commit `bf2b146`) deployed → User-Smoke Round 2 deckte naechsten Symptom auf: HTTP 401 `{"message":"No API key found in request"}` beim PUT (Coolify-Kong erwartet apikey, ISSUE-025-Pattern). Helper `rewriteSignedUrlForBrowser` erweitert: zusaetzlich `apikey=<NEXT_PUBLIC_SUPABASE_ANON_KEY>` als Query-Param anhaengen (anon-key ist eh public, Auth via Signed-URL-Token + Storage-RLS). ISSUE-036 finale Resolution beschreibt beide Round-1+Round-2-Fixes. 13/13 Vitest GREEN inkl. 3 neue Cases (Coolify+apikey, Cloud+apikey, Idempotenz wenn apikey schon drin). lint 0/0, build PASS. **Naechster Schritt: User-Coolify-Deploy Round 3 + Browser-Smoke Round 3.**
-- Current Phase: V5 Option 2 Implementation (SLC-075 /doctor Round 2 done, awaiting Re-Deploy + Browser-Smoke Round 3).
+- Current Focus: **V5 Option 2 SLC-075 /doctor Round 3 done 2026-05-06 (RPT-177)**. Round 2 (Commit `6f24b5c`) deployed → User-Smoke Round 3 deckte ISSUE-038 auf: HTTP 415 `invalid_mime_type — video/webm;codecs=vp9,opus is not supported` weil `walkthroughs`-Bucket `allowed_mime_types=['video/webm']` exact-match macht. Hotfix: client-side Content-Type-Header beim PUT auf `video/webm` strippen (Codec-Suffix raus), Blob behaelt vollen MIME-Type, RFC 7231 erlaubt das. Bucket-Filter bleibt strict (Security-by-Design). 16/16 Vitest GREEN, lint 0/0, build PASS. **Naechster Schritt: User-Coolify-Deploy Round 3 + Browser-Smoke Round 3.**
+- Current Phase: V5 Option 2 Implementation (SLC-075 /doctor Round 3 done, awaiting Re-Deploy + Browser-Smoke).
 
 ## Immediate Next Steps
 1. **User-Coolify-Deploy** des aktuellen HEAD-Commits (Sidebar + signedUrl-Rewrite-Hotfix). Kein neuer ENV, keine Migration, keine Worker-Aenderung.
