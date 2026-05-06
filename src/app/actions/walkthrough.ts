@@ -5,8 +5,22 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 // V5 Walkthrough-Mode — Capture-Foundation Server Actions.
-// SLC-071 MT-4 + MT-5. Deps: walkthrough_session (MIG-031/083), Storage-Bucket
-// "walkthroughs" (MIG-031/084), ai_jobs (Migration 031).
+// SLC-071 MT-4 + MT-5 (initial). SLC-075 MT-1 (Self-Spawn-Refactor).
+// Deps: walkthrough_session (MIG-031/083), Storage-Bucket "walkthroughs"
+// (MIG-031/084), ai_jobs (Migration 031), capture_session (MIG-001/021).
+//
+// SLC-075 Self-Spawn-Pattern (DEC-080):
+//   startWalkthroughSession() erzeugt capture_session + walkthrough_session
+//   atomar via service_role. Mitarbeiter (employee) kann selbst KEIN
+//   capture_session INSERTen (nur tenant_admin/strategaize_admin per
+//   capture_session_tenant_admin_write Policy). Daher Service-Role-Bypass —
+//   Pattern analog V4 FEAT-023 Bridge-RPC.
+//
+//   requestWalkthroughUpload(walkthroughSessionId) bekommt jetzt die fertige
+//   walkthrough_session-ID (von startWalkthroughSession), prueft
+//   recorded_by_user_id = auth.uid() via RLS und liefert nur die signed URL.
+//   Status bleibt 'recording' bis confirmWalkthroughUploaded ihn auf
+//   'uploaded' setzt.
 //
 // Status-Maschine (siehe 083): recording → uploading → uploaded → transcribing
 //   → pending_review → approved | rejected | failed.
@@ -21,31 +35,30 @@ const RECORDING_OBJECT_NAME = "recording.webm";
 // dabei — der dokumentiert nicht, er reviewed.
 const RECORDER_ROLES = new Set(["employee", "tenant_member", "tenant_admin"]);
 
-export interface RequestWalkthroughUploadInput {
-  captureSessionId: string;
-  estimatedDurationSec: number;
-}
+// =============================================================================
+// startWalkthroughSession — SLC-075 MT-1 Self-Spawn-Action (DEC-080)
+// =============================================================================
 
-export interface RequestWalkthroughUploadResult {
+export interface StartWalkthroughSessionResult {
   walkthroughSessionId: string;
-  uploadUrl: string;
-  storagePath: string;
+  captureSessionId: string;
 }
 
-export async function requestWalkthroughUpload(
-  input: RequestWalkthroughUploadInput
-): Promise<RequestWalkthroughUploadResult> {
-  // Fast-fail before any DB hit so a bogus client never produces a row.
-  if (
-    !Number.isFinite(input.estimatedDurationSec) ||
-    input.estimatedDurationSec <= 0 ||
-    input.estimatedDurationSec > WALKTHROUGH_MAX_DURATION_SEC
-  ) {
-    throw new Error(
-      `estimatedDurationSec ${input.estimatedDurationSec} ueberschreitet das 1800s Limit (30min)`
-    );
-  }
-
+/**
+ * Spawns a fresh capture_session (capture_mode='walkthrough') and the matching
+ * walkthrough_session (status='recording') for the calling user. Service-role
+ * is required because RLS on capture_session blocks INSERT for employee /
+ * tenant_member roles (Migration 022 capture_session_tenant_admin_write).
+ *
+ * Returns the new walkthrough_session id which the caller passes to
+ * requestWalkthroughUpload + confirmWalkthroughUploaded later.
+ *
+ * Template resolution: picks the oldest template system-wide (templates are
+ * not tenant-scoped per Migration 021). For onboarding workloads with a single
+ * canonical template this is the right pick; multi-template tenants will have
+ * to revisit this when they exist.
+ */
+export async function startWalkthroughSession(): Promise<StartWalkthroughSessionResult> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -66,44 +79,133 @@ export async function requestWalkthroughUpload(
     );
   }
 
-  // Cross-Tenant-Guard. RLS auf capture_session liefert die Zeile gar nicht
-  // erst zurueck, wenn sie nicht zum Tenant des Users gehoert; der explizite
-  // tenant_id-Vergleich bleibt als Defense-in-Depth-Sicherung.
-  const { data: capture, error: captureError } = await supabase
-    .from("capture_session")
-    .select("id, tenant_id")
-    .eq("id", input.captureSessionId)
+  const admin = createAdminClient();
+
+  // Pick the oldest template — onboarding has typically one canonical template
+  // (exit_readiness). If multiple templates exist, the oldest is the V1 entry.
+  const { data: template, error: templateError } = await admin
+    .from("template")
+    .select("id, version")
+    .order("created_at", { ascending: true })
+    .limit(1)
     .single();
-  if (captureError || !capture) {
-    throw new Error("capture_session nicht gefunden oder fremd-tenant");
-  }
-  if (capture.tenant_id !== profile.tenant_id) {
-    throw new Error("capture_session gehoert nicht zum eigenen Tenant");
+  if (templateError || !template) {
+    throw new Error(
+      `Kein Template fuer Walkthrough-Capture gefunden: ${templateError?.message ?? "no rows"}`
+    );
   }
 
-  // INSERT laeuft mit dem User-Client → walkthrough_session_insert-Policy
-  // verlangt recorded_by_user_id = auth.uid() AND tenant_id = auth.user_tenant_id().
-  const { data: created, error: insertError } = await supabase
+  // Insert capture_session via service_role (RLS would block employee).
+  const { data: capture, error: captureError } = await admin
+    .from("capture_session")
+    .insert({
+      tenant_id: profile.tenant_id,
+      template_id: template.id,
+      template_version: template.version,
+      owner_user_id: user.id,
+      status: "open",
+      capture_mode: "walkthrough",
+    })
+    .select("id")
+    .single();
+  if (captureError || !capture) {
+    throw new Error(
+      `capture_session INSERT fehlgeschlagen: ${captureError?.message ?? "unknown"}`
+    );
+  }
+
+  const captureSessionId = capture.id as string;
+
+  // Insert walkthrough_session via service_role to keep both inserts on the
+  // same connection. If this fails the capture_session is rolled back to keep
+  // the data model clean — orphan capture_sessions would confuse the cleanup
+  // cron in SLC-074.
+  const { data: walk, error: walkError } = await admin
     .from("walkthrough_session")
     .insert({
       tenant_id: profile.tenant_id,
-      capture_session_id: input.captureSessionId,
+      capture_session_id: captureSessionId,
       recorded_by_user_id: user.id,
       status: "recording",
     })
     .select("id")
     .single();
-  if (insertError || !created) {
+  if (walkError || !walk) {
+    await admin.from("capture_session").delete().eq("id", captureSessionId);
     throw new Error(
-      `walkthrough_session INSERT fehlgeschlagen: ${insertError?.message ?? "unknown"}`
+      `walkthrough_session INSERT fehlgeschlagen: ${walkError?.message ?? "unknown"}`
     );
   }
 
-  const walkthroughSessionId = created.id as string;
-  const storagePath = `${profile.tenant_id}/${walkthroughSessionId}/${RECORDING_OBJECT_NAME}`;
+  return {
+    walkthroughSessionId: walk.id as string,
+    captureSessionId,
+  };
+}
 
-  // Signed-URL via service-role: anon-key sieht den storage.buckets-Eintrag
-  // nicht und createSignedUploadUrl ist ohnehin Admin-API.
+// =============================================================================
+// requestWalkthroughUpload — SLC-075 MT-1 Refactor (was SLC-071 MT-4)
+// =============================================================================
+
+export interface RequestWalkthroughUploadInput {
+  walkthroughSessionId: string;
+  estimatedDurationSec: number;
+}
+
+export interface RequestWalkthroughUploadResult {
+  walkthroughSessionId: string;
+  uploadUrl: string;
+  storagePath: string;
+}
+
+/**
+ * Issues a signed Supabase Storage URL for the existing walkthrough_session.
+ * Pre-condition: the row was created by startWalkthroughSession and is still
+ * in status 'recording'. RLS on walkthrough_session restricts the user-client
+ * lookup to recorded_by_user_id = auth.uid() — owners only.
+ */
+export async function requestWalkthroughUpload(
+  input: RequestWalkthroughUploadInput
+): Promise<RequestWalkthroughUploadResult> {
+  if (
+    !Number.isFinite(input.estimatedDurationSec) ||
+    input.estimatedDurationSec <= 0 ||
+    input.estimatedDurationSec > WALKTHROUGH_MAX_DURATION_SEC
+  ) {
+    throw new Error(
+      `estimatedDurationSec ${input.estimatedDurationSec} ueberschreitet das 1800s Limit (30min)`
+    );
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Nicht authentifiziert");
+
+  // RLS on walkthrough_session lets the recorder see only own rows; a
+  // mismatched recorder gets data:null without error.
+  const { data: session, error: sessionError } = await supabase
+    .from("walkthrough_session")
+    .select("id, tenant_id, recorded_by_user_id, status")
+    .eq("id", input.walkthroughSessionId)
+    .maybeSingle();
+  if (sessionError || !session) {
+    throw new Error("walkthrough_session nicht gefunden oder nicht zugaenglich");
+  }
+  if (session.recorded_by_user_id !== user.id) {
+    throw new Error(
+      "Nur der Aufnehmer (recorded_by_user_id) darf Upload anfordern"
+    );
+  }
+  if (session.status !== "recording") {
+    throw new Error(
+      `Ungueltiger status '${session.status}' fuer requestWalkthroughUpload — erlaubt ist nur 'recording'`
+    );
+  }
+
+  const storagePath = `${session.tenant_id}/${session.id}/${RECORDING_OBJECT_NAME}`;
+
   const admin = createAdminClient();
   const { data: signed, error: signedError } = await admin.storage
     .from(STORAGE_BUCKET)
@@ -115,11 +217,15 @@ export async function requestWalkthroughUpload(
   }
 
   return {
-    walkthroughSessionId,
+    walkthroughSessionId: session.id,
     uploadUrl: signed.signedUrl,
     storagePath,
   };
 }
+
+// =============================================================================
+// confirmWalkthroughUploaded — unchanged from SLC-071 MT-5
+// =============================================================================
 
 export interface ConfirmWalkthroughUploadedInput {
   walkthroughSessionId: string;
@@ -130,7 +236,6 @@ export interface ConfirmWalkthroughUploadedInput {
 export async function confirmWalkthroughUploaded(
   input: ConfirmWalkthroughUploadedInput
 ): Promise<{ ok: true }> {
-  // DB-CHECK fangs ohnehin ab; Fast-Fail spart einen Roundtrip.
   if (
     !Number.isFinite(input.durationSec) ||
     input.durationSec <= 0 ||

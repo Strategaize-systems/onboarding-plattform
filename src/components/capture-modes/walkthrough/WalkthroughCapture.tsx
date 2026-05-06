@@ -30,7 +30,7 @@ import {
  */
 
 interface Props {
-  captureSessionId: string;
+  walkthroughSessionId: string;
   /** Used in the redirect target after a successful upload. */
   ownerLabel?: string;
 }
@@ -47,7 +47,7 @@ function useCaptureMachine() {
   );
 }
 
-export function WalkthroughCapture({ captureSessionId, ownerLabel }: Props) {
+export function WalkthroughCapture({ walkthroughSessionId, ownerLabel }: Props) {
   const router = useRouter();
   const [ctx, dispatch] = useCaptureMachine();
 
@@ -189,7 +189,7 @@ export function WalkthroughCapture({ captureSessionId, ownerLabel }: Props) {
 
       try {
         const reqResult = await requestWalkthroughUpload({
-          captureSessionId,
+          walkthroughSessionId,
           estimatedDurationSec: startedDurationRef.current || 1,
         });
 
@@ -209,7 +209,7 @@ export function WalkthroughCapture({ captureSessionId, ownerLabel }: Props) {
         fail(`Upload-Fehler: ${(e as Error).message}`);
       }
     },
-    [captureSessionId, dispatch, fail, putBlob, router]
+    [walkthroughSessionId, dispatch, fail, putBlob, router]
   );
 
   const startRecording = useCallback(async () => {

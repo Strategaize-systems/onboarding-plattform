@@ -30,32 +30,17 @@ vi.mock("@/lib/supabase/admin", () => ({
 }));
 
 import {
-  requestWalkthroughUpload,
   confirmWalkthroughUploaded,
+  requestWalkthroughUpload,
+  startWalkthroughSession,
 } from "../walkthrough";
 
 const TENANT_A = "11111111-1111-1111-1111-111111111111";
-const TENANT_B = "22222222-2222-2222-2222-222222222222";
 const USER_A = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
 const USER_B = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb";
 const CAPTURE_A = "cccccccc-cccc-cccc-cccc-cccccccccccc";
 const WALK_ID = "dddddddd-dddd-dddd-dddd-dddddddddddd";
-
-type TableHandler = () => unknown;
-
-/**
- * Build a from(table) router that returns the configured chainable per table.
- * The handler receives no args; build chainables yourself per test.
- */
-function makeFromRouter(handlers: Record<string, TableHandler>) {
-  return vi.fn((table: string) => {
-    const h = handlers[table];
-    if (!h) {
-      throw new Error(`unmocked from(${table})`);
-    }
-    return h();
-  });
-}
+const TEMPLATE_ID = "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee";
 
 beforeEach(() => {
   getUserMock.mockReset();
@@ -66,53 +51,217 @@ beforeEach(() => {
 });
 
 // ============================================================
-// requestWalkthroughUpload
+// startWalkthroughSession (SLC-075 MT-1 Self-Spawn)
 // ============================================================
 
-describe("requestWalkthroughUpload", () => {
-  it("creates walkthrough_session and returns signed upload URL on happy path", async () => {
+describe("startWalkthroughSession", () => {
+  it("creates capture_session + walkthrough_session via service_role on happy path", async () => {
     getUserMock.mockResolvedValue({
       data: { user: { id: USER_A } },
       error: null,
     });
 
-    // profiles row (anon-key client)
     const profilesChain = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
-      single: vi
-        .fn()
-        .mockResolvedValue({
-          data: { tenant_id: TENANT_A, role: "employee" },
-          error: null,
-        }),
+      single: vi.fn().mockResolvedValue({
+        data: { tenant_id: TENANT_A, role: "employee" },
+        error: null,
+      }),
     };
-    // capture_session ownership check
-    const captureChain = {
+    userFromMock.mockImplementation((table: string) => {
+      if (table === "profiles") return profilesChain;
+      throw new Error(`unmocked user from(${table})`);
+    });
+
+    const templateChain = {
       select: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({
+        data: { id: TEMPLATE_ID, version: "1.0.0" },
+        error: null,
+      }),
+    };
+
+    const captureInsertSelect = {
       single: vi
         .fn()
-        .mockResolvedValue({
-          data: { tenant_id: TENANT_A },
-          error: null,
-        }),
+        .mockResolvedValue({ data: { id: CAPTURE_A }, error: null }),
     };
-    // walkthrough_session INSERT (RLS-bound via anon-key)
-    const insertSelect = {
+    const captureInsertReturn = {
+      select: vi.fn().mockReturnValue(captureInsertSelect),
+    };
+    const captureChain = {
+      insert: vi.fn().mockReturnValue(captureInsertReturn),
+    };
+
+    const walkInsertSelect = {
       single: vi
         .fn()
         .mockResolvedValue({ data: { id: WALK_ID }, error: null }),
     };
-    const insertReturn = { select: vi.fn().mockReturnValue(insertSelect) };
-    const walkthroughChain = {
-      insert: vi.fn().mockReturnValue(insertReturn),
+    const walkInsertReturn = {
+      select: vi.fn().mockReturnValue(walkInsertSelect),
     };
+    const walkChain = { insert: vi.fn().mockReturnValue(walkInsertReturn) };
 
+    adminFromMock.mockImplementation((table: string) => {
+      if (table === "template") return templateChain;
+      if (table === "capture_session") return captureChain;
+      if (table === "walkthrough_session") return walkChain;
+      throw new Error(`unmocked admin from(${table})`);
+    });
+
+    const result = await startWalkthroughSession();
+
+    expect(result.walkthroughSessionId).toBe(WALK_ID);
+    expect(result.captureSessionId).toBe(CAPTURE_A);
+
+    expect(captureChain.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenant_id: TENANT_A,
+        template_id: TEMPLATE_ID,
+        template_version: "1.0.0",
+        owner_user_id: USER_A,
+        capture_mode: "walkthrough",
+        status: "open",
+      })
+    );
+    expect(walkChain.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenant_id: TENANT_A,
+        capture_session_id: CAPTURE_A,
+        recorded_by_user_id: USER_A,
+        status: "recording",
+      })
+    );
+  });
+
+  it("rejects strategaize_admin (review-only role)", async () => {
+    getUserMock.mockResolvedValue({
+      data: { user: { id: USER_A } },
+      error: null,
+    });
+
+    const profilesChain = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({
+        data: { tenant_id: null, role: "strategaize_admin" },
+        error: null,
+      }),
+    };
     userFromMock.mockImplementation((table: string) => {
       if (table === "profiles") return profilesChain;
+      throw new Error(`unmocked user from(${table})`);
+    });
+
+    await expect(startWalkthroughSession()).rejects.toThrow(/berechtigt/i);
+
+    // Must not touch templates or capture_session if role check rejects.
+    expect(adminFromMock).not.toHaveBeenCalled();
+  });
+
+  it("rolls back capture_session when walkthrough_session INSERT fails", async () => {
+    getUserMock.mockResolvedValue({
+      data: { user: { id: USER_A } },
+      error: null,
+    });
+
+    const profilesChain = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({
+        data: { tenant_id: TENANT_A, role: "tenant_member" },
+        error: null,
+      }),
+    };
+    userFromMock.mockImplementation((table: string) => {
+      if (table === "profiles") return profilesChain;
+      throw new Error(`unmocked user from(${table})`);
+    });
+
+    const templateChain = {
+      select: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({
+        data: { id: TEMPLATE_ID, version: "1.0.0" },
+        error: null,
+      }),
+    };
+
+    const captureInsertSelect = {
+      single: vi
+        .fn()
+        .mockResolvedValue({ data: { id: CAPTURE_A }, error: null }),
+    };
+    const captureInsertReturn = {
+      select: vi.fn().mockReturnValue(captureInsertSelect),
+    };
+    const captureDeleteEq = vi.fn().mockResolvedValue({ error: null });
+    const captureDeleteReturn = {
+      eq: captureDeleteEq,
+    };
+    const captureChain = {
+      insert: vi.fn().mockReturnValue(captureInsertReturn),
+      delete: vi.fn().mockReturnValue(captureDeleteReturn),
+    };
+
+    const walkInsertSelect = {
+      single: vi.fn().mockResolvedValue({
+        data: null,
+        error: { message: "RLS denied" },
+      }),
+    };
+    const walkInsertReturn = {
+      select: vi.fn().mockReturnValue(walkInsertSelect),
+    };
+    const walkChain = { insert: vi.fn().mockReturnValue(walkInsertReturn) };
+
+    adminFromMock.mockImplementation((table: string) => {
+      if (table === "template") return templateChain;
       if (table === "capture_session") return captureChain;
-      if (table === "walkthrough_session") return walkthroughChain;
+      if (table === "walkthrough_session") return walkChain;
+      throw new Error(`unmocked admin from(${table})`);
+    });
+
+    await expect(startWalkthroughSession()).rejects.toThrow(
+      /walkthrough_session INSERT fehlgeschlagen/
+    );
+
+    expect(captureChain.delete).toHaveBeenCalled();
+    expect(captureDeleteEq).toHaveBeenCalledWith("id", CAPTURE_A);
+  });
+});
+
+// ============================================================
+// requestWalkthroughUpload (SLC-075 MT-1 Refactor — walkthroughSessionId-based)
+// ============================================================
+
+describe("requestWalkthroughUpload", () => {
+  it("returns signed upload URL for own walkthrough_session in 'recording' state", async () => {
+    getUserMock.mockResolvedValue({
+      data: { user: { id: USER_A } },
+      error: null,
+    });
+
+    const sessionChain = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: {
+          id: WALK_ID,
+          tenant_id: TENANT_A,
+          recorded_by_user_id: USER_A,
+          status: "recording",
+        },
+        error: null,
+      }),
+    };
+    userFromMock.mockImplementation((table: string) => {
+      if (table === "walkthrough_session") return sessionChain;
       throw new Error(`unmocked from(${table})`);
     });
 
@@ -126,7 +275,7 @@ describe("requestWalkthroughUpload", () => {
     });
 
     const result = await requestWalkthroughUpload({
-      captureSessionId: CAPTURE_A,
+      walkthroughSessionId: WALK_ID,
       estimatedDurationSec: 600,
     });
 
@@ -134,15 +283,6 @@ describe("requestWalkthroughUpload", () => {
     expect(result.uploadUrl).toBe("https://storage.example/upload/abc");
     expect(result.storagePath).toBe(`${TENANT_A}/${WALK_ID}/recording.webm`);
 
-    // INSERT must include tenant + capture_session + recorded_by + status
-    expect(walkthroughChain.insert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        tenant_id: TENANT_A,
-        capture_session_id: CAPTURE_A,
-        recorded_by_user_id: USER_A,
-        status: "recording",
-      })
-    );
     expect(createSignedUploadUrlMock).toHaveBeenCalledWith(
       `${TENANT_A}/${WALK_ID}/recording.webm`,
       expect.objectContaining({ upsert: false })
@@ -157,62 +297,86 @@ describe("requestWalkthroughUpload", () => {
 
     await expect(
       requestWalkthroughUpload({
-        captureSessionId: CAPTURE_A,
+        walkthroughSessionId: WALK_ID,
         estimatedDurationSec: 1801,
       })
     ).rejects.toThrow(/1800|30\s*min/i);
 
-    // Fast-fail: must not touch DB
     expect(userFromMock).not.toHaveBeenCalled();
     expect(createSignedUploadUrlMock).not.toHaveBeenCalled();
   });
 
-  it("throws when captureSessionId belongs to a different tenant", async () => {
+  it("throws when caller did not record this session (Self-Only)", async () => {
     getUserMock.mockResolvedValue({
-      data: { user: { id: USER_A } },
+      data: { user: { id: USER_B } },
       error: null,
     });
 
-    const profilesChain = {
+    const sessionChain = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
-      single: vi
-        .fn()
-        .mockResolvedValue({
-          data: { tenant_id: TENANT_A, role: "employee" },
-          error: null,
-        }),
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: {
+          id: WALK_ID,
+          tenant_id: TENANT_A,
+          recorded_by_user_id: USER_A,
+          status: "recording",
+        },
+        error: null,
+      }),
     };
-    // capture_session lookup — RLS hides the row entirely (data: null)
-    const captureChain = {
-      select: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      single: vi.fn().mockResolvedValue({ data: null, error: null }),
-    };
-    const insertSpy = vi.fn();
-    const walkthroughChain = { insert: insertSpy };
-
     userFromMock.mockImplementation((table: string) => {
-      if (table === "profiles") return profilesChain;
-      if (table === "capture_session") return captureChain;
-      if (table === "walkthrough_session") return walkthroughChain;
+      if (table === "walkthrough_session") return sessionChain;
       throw new Error(`unmocked from(${table})`);
     });
 
     await expect(
       requestWalkthroughUpload({
-        captureSessionId: CAPTURE_A,
+        walkthroughSessionId: WALK_ID,
         estimatedDurationSec: 300,
       })
-    ).rejects.toThrow(/capture[_ ]?session|tenant|nicht.+gefunden/i);
+    ).rejects.toThrow(/Aufnehmer|recorded_by/i);
 
-    expect(insertSpy).not.toHaveBeenCalled();
+    expect(createSignedUploadUrlMock).not.toHaveBeenCalled();
+  });
+
+  it("throws when session status is not 'recording'", async () => {
+    getUserMock.mockResolvedValue({
+      data: { user: { id: USER_A } },
+      error: null,
+    });
+
+    const sessionChain = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: {
+          id: WALK_ID,
+          tenant_id: TENANT_A,
+          recorded_by_user_id: USER_A,
+          status: "uploaded",
+        },
+        error: null,
+      }),
+    };
+    userFromMock.mockImplementation((table: string) => {
+      if (table === "walkthrough_session") return sessionChain;
+      throw new Error(`unmocked from(${table})`);
+    });
+
+    await expect(
+      requestWalkthroughUpload({
+        walkthroughSessionId: WALK_ID,
+        estimatedDurationSec: 300,
+      })
+    ).rejects.toThrow(/status.*recording/);
+
     expect(createSignedUploadUrlMock).not.toHaveBeenCalled();
   });
 });
 
 // ============================================================
-// confirmWalkthroughUploaded
+// confirmWalkthroughUploaded — unchanged behavior, kept for regression coverage
 // ============================================================
 
 describe("confirmWalkthroughUploaded", () => {
@@ -222,7 +386,6 @@ describe("confirmWalkthroughUploaded", () => {
       error: null,
     });
 
-    // user-side: load walkthrough_session for ownership/status check
     const loadChain = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
@@ -241,7 +404,6 @@ describe("confirmWalkthroughUploaded", () => {
       throw new Error(`unmocked user from(${table})`);
     });
 
-    // admin-side: UPDATE walkthrough_session via service_role + INSERT ai_jobs
     const updateEq = vi.fn().mockResolvedValue({ error: null });
     const updateChain = { update: vi.fn().mockReturnValue({ eq: updateEq }) };
     const aiInsert = vi.fn().mockResolvedValue({ error: null });
@@ -351,7 +513,3 @@ describe("confirmWalkthroughUploaded", () => {
     expect(adminFromMock).not.toHaveBeenCalled();
   });
 });
-
-// suppress unused-helper warning from strict tsconfig — kept exported for
-// future tests that benefit from the table-router.
-void makeFromRouter;

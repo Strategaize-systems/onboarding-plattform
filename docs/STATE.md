@@ -9,14 +9,14 @@
 Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdichtung. Ermoeglicht mehrere Capture-Modi (Fragebogen, Meeting, Voice, etc.) und Template-basierte Produktvarianten (z.B. Exit-Readiness, Immobilien-Onboarding). Ab V4: Zwei-Ebenen-Verschmelzung (GF-Blueprint + Mitarbeiter-Capture + Unternehmerhandbuch-Output).
 
 ## Current State
-- High-Level State: slice-planning
-- Current Focus: **V5 Option 2 Slice-Planning done 2026-05-06 (RPT-172)** nach RPT-171 Architecture. 7 Option-2-Slices final geschnitten in slices/INDEX.md V5-Sektion: SLC-075 Routing-Patch (Self-Spawn-Pattern, ~3 MTs, ERSTER) + SLC-072 Whisper-Worker unveraendert (~5 MTs) + SLC-076 PII (~5 MTs) + SLC-077 Schritt-Extraktion (~5 MTs) + SLC-078 Auto-Mapping (~4 MTs) + SLC-079 Methodik-Review-UI (~7 MTs) + SLC-074 re-scoped Registry+48-Faelle-RLS+Cleanup (~5 MTs). Gesamt **34 MTs / ~5-6.5 Tage**. SLC-071 bleibt als-ist akzeptiert (code-side done, in_progress bis SLC-075 Browser-Smoke nachholt). SLC-073 (FEAT-036 Roh-Video-Review) markiert als **deferred** per DEC-079. BL-076 Cron-Idempotenz-Hotfix als Mid-Stream-Slot zwischen SLC-079 und SLC-074 platziert. Sequencing: SLC-075 → SLC-072 → SLC-076 → SLC-077 → SLC-078 ∥ SLC-079 → BL-076 → SLC-074. **Naechster Schritt: `/backend SLC-075`** — Self-Spawn-Pattern + Routing-Patch + AC-10/11/12 Browser-Smoke.
-- Current Phase: V5 Option 2 Slice-Planning done (2026-05-06), Implementation-Phase startet.
+- High-Level State: implementing
+- Current Focus: **V5 Option 2 SLC-075 /backend code-complete 2026-05-06 (RPT-173)**. 3/3 MTs done: `startWalkthroughSession`-Action via service_role + atomare capture_session+walkthrough_session-Erzeugung mit Rollback-on-Fail, `requestWalkthroughUpload`-Signatur auf walkthroughSessionId refactored, neue Routen `/employee/walkthroughs` (Liste + Self-Spawn-Form) + `/employee/walkthroughs/[id]/record` (Recorder-Wrapper), alte Route `/employee/capture/walkthrough/[id]` geloescht, WalkthroughCapture-Component-Prop `captureSessionId → walkthroughSessionId`. Lint 0/0, Build PASS (Routen registriert), 13/13 Walkthrough-Vitest GREEN. Pending: AC-10/11/12 Browser-Smoke (Pflicht-Gate) auf Live-URL nach User-Coolify-Deploy. SLC-075 bleibt `in_progress` bis `/qa SLC-075` PASS. **Naechster Schritt: User-Coolify-Deploy + `/qa SLC-075`** mit `richard@bellaerts.de` auf https://onboarding.strategaizetransition.com.
+- Current Phase: V5 Option 2 Implementation (SLC-075 code-side done, awaiting Live-Smoke).
 
 ## Immediate Next Steps
-1. **`/backend SLC-075`** — Self-Spawn-Pattern via `startWalkthroughSession`-Action implementieren, Routing umstellen `/employee/walkthroughs` + `/employee/walkthroughs/[id]/record` + alte Route `/employee/capture/walkthrough/[id]` entfernen, AC-10/11/12 Browser-Smoke nachholen. Loest BL-086 = Q-V5-F kritisch. ~3 MTs.
-2. **`/qa SLC-075`** + Cockpit-Records-Sync nach SLC-075-done.
-3. **`/backend SLC-072`** — Whisper-Worker (5 MTs) — bestehende Spec mit Pipeline-Trigger-Patch in SLC-076 MT-5.
+1. **User-Coolify-Deploy** des aktuellen Commits (HEAD nach RPT-173) — kein neuer ENV, keine Migration, keine Worker-Aenderung.
+2. **`/qa SLC-075`** mit AC-10/11/12 Browser-Smoke (employee `richard@bellaerts.de`): (a) `/employee/walkthroughs` HTTP 200 + Liste + Button, (b) Klick Self-Spawn → Permissions-Dialog → MediaRecorder, (c) Stoppen → Upload → Status-Page mit `uploaded`. Screenshot pro AC. Vitest gegen Coolify-DB falls reachable. Schliesst SLC-071 + SLC-075.
+3. **`/backend SLC-072`** — Whisper-Worker (5 MTs) — bestehende Spec mit Pipeline-Trigger-Patch in SLC-076 MT-5. Erst nach SLC-075-Slice-Closing (User-Smoke).
 4. **`/backend SLC-076`** — Stufe 1 PII-Redaction (Migration 087 + walkthrough_redact_pii Worker + PII-Pattern-Library + synthetische Test-Suite SC-V5-6 ≥90% Recall, ~5 MTs).
 5. **`/backend SLC-077`** — Stufe 2 Schritt-Extraktion (Migration 085 + walkthrough_extract_steps Worker + ≥5 Test-Walkthroughs, ~5 MTs).
 6. **`/backend SLC-078`** — Stufe 3 Auto-Mapping (Migration 086 + walkthrough_map_subtopics Worker mit Bridge-Engine-Pattern Reverse-Direction + Coverage-Test SC-V5-7 ≥70%, ~4 MTs).
