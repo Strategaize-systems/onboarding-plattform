@@ -1,5 +1,21 @@
 # Known Issues
 
+### ISSUE-037 — Walkthrough-Sidebar-Eintrag fehlt (SLC-075-Implementation-Luecke)
+- Status: resolved
+- Severity: Low
+- Area: V5 Option 2 / SLC-075 / EmployeeSidebar UX
+- Summary: SLC-075 hat die Routen `/employee/walkthroughs[/...]` neu angelegt + Self-Spawn-Action implementiert, aber `src/components/employee-sidebar.tsx` nicht erweitert. Mitarbeiter sahen ueber das normale Login (`/employee`) keinen Sidebar-Eintrag fuer Walkthroughs — die neue Route war nur via direktes URL-Eintippen erreichbar. User-Smoke 2026-05-06 hat die Luecke aufgedeckt (Screenshot: nur "Aufgaben"-Eintrag im Sidebar).
+- Impact: Mitarbeiter konnten den Walkthrough-Capture-Pfad praktisch nicht entdecken — Pflicht-Gate AC-10 nur formal erfuellbar.
+- Resolution: Hotfix 2026-05-06 in `/doctor SLC-075` (RPT-175). Sidebar-Link "Walkthroughs" mit `Video`-Icon ergaenzt, Active-State-Highlighting fuer alle `/employee/walkthroughs/*`-Pfade. Zwei Commits zusammen mit ISSUE-036.
+
+### ISSUE-036 — Walkthrough-Upload schlaegt mit "Netzwerkfehler" fehl (Hairpin-NAT signedUrl)
+- Status: resolved
+- Severity: High
+- Area: V5 Option 2 / SLC-075 / Self-Hosted-Supabase / Storage Signed-URL
+- Summary: `requestWalkthroughUpload` returnt eine `signedUrl` von `createSignedUploadUrl`. Auf Self-Hosted-Coolify ist `createAdminClient` mit `SUPABASE_URL=http://supabase-kong:8000` (intern) initialisiert, weshalb supabase-js die signedUrl gegen den Docker-Hostname baut. Browser kann `supabase-kong` nicht aufloesen → `xhr.onerror` → "Netzwerkfehler waehrend Upload". User-Smoke 2026-05-06 zeigte den Fehler nach Permission-Grant + Aufnahme + Stop.
+- Impact: AC-12 (Upload + Status `uploaded`) komplett gebrochen. Capture-Pipeline-Eintritt blockiert.
+- Resolution: Hotfix 2026-05-06 in `/doctor SLC-075` (RPT-175). Helper `rewriteSignedUrlForBrowser` in `src/app/actions/walkthrough.ts`: nach `createSignedUploadUrl` den Host-Praefix von `process.env.SUPABASE_URL` auf `process.env.NEXT_PUBLIC_SUPABASE_URL` umschreiben — ergibt fuer Coolify-Setup `https://onboarding.strategaizetransition.com/supabase/storage/v1/object/upload/sign/...?token=...`, die Coolify-Reverse-Proxy → Kong routet. 2 zusaetzliche Vitest-Cases pruefen Coolify-Self-Hosted-Pfad + Supabase-Cloud-Pfad (kein Rewrite wenn intern==extern). Pattern wiederverwendbar fuer kuenftige Browser-Direct-Upload-Flows.
+
 ### ISSUE-035 — reminder_log Stage1-Mehrfach-Send ueber Tage (V4.2-Carry-Over)
 - Status: open
 - Severity: Medium

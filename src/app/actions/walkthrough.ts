@@ -31,6 +31,24 @@ const WALKTHROUGH_MAX_DURATION_SEC = 1800; // DEC-076: 30min hard cap.
 const STORAGE_BUCKET = "walkthroughs";
 const RECORDING_OBJECT_NAME = "recording.webm";
 
+/**
+ * Self-hosted Supabase via Coolify exposes Kong on the internal Docker network
+ * as `http://supabase-kong:8000` (`SUPABASE_URL`) and externally via the app
+ * domain at `NEXT_PUBLIC_SUPABASE_URL`. `createSignedUploadUrl` builds the URL
+ * relative to the client base URL — when the admin client uses the internal
+ * hostname, the returned `signedUrl` is unreachable from a browser
+ * (`xhr.onerror` "Netzwerkfehler"). Rewrite the host before returning to the
+ * client so the browser hits the public reverse-proxy path.
+ */
+function rewriteSignedUrlForBrowser(url: string): string {
+  const internalBase = process.env.SUPABASE_URL;
+  const externalBase = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!internalBase || !externalBase) return url;
+  if (internalBase === externalBase) return url;
+  if (!url.startsWith(internalBase)) return url;
+  return externalBase + url.slice(internalBase.length);
+}
+
 // Roles allowed to record a walkthrough. strategaize_admin is bewusst NICHT
 // dabei — der dokumentiert nicht, er reviewed.
 const RECORDER_ROLES = new Set(["employee", "tenant_member", "tenant_admin"]);
@@ -218,7 +236,7 @@ export async function requestWalkthroughUpload(
 
   return {
     walkthroughSessionId: session.id,
-    uploadUrl: signed.signedUrl,
+    uploadUrl: rewriteSignedUrlForBrowser(signed.signedUrl),
     storagePath,
   };
 }

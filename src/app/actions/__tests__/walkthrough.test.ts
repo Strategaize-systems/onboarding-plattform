@@ -241,6 +241,116 @@ describe("startWalkthroughSession", () => {
 // ============================================================
 
 describe("requestWalkthroughUpload", () => {
+  it("rewrites internal supabase-kong host to the public Coolify URL for browser PUT", async () => {
+    const ORIGINAL_INTERNAL = process.env.SUPABASE_URL;
+    const ORIGINAL_PUBLIC = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    process.env.SUPABASE_URL = "http://supabase-kong:8000";
+    process.env.NEXT_PUBLIC_SUPABASE_URL =
+      "https://onboarding.strategaizetransition.com/supabase";
+
+    try {
+      getUserMock.mockResolvedValue({
+        data: { user: { id: USER_A } },
+        error: null,
+      });
+
+      const sessionChain = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({
+          data: {
+            id: WALK_ID,
+            tenant_id: TENANT_A,
+            recorded_by_user_id: USER_A,
+            status: "recording",
+          },
+          error: null,
+        }),
+      };
+      userFromMock.mockImplementation((table: string) => {
+        if (table === "walkthrough_session") return sessionChain;
+        throw new Error(`unmocked from(${table})`);
+      });
+
+      // Supabase-js builds the URL relative to its configured base — simulate
+      // the internal-hostname value the admin client returns on Coolify.
+      createSignedUploadUrlMock.mockResolvedValue({
+        data: {
+          signedUrl: `http://supabase-kong:8000/storage/v1/object/upload/sign/walkthroughs/${TENANT_A}/${WALK_ID}/recording.webm?token=signed-token`,
+          path: `${TENANT_A}/${WALK_ID}/recording.webm`,
+          token: "signed-token",
+        },
+        error: null,
+      });
+
+      const result = await requestWalkthroughUpload({
+        walkthroughSessionId: WALK_ID,
+        estimatedDurationSec: 600,
+      });
+
+      // Browser must receive the public URL, not the internal Docker hostname.
+      expect(result.uploadUrl).toBe(
+        `https://onboarding.strategaizetransition.com/supabase/storage/v1/object/upload/sign/walkthroughs/${TENANT_A}/${WALK_ID}/recording.webm?token=signed-token`
+      );
+    } finally {
+      process.env.SUPABASE_URL = ORIGINAL_INTERNAL;
+      process.env.NEXT_PUBLIC_SUPABASE_URL = ORIGINAL_PUBLIC;
+    }
+  });
+
+  it("returns signed upload URL unchanged when SUPABASE_URL == NEXT_PUBLIC_SUPABASE_URL", async () => {
+    const ORIGINAL_INTERNAL = process.env.SUPABASE_URL;
+    const ORIGINAL_PUBLIC = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    process.env.SUPABASE_URL = "https://supabase.cloud/";
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://supabase.cloud/";
+
+    try {
+      getUserMock.mockResolvedValue({
+        data: { user: { id: USER_A } },
+        error: null,
+      });
+
+      const sessionChain = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({
+          data: {
+            id: WALK_ID,
+            tenant_id: TENANT_A,
+            recorded_by_user_id: USER_A,
+            status: "recording",
+          },
+          error: null,
+        }),
+      };
+      userFromMock.mockImplementation((table: string) => {
+        if (table === "walkthrough_session") return sessionChain;
+        throw new Error(`unmocked from(${table})`);
+      });
+
+      createSignedUploadUrlMock.mockResolvedValue({
+        data: {
+          signedUrl: "https://supabase.cloud/storage/v1/object/upload/sign/abc?token=t",
+          path: `${TENANT_A}/${WALK_ID}/recording.webm`,
+          token: "t",
+        },
+        error: null,
+      });
+
+      const result = await requestWalkthroughUpload({
+        walkthroughSessionId: WALK_ID,
+        estimatedDurationSec: 600,
+      });
+
+      expect(result.uploadUrl).toBe(
+        "https://supabase.cloud/storage/v1/object/upload/sign/abc?token=t"
+      );
+    } finally {
+      process.env.SUPABASE_URL = ORIGINAL_INTERNAL;
+      process.env.NEXT_PUBLIC_SUPABASE_URL = ORIGINAL_PUBLIC;
+    }
+  });
+
   it("returns signed upload URL for own walkthrough_session in 'recording' state", async () => {
     getUserMock.mockResolvedValue({
       data: { user: { id: USER_A } },

@@ -3,7 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { logout } from "@/app/login/actions";
-import { ClipboardList, LogOut, ArrowLeft, UserCircle2 } from "lucide-react";
+import {
+  ArrowLeft,
+  ClipboardList,
+  LogOut,
+  UserCircle2,
+  Video,
+} from "lucide-react";
 
 interface EmployeeSidebarProps {
   email?: string;
@@ -41,6 +47,7 @@ export function EmployeeSidebar({ email }: EmployeeSidebarProps) {
   const pathname = usePathname();
   const backHref = getBackLink(pathname);
   const isAufgabenActive = pathname === "/employee" || pathname.startsWith("/employee/capture");
+  const isWalkthroughsActive = pathname.startsWith("/employee/walkthroughs");
 
   async function handleLogout() {
     await logout();
@@ -97,6 +104,17 @@ export function EmployeeSidebar({ email }: EmployeeSidebarProps) {
         >
           <ClipboardList className={`h-4 w-4 ${isAufgabenActive ? "text-white" : ""}`} />
           Aufgaben
+        </Link>
+        <Link
+          href="/employee/walkthroughs"
+          className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
+            isWalkthroughsActive
+              ? "bg-gradient-to-r from-brand-primary to-brand-primary-dark text-white shadow-[0_8px_16px_-4px_rgba(68,84,184,0.35)]"
+              : "text-slate-400 hover:bg-white/[0.06] hover:text-slate-200"
+          }`}
+        >
+          <Video className={`h-4 w-4 ${isWalkthroughsActive ? "text-white" : ""}`} />
+          Walkthroughs
         </Link>
       </nav>
 
