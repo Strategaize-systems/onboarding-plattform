@@ -60,7 +60,23 @@ export function WalkthroughCapture({ captureSessionId, ownerLabel }: Props) {
   const autoStopHandleRef = useRef<{ clear: () => void } | null>(null);
   const startedDurationRef = useRef<number>(0);
 
-  const [remainingMs, setRemainingMs] = useState<number>(WALKTHROUGH_AUTO_STOP_MS);
+  // SLC-071 AC-11 Test-Variante: URL-Param ?testAutoStopMs=60000 verkuerzt
+  // den 30min-Hard-Cap auf einen testbaren Wert (10s..30min). Ohne Param bleibt
+  // der Default WALKTHROUGH_AUTO_STOP_MS aktiv. Lookup auf Mount, kein State.
+  const autoStopMs = (() => {
+    if (typeof window === "undefined") return WALKTHROUGH_AUTO_STOP_MS;
+    const raw = new URLSearchParams(window.location.search).get(
+      "testAutoStopMs"
+    );
+    if (!raw || !/^\d+$/.test(raw)) return WALKTHROUGH_AUTO_STOP_MS;
+    const parsed = parseInt(raw, 10);
+    if (parsed < 10_000 || parsed > WALKTHROUGH_AUTO_STOP_MS) {
+      return WALKTHROUGH_AUTO_STOP_MS;
+    }
+    return parsed;
+  })();
+
+  const [remainingMs, setRemainingMs] = useState<number>(autoStopMs);
   const [uploadPercent, setUploadPercent] = useState<number>(0);
 
   const stopAllTracks = useCallback(() => {
@@ -79,11 +95,11 @@ export function WalkthroughCapture({ captureSessionId, ownerLabel }: Props) {
       const startedAt = startedAtRef.current;
       if (!startedAt) return;
       const elapsed = Date.now() - startedAt;
-      const remaining = Math.max(0, WALKTHROUGH_AUTO_STOP_MS - elapsed);
+      const remaining = Math.max(0, autoStopMs - elapsed);
       setRemainingMs(remaining);
     }, TICK_MS);
     return () => clearInterval(interval);
-  }, [ctx.state]);
+  }, [ctx.state, autoStopMs]);
 
   // Cleanup on unmount: stop tracks + clear timers + abort recorder.
   useEffect(() => {
@@ -283,22 +299,25 @@ export function WalkthroughCapture({ captureSessionId, ownerLabel }: Props) {
 
     recorder.start();
     startedAtRef.current = Date.now();
-    setRemainingMs(WALKTHROUGH_AUTO_STOP_MS);
+    setRemainingMs(autoStopMs);
 
-    autoStopHandleRef.current = scheduleAutoStop(() => {
-      // Browser-side hard cap (DEC-076). The server enforces it again.
-      if (recorderRef.current && recorderRef.current.state !== "inactive") {
-        stopRecording();
-      }
-    });
+    autoStopHandleRef.current = scheduleAutoStop(
+      () => {
+        // Browser-side hard cap (DEC-076). The server enforces it again.
+        if (recorderRef.current && recorderRef.current.state !== "inactive") {
+          stopRecording();
+        }
+      },
+      autoStopMs
+    );
 
     dispatch({ type: "PERMISSIONS_GRANTED" });
-  }, [dispatch, fail, finalizeUpload, stopAllTracks, stopRecording]);
+  }, [autoStopMs, dispatch, fail, finalizeUpload, stopAllTracks, stopRecording]);
 
   const remainingLabel = formatRemaining(remainingMs);
   const showWarning =
     ctx.state === "recording" &&
-    remainingMs <= WALKTHROUGH_AUTO_STOP_MS - WALKTHROUGH_AUTO_STOP_WARN_MS;
+    remainingMs <= autoStopMs - WALKTHROUGH_AUTO_STOP_WARN_MS;
 
   return (
     <div className="mx-auto w-full max-w-2xl px-6 py-10">
