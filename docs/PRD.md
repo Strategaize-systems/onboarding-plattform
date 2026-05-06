@@ -1140,25 +1140,32 @@ V4.4 ist explizit als Pre-V5-Hygiene scopiert. V5 (Walkthrough-Mode) startet nac
 
 ---
 
-## V5 — Walkthrough-Mode MVP (Capture + Berater-Review)
+## V5 — Walkthrough-Mode MVP (Capture + Methodik-Schicht) — **Option 2 (2026-05-06)**
 
 Requirements done 2026-05-05 in /requirements V5 mit User-Sign-Off.
+**Re-scoped 2026-05-06 in /requirements V5 Option 2** nach USP-Stress-Test (DEC-079 Strategaize-Dev-System) — Berater-Review von Roh-Walkthroughs faellt, Methodik-Schicht aus V5.1 wird vorgezogen.
+
+### Pivot-Begruendung (2026-05-06)
+
+USP-Stress-Test 2026-05-06 ergab: V5 wie urspruenglich geplant ist 4 Slices Plumbing ohne Strategaize-Methodik-Substanz. Berater-Review eines Roh-Videos (`block_review`-Pattern auf MP4) ist kein Differenzierer — das kann jedes Tool. **Der eigentliche Methodik-Hebel** ist die Schicht zwischen Roh-Aufnahme und Berater-Sicht: PII-Redaction, Schritt-Extraktion und Auto-Mapping zu Subtopics. Erst dort entsteht aus Walkthrough-Capture echtes Domain-Know-how. Daher wird die AI-Pipeline aus V5.1 nach V5 vorgezogen, und der Berater sieht in V5 mapped SOPs statt Roh-Videos.
+
+Strategaize-Suite-Konsistenz: Plattform allein ist kein USP — der Methodik-Aufsatz ist es. V5 muss die Methodik-Schicht beweisen, sonst ist sie nur Loom/Tella-Klon mit Berater-Brille.
 
 ### Vision
 
-Walkthrough-Mode ist der **fuenfte Capture-Modus** der Plattform (nach Questionnaire, Evidence, Voice, Dialogue). Nutzer zeichnen am eigenen Bildschirm einen Prozess auf — Browser-Tool, Desktop-Anwendung oder Mischung — waehrend sie parallel via Mikrofon erklaeren, was sie tun. Aus der Aufnahme werden zwei Outputs gewonnen:
-1. **Onboarding-Videos** fuer neue Mitarbeiter (How-to-Material)
-2. **Strukturierte Knowledge Units + SOP-Schritte** fuer das Unternehmerhandbuch (analog Questionnaire/Dialogue)
+Walkthrough-Mode ist der **fuenfte Capture-Modus** der Plattform (nach Questionnaire, Evidence, Voice, Dialogue). Mitarbeiter zeichnen am eigenen Bildschirm einen Prozess auf, parallel via Mikrofon erklaert. Daraus extrahiert die Plattform **strukturierte SOP-Schritte gemappt zu Subtopics** des Blueprints — der Berater bekommt nicht das Roh-Video, sondern den fertigen Methodik-Output zur Validierung.
 
-V5 baut **NUR den MVP-Capture-Pfad** + **Berater-Review-UI**. Die KI-Pipeline (Schritt-Extraktion, KU-Generierung) folgt in V5.1.
+V5 Option 2 baut den **vollen Capture → AI-Pipeline → Methodik-Review-Pfad**. V5.1 verbindet die approved SOPs mit dem Unternehmerhandbuch.
 
 ### Problem Statement
 
 Bestehende Capture-Modi erfassen Wissen ueber Tipp-Eingabe (Questionnaire), Datei-Upload (Evidence), kurze Sprach-Notizen (Voice) oder strukturierte Gespraeche (Dialogue). Keiner davon eignet sich fuer **prozessuales, am-Bildschirm-passierendes Wissen** — z.B. "Wie lege ich einen Auftrag im CRM an?" oder "Wie exportiere ich Quartalszahlen aus Datev?". Dieses Wissen ist im Kopf der Mitarbeiter und schwer zu verbalisieren ohne den Bildschirm-Kontext.
 
+Zusaetzlich: Wenn die Plattform nur Roh-Aufnahmen erfasst und einem Berater zur Sichtung vorlegt, entsteht kein Methodik-Wert. Der Berater muss den Walkthrough abspielen, mitschreiben, in Schritte zerlegen, manuell zu Subtopics zuordnen — das ist exakt das Hand-Work, das die Plattform automatisieren soll.
+
 ### Goal
 
-Mitarbeiter koennen mit einem Klick eine Walkthrough-Session starten, ihren Bildschirm + Mikrofon aufzeichnen und nach Beenden bekommt der Berater eine review-ready Aufnahme + Whisper-Transkript. Daraus kann der Berater (manuell in V5, automatisiert in V5.1) Onboarding-Videos und Wissens-Eintraege ableiten.
+Mitarbeiter zeichnet mit einem Klick (kein Install) Bildschirm + Mic auf. Die Plattform extrahiert daraus **automatisch redacted SOP-Schritte gemappt zu Subtopics** des aktiven Blueprints. Berater validiert nur noch den Methodik-Output (Schritt-Liste pro Subtopic + Unmapped-Bucket), korrigiert Zuordnungen und gibt frei. Die Roh-Aufnahme bleibt im Storage als Audit-/Re-Processing-Quelle, ist aber kein Berater-Review-Material.
 
 ### Primaere Nutzer
 
@@ -1178,177 +1185,197 @@ Begruendung:
 
 Bewusst weggelassen: Klick-Tracking, DOM-Snapshots, Selektor-Erfassung. Erst bei explizitem Kundenwunsch in V6+ (per Browser-Extension) nachreichen.
 
-### V5 — In Scope
+### V5 Option 2 — In Scope (4 Features)
 
-- **Walkthrough-Capture-UI** als neuer Mode in der Capture-Session-Registry (`capture_mode='walkthrough'`, bereits in CHECK-Constraint enthalten via Migration 067)
-  - Start-Button "Walkthrough starten"
-  - Browser-Permission-Prompts fuer Bildschirm + Mikrofon
-  - Recording-Controls (Pause/Resume/Stopp)
-  - Visuelle Aufnahme-Anzeige
-  - Optional: Live-Pegelmesser fuer Mikrofon (User-Feedback)
-- **Aufzeichnung** via MediaRecorder API
-  - Screen-Spur (`getDisplayMedia` mit Audio-Option = false)
-  - Mic-Spur (`getUserMedia` audio-only)
-  - Beides gemerged in einen WebM/MP4-Stream (oder zwei separate Spuren mit serverseitigem Mux falls noetig)
-  - Format-Praeferenz: WebM/VP9 + Opus (Browser-native, kein Server-Transcoding noetig fuer Storage)
-- **Storage**
-  - Eigener Storage-Bucket `walkthroughs` (analog `recordings` aus V3) mit Tenant-RLS
-  - Pfad-Konvention: `walkthroughs/<tenant_id>/<session_id>/recording.webm`
-  - Max-Dauer-Limit (Vorschlag /architecture: 30 Min pro Session)
-- **Whisper-Transkription**
-  - Audio-Spur durch Self-hosted Whisper-Container (bereits live)
-  - Transkript in `knowledge_unit` mit `source='walkthrough_transcript'`
-- **Walkthrough-Session-Datenmodell**
-  - Neue Tabelle `walkthrough_session` (oder Erweiterung capture_session) mit Felder: storage_path, duration_sec, transcript_status, recorded_at
-- **Berater-Review-UI** (manueller Approve-Pfad, KEIN KI-Auto-Verarbeitung in V5)
-  - Liste aller pending Walkthrough-Sessions je Tenant unter `/admin/tenants/[id]/walkthroughs`
-  - Detailansicht mit Video-Player + Transkript-Anzeige
-  - Approve / Reject-Aktion (analog block_review)
-  - Bei Approve: Walkthrough wird fuer Handbuch-Pipeline freigegeben (in V5.1 verarbeitet)
-- **Pflicht-Datenschutz-Flow**
-  - **Pre-Approve-Sicht**: Walkthrough-Aufnahmen sind NUR fuer Berater + den aufnehmenden Mitarbeiter sichtbar. Andere Mitarbeiter / GF / strategaize_admin sehen nichts vor Approve.
-  - **Post-Approve-Sicht** ohne PII-Redaction in V5: Berater muss vor Approve bestaetigen, dass keine sensiblen Daten im Video sind. UI-Pflicht-Checkbox "Ich habe geprueft: keine kundenspezifischen oder sensitiven Inhalte sichtbar".
-- **Capture-Session-Integration**
-  - Walkthrough-Mode in CAPTURE_MODE_REGISTRY eintragen (ersetzt walkthrough_stub-Spike)
-  - `walkthrough_stub` bleibt als Architektur-Beispiel im Code, wird aber nicht mehr beworben
-- **Tests**
-  - Vitest-Unit-Tests fuer Walkthrough-Server-Actions (Create, Upload, List, Approve, Reject)
-  - Vitest-Integration-Tests fuer RLS (4-Rollen-Matrix: strategaize_admin, tenant_admin, tenant_member, employee)
+#### FEAT-034 Walkthrough Capture-Session (unveraendert, SLC-071 code-side done)
+- Walkthrough-Capture-UI als neuer Mode in der Capture-Session-Registry (`capture_mode='walkthrough'`, Migration 067)
+- MediaRecorder via `getDisplayMedia` (Screen) + `getUserMedia` (Mic), Format WebM/VP9+Opus
+- Storage-Bucket `walkthroughs` mit Tenant-RLS, Pfad `<tenant_id>/<session_id>/recording.webm`
+- Max-Dauer 30min (Default in V5 SLC-071, override per `?testAutoStopMs=` Param)
+- **Status SLC-071: code-side done (Commit ebb3eaf, RPT-169) — Browser-Smoke offen wegen 404-RLS-Pfad-Issue (siehe Q-V5-F)**
 
-### V5 — Out of Scope (kommt in V5.1)
+#### FEAT-035 Walkthrough Whisper-Transkription (unveraendert)
+- Audio-Spur durch Self-hosted Whisper-Container
+- Job-Type `walkthrough_transcribe` in ai_jobs
+- Transkript in `knowledge_unit` mit `source='walkthrough_transcript'`
+- Status-Maschine `uploaded → transcribing → transcribed`
 
-- KI-basierte Schritt-Extraktion aus Transkript
-- Automatische SOP-Generierung aus Walkthrough
-- Automatische KU-Generierung aus Walkthrough
-- PII-Auto-Redaction des Transkripts
-- Integration in Unternehmerhandbuch-Snapshot
-- Diagnose-Layer-Anbindung
+#### FEAT-037 Walkthrough AI-Pipeline (vorgezogen aus V5.1, Scope erweitert um Auto-Mapping)
+- **Stufe 1 PII-Redaction-Worker**: Bedrock-Claude (eu-central-1) maskiert Kundennamen, E-Mail, IBAN, Preise, IDs zu Platzhaltern (`[KUNDE]`, `[EMAIL]`, `[BETRAG]`, `[ID]`, `[INTERN]`). Original bleibt unveraendert in DB; Redacted-Version separater knowledge_unit-Eintrag. Pattern-Library unter `src/lib/ai/pii-patterns/`.
+- **Stufe 2 Schritt-Extraktion-Worker**: Bedrock-Claude erzeugt SopStep-Liste (number, action, responsible, timeframe, success_criterion, dependencies) + KU-Liste mit `source='walkthrough'`. Pattern-Reuse aus V2 FEAT-012 SOP-Generation.
+- **Stufe 3 Auto-Mapping-Worker (NEU in Option 2)**: Bedrock-Claude mappt extrahierte Schritte zu Subtopics des aktiven Templates/Blueprints (Bridge-Engine-Pattern aus FEAT-023 in Reverse-Direction). Output: Mapping-Tabelle `walkthrough_step → subtopic_id` mit Confidence-Score. Schritte ohne klares Match landen im Unmapped-Bucket.
+- **Pipeline-Trigger**: Auto-Trigger nach Whisper-Job-Abschluss. Sequenz: PII → Extraktion → Mapping. Status `transcribed → redacting → extracting → mapping → pending_review`.
+- **Audit-Log**: Bedrock-Region, Modell-ID, Stufe, Token-Count, Timestamp pro Pipeline-Run.
 
-### V5 — Out of Scope (kommt in V6+ falls Bedarf)
+#### FEAT-040 Walkthrough Methodik-Review-UI (NEU in Option 2 — ersetzt FEAT-036 Roh-Video-Review)
+- Cross-Tenant `/admin/walkthroughs` + Pro-Tenant `/admin/tenants/[id]/walkthroughs` + Detail `/admin/walkthroughs/[id]`
+- **Methodik-Review-View**: Subtopic-Tree mit zugeordneten extrahierten Schritten + Unmapped-Bucket + Confidence-Score-Anzeige + Move-Between-Subtopics
+- **Pflicht-Checkbox** vor Approve: "Ich habe geprueft: keine kundenspezifischen oder sensitiven Inhalte in den extrahierten SOPs sichtbar"
+- **Optional Toggle "Roh-Transkript anzeigen"** mit explizitem Audit-Log-Eintrag (Edge-Case-Pruefung). KEIN Toggle "Roh-Video anzeigen" in V5.
+- Pattern-Reuse aus V4 FEAT-023 Bridge-Review-UI + V4.1 FEAT-029 block_review.
+- RLS-Matrix: strategaize_admin (full), tenant_admin (eigener Tenant), tenant_member (no access), employee (eigene Sessions Status-only)
+- Cockpit-Card "Pending Walkthroughs" (analog block_review-Card)
+
+### Cleanup-Cron-Minimum (gemaess DEC-079)
+- Coolify-Scheduled-Task `walkthrough-cleanup-daily`
+- Rejected → 30d Retention dann delete
+- Failed-Pipeline → 7d Retention
+- Stale-Transcribing/Extracting/Mapping > 1h → Status `failed` setzen (Recovery)
+
+### V5 Option 2 — Pflicht-Tests
+- Vitest-Unit-Tests fuer alle Server-Actions (Create, Upload, AI-Pipeline-Trigger, Approve, Reject, Move-Step)
+- Vitest-Integration-Tests fuer RLS (4-Rollen-Matrix × walkthrough_session + walkthrough_step + walkthrough_review_mapping)
+- Bedrock-Adapter-Mocking fuer Pipeline-Tests
+- Synthetische PII-Test-Suite (≥90% Recall)
+- Auto-Mapping-Test-Suite (≥70% der Schritte mit Confidence ≥0.7 zugeordnet auf Test-Walkthroughs)
+
+### V5 Option 2 — Out of Scope (verschoben in V5.1+)
+
+- **FEAT-038 Walkthrough Handbuch-Integration** (V5.1) — approved mapped SOPs flow into Unternehmerhandbuch-Snapshot
+- **FEAT-036 Roh-Video-Audit-View** (deferred, kein V5.x-Pinning) — Roh-Video bleibt im Storage, Berater-UI-Pfad nur bei Edge-Case-Bedarf
+- Re-Open-Pfad fuer rejected Walkthroughs (V5.x+)
+- Reviewer-Markdown-Notes (V5.x+)
+- Retry-Mechanik fuer failed-AI-Pipeline (V5.x+ — V5 hat manuellen Re-Trigger via Cron-Recovery)
+- Per-Tenant-PII-Pattern-Konfiguration (V5.x+)
+- Mehrsprachige Pipeline (DE only fuer V5)
+- Diagnose-Layer-Anbindung der Walkthrough-KUs
+
+### V5 Option 2 — Out of Scope (V6+ falls Bedarf)
 
 - Browser-Extension fuer strukturierte Klick-Erfassung
 - DOM-Snapshots / Selektor-Wiedergabe
 - Native/Electron-App
 - Live-Annotation waehrend Aufnahme
-- Multi-User-Walkthrough (mehrere Personen gleichzeitig)
+- Multi-User-Walkthrough
+- Cross-Walkthrough-Konsistenz-Pruefung
 - Process-Mining (V7+)
+- Video-Level-PII-Redaction (Computer-Vision) — Pre-Production-Compliance-Gate, aufgeschoben
 
-### V5 — Constraints
+### V5 Option 2 — Constraints
 
-- **Bedrock-Region**: eu-central-1 (DSGVO, etabliert)
+- **Bedrock-Region**: eu-central-1 (DSGVO, etabliert) — Pflicht fuer alle 3 AI-Pipeline-Stufen
 - **Whisper**: Self-hosted Container (etabliert seit V2)
 - **Storage**: Self-hosted Supabase-Storage mit RLS
 - **Internal-Test-Mode** bleibt aktiv — Pre-Production-Compliance-Gate ist aufgeschoben (User-Decision)
-- **Browser-Support**: Chrome/Edge/Firefox (alle aktuell `getDisplayMedia` faehig). Safari hat eingeschraenkte Unterstuetzung — V5 macht Safari nicht zur Pflicht, dokumentiert nur "Empfohlen Chrome/Edge/Firefox".
+- **Browser-Support**: Chrome/Edge/Firefox (alle aktuell `getDisplayMedia` faehig). Safari eingeschraenkt — V5 dokumentiert "Empfohlen Chrome/Edge/Firefox".
+- **Bridge-Engine-Pattern-Reuse**: Auto-Mapping muss konsistent zur FEAT-023-Bridge-Adapter-Konvention sein, damit der Reverse-Pfad (Subtopic-Tree → Step-Mapping) keinen Code-Drift einfuehrt.
 
-### V5 — Risks
+### V5 Option 2 — Risks
 
-- **R-V5-1 Datei-Groesse pro Session**: 30min WebM/VP9 ~150-300 MB. Bei 100 Sessions/Monat = 15-30 GB Storage-Wachstum. Mitigation: Max-Dauer-Limit + Storage-Bucket-Lifecycle-Policy fuer abgelehnte Sessions (Auto-Delete nach 30 Tagen).
-- **R-V5-2 Browser-Permissions**: Mitarbeiter koennten Bildschirm-Freigabe verweigern oder falsches Fenster waehlen. Mitigation: klare UI-Anleitung + Vorschau vor Aufnahme.
-- **R-V5-3 Privacy-Leak vor Approve**: Roh-Aufnahme enthaelt Kundennamen/Preise/IDs. Mitigation: strenge RLS (nur Aufnehmender + Berater), Pflicht-Checkbox vor Approve, kein Public-URL.
-- **R-V5-4 Whisper-Performance**: 30min Audio = ~3-5min Transkriptions-Zeit. Mitigation: asynchrone Verarbeitung via Worker, Transcript-Status-Polling im UI.
-- **R-V5-5 Codec-Inkompatibilitaet**: WebM/VP9 wird nicht von allen Players sauber abgespielt. Mitigation: HTML5 video-Element + ggf. ffmpeg-Transcoding-Job in V5.1.
+- **R-V5-1 Datei-Groesse pro Session**: 30min WebM/VP9 ~150-300 MB. Bei 100 Sessions/Monat = 15-30 GB Storage-Wachstum. Mitigation: Max-Dauer-Limit + Cleanup-Cron-Lifecycle-Policy.
+- **R-V5-2 Browser-Permissions**: Mitarbeiter koennten Bildschirm-Freigabe verweigern oder falsches Fenster waehlen. Mitigation: klare UI-Anleitung + Vorschau vor Aufnahme. **Aktiv in SLC-071 implementiert.**
+- **R-V5-3 PII-Redaction-Recall**: Bedrock-Claude koennte sensitive Daten uebersehen. Mitigation: konservative Pattern-Library + Berater-Pflicht-Checkbox als zweiter Filter + Audit-Log fuer "Roh-Transkript anzeigen"-Toggle.
+- **R-V5-4 Whisper-Performance**: 30min Audio = ~3-5min Transkription. Mitigation: asynchrone Worker, Status-Polling-UI.
+- **R-V5-5 Codec-Inkompatibilitaet**: WebM/VP9 nicht von allen Players. Mitigation: HTML5-video-Element fuer "Roh-Transkript anzeigen"-Edge-Case (kein Pflicht-Pfad in V5).
+- **R-V5-6 Capture-Entry-Point-RLS-Pfad** (NEU, aus SLC-071-Browser-Smoke-Versuch 2026-05-06): Aktuell verhindert die capture_session-RLS fuer `employee`-Rolle den Zugriff auf nicht-zugewiesene Sessions. Bei Aufruf einer Walkthrough-Capture-URL fuer eine andere User-Session liefert die Server-Component HTTP 404. Mitigation siehe Q-V5-F — Architektur-Entscheidung (Bridge-Spawn-Pattern vs. RLS-Relaxation vs. Top-Level-Action) erforderlich vor SLC-071-Browser-Smoke + SLC-074 Entry-Point-UI.
+- **R-V5-7 Auto-Mapping-Qualitaet**: Bei unstrukturierten Walkthroughs koennten zu viele Schritte im Unmapped-Bucket landen. Mitigation: Confidence-Schwelle in /architecture entscheiden, Berater-Move-UI als Sicherheitsnetz, Test-Suite mit echten Walkthroughs vor V5-Release.
+- **R-V5-8 Bedrock-Kosten**: 30min-Walkthrough = ~5k Tokens × 3 Passes (PII + Extraktion + Mapping) × $0.003/1k = ~$0.045/Walkthrough. Bei 100/Monat = $4.50. Bagatelle.
+- **R-V5-9 Pipeline-Reliability**: 3-stufige sequentielle Pipeline = drei Failure-Points. Mitigation: Cleanup-Cron mit Stale-Detection (>1h in einer Stufe → `failed`), klare Status-Maschine, Audit-Log pro Stufe.
 
-### V5 — Success Criteria
+### V5 Option 2 — Success Criteria
 
-- **SC-V5-1** Mitarbeiter kann von /employee Capture-Session "Walkthrough" auswaehlen, aufzeichnen, beenden, ohne Tooling-Install.
-- **SC-V5-2** Aufnahme + Whisper-Transkript landen sauber im Storage + DB. Worker-Pipeline (Whisper) abgeschlossen unter 1.5x Realtime.
-- **SC-V5-3** Berater sieht im /admin/tenants/[id]/walkthroughs Liste pending Sessions. Pro Session: Video-Player + Transkript + Approve/Reject mit Pflicht-Checkbox.
-- **SC-V5-4** RLS-Matrix-Test: 4 Rollen × 3 Operationen (Create/Read/Approve) gruen. Andere Mitarbeiter / GF / strategaize_admin sehen NICHTS vor Approve.
-- **SC-V5-5** Code-Quality: 0 Lint-Errors, 0 Lint-Warnings, alle Tests gruen, npm audit --omit=dev = 0 Vulns.
+- **SC-V5-1** Mitarbeiter kann von /employee Capture-Session "Walkthrough" auswaehlen, aufzeichnen, beenden, ohne Tooling-Install. **(SLC-071 code-side erfuellt; Browser-Smoke pending RLS-Pfad-Entscheidung Q-V5-F.)**
+- **SC-V5-2** Aufnahme + Whisper-Transkript landen sauber im Storage + DB. Whisper-Pipeline < 1.5x Realtime.
+- **SC-V5-3** AI-Pipeline (3 Stufen sequentiell) produziert PII-redacted SOP-Schritte gemappt zu Subtopics. Pipeline-Throughput pro Walkthrough < 10min.
+- **SC-V5-4** Berater sieht im /admin/walkthroughs Methodik-Review-View: Subtopic-Tree mit zugeordneten Schritten + Unmapped-Bucket. Approve/Reject mit Pflicht-Checkbox. Move-Between-Subtopics funktioniert. **KEIN** Roh-Video-Pfad im Berater-UI.
+- **SC-V5-5** RLS-Matrix-Test: 4 Rollen × Operationen (Create/Read/Update-Mapping/Approve) gruen ueber walkthrough_session + walkthrough_step + walkthrough_review_mapping.
+- **SC-V5-6** PII-Redaction-Recall ≥90% auf synthetischer Test-Suite.
+- **SC-V5-7** Auto-Mapping ordnet ≥70% der Schritte einem Subtopic mit Confidence ≥0.7 zu (Test-Walkthroughs).
+- **SC-V5-8** Code-Quality: 0 Lint-Errors, 0 Lint-Warnings, alle Tests gruen, npm audit --omit=dev = 0 Vulns.
 
-### V5 — Open Questions (offen fuer /architecture)
+### V5 Option 2 — Open Questions (offen fuer /architecture)
 
-- **Q-V5-A**: Eigene Tabelle `walkthrough_session` oder Erweiterung von `capture_session`? Pro/Contra in /architecture klaeren.
-- **Q-V5-B**: Storage-Format — WebM/VP9 only, oder auch MP4/H.264 Transcoding fuer breitere Player-Kompatibilitaet?
-- **Q-V5-C**: Max-Dauer-Limit — 15min, 30min, 60min? Default-Vorschlag: 30min.
-- **Q-V5-D**: Upload-Strategie — Direct-Upload vom Browser zu Storage (signed URL) oder Server-Proxy? Direct ist schneller, Proxy ist einfacher fuer RLS.
-- **Q-V5-E**: Audio-Mix — kombinierter Stream (Screen-Audio + Mic) oder separate Spuren? Empfehlung: Mic-only (kein Screen-Audio), weil Screen-Audio ohnehin selten relevant.
+#### Aus Original V5-Requirements (RPT-163)
+- **Q-V5-A**: Eigene Tabelle `walkthrough_session` oder Erweiterung von `capture_session`? — **partially settled in SLC-071**: walkthrough_session als eigene Tabelle existiert (MIG-031 deployed). Verbleibt: Beziehung zur capture_session.
+- **Q-V5-B**: Storage-Format — WebM/VP9 only oder MP4-Transcoding? Vorschlag: WebM/VP9 only fuer V5 (Roh-Aufnahme bleibt im Storage, kein Berater-UI-Player-Pfad noetig).
+- **Q-V5-C**: Max-Dauer-Limit — settled in SLC-071: 30min Default.
+- **Q-V5-D**: Upload-Strategie — settled in SLC-071: Direct-Upload via signed URL.
+- **Q-V5-E**: Audio-Mix — Mic-only oder Screen-Audio + Mic? Empfehlung: Mic-only.
 
-### Delivery Mode (V5)
+#### NEU aus V5 Option 2 Pivot
+- **Q-V5-F (NEU, kritisch)**: Capture-Entry-Point-RLS-Pfad — Bridge-Spawn-Pattern (FEAT-023-Reuse, employee owns spawned walkthrough-session) vs. RLS-Relaxation fuer `capture_mode='walkthrough'` vs. eigene Top-Level-Action ohne capture_session-Bindung. **Entscheidung blockiert SLC-071 Browser-Smoke + SLC-074 Entry-Point-UI.** Empfehlung: Bridge-Spawn-Pattern (konsistent zu V4).
+- **Q-V5-G**: Bedrock-Modell fuer alle 3 AI-Stufen — Sonnet (gleich V2/V3) oder Haiku (Kosten-Optimierung)? Empfehlung: Sonnet fuer PII (Praezision) + Extraktion (Strukturierung), Haiku ggf. fuer Mapping (einfachere Klassifikation).
+- **Q-V5-H**: PII-Pattern-Granularitaet — fest vorgegeben fuer V5 oder bereits per-Tenant-konfigurierbar? Empfehlung: fest fuer V5, per-Tenant verschoben in V5.x.
+- **Q-V5-I**: Storage-Strategie Original- vs. Redacted-Transkript — beide in DB oder Original im Storage + Redacted in DB?
+- **Q-V5-J**: Auto-Mapping-Confidence-Schwelle — ab welchem Score landet ein Schritt im Subtopic vs. Unmapped-Bucket? Vorschlag: Default 0.7, in /architecture validieren.
+- **Q-V5-K**: Unmapped-Bucket-Datenmodell — separate Tabelle oder NULL-subtopic_id im walkthrough_step?
+- **Q-V5-L**: Methodik-Review-UI Move-Pattern — Drag-Drop oder Select-Move? Empfehlung: Select-Move (einfacher zu testen, Tastatur-tauglich).
+- **Q-V5-M**: Confidence-Score-Anzeige im Review-UI — numerisch (0.85) oder ampelfarben (gruen/gelb/rot)? Empfehlung: Ampelfarbe.
+- **Q-V5-N**: "Roh-Transkript anzeigen"-Toggle Audit-Detail-Tiefe — nur Aktivierung loggen oder pro angezeigtem Snippet?
+
+### Delivery Mode (V5 Option 2)
 **SaaS Product** — wie bisherige Releases.
 
 ### Slice-Skizze (informativ, finaler Schnitt in /slice-planning)
 
-| Slice | Scope | Geschaetzt |
-|-------|-------|-----------|
-| SLC-071 | Walkthrough-Capture-UI + getDisplayMedia + MediaRecorder + Storage-Upload | ~6-8 MTs |
-| SLC-072 | Whisper-Transkriptions-Pipeline fuer Walkthrough (Worker-Adapter wiederverwendet) | ~3-4 MTs |
-| SLC-073 | Berater-Review-UI (Liste + Detail + Approve/Reject + Pflicht-Checkbox) | ~5-6 MTs |
-| SLC-074 | Capture-Session-Integration + Registry-Update + RLS-Tests + walkthrough_stub-Cleanup | ~4-5 MTs |
+| Slice | Scope | Status / Schaetzung |
+|-------|-------|--------------------|
+| SLC-071 | Walkthrough Foundation: MIG-031 + Capture-UI + Direct-Upload | **Code-side done (Commit ebb3eaf, RPT-169) — Browser-Smoke pending Q-V5-F** |
+| SLC-072 | Whisper-Worker `walkthrough_transcribe` | ~5 MTs (unveraendert vom Original V5-Plan) |
+| SLC-PII | PII-Redaction-Worker + Pattern-Library + synthetische Test-Suite | ~3-4 MTs (NEU, vorgezogen aus V5.1) |
+| SLC-EXT | Schritt-Extraktion-Worker + KU-Persistierung | ~4-5 MTs (NEU, vorgezogen aus V5.1) |
+| SLC-MAP | Auto-Mapping-Worker (Bridge-Engine-Pattern-Reuse, Reverse-Direction) | ~3-4 MTs (NEU in Option 2) |
+| SLC-REV | Methodik-Review-UI (Subtopic-Tree + Unmapped-Bucket + Pflicht-Checkbox + Cockpit-Card) | ~5-6 MTs (NEU in Option 2 — ersetzt SLC-073 Roh-Video-Review) |
+| SLC-CLN | Registry-Update + Cleanup-Cron + 4-Rollen-RLS-Matrix + Release-Gate | ~3-4 MTs (NEU, ersetzt SLC-074) |
 
-4 Slices, ~18-23 Micro-Tasks, geschaetzt **2 Wochen Implementation**.
+**Geschaetzt:** 7 Slices, ~24-32 MTs, ~5-6.5 Tage Implementation (gemaess DEC-079).
+
+**Slice-IDs final in /slice-planning** — bestehende SLC-072..074-Specs muessen ueberarbeitet/ersetzt werden.
 
 ---
 
-## V5.1 — Walkthrough AI-Pipeline (KU + SOP + PII-Redaction + Handbuch-Integration)
+## V5.1 — Walkthrough Handbuch-Integration (geshrinkt nach V5 Option 2)
 
 ### Vision
 
-V5.1 verwandelt den manuellen V5-Berater-Review-Pfad in einen automatisierten Pipeline-Pfad. Berater bekommt nicht mehr nur das Roh-Transkript, sondern PII-redacted Schritte als Vorschlag, die er nur noch reviewen + approven muss. Bei Approve fliessen die Schritte automatisch ins Unternehmerhandbuch.
+Nach V5 Option 2 sind alle AI-Pipeline-Schichten und der Berater-Review-Workflow bereits live. V5.1 verbindet die approved mapped SOPs mit dem Unternehmerhandbuch-Snapshot — der approved Methodik-Output landet als neuer Section-Typ im Reader.
 
 ### V5.1 — In Scope
 
-- **PII-Redaction-Pass** via Bedrock-Claude (Self-hosted EU)
-  - Input: Whisper-Transkript einer Walkthrough-Session
-  - Output: Redacted-Transkript mit Platzhaltern (`[KUNDE]`, `[EMAIL]`, `[BETRAG]`, `[ID]`, `[INTERN]`)
-  - Original bleibt im Storage (Berater kann zur Verifikation auf Original umschalten, mit Audit-Log-Eintrag)
-- **Schritt-Extraktion** via Bedrock-Claude
-  - Input: Redacted-Transkript + Walkthrough-Metadaten
-  - Output: Strukturierte Schritt-Liste (analog SopStep-Schema aus V2)
-  - Output: Knowledge Units (analog Questionnaire/Dialogue, source='walkthrough')
-- **Berater-Review-UI Erweiterung**
-  - Pending-Walkthrough zeigt jetzt: Original-Transkript + Redacted-Transkript + KI-Schritt-Vorschlag + KU-Vorschlag
-  - Berater editiert/loescht Schritte/KUs vor Approve
-  - Approve setzt sowohl block_review als auch walkthrough_review auf approved
-- **Handbuch-Integration**
-  - Neuer Section-Typ "Walkthroughs" im Unternehmerhandbuch
-  - Pro approved Walkthrough: Schritt-Liste + Embed-Link zum Original-Video
-  - Sektion-Position konfigurierbar pro Template
-- **PII-Pattern-Library**
-  - Wiederverwendbare PII-Detection-Prompts fuer V5.1 + spaetere Walkthrough-Iterationen
-  - Pattern-Coverage-Tests (synthetische Beispiele)
+- **Handbuch-Renderer-Erweiterung** (FEAT-038)
+  - Neuer Section-Typ "Walkthroughs" im Unternehmerhandbuch (analog FEAT-026 Section-Architektur)
+  - Pro approved Walkthrough: Schritt-Liste in Markdown + Embed-Link zum Roh-Video (Storage-Proxy-Pattern aus V4.1 ISSUE-025 Resolution, signed URL via Server)
+  - Section-Position konfigurierbar pro Template (Default: nach SOPs)
+- **Snapshot-Integration**
+  - Approved walkthrough-Mapping → automatische Aufnahme in den naechsten Handbuch-Snapshot
+  - Backwards-Compat: alte V4-Snapshots ohne Walkthroughs-Section weiter generierbar
 
 ### V5.1 — Out of Scope
 
-- Video-Level-PII-Redaction (Computer-Vision-Pass) — kommt erst bei explizitem Kundenwunsch / Pre-Production-Compliance-Gate
-- Live-Schritt-Annotation waehrend Aufnahme
-- Mehrsprachige Transkription (V5.1 = DE only, V5.2+ ggf. EN)
-- Cross-Walkthrough-Analyse (z.B. "ist dieser Prozess konsistent zu Walkthrough X?")
+- Video-Streaming-Optimierung (Adaptive Bitrate, HLS) — V5.1 nutzt einfaches HTML5 video mit signed URL
+- Walkthrough-Embedding in andere Section-Typen (z.B. inline in SOP)
+- Walkthrough-Suche im Reader (V5.x+)
+- Subtitle-Tracks aus Whisper-Transkript
 
 ### V5.1 — Risks
 
-- **R-V5.1-1 PII-Redaction-Recall**: Bedrock-Claude koennte sensitive Daten uebersehen. Mitigation: konservative Default-Patterns + Berater-Review als Pflicht-Stufe.
-- **R-V5.1-2 Schritt-Extraktion-Qualitaet**: Bei unstrukturierten Walkthroughs kann KI keine sinnvollen Schritte extrahieren. Mitigation: Berater kann Schritte vor Approve nachpflegen, Walkthrough kann auch ohne KI-Schritte zum Onboarding-Video genutzt werden.
-- **R-V5.1-3 Bedrock-Kosten**: 30min-Walkthrough-Transkript = ~5k Tokens × 2 Passes (PII + Extraktion) × $0.003/1k Output-Tokens = ~$0.03 pro Walkthrough. Bei 100/Monat = $3. Bagatelle.
+- **R-V5.1-1 Section-Position-Konflikte**: Mehrere Templates mit unterschiedlichen Section-Reihenfolgen koennen Renderer-Drift erzeugen. Mitigation: Section-Position als Template-Field, Default-Fallback.
+- **R-V5.1-2 Embed-Link-RLS**: Roh-Video-URL muss tenant-isoliert bleiben auch im Reader. Mitigation: Storage-Proxy-Pattern aus V4.1 (signed URL mit kurzer Expiry).
 
 ### V5.1 — Success Criteria
 
-- **SC-V5.1-1** PII-Redaction erkennt mind. 90% synthetischer PII-Beispiele in Test-Suite.
-- **SC-V5.1-2** Schritt-Extraktion liefert plausible Schrittliste fuer >80% der Test-Walkthroughs (manuelle Bewertung).
-- **SC-V5.1-3** Berater-Review-Workflow inkl. KI-Vorschlaegen ist max 50% schneller als V5-Manueller-Review (User-Akzeptanz-Test).
-- **SC-V5.1-4** Approved Walkthrough erscheint korrekt im Unternehmerhandbuch unter Section "Walkthroughs".
+- **SC-V5.1-1** Approved mapped Walkthrough erscheint im Handbuch-Snapshot unter Section "Walkthroughs".
+- **SC-V5.1-2** Schritt-Liste rendert sauber (Markdown) im Reader.
+- **SC-V5.1-3** Embed-Link spielt Roh-Video tenant-RLS-geschuetzt ab.
+- **SC-V5.1-4** Backwards-Compat: V4-Snapshots ohne Walkthroughs-Section weiter generierbar.
 
-### V5.1 — Open Questions (fuer /architecture)
+### V5.1 — Open Questions (fuer /architecture V5.1)
 
-- **Q-V5.1-A**: Bedrock-Modell — Claude Sonnet 4 (gleich wie V2/V3) oder Haiku fuer Kosten-Optimierung? Vermutlich Sonnet wegen PII-Praezision.
-- **Q-V5.1-B**: PII-Pattern-Liste — fest vorgegeben oder per-Tenant konfigurierbar? Vermutlich fest fuer V5.1, per-Tenant fuer V5.2.
-- **Q-V5.1-C**: Storage-Strategie fuer Original- vs. Redacted-Transkript — beide in DB oder Original im Storage + Redacted in DB?
+- **Q-V5.1-A**: Section-Position default — nach SOPs oder eigener Position?
+- **Q-V5.1-B**: Embed-Player — HTML5 video direkt oder iframe-Sandbox?
+- **Q-V5.1-C**: Snapshot-Re-Generation bei nachtraeglichem Walkthrough-Approve — sofort oder nur bei naechstem Snapshot-Trigger?
 
 ### Slice-Skizze V5.1 (informativ)
 
 | Slice | Scope | Geschaetzt |
 |-------|-------|-----------|
-| SLC-075 | PII-Redaction-Pass + Pattern-Library + Test-Suite | ~4-5 MTs |
-| SLC-076 | Schritt-Extraktion + KU-Generierung Worker-Pipeline | ~5-6 MTs |
-| SLC-077 | Berater-Review-UI Erweiterung + Handbuch-Integration | ~6-7 MTs |
+| SLC-V51-1 | Handbuch-Renderer-Erweiterung Section-Typ "Walkthroughs" + Snapshot-Integration | ~5-6 MTs |
+| SLC-V51-2 | Embed-Link-Storage-Proxy + Reader-Polish + Tests | ~3-4 MTs |
 
-3 Slices, ~15-18 Micro-Tasks, geschaetzt **1 Woche Implementation**.
+2 Slices, ~8-10 Micro-Tasks, geschaetzt **3-4 Tage Implementation**.
 
-### Sequencing — V5 → V5.1
+### Sequencing — V5 Option 2 → V5.1
 
-V5 muss vor V5.1 deployed sein, weil V5.1 auf den Roh-Aufzeichnungen + Whisper-Transkripten von V5 aufsetzt. Geplante Reihenfolge:
-1. V5 → Release als REL-013 → 24-48h Post-Launch
+V5 Option 2 muss deployed sein, weil V5.1 die approved mapped SOPs aus walkthrough_review_mapping als Input nutzt. Geplante Reihenfolge:
+1. V5 Option 2 → Release als REL-013 → Post-Launch
 2. V5.1 → Release als REL-014
-
-Bei sauberem V5-Verhalten kann V5.1 direkt anschliessen, ohne extra Hygiene-Release.

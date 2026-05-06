@@ -9,20 +9,19 @@
 Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdichtung. Ermoeglicht mehrere Capture-Modi (Fragebogen, Meeting, Voice, etc.) und Template-basierte Produktvarianten (z.B. Exit-Readiness, Immobilien-Onboarding). Ab V4: Zwei-Ebenen-Verschmelzung (GF-Blueprint + Mitarbeiter-Capture + Unternehmerhandbuch-Output).
 
 ## Current State
-- High-Level State: implementing
-- Current Focus: **SLC-071 QA Final-Gate code-side PASS (RPT-169) — bereit für Merge + Coolify-Redeploy + Browser-Smoke.** MT-9 als kombinierter QA-Gate durchgezogen: Stub-Scan clean, Lint 0/0, SLC-071-Vitest 9/9 GREEN (6 actions + 3 capture-logic), Build PASS (mit Dummy-ENV), 4-Rollen RLS-Partial-Matrix 4/4 GREEN gegen Live-Coolify-DB via node:20-Container, Schema-Live-Verify alle 3 Migrations + 6 Policies + Bucket korrekt deployed. Wiring-Chain (Capture-UI → Server Action → walkthrough_session → Status-Polling → /api/walkthroughs/[id]/status) komplett verbunden, keine Stubs. Branch `slc-071/v5-walkthrough-foundation` Commit `d3137ea` (1a16d7e + neue v5-walkthrough-rls.test.ts). 14/15 ACs PASS code-side; AC-10/11/12 (Browser-Smoke + Auto-Stop + Status-Polling-Live) pending Coolify-Redeploy. Findings: 1 Low (AC-4 Idempotenz-Pattern verifiziert, aktiver Re-Apply nicht erneut durchgeführt — Pattern ist Standard im Repo). Naechste Schritte: User-merge + Coolify-Redeploy + Browser-Smoke + Slice-Closing (slices/INDEX SLC-071 → done) → /backend SLC-072 Worker.
-- Current Phase: V5 Implementation (Walkthrough-Mode MVP, 1/4 Slices code-complete + code-side QA-PASS, Browser-Smoke + Slice-Closing pending).
+- High-Level State: requirements
+- Current Focus: **V5 Option 2 Requirements re-done 2026-05-06 (RPT-170)** nach USP-Stress-Test (DEC-079 im Strategaize-Dev-System). V5 wurde re-scoped: Berater-Review von Roh-Walkthroughs (urspruengliches FEAT-036) faellt; AI-Pipeline (FEAT-037) wird aus V5.1 nach V5 vorgezogen, Scope erweitert um Auto-Mapping zu Subtopics (Bridge-Engine-Pattern-Reuse FEAT-023 in Reverse-Direction); neue FEAT-040 Methodik-Review-UI ersetzt FEAT-036 in V5 (Berater sieht mapped SOPs im Subtopic-Tree statt Roh-Video, mit Pflicht-Checkbox-Gate). V5.1 geshrinkt auf nur FEAT-038 Handbuch-Integration. **SLC-071 Code-side bleibt verwertbar** (Commit ebb3eaf, RPT-169) — keine Code-Aenderungen aus dem Pivot, nur RLS-Pfad-Entscheidung Q-V5-F blockiert Browser-Smoke-Final-Gate. **Naechster Schritt: /architecture V5 Option 2** — entscheidet Q-V5-F (Capture-Entry-Point-RLS-Pfad: Bridge-Spawn vs. RLS-Relaxation vs. Top-Level-Action) + Q-V5-G..N (8 weitere Open Questions).
+- Current Phase: V5 Option 2 Requirements done (Re-Plan 2026-05-06), Architecture-Phase startet.
 
 ## Immediate Next Steps
-1. **User: Merge `slc-071/v5-walkthrough-foundation` (Commit d3137ea) → main + Push.**
-2. **User: Coolify-Redeploy (manuell ueber UI per `feedback_manual_deploy`).**
-3. **AC-10 Browser-Smoke (Chrome + Edge)** auf `https://onboarding.strategaizetransition.com/employee/capture/walkthrough/<valid-capture-session-id>`: Permission-Prompts (getDisplayMedia + getUserMedia), Aufnahme, Stopp, Upload-Progress-Bar, Redirect zur Status-Page (`/employee/walkthroughs/[id]`).
-4. **AC-11 Auto-Stop-Test (verkuerzt 1min via ENV)** — erfordert kleinen Code-Touch: `WALKTHROUGH_AUTO_STOP_MS` aus ENV `WALKTHROUGH_AUTO_STOP_MS` lesbar machen (heute hardcoded in `walkthrough-capture-logic.ts:10`). Bewusst klein gehalten — minimaler Patch + Test + Revert.
-5. **AC-12 Status-Polling-Live** — direkt nach Upload: `uploaded` als Initial-State sichtbar (Polling alle 5s); `transcribing → pending_review` folgt erst mit SLC-072-Worker.
-6. **Slice-Closing nach Browser-Smoke** — slices/INDEX.md SLC-071 → `done`, planning/backlog.json synchen, RPT-170 (Browser-Smoke-Bericht), Closing-Commit.
-7. **/backend SLC-072 Worker `walkthrough_transcribe`** — 5 MTs, Whisper-Adapter-Reuse, ffmpeg, KU-Persistierung, Status-Maschine `uploaded → transcribing → pending_review`.
-8. **BL-076 Cron-Idempotenz-Hotfix** zwischen SLC-073 und SLC-074 (nicht jetzt vorziehen).
-9. **BL-067 Berater-Help-Review** parallel via direkten Editor-Workflow.
+1. **`/architecture V5 Option 2`** — klaert die 9 Open Questions (Q-V5-F kritisch, Q-V5-G..N) + dokumentiert DECs zu RLS-Pfad, Bedrock-Modellen, PII-Pattern, Auto-Mapping-Confidence, Datenmodell-Erweiterungen (walkthrough_step + walkthrough_review_mapping + Unmapped-Bucket).
+2. **`/slice-planning V5 Option 2`** — re-scopet die Slices (alte SLC-071..074 Plan teilweise ueberholt: SLC-071 bleibt code-side gueltig; SLC-072 Whisper-Worker bleibt; SLC-073 Roh-Video-Review faellt; neu hinzu: SLC-PII / SLC-EXT / SLC-MAP / SLC-REV / SLC-CLN — finale IDs in /slice-planning).
+3. **BL-086 Q-V5-F-Fix** im /architecture-Output: Bridge-Spawn-Pattern empfohlen wegen Konsistenz zu V4 FEAT-023.
+4. **SLC-071 Browser-Smoke** (AC-10/11/12) verschoben bis Q-V5-F entschieden — Smoke in eigener Session nach RLS-Pfad-Fix + Coolify-Redeploy.
+5. **Slice-Closing SLC-071** abhaengig vom /slice-planning-Re-Schnitt: Entweder als-ist akzeptieren (Code-Side OK, RLS-Pfad ergaenzt im Architecture-Slice) oder als Sub-Task innerhalb eines re-scoped V5-Foundation-Slices fuehren.
+6. **/backend SLC-072 Walkthrough-Whisper-Worker** — bleibt im Plan unveraendert (~5 MTs, Whisper-Adapter-Reuse, Job-Type walkthrough_transcribe).
+7. **BL-076 Cron-Idempotenz-Hotfix** weiterhin als Mid-Stream-Slot zwischen Pipeline-Slices und Cleanup-Cron-Slice einplanen (nicht jetzt vorziehen).
+8. **BL-067 Berater-Help-Review** parallel via direkten Editor-Workflow.
 
 ## Active Scope
 **V4 — Zwei-Ebenen-Verschmelzung, 6 Features Code-done, 8 Slices Code-done:**

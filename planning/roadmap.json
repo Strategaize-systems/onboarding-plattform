@@ -74,14 +74,14 @@
       "id": "v5",
       "name": "V5",
       "status": "active",
-      "summary": "Walkthrough-Mode MVP — Web-only Screen+Mic-Capture via getDisplayMedia + getUserMedia (KEIN Browser-Extension/Electron/Native, User-Decision 2026-05-05). 3 Features: FEAT-034 Walkthrough Capture-Session (Recording-UI + MediaRecorder + Storage-Upload), FEAT-035 Walkthrough Whisper-Transkription (reusiert V2 Whisper-Adapter mit neuem Job-Type), FEAT-036 Walkthrough Berater-Review (manueller Approval-Gate mit Pflicht-Checkbox 'keine sensitiven Inhalte sichtbar'). KEINE KI-Pipeline in V5 — Roh-Aufnahme + Transkript + manueller Berater-Approve, dann steht Walkthrough als Onboarding-Video bereit. KI-Pipeline kommt in V5.1. Privacy: roh-Aufnahme NUR fuer Berater + Aufnehmer sichtbar bis Approve. Slice-Skizze: 4 Slices SLC-071..074, ~18-23 MTs, ~2 Wochen. Requirements done 2026-05-05.",
+      "summary": "Walkthrough-Mode MVP Option 2 (re-scoped 2026-05-06 per DEC-079 nach USP-Stress-Test) — Web-only Screen+Mic-Capture via getDisplayMedia+getUserMedia + volle AI-Pipeline + Methodik-Review-UI. 4 Features: FEAT-034 Capture-Session (SLC-071 code-side done, Browser-Smoke pending Q-V5-F RLS-Pfad-Entscheidung), FEAT-035 Whisper-Transkription (Job-Type walkthrough_transcribe), FEAT-037 AI-Pipeline (3 Stufen: PII-Redaction + Schritt-Extraktion + Auto-Mapping zu Subtopics via Bridge-Engine-Pattern-Reuse, Bedrock-Claude eu-central-1) — vorgezogen aus V5.1, FEAT-040 Methodik-Review-UI (Berater sieht mapped SOPs im Subtopic-Tree + Unmapped-Bucket, Pflicht-Checkbox, KEIN Roh-Video-Pfad) — NEU in Option 2, ersetzt deferred FEAT-036. Cleanup-Cron-Minimum (rejected 30d / failed 7d / stale 1h Recovery). Slice-Skizze: 7 Slices, ~24-32 MTs, ~5-6.5 Tage. Requirements re-done 2026-05-06 (RPT-170).",
       "order": 11
     },
     {
       "id": "v5-1",
       "name": "V5.1",
       "status": "planned",
-      "summary": "Walkthrough AI-Pipeline + Handbuch-Integration. 2 Features: FEAT-037 AI-Pipeline (PII-Redaction-Pass + Schritt-Extraktion via Bedrock-Claude eu-central-1, sequenzielle Worker-Jobs nach walkthrough_review.approved), FEAT-038 Handbuch-Integration (neuer Section-Typ 'Walkthroughs' im Unternehmerhandbuch mit Schritt-Liste + Embed-Video, Berater-Review-UI bekommt KI-Vorschlaege als editierbare Vorlage). Stack-Reuse Bedrock-Adapter aus V2. Slice-Skizze: 3 Slices SLC-075..077, ~15-18 MTs, ~1 Woche. Requirements done 2026-05-05. Sequenz: V5 deployed → V5.1 startet.",
+      "summary": "Walkthrough Handbuch-Integration — geshrinkt nach V5 Option 2 (DEC-079, 2026-05-06). 1 Feature: FEAT-038 Handbuch-Integration (approved mapped SOPs aus V5 Option 2 fliessen in Unternehmerhandbuch-Snapshot als neuer Section-Typ 'Walkthroughs' mit Schritt-Liste + Embed-Link zum Roh-Video via Storage-Proxy-Pattern aus V4.1 ISSUE-025 Resolution; Section-Position konfigurierbar pro Template). AI-Pipeline (PII + Schritt-Extraktion + Auto-Mapping) ist nicht mehr V5.1 — wurde nach V5 vorgezogen. Slice-Skizze: 2 Slices, ~8-10 MTs, ~3-4 Tage. Requirements re-done 2026-05-06 (RPT-170). Sequenz: V5 Option 2 deployed -> V5.1 startet.",
       "order": 12
     },
     {

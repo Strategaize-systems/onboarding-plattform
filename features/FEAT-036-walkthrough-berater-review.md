@@ -1,10 +1,17 @@
-# FEAT-036 — Walkthrough Berater-Review (Manual Approval-Gate)
+# FEAT-036 — Walkthrough Berater-Review (Manual Approval-Gate) — DEFERRED
 
-**Version:** V5
-**Status:** planned
+**Version:** V5 (urspruenglich) — **deferred per DEC-079 (V5 Option 2, 2026-05-06)**
+**Status:** deferred
 **Created:** 2026-05-05
+**Deferred:** 2026-05-06
 
-## Zweck
+## Update 2026-05-06 — Scope-Pivot V5 Option 2
+
+Per USP-Stress-Test 2026-05-06 (DEC-079 im Strategaize-Dev-System) wird das Berater-Review von Roh-Walkthroughs **nicht** in V5 gebaut. Begruendung: Berater-Approval eines Roh-Videos ist kein Strategaize-Methodik-Differenzierer — es ist Plumbing. Stattdessen sieht der Berater in V5 die **extrahierten SOP-Schritte gemappt zu Subtopics** (siehe FEAT-040 Methodik-Review-UI), nicht die Roh-Aufnahme.
+
+Die Roh-Aufnahme bleibt im Storage erhalten (Audit + Re-Processing-Quelle), wird aber nicht im Berater-UI gezeigt. Eine spaetere Rueckkehr als optionale "Audit-View" fuer Edge-Cases (z.B. Roh-Video pruefen wenn Schritt-Extraktion fragwuerdig wirkt) ist offen, aber nicht V5-Scope.
+
+## Zweck (Original — nicht V5-Scope)
 Berater-UI fuer manuelle Sichtung + Approval von Walkthrough-Sessions. **Roh-Aufnahmen sind ausschliesslich fuer Berater + den aufnehmenden Mitarbeiter sichtbar**, bis sie approved sind. Approval setzt Walkthrough fuer V5.1-AI-Pipeline frei (in V5 selbst kein KI-Pfad — manueller Approve, dann steht Walkthrough fuer Berater-Konsumption + Onboarding-Video bereit).
 
 ## Hintergrund
@@ -45,6 +52,9 @@ Privacy-Verschaerfung User-Decision 2026-05-05: niemand darf sensitives/kundensp
 - V4.1 block_review-Pattern als Vorlage (deployed)
 
 ## Verweise
-- PRD V5-Sektion (SC-V5-3, SC-V5-4, R-V5-3)
-- /requirements V5 RPT-XXX (2026-05-05)
+- DEC-079 (Strategaize-Dev-System) — V5 Option 2 Scope-Aenderung 2026-05-06
+- FEAT-040 Walkthrough Methodik-Review-UI (V5-Ersatz, mapped SOPs statt Roh-Video)
+- PRD V5-Sektion (Original — pre-Option-2)
+- /requirements V5 RPT-163 (2026-05-05) — Original-Spec
+- /requirements V5 Option 2 RPT-170 (2026-05-06) — Re-Plan
 - V4.1 FEAT-029 Berater-Review + Quality-Gate (deployed)

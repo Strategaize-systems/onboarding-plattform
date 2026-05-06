@@ -68,17 +68,25 @@
 | FEAT-032 | Capture-Reminders | deployed | [Spec](FEAT-032-capture-reminders.md) | 2026-04-29 |
 | FEAT-033 | In-App-Hilfe | deployed | [Spec](FEAT-033-in-app-hilfe.md) | 2026-04-29 |
 
-## V5 Features (Walkthrough-Mode MVP — Capture + Berater-Review)
+## V5 Features — Walkthrough-Mode MVP (Option 2: Capture + AI-Pipeline + Methodik-Review)
+
+Re-scoped 2026-05-06 per DEC-079 (Strategaize-Dev-System) nach USP-Stress-Test.
 
 | ID | Feature | Status | Spec | Created |
 |----|---------|--------|------|---------|
-| FEAT-034 | Walkthrough Capture-Session (Web-only Recording) | planned | [Spec](FEAT-034-walkthrough-capture-session.md) | 2026-05-05 |
+| FEAT-034 | Walkthrough Capture-Session (Web-only Recording) | in_progress | [Spec](FEAT-034-walkthrough-capture-session.md) | 2026-05-05 |
 | FEAT-035 | Walkthrough Whisper-Transkription | planned | [Spec](FEAT-035-walkthrough-whisper-transcription.md) | 2026-05-05 |
-| FEAT-036 | Walkthrough Berater-Review (Manual Approval-Gate) | planned | [Spec](FEAT-036-walkthrough-berater-review.md) | 2026-05-05 |
+| FEAT-037 | Walkthrough AI-Pipeline (PII-Redaction + Schritt-Extraktion + Auto-Mapping) | planned | [Spec](FEAT-037-walkthrough-ai-pipeline.md) | 2026-05-05 |
+| FEAT-040 | Walkthrough Methodik-Review-UI (Mapped SOPs statt Roh-Video) | planned | [Spec](FEAT-040-walkthrough-methodik-review-ui.md) | 2026-05-06 |
 
-## V5.1 Features (Walkthrough AI-Pipeline + Handbuch-Integration)
+### V5 Deferred / Removed
+
+| ID | Feature | Status | Begruendung |
+|----|---------|--------|-------------|
+| FEAT-036 | Walkthrough Berater-Review (Roh-Video-Approval) | deferred | DEC-079 — kein Methodik-Differenzierer; ersetzt durch FEAT-040 in V5 |
+
+## V5.1 Features (Walkthrough Handbuch-Integration — geshrinkt nach V5 Option 2)
 
 | ID | Feature | Status | Spec | Created |
 |----|---------|--------|------|---------|
-| FEAT-037 | Walkthrough AI-Pipeline (PII-Redaction + Schritt-Extraktion) | planned | [Spec](FEAT-037-walkthrough-ai-pipeline.md) | 2026-05-05 |
-| FEAT-038 | Walkthrough Handbuch-Integration | planned | [Spec](FEAT-038-walkthrough-handbuch-integration.md) | 2026-05-05 |
+| FEAT-038 | Walkthrough Handbuch-Integration (approved mapped SOPs in Snapshot) | planned | [Spec](FEAT-038-walkthrough-handbuch-integration.md) | 2026-05-05 |

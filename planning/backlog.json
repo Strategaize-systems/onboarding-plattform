@@ -782,32 +782,32 @@
     },
     {
       "id": "BL-079",
-      "title": "FEAT-036 Walkthrough Berater-Review (Manual Approval-Gate)",
+      "title": "FEAT-036 Walkthrough Berater-Review (Roh-Video-Approval) — DEFERRED",
       "type": "feature",
-      "priority": "high",
-      "status": "in_progress",
+      "priority": "low",
+      "status": "deferred",
       "version": "V5",
-      "description": "Berater-UI fuer manuelle Sichtung + Approval von Walkthrough-Sessions. Cross-Tenant-Sicht /admin/walkthroughs + Pro-Tenant-Sicht /admin/tenants/[id]/walkthroughs. Pflicht-Checkbox vor Approve: 'keine kundenspezifischen oder sensitiven Inhalte sichtbar'. RLS: Roh-Aufnahmen NUR fuer Berater + Aufnehmer sichtbar bis Approve. Pattern-Reuse aus V4.1 block_review. Slice: SLC-073 (6 MTs).",
+      "description": "DEFERRED 2026-05-06 per DEC-079 (V5 Option 2). Berater-Review eines Roh-Videos ist kein Strategaize-Methodik-Differenzierer. Ersetzt durch BL-085 (FEAT-040 Methodik-Review-UI, mapped SOPs statt Roh-Video). Roh-Aufnahme bleibt im Storage als Audit/Re-Processing-Quelle, kein Berater-UI-Pfad in V5. Spaetere Rueckkehr als optionale Audit-View in V5.x offen.",
       "createdAt": "2026-05-05"
     },
     {
       "id": "BL-080",
-      "title": "V5 Walkthrough-Registry-Update + 16-Faelle-RLS-Matrix + Cleanup-Cron",
+      "title": "V5 Walkthrough-Registry-Update + Cleanup-Cron + RLS-Matrix (Re-scoped Option 2)",
       "type": "feature",
       "priority": "high",
       "status": "in_progress",
       "version": "V5",
-      "description": "Capture-Mode-Registry-Update (walkthrough produktiv, walkthrough_stub UI-deaktiviert/Code bleibt), 4-Rollen-RLS-Test-Matrix (16 Faelle Vitest gegen Coolify-DB als SC-V5-4-Pflicht-Gate), Coolify-Scheduled-Task walkthrough-cleanup-daily (rejected 30d / failed 7d / stale-transcribing 1h Recovery). V5-Release-Gate: 0 Lint-Errors+Warnings, 0 npm-Vulns. Slice: SLC-074 (5 MTs).",
+      "description": "Re-scoped 2026-05-06 per DEC-079. Capture-Mode-Registry-Update (walkthrough produktiv, walkthrough_stub UI-deaktiviert), Coolify-Scheduled-Task walkthrough-cleanup-daily (rejected 30d / failed 7d / stale-Pipeline 1h Recovery erweitert um redacting/extracting/mapping-Stufen), 4-Rollen-RLS-Matrix erweitert um walkthrough_step + walkthrough_review_mapping (mehr als 16 Faelle wegen 3-stufiger Pipeline), V5-Release-Gate (0 Lint, 0 Warnings, 0 npm-Vulns). Slice-ID final in /slice-planning V5 Option 2.",
       "createdAt": "2026-05-05"
     },
     {
       "id": "BL-081",
-      "title": "FEAT-037 Walkthrough AI-Pipeline (PII-Redaction + Schritt-Extraktion)",
+      "title": "FEAT-037 Walkthrough AI-Pipeline (PII + Schritt-Extraktion + Auto-Mapping)",
       "type": "feature",
       "priority": "high",
-      "status": "open",
-      "version": "V5.1",
-      "description": "Whisper-Transkript einer Walkthrough-Session durchlaeuft 2-stufige Bedrock-Claude-Pipeline (eu-central-1): (1) PII-Redaction-Pass mit konservativer Pattern-Liste maskiert sensitive Daten zu Platzhaltern ([KUNDE], [EMAIL], [BETRAG], [ID], [INTERN]); (2) Schritt-Extraktion-Pass produziert SopStep-Liste + Knowledge-Units. Sequenzielle Worker-Jobs nach walkthrough_review.approved. PII-Pattern-Library mit synthetischer Test-Suite. Slice-Skizze: SLC-075 + SLC-076. ~9-11 MTs.",
+      "status": "in_progress",
+      "version": "V5",
+      "description": "Vorgezogen aus V5.1 nach V5 per DEC-079 (2026-05-06). Scope erweitert um Auto-Mapping (Stufe 3). Whisper-Transkript durchlaeuft 3-stufige Bedrock-Claude-Pipeline (eu-central-1): (1) PII-Redaction-Pass mit Pattern-Library zu Platzhaltern; (2) Schritt-Extraktion-Pass produziert SopStep-Liste + KUs; (3) Auto-Mapping-Pass ordnet Schritte Subtopics zu (Bridge-Engine-Pattern-Reuse aus FEAT-023 in Reverse-Direction, Confidence-Score, Unmapped-Bucket). Sequenzielle Worker-Jobs nach walkthrough_session.transcribed. Status-Maschine transcribed -> redacting -> extracting -> mapping -> pending_review. PII-Pattern-Library mit synthetischer Test-Suite (mehr als 90 Prozent Recall) + Auto-Mapping-Test-Suite (mehr als 70 Prozent Coverage). Slice-Skizze: 3 Slices (PII / Extraktion / Mapping), ~10-13 MTs.",
       "createdAt": "2026-05-05"
     },
     {
@@ -817,8 +817,28 @@
       "priority": "high",
       "status": "open",
       "version": "V5.1",
-      "description": "Approved Walkthroughs erscheinen im Unternehmerhandbuch unter neuer Section 'Walkthroughs' mit Schritt-Liste + Embed-Link zum Roh-Video (Storage-Proxy-Pattern aus V4.1 ISSUE-025 Resolution). Berater-Review-UI bekommt KI-Vorschlaege (FEAT-037) als editierbare Vorlage; Berater editiert vor Approve. Toggle 'Original-Transkript anzeigen' mit Audit-Log. Section-Position konfigurierbar pro Template. Slice-Skizze: SLC-077. ~6-7 MTs.",
+      "description": "Approved mapped Walkthroughs (aus V5 Option 2 walkthrough_review_mapping) erscheinen im Unternehmerhandbuch unter neuer Section 'Walkthroughs' mit Schritt-Liste + Embed-Link zum Roh-Video (Storage-Proxy-Pattern aus V4.1 ISSUE-025 Resolution). Section-Position konfigurierbar pro Template (Default: nach SOPs). Backwards-Compat: alte V4-Snapshots ohne Walkthroughs-Section weiter generierbar. Hinweis: AI-Vorschlag-Editor-UI (urspruenglich V5.1 Scope) ist Teil von FEAT-040 in V5 Option 2. Slice-Skizze: 2 Slices, ~8-10 MTs.",
       "createdAt": "2026-05-05"
+    },
+    {
+      "id": "BL-085",
+      "title": "FEAT-040 Walkthrough Methodik-Review-UI (Mapped SOPs statt Roh-Video)",
+      "type": "feature",
+      "priority": "high",
+      "status": "in_progress",
+      "version": "V5",
+      "description": "NEU 2026-05-06 per DEC-079 (V5 Option 2). Berater-UI fuer Review + Approval extrahierter SOP-Schritte gemappt zu Subtopics — nicht des Roh-Videos. Cross-Tenant /admin/walkthroughs + Pro-Tenant /admin/tenants/[id]/walkthroughs + Detail /admin/walkthroughs/[id] mit Subtopic-Tree + zugeordnete Schritte + Unmapped-Bucket + Confidence-Score-Anzeige + Move-Between-Subtopics. Pflicht-Checkbox vor Approve ('keine sensitiven Inhalte in extrahierten SOPs sichtbar'). Optional Toggle 'Roh-Transkript anzeigen' mit Audit-Log; KEIN Roh-Video-UI-Pfad. Cockpit-Card 'Pending Walkthroughs' analog block_review. Pattern-Reuse aus V4 FEAT-023 Bridge-Review-UI + V4.1 FEAT-029 block_review. Ersetzt deferred FEAT-036. Slice-Skizze: ~5-6 MTs.",
+      "createdAt": "2026-05-06"
+    },
+    {
+      "id": "BL-086",
+      "title": "V5 Capture-Entry-Point-RLS-Pfad entscheiden + fixen (Q-V5-F)",
+      "type": "fix",
+      "priority": "high",
+      "status": "open",
+      "version": "V5",
+      "description": "NEU 2026-05-06 aus SLC-071 Browser-Smoke-Versuch. capture_session-RLS fuer 'employee'-Rolle versteckt nicht-zugewiesene Sessions, was Walkthrough-Capture-URL-Aufruf zu HTTP 404 macht. Architektur-Entscheidung erforderlich (siehe Q-V5-F): (a) Bridge-Spawn-Pattern (FEAT-023-Reuse, employee owns spawned walkthrough-session, empfohlen wegen Konsistenz zu V4) ODER (b) RLS-Relaxation fuer capture_mode='walkthrough' ODER (c) eigene Top-Level-Action ohne capture_session-Bindung. Blockiert SLC-071 Browser-Smoke-Final-Gate (AC-10/11/12) + SLC-074 Entry-Point-UI. Klaerung in /architecture V5 Option 2.",
+      "createdAt": "2026-05-06"
     }
   ]
 }
