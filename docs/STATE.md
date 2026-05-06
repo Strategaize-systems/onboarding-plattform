@@ -10,8 +10,8 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: **V5 Option 2 SLC-075 /doctor done 2026-05-06 (RPT-175)**. User-Smoke 2026-05-06 zeigte 2 Bugs: (1) Sidebar-Walkthroughs-Link fehlte → ISSUE-037 resolved (EmployeeSidebar erweitert mit Video-Icon-Eintrag), (2) Upload-Netzwerkfehler durch Hairpin-NAT — `createSignedUploadUrl` nutzte interne Docker-Hostname `http://supabase-kong:8000`, Browser konnte das nicht aufloesen → ISSUE-036 resolved (rewriteSignedUrlForBrowser-Helper schreibt SUPABASE_URL→NEXT_PUBLIC_SUPABASE_URL um vor Return zum Browser, 2 zusaetzliche Vitest-Cases). 12/12 Vitest GREEN, lint 0/0, build PASS. **Naechster Schritt: User-Coolify-Deploy + AC-11+AC-12 Browser-Smoke Round 2.**
-- Current Phase: V5 Option 2 Implementation (SLC-075 /doctor done, awaiting Re-Deploy + Browser-Smoke Round 2).
+- Current Focus: **V5 Option 2 SLC-075 /doctor Round 2 done 2026-05-06 (RPT-176)**. Round 1 (Commit `bf2b146`) deployed → User-Smoke Round 2 deckte naechsten Symptom auf: HTTP 401 `{"message":"No API key found in request"}` beim PUT (Coolify-Kong erwartet apikey, ISSUE-025-Pattern). Helper `rewriteSignedUrlForBrowser` erweitert: zusaetzlich `apikey=<NEXT_PUBLIC_SUPABASE_ANON_KEY>` als Query-Param anhaengen (anon-key ist eh public, Auth via Signed-URL-Token + Storage-RLS). ISSUE-036 finale Resolution beschreibt beide Round-1+Round-2-Fixes. 13/13 Vitest GREEN inkl. 3 neue Cases (Coolify+apikey, Cloud+apikey, Idempotenz wenn apikey schon drin). lint 0/0, build PASS. **Naechster Schritt: User-Coolify-Deploy Round 3 + Browser-Smoke Round 3.**
+- Current Phase: V5 Option 2 Implementation (SLC-075 /doctor Round 2 done, awaiting Re-Deploy + Browser-Smoke Round 3).
 
 ## Immediate Next Steps
 1. **User-Coolify-Deploy** des aktuellen HEAD-Commits (Sidebar + signedUrl-Rewrite-Hotfix). Kein neuer ENV, keine Migration, keine Worker-Aenderung.

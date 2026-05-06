@@ -39,14 +39,30 @@ const RECORDING_OBJECT_NAME = "recording.webm";
  * hostname, the returned `signedUrl` is unreachable from a browser
  * (`xhr.onerror` "Netzwerkfehler"). Rewrite the host before returning to the
  * client so the browser hits the public reverse-proxy path.
+ *
+ * The Coolify-Kong gateway additionally rejects requests that arrive without an
+ * `apikey` (HTTP 401 `{"message":"No API key found in request"}`, verwandt mit
+ * ISSUE-025). Append the public anon-key as a query parameter — it is already
+ * exposed to the browser via `NEXT_PUBLIC_SUPABASE_ANON_KEY` and the actual
+ * write authorization is enforced by the signed-URL token + storage RLS.
  */
 function rewriteSignedUrlForBrowser(url: string): string {
   const internalBase = process.env.SUPABASE_URL;
   const externalBase = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!internalBase || !externalBase) return url;
-  if (internalBase === externalBase) return url;
-  if (!url.startsWith(internalBase)) return url;
-  return externalBase + url.slice(internalBase.length);
+
+  let rewritten = url;
+  if (internalBase !== externalBase && url.startsWith(internalBase)) {
+    rewritten = externalBase + url.slice(internalBase.length);
+  }
+
+  if (anonKey && !/[?&]apikey=/.test(rewritten)) {
+    const separator = rewritten.includes("?") ? "&" : "?";
+    rewritten = `${rewritten}${separator}apikey=${encodeURIComponent(anonKey)}`;
+  }
+
+  return rewritten;
 }
 
 // Roles allowed to record a walkthrough. strategaize_admin is bewusst NICHT

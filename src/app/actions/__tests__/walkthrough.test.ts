@@ -50,6 +50,16 @@ beforeEach(() => {
   revalidatePathMock.mockReset();
 });
 
+// Setting `process.env.X = undefined` assigns the string "undefined" — use this
+// to fully restore env state, including deletion when the var was unset before.
+function restoreEnv(key: string, original: string | undefined) {
+  if (original === undefined) {
+    delete process.env[key];
+  } else {
+    process.env[key] = original;
+  }
+}
+
 // ============================================================
 // startWalkthroughSession (SLC-075 MT-1 Self-Spawn)
 // ============================================================
@@ -241,12 +251,14 @@ describe("startWalkthroughSession", () => {
 // ============================================================
 
 describe("requestWalkthroughUpload", () => {
-  it("rewrites internal supabase-kong host to the public Coolify URL for browser PUT", async () => {
+  it("rewrites internal supabase-kong host AND injects apikey for browser PUT (Coolify)", async () => {
     const ORIGINAL_INTERNAL = process.env.SUPABASE_URL;
     const ORIGINAL_PUBLIC = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const ORIGINAL_ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
     process.env.SUPABASE_URL = "http://supabase-kong:8000";
     process.env.NEXT_PUBLIC_SUPABASE_URL =
       "https://onboarding.strategaizetransition.com/supabase";
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon-key-public";
 
     try {
       getUserMock.mockResolvedValue({
@@ -272,8 +284,6 @@ describe("requestWalkthroughUpload", () => {
         throw new Error(`unmocked from(${table})`);
       });
 
-      // Supabase-js builds the URL relative to its configured base — simulate
-      // the internal-hostname value the admin client returns on Coolify.
       createSignedUploadUrlMock.mockResolvedValue({
         data: {
           signedUrl: `http://supabase-kong:8000/storage/v1/object/upload/sign/walkthroughs/${TENANT_A}/${WALK_ID}/recording.webm?token=signed-token`,
@@ -288,21 +298,24 @@ describe("requestWalkthroughUpload", () => {
         estimatedDurationSec: 600,
       });
 
-      // Browser must receive the public URL, not the internal Docker hostname.
+      // Coolify-Pfad: Host extern + apikey-Query-Param fuer Kong (ISSUE-025-Pattern).
       expect(result.uploadUrl).toBe(
-        `https://onboarding.strategaizetransition.com/supabase/storage/v1/object/upload/sign/walkthroughs/${TENANT_A}/${WALK_ID}/recording.webm?token=signed-token`
+        `https://onboarding.strategaizetransition.com/supabase/storage/v1/object/upload/sign/walkthroughs/${TENANT_A}/${WALK_ID}/recording.webm?token=signed-token&apikey=anon-key-public`
       );
     } finally {
-      process.env.SUPABASE_URL = ORIGINAL_INTERNAL;
-      process.env.NEXT_PUBLIC_SUPABASE_URL = ORIGINAL_PUBLIC;
+      restoreEnv("SUPABASE_URL", ORIGINAL_INTERNAL);
+      restoreEnv("NEXT_PUBLIC_SUPABASE_URL", ORIGINAL_PUBLIC);
+      restoreEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", ORIGINAL_ANON);
     }
   });
 
-  it("returns signed upload URL unchanged when SUPABASE_URL == NEXT_PUBLIC_SUPABASE_URL", async () => {
+  it("appends apikey on Supabase-Cloud-Pfad (intern==extern, host bleibt unveraendert)", async () => {
     const ORIGINAL_INTERNAL = process.env.SUPABASE_URL;
     const ORIGINAL_PUBLIC = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const ORIGINAL_ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
     process.env.SUPABASE_URL = "https://supabase.cloud/";
     process.env.NEXT_PUBLIC_SUPABASE_URL = "https://supabase.cloud/";
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "cloud-anon";
 
     try {
       getUserMock.mockResolvedValue({
@@ -342,12 +355,71 @@ describe("requestWalkthroughUpload", () => {
         estimatedDurationSec: 600,
       });
 
+      // Cloud-Pfad: Host bleibt, apikey wird trotzdem appended (harmlos, Kong-Workaround einheitlich).
       expect(result.uploadUrl).toBe(
-        "https://supabase.cloud/storage/v1/object/upload/sign/abc?token=t"
+        "https://supabase.cloud/storage/v1/object/upload/sign/abc?token=t&apikey=cloud-anon"
       );
     } finally {
-      process.env.SUPABASE_URL = ORIGINAL_INTERNAL;
-      process.env.NEXT_PUBLIC_SUPABASE_URL = ORIGINAL_PUBLIC;
+      restoreEnv("SUPABASE_URL", ORIGINAL_INTERNAL);
+      restoreEnv("NEXT_PUBLIC_SUPABASE_URL", ORIGINAL_PUBLIC);
+      restoreEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", ORIGINAL_ANON);
+    }
+  });
+
+  it("does not double-append apikey if signedUrl already has it", async () => {
+    const ORIGINAL_INTERNAL = process.env.SUPABASE_URL;
+    const ORIGINAL_PUBLIC = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const ORIGINAL_ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    process.env.SUPABASE_URL = "https://supabase.cloud/";
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://supabase.cloud/";
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "cloud-anon";
+
+    try {
+      getUserMock.mockResolvedValue({
+        data: { user: { id: USER_A } },
+        error: null,
+      });
+
+      const sessionChain = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({
+          data: {
+            id: WALK_ID,
+            tenant_id: TENANT_A,
+            recorded_by_user_id: USER_A,
+            status: "recording",
+          },
+          error: null,
+        }),
+      };
+      userFromMock.mockImplementation((table: string) => {
+        if (table === "walkthrough_session") return sessionChain;
+        throw new Error(`unmocked from(${table})`);
+      });
+
+      createSignedUploadUrlMock.mockResolvedValue({
+        data: {
+          signedUrl:
+            "https://supabase.cloud/storage/v1/object/upload/sign/abc?token=t&apikey=already-set",
+          path: `${TENANT_A}/${WALK_ID}/recording.webm`,
+          token: "t",
+        },
+        error: null,
+      });
+
+      const result = await requestWalkthroughUpload({
+        walkthroughSessionId: WALK_ID,
+        estimatedDurationSec: 600,
+      });
+
+      expect(result.uploadUrl).toBe(
+        "https://supabase.cloud/storage/v1/object/upload/sign/abc?token=t&apikey=already-set"
+      );
+    } finally {
+      restoreEnv("SUPABASE_URL", ORIGINAL_INTERNAL);
+      restoreEnv("NEXT_PUBLIC_SUPABASE_URL", ORIGINAL_PUBLIC);
+      restoreEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", ORIGINAL_ANON);
     }
   });
 
