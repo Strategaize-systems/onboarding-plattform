@@ -1,6 +1,16 @@
 # SLC-073 — Walkthrough Berater-Review-UI (Cross-Tenant + Pro-Tenant + Detail + Approve/Reject)
 
-## Goal
+## Status: DEFERRED (2026-05-06 per DEC-079 + DEC-091)
+
+**SLC-073 ist deferred.** Im Zuge des V5 Option 2 Re-Plans (USP-Stress-Test 2026-05-06, DEC-079) wurde FEAT-036 (Roh-Video-Berater-Review) verworfen — Berater reviewt nicht mehr das Roh-Video, sondern die methodisch-aufbereitete SOP-Schicht. **Ersetzt durch SLC-079 (Methodik-Review-UI)** mit FEAT-040 (Subtopic-Tree + Unmapped-Bucket + Move-Pattern + Pflicht-Checkbox).
+
+DEC-077 (Privacy-Checkbox-Pflicht) bleibt accepted und wandert architektonisch zum Methodik-Review-Approve-Pfad in SLC-079 (Re-Validation in DEC-091).
+
+Die ursprungs Spec dieses Slices bleibt unten archiviert als historische Referenz — sie wird in keinem V5-Option-2-Slice implementiert.
+
+---
+
+## Goal (DEFERRED — historische Spec)
 
 Berater-Review-UI fuer V5 Walkthrough-Mode. Drei Routen: `/admin/walkthroughs` (cross-tenant pending-Liste), `/admin/tenants/[id]/walkthroughs` (pro-Tenant), `/admin/walkthroughs/[id]` (Detail mit HTML5-video + Transkript + Pflicht-Checkbox + Approve/Reject). Server-Action `approveOrRejectWalkthrough` mit DB+Server-Side-Validation der Privacy-Checkbox + Audit-Log. Cockpit-Card "Pending Walkthroughs" auf `/admin`-Dashboard. Pattern-Reuse aus V4.1 SLC-042/043 block_review (Strukturanaloge Cross-/Per-Tenant-Sichten).
 

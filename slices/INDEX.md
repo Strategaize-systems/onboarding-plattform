@@ -233,51 +233,68 @@ BL-067 ist KEIN Code-Slice — direkter Editor-Workflow vom User selbst. 5 Help-
 | SLC-061 | [Lint-Sweep V2-V4.2 Pre-existing Errors+Warnings](SLC-061-lint-sweep.md) | V4.4 | done | Medium | 2026-05-05 |
 | SLC-062 | [SQL-Backfill 046_seed_demo_template Umlaute (MIG-030)](SLC-062-sql-backfill-umlauts.md) | V4.4 | done | Low | 2026-05-05 |
 
-## V5 Slices (Walkthrough-Mode MVP)
+## V5 Slices (Walkthrough-Mode + Methodik-Schicht — V5 Option 2 Re-Plan 2026-05-06)
+
+V5-Scope wurde am 2026-05-06 nach USP-Stress-Test re-geplant (DEC-079 Strategaize-Dev-System + DEC-089 Onboarding-Anker). Roh-Video-Berater-Review (FEAT-036, SLC-073) wurde **deferred**. Stattdessen vorgezogene Methodik-Schicht aus V5.1 (PII-Redaction + Schritt-Extraktion + Auto-Mapping + Methodik-Review-UI). Resultat: 7 Slices statt urspruenglicher 4.
 
 | ID | Slice | Feature | Status | Priority | Created |
 |----|-------|---------|--------|----------|---------|
 | SLC-071 | [Walkthrough Foundation: MIG-031 + Capture-UI + Direct-Upload](SLC-071-walkthrough-foundation-capture-upload.md) | FEAT-034 | in_progress | Blocker | 2026-05-05 |
 | SLC-072 | [Walkthrough Whisper-Worker (Job-Handler `walkthrough_transcribe`)](SLC-072-walkthrough-whisper-worker.md) | FEAT-035 | planned | High | 2026-05-05 |
-| SLC-073 | [Walkthrough Berater-Review-UI (Cross + Per-Tenant + Detail)](SLC-073-walkthrough-berater-review-ui.md) | FEAT-036 | planned | High | 2026-05-05 |
-| SLC-074 | [Registry-Update + 16-Faelle-RLS-Matrix + Cleanup-Cron](SLC-074-walkthrough-registry-rls-cleanup.md) | FEAT-034, FEAT-035, FEAT-036 | planned | Blocker | 2026-05-05 |
+| SLC-073 | [Walkthrough Berater-Review-UI (Roh-Video) — DEFERRED per DEC-079](SLC-073-walkthrough-berater-review-ui.md) | FEAT-036 | deferred | Low | 2026-05-05 |
+| SLC-074 | [Registry-Update + 48-Faelle-RLS-Matrix + Cleanup-Cron (V5 Option 2 Re-Scope)](SLC-074-walkthrough-registry-rls-cleanup.md) | FEAT-034, FEAT-035, FEAT-037, FEAT-040 | planned | Blocker | 2026-05-05 |
+| SLC-075 | [Walkthrough Routing-Patch + Self-Spawn-Pattern (Q-V5-F)](SLC-075-walkthrough-routing-patch-self-spawn.md) | FEAT-034 | planned | Blocker | 2026-05-06 |
+| SLC-076 | [Walkthrough Stufe 1 PII-Redaction (Migration 087 + Pattern-Library + Worker)](SLC-076-walkthrough-pii-redaction.md) | FEAT-037 | planned | High | 2026-05-06 |
+| SLC-077 | [Walkthrough Stufe 2 Schritt-Extraktion (Migration 085 + Worker)](SLC-077-walkthrough-step-extraction.md) | FEAT-037 | planned | High | 2026-05-06 |
+| SLC-078 | [Walkthrough Stufe 3 Auto-Mapping (Migration 086 + Bridge-Engine-Reuse)](SLC-078-walkthrough-subtopic-mapping.md) | FEAT-037 | planned | High | 2026-05-06 |
+| SLC-079 | [Walkthrough Methodik-Review-UI (FEAT-040)](SLC-079-walkthrough-methodik-review-ui.md) | FEAT-040 | planned | High | 2026-05-06 |
 
-### V5 Execution Order
+### V5 Option 2 Execution Order
 
-Reihenfolge (mit Mid-Stream-Hotfix-Slot fuer BL-076 vor SLC-074):
+Reihenfolge (mit Mid-Stream-Hotfix-Slot fuer BL-076 zwischen SLC-079 und SLC-074):
 
-**SLC-071 → SLC-072 → SLC-073 → BL-076-Hotfix → SLC-074**
+**SLC-071 (code-side done) → SLC-075 → SLC-072 → SLC-076 → SLC-077 → SLC-078 ∥ SLC-079 → BL-076-Hotfix → SLC-074**
 
-- **SLC-071** (Foundation, ERSTER Slice): MIG-031 (082+083+084) + Storage-Bucket + Capture-UI + Direct-Upload + 2 Server Actions. **Blocker fuer alle V5-Slices** weil das Schema, Bucket und ai_jobs-Queueing dort live gehen. ~9 MTs.
-- **SLC-072** (Worker-Pfad): walkthrough_transcribe Job-Handler + ffmpeg + Whisper-Adapter-Reuse + KU-Persistierung + Status-Maschine `uploaded → transcribing → pending_review`. Voraussetzung fuer SLC-073 (sonst nichts zum Reviewen). ~5 MTs.
-- **SLC-073** (Berater-Review-UI): 3 Routen (cross-tenant + per-tenant + detail) + Pflicht-Checkbox + approveOrReject Server-Action + Cockpit-Card. Pattern-Reuse aus V4.1 SLC-042/043. ~6 MTs.
-- **BL-076 Cron-Idempotenz-Hotfix** (Mid-Stream zwischen SLC-073 und SLC-074): Fix der V4.2 capture-reminders-Cron-Idempotenz-Logik (ISSUE-035). **Bewusst zwischen SLC-073 und SLC-074 platziert**, weil SLC-074 den neuen `walkthrough-cleanup-daily`-Cron baut und das gefixte Idempotenz-Pattern aus BL-076 dort sofort uebernehmen kann. Eigene atomare Aenderung, eigener Commit, kein Code-Merge mit V5-Slices.
-- **SLC-074** (V5-Abschluss): Capture-Mode-Registry-Update + 16-Faelle-RLS-Matrix + Cleanup-Cron + Lint/Build/Test gruen als V5-Release-Gate. Vor Gesamt-V5-/qa. ~5 MTs.
+- **SLC-071** (Foundation, code-side done): MIG-031 (082+083+084) live appliziert, Capture-UI + Direct-Upload code-funktional. Status bleibt `in_progress` bis SLC-075 abgeschlossen (Browser-Smoke AC-10/11/12 nachholen). Code bleibt unveraendert verwertbar.
+- **SLC-075** (Routing-Patch, ERSTER Option-2-Slice): Self-Spawn-Pattern (DEC-080) + neue Routen `/employee/walkthroughs` + AC-10/11/12 Smoke. Loest BL-086 = Q-V5-F kritisch. ~3 MTs.
+- **SLC-072** (Worker-Pfad): walkthrough_transcribe unveraendert. **In V5 Option 2:** Pipeline-Trigger advanced auf `redacting` (statt `pending_review`) — Patch in SLC-076 MT-5. ~5 MTs.
+- **SLC-076** (Stufe 1 PII-Redaction): Migration 087 + walkthrough_redact_pii Worker + PII-Pattern-Library + synthetische Test-Suite (≥90% Recall, SC-V5-6). ~5 MTs.
+- **SLC-077** (Stufe 2 Schritt-Extraktion): Migration 085 + walkthrough_extract_steps Worker + Schritt-Persistierung + ≥5 Test-Walkthroughs. ~5 MTs.
+- **SLC-078** (Stufe 3 Auto-Mapping): Migration 086 + walkthrough_map_subtopics Worker mit **Bridge-Engine-Pattern Reverse-Direction** (FEAT-023 Reuse-Pflicht) + Coverage-Test ≥70% (SC-V5-7). ~4 MTs.
+- **SLC-079** (Methodik-Review-UI): 3 Admin-Routen + SubtopicTreeReview + UnmappedBucket + MoveStepDropdown + ApprovalForm mit Pflicht-Privacy-Checkbox (DEC-091) + Cockpit-Card + RawTranscriptToggle mit Audit. Pattern-Reuse FEAT-023 + FEAT-029. **Kann parallel zu SLC-078 laufen**, sobald walkthrough_step + walkthrough_review_mapping Schemas live (also nach SLC-077 Migration 085 + SLC-078 Migration 086). ~7 MTs.
+- **BL-076 Cron-Idempotenz-Hotfix** (Mid-Stream zwischen SLC-079 und SLC-074): Fix der V4.2 capture-reminders-Cron-Idempotenz-Logik (ISSUE-035). **Bewusst zwischen SLC-079 und SLC-074 platziert**, weil SLC-074 den `walkthrough-cleanup-daily`-Cron erweitert um Stale-Pipeline-Recovery und das gefixte Idempotenz-Pattern aus BL-076 dort sofort uebernehmen kann. Eigene atomare Aenderung, eigener Commit, kein Code-Merge mit V5-Slices.
+- **SLC-074** (V5-Option-2-Abschluss, re-scoped): Capture-Mode-Registry-Update + **48-Faelle-RLS-Matrix** (16 walkthrough_session + 16 walkthrough_step + 16 walkthrough_review_mapping) + Cleanup-Cron erweitert um Stale-Pipeline-Recovery (`redacting/extracting/mapping > 1h → failed`) + Lint/Build/Test/Audit gruen als V5 Option 2 Release-Gate. Vor Gesamt-V5-Option-2-/qa. ~5 MTs.
 
-**Gesamt:** 4 Slices, 25 MTs, ~2 Wochen Implementation (entspricht /architecture V5 RPT-164 Empfehlung).
+**Gesamt V5 Option 2:** 7 Option-2-Slices (SLC-072 + SLC-074 + SLC-075..079) + SLC-071 als-ist + SLC-073 deferred = **34 MTs / ~5-6.5 Tage Implementation** (entspricht ARCHITECTURE.md V5 Option 2 Empfehlung + DEC-079-Aufwand).
 
 **Parallelisierbar:**
-- Innerhalb SLC-073: MT-2 + MT-3 + MT-4 koennen parallel laufen sobald MT-1 done.
+- SLC-079 kann parallel zu SLC-078 starten sobald SLC-077 done ist (Schemas walkthrough_step + walkthrough_review_mapping live nach Migration 085 + 086 — d.h. nach SLC-077-MT-1 + SLC-078-MT-1).
 - BL-067 (Berater-Help-Review, Content-Only, deferred) jederzeit parallel via direkten Editor-Workflow.
-- V4.4 Re-Check 2026-05-06 ~14:18 laeuft parallel zu /slice-planning (reine Doku-Arbeit) ohne Konflikt.
 
-**Pflicht-Gates fuer V5:**
-- SLC-071: Pre-Apply-Backup + Migration-Live-Deploy 082→083→084 strikt sequentiell + Browser-Capability-Check.
-- SLC-072: Live-Smoke End-to-End (User → Worker → KU) + Backwards-Compat alter Job-Types.
-- SLC-073: Browser-Smoke alle 3 Routen + Approve mit/ohne Checkbox + Reject mit/ohne Reason.
+**Pflicht-Gates fuer V5 Option 2 Release:**
+- SLC-075: AC-10/11/12 Browser-Smoke gruen (loest BL-086 = Q-V5-F).
+- SLC-072: Pipeline-Trigger advanced auf `redacting` (Patch via SLC-076 MT-5).
+- SLC-076: **SC-V5-6 PII-Redaction-Recall ≥90%** auf synthetischer Test-Suite.
+- SLC-077: Migration 085 + ≥5 Test-Walkthroughs Vitest.
+- SLC-078: **SC-V5-7 Auto-Mapping ≥70%** Schritte mit Confidence ≥0.7. Bridge-Engine-Pattern-Konsistenz-Diff zu `bridge-engine-worker.ts`.
+- SLC-079: **SC-V5-4 Berater-Methodik-Review-Smoke** alle 3 Admin-Routen + Move + Approve mit/ohne Checkbox.
 - BL-076 done VOR SLC-074-Beginn (Pattern-Vorlage fuer Cleanup-Cron).
-- SLC-074: SC-V5-4 16-Faelle-RLS-Matrix gruen + SC-V5-1 Mitarbeiter-Self-Test + SC-V5-3 Berater-Review-Smoke + SC-V5-5 Code-Quality (0/0 Lint, 0 Vulns).
-- Gesamt-V5-/qa nach SLC-074 (SC-V5-1..5 vollstaendig verifiziert).
+- SLC-074: **SC-V5-5 48-Faelle-RLS-Matrix gruen** + SC-V5-1 Mitarbeiter-Self-Test + **SC-V5-8 Code-Quality** (0/0 Lint, 0 Vulns).
+- Gesamt-V5-Option-2-/qa nach SLC-074 (SC-V5-1, SC-V5-4..8 vollstaendig verifiziert).
 
 ### V5 Out-of-Scope (deferred V5.1+)
 
-- KI-Pipeline: PII-Redaction, Schritt-Extraktion → V5.1 (FEAT-037, BL-081)
-- Walkthrough-Embed im Handbuch-Reader → V5.1 (FEAT-038)
+- Walkthrough-Embed im Handbuch-Reader + KU-Bruecke walkthrough_step → knowledge_unit → V5.1 (FEAT-038, DEC-090, BL-082)
+- FEAT-036 Roh-Video-Berater-Review → SLC-073 deferred (per DEC-079, kein Re-Open-Pfad in V5.x geplant)
 - Mehrsprachige Transkription (DE only fuer V5)
 - Mobile-Capture, Klick-Tracking, DOM-Snapshots → V6+
 - Re-Open-Pfad fuer rejected → V5.2+
-- Reviewer-Markdown-Notes → V5.2+
-- Retry-Mechanik fuer failed-Transkriptionen → V5.2+
+- Reviewer-Markdown-Notes pro Schritt → V5.2+
+- Retry-Mechanik fuer failed-Pipeline-Stufen → V5.2+
+- Per-Tenant-PII-Pattern-Override → V5.x (DEC-082)
+- Per-Tenant-Confidence-Schwelle → V5.x (DEC-084)
+- Haiku-Optimization fuer Stufe 3 → V5.x (DEC-081)
+- Re-Processing approved Walkthroughs (z.B. nach Subtopic-Tree-Aenderung) → V5.x
 
 ### V4.4 Execution Order (per DEC-073)
 

@@ -1,5 +1,13 @@
 # SLC-071 — Walkthrough Foundation: MIG-031 + Capture-UI + Direct-Upload
 
+## Status-Anmerkung (V5 Option 2)
+
+Code-side **done** (Commit ebb3eaf, RPT-169 PASS code-side). MIG-031 (082+083+084) live appliziert. Browser-Smoke AC-10/11/12 wurde wegen 404-RLS-Issue (Q-V5-F) blockiert — **architektonisch geloest in DEC-080 Self-Spawn-Pattern**.
+
+**Slice-Closing-Entscheidung 2026-05-06 in /slice-planning V5 Option 2:** SLC-071 bleibt als-ist akzeptiert (Code unveraendert verwertbar). Der Routing-Patch wird als eigener Folge-Slice `SLC-075 — Walkthrough Routing-Patch + Self-Spawn-Pattern` eingefuehrt (loest BL-086 + erlaubt AC-10/11/12 Browser-Smoke nachzuholen). Status SLC-071 bleibt `in_progress` bis SLC-075 abgeschlossen ist; danach `done`.
+
+WalkthroughCapture.tsx, requestWalkthroughUpload, confirmWalkthroughUploaded bleiben funktional unveraendert — nur Routing-Wrapper aendert sich in SLC-075.
+
 ## Goal
 
 Backend-Foundation und Capture-Pfad fuer V5 Walkthrough-Mode. MIG-031 (Migrations 082+083+084) auf Hetzner deployen — alle V5-Schema-Aenderungen + Storage-Bucket upfront. Capture-UI unter `/employee/capture/walkthrough/[id]` mit `getDisplayMedia` + `getUserMedia`, MediaRecorder (`video/webm;codecs=vp9,opus`), 30min-Hard-Cap (Browser-Timer), Direct-Upload via Supabase Signed URL. Zwei Server Actions: `requestWalkthroughUpload` (erzeugt walkthrough_session + signed URL) und `confirmWalkthroughUploaded` (status=uploaded + queued ai_jobs-Eintrag fuer SLC-072 Worker). Status-Polling-Page als End-State.

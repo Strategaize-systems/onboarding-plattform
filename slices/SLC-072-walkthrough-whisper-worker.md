@@ -1,12 +1,16 @@
 # SLC-072 — Walkthrough Whisper-Worker (Job-Handler `walkthrough_transcribe`)
 
+## Status-Anmerkung (V5 Option 2)
+
+Der Slice bleibt im Scope unveraendert. **EINE Aenderung gegenueber Original-Spec:** Status-Maschine endet **nicht mehr** bei `pending_review`, sondern advanced auf `redacting` und enqueued den Stufe-1-Pipeline-Job `walkthrough_redact_pii`. Konkret: am Ende des `walkthrough_transcribe`-Job ruft der Worker `advanceWalkthroughPipeline(walkthroughSessionId)` (aus SLC-076 MT-5 Pipeline-Trigger), das Status auf `redacting` setzt + neuen ai_jobs-Eintrag fuer Stufe 1 erzeugt. Diese Anpassung ist Teil von SLC-076 MT-5 — SLC-072 selbst kann ohne diesen Trigger noch `pending_review` setzen, aber der Pipeline-Trigger-Patch ist Voraussetzung fuer V5 Option 2 Release.
+
 ## Goal
 
-Worker-Pfad fuer V5 Walkthrough-Mode. Neuer Job-Handler `walkthrough_transcribe` im bestehenden Worker-Container: pickt `ai_jobs`-Eintraege, laedt WebM aus Storage, extrahiert Audio-Spur via ffmpeg, ruft Self-hosted Whisper (DEC-018-Adapter wiederverwendet), persistiert Transcript als `knowledge_unit` mit `source='walkthrough_transcript'`, fuehrt Status-Maschine `uploaded → transcribing → pending_review` (oder `failed` bei Fehler).
+Worker-Pfad fuer V5 Walkthrough-Mode. Neuer Job-Handler `walkthrough_transcribe` im bestehenden Worker-Container: pickt `ai_jobs`-Eintraege, laedt WebM aus Storage, extrahiert Audio-Spur via ffmpeg, ruft Self-hosted Whisper (DEC-018-Adapter wiederverwendet), persistiert Transcript als `knowledge_unit` mit `source='walkthrough_transcript'`, fuehrt Status-Maschine `uploaded → transcribing → pending_review` **(in V5 Option 2: → `redacting` via SLC-076 Pipeline-Trigger)** (oder `failed` bei Fehler).
 
 ## Feature
 
-FEAT-035 (Walkthrough Whisper-Transkription). Setzt direkt auf SLC-071 (Schema + ai_jobs-Eintrag) auf.
+FEAT-035 (Walkthrough Whisper-Transkription). Setzt direkt auf SLC-071 (Schema + ai_jobs-Eintrag) auf. In V5 Option 2 ist SLC-072-Output Pipeline-Input fuer SLC-076 Stufe 1.
 
 ## In Scope
 
