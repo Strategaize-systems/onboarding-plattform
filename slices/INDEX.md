@@ -237,7 +237,7 @@ BL-067 ist KEIN Code-Slice — direkter Editor-Workflow vom User selbst. 5 Help-
 
 | ID | Slice | Feature | Status | Priority | Created |
 |----|-------|---------|--------|----------|---------|
-| SLC-071 | [Walkthrough Foundation: MIG-031 + Capture-UI + Direct-Upload](SLC-071-walkthrough-foundation-capture-upload.md) | FEAT-034 | planned | Blocker | 2026-05-05 |
+| SLC-071 | [Walkthrough Foundation: MIG-031 + Capture-UI + Direct-Upload](SLC-071-walkthrough-foundation-capture-upload.md) | FEAT-034 | in_progress | Blocker | 2026-05-05 |
 | SLC-072 | [Walkthrough Whisper-Worker (Job-Handler `walkthrough_transcribe`)](SLC-072-walkthrough-whisper-worker.md) | FEAT-035 | planned | High | 2026-05-05 |
 | SLC-073 | [Walkthrough Berater-Review-UI (Cross + Per-Tenant + Detail)](SLC-073-walkthrough-berater-review-ui.md) | FEAT-036 | planned | High | 2026-05-05 |
 | SLC-074 | [Registry-Update + 16-Faelle-RLS-Matrix + Cleanup-Cron](SLC-074-walkthrough-registry-rls-cleanup.md) | FEAT-034, FEAT-035, FEAT-036 | planned | Blocker | 2026-05-05 |
