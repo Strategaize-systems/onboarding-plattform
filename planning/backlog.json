@@ -832,12 +832,12 @@
     },
     {
       "id": "BL-086",
-      "title": "V5 Capture-Entry-Point-RLS-Pfad entscheiden + fixen (Q-V5-F)",
+      "title": "V5 Capture-Entry-Point Self-Spawn-Pattern implementieren (Q-V5-F geloest in DEC-080)",
       "type": "fix",
       "priority": "high",
-      "status": "open",
+      "status": "in_progress",
       "version": "V5",
-      "description": "NEU 2026-05-06 aus SLC-071 Browser-Smoke-Versuch. capture_session-RLS fuer 'employee'-Rolle versteckt nicht-zugewiesene Sessions, was Walkthrough-Capture-URL-Aufruf zu HTTP 404 macht. Architektur-Entscheidung erforderlich (siehe Q-V5-F): (a) Bridge-Spawn-Pattern (FEAT-023-Reuse, employee owns spawned walkthrough-session, empfohlen wegen Konsistenz zu V4) ODER (b) RLS-Relaxation fuer capture_mode='walkthrough' ODER (c) eigene Top-Level-Action ohne capture_session-Bindung. Blockiert SLC-071 Browser-Smoke-Final-Gate (AC-10/11/12) + SLC-074 Entry-Point-UI. Klaerung in /architecture V5 Option 2.",
+      "description": "NEU 2026-05-06 aus SLC-071 Browser-Smoke-Versuch. ARCHITEKTUR-ENTSCHIEDEN 2026-05-06 in DEC-080 (RPT-171): Self-Spawn-Pattern, Adaption von V4 FEAT-023 Bridge-Engine. Implementation: neue Server Action startWalkthroughSession() erzeugt fresh capture_session (capture_mode='walkthrough', owner_user_id=auth.uid(), tenant_id=auth.user_tenant_id()) + walkthrough_session, gibt walkthroughSessionId zurueck. UI-Routing: /employee/walkthroughs als Liste mit Button 'Neuen Walkthrough starten' → Server Action → Redirect /employee/walkthroughs/[walkthroughSessionId]/record. Bestehender SLC-071-Code (WalkthroughCapture.tsx, requestWalkthroughUpload, confirmWalkthroughUploaded) bleibt funktional unveraendert, nur Routing-Wrapper aendert sich. Damit AC-10/11/12 Browser-Smoke durchziehbar = unblock SLC-071-Slice-Closing. Slice-Zuordnung in /slice-planning V5 Option 2 (entweder als-ist-Akzept SLC-071 + Routing-Patch als ersten Option-2-Slice ODER Re-Schnitt SLC-071-Foundation).",
       "createdAt": "2026-05-06"
     }
   ]

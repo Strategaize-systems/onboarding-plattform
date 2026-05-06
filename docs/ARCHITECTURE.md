@@ -4394,3 +4394,574 @@ PRD-Skizze (4 Slices SLC-071..074) bleibt nach Architektur-Pruefung tragfaehig. 
 `/slice-planning V5` — die 4 Slice-Empfehlungen oben in finale SLC-071..074-Files zerlegen, MTs nummerieren, Slice-INDEX.md updaten, BL-077..080 → `in_progress` setzen.
 
 V5.1 (`/requirements V5.1` ist bereits done, `/architecture V5.1` offen) wird nach V5-Release angegangen.
+
+---
+
+## V5 Option 2 Architecture Addendum — Methodik-Schicht (PII-Redaction + Schritt-Extraktion + Auto-Mapping + Methodik-Review-UI)
+
+### Status
+
+Architecture done 2026-05-06 nach `/architecture V5 Option 2` mit Re-Plan auf Basis DEC-079 (Strategaize-Dev-System) + RPT-170 (Requirements V5 Option 2). Diese Sektion **erweitert** die V5-Architecture (oben) um die Methodik-Schicht (PII-Redaction, Schritt-Extraktion, Auto-Mapping zu Subtopics) und ersetzt das urspruengliche manuelle Berater-Roh-Video-Review (FEAT-036, deferred) durch ein Methodik-Review-UI (FEAT-040).
+
+DEC-074..078 (V5-Foundation: walkthrough_session-Tabelle, WebM/VP9-Codec, 30min-Hard-Cap, Direct-Upload+Privacy-Checkbox, Mic-only) bleiben **alle accepted**, kein supersede — ihre Begruendung ist Capture-/Storage-spezifisch und Option-2-orthogonal. DEC-077 Privacy-Checkbox-Pflicht wandert architektonisch vom Roh-Video-Approve zum Methodik-Review-Approve (Re-Validation in DEC-090).
+
+### Architektur-Zusammenfassung Option 2
+
+V5 Option 2 fuegt der V5-Foundation eine **3-stufige asynchrone AI-Pipeline** zwischen Whisper-Transkription und Berater-Review ein. Die Pipeline laeuft im bestehenden Worker-Container ueber `ai_jobs`-Queueing (Pattern wie SLC-008 / FEAT-005, FEAT-010, FEAT-016, FEAT-023). Bedrock-Claude-Sonnet (eu-central-1) verarbeitet drei sequentielle Schritte:
+
+1. **PII-Redaction** — Original-Transkript → redacted-Transkript (Platzhalter-basiert)
+2. **Schritt-Extraktion** — redacted-Transkript → strukturierte SOP-Schritt-Liste (`walkthrough_step` Tabelle)
+3. **Auto-Mapping** — SOP-Schritt-Liste + Template-Subtopic-Tree → `walkthrough_step → subtopic_id` Zuordnung (`walkthrough_review_mapping` Tabelle, Bridge-Engine-Pattern in Reverse-Direction)
+
+Der Berater sieht im Methodik-Review-UI (FEAT-040) den Subtopic-Tree mit zugeordneten Schritten + Unmapped-Bucket, korrigiert Mapping per Select-Move, bestaetigt Pflicht-Checkbox, approved/rejected. **Kein Roh-Video im Berater-UI**. Die Roh-WebM-Datei bleibt im Storage als Audit-/Re-Processing-Quelle, aber nicht als Berater-Review-Material (R-V5-3 + DSGVO-Plus).
+
+V5 Option 2 ist die erste Strategaize-Onboarding-Pipeline, die Bedrock produktiv im Onboarding-Repo nutzt (V1-V4 hatten Bedrock fuer Verdichtung/Diagnose/Bridge im selben Worker; V5 Option 2 erweitert um drei walkthrough-spezifische Job-Types — kein neuer Service, keine neue Auth, keine neue Container).
+
+### Service-Topologie Option 2
+
+| Service | Aenderung in Option 2 (gegenueber V5-Foundation) |
+|---------|---------------------------------------------------|
+| Web App (Next.js) | **Neue Routen ersetzen** alte FEAT-036-Routen: `/admin/walkthroughs` (Methodik-Review-Liste, cross-tenant), `/admin/tenants/[id]/walkthroughs` (per Tenant), `/admin/walkthroughs/[id]` (Methodik-Review-Detail mit Subtopic-Tree). **Neue Server Actions**: `startWalkthroughSession` (Self-Spawn-Pattern, DEC-080), `editWalkthroughStep`, `moveWalkthroughStepMapping`, `approveOrRejectWalkthroughMethodology`. `approveOrRejectWalkthrough` aus V5-Foundation wird umbenannt/ersetzt. **Neue Hilfs-API-Route**: `/api/cron/walkthrough-cleanup` (Lifecycle aus V5-Foundation bleibt bestehen, Cleanup-Cron erweitert um stale-pipeline-Recovery). |
+| Worker Container | **Drei neue Job-Handler** im bestehenden Worker (kein neuer Container): `walkthrough_redact_pii`, `walkthrough_extract_steps`, `walkthrough_map_subtopics`. Pattern-Reuse: `bedrock-client.ts` (DEC-006), `ai_jobs`-Queueing (DEC-007), Cost-Logging (`ai_cost_ledger`). |
+| Supabase Postgres | **Zwei neue Tabellen**: `walkthrough_step`, `walkthrough_review_mapping` (siehe Datenmodell). **CHECK-Erweiterungen**: `walkthrough_session.status` um `redacting`, `extracting`, `mapping`. `knowledge_unit.source` um `walkthrough_transcript_redacted`. |
+| AWS Bedrock | **Erste produktive Nutzung im Onboarding-Worker** (aus V5-Foundation-Sicht; war in V1-V4 schon aktiv via condensation/diagnosis/bridge). Drei neue Prompt-Templates unter `src/lib/ai/prompts/walkthrough/` (`pii_redact.ts`, `step_extract.ts`, `subtopic_map.ts`). Modell `anthropic.claude-sonnet-4-20250514-v1:0` fuer alle drei Stufen (DEC-081). |
+| Self-hosted Whisper | Unveraendert. Whisper-Output ist Pipeline-Input fuer Stufe 1. |
+| Supabase Storage | Bucket `walkthroughs` unveraendert (V5-Foundation). Roh-WebM bleibt fuer Audit, kein neuer Bucket. |
+
+### Datenmodell Option 2
+
+#### `walkthrough_step` (NEU) — Stufe 2 Output
+
+Strukturierte SOP-Schritt-Repraesentation aus dem redacted-Transkript. Eine Zeile pro extrahiertem Schritt. Spaltenpattern an V2 SOP-Tabelle (FEAT-012) angelehnt, aber walkthrough-eigenstaendig — keine Spalten-Duplizierung.
+
+```sql
+CREATE TABLE walkthrough_step (
+  id                          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id                   uuid        NOT NULL REFERENCES tenants ON DELETE CASCADE,
+  walkthrough_session_id      uuid        NOT NULL REFERENCES walkthrough_session ON DELETE CASCADE,
+
+  -- Sortierung (1-basiert, Worker setzt initial)
+  step_number                 integer     NOT NULL,
+
+  -- Extrahierte SOP-Inhalte (Stage 2 Output)
+  action                      text        NOT NULL,                       -- Was passiert in dem Schritt
+  responsible                 text,                                        -- Wer macht es ("Mitarbeiter", "GF", "System")
+  timeframe                   text,                                        -- Wann/wie lange ("nach Auftragseingang", "5min")
+  success_criterion           text,                                        -- Wie erkennbar dass Schritt fertig
+  dependencies                text,                                        -- Freitext "Schritt 1, Schritt 3"
+
+  -- Source-Referenz (welcher redacted-Transkript-Snippet hat diesen Schritt erzeugt)
+  transcript_snippet          text,                                        -- redacted Snippet (PII-frei)
+  transcript_offset_start     integer,                                     -- char-Offset im redacted-Transkript-KU
+  transcript_offset_end       integer,
+
+  -- Berater-Edit-Spur (V5: Berater darf Schritt-Felder editieren)
+  edited_by_user_id           uuid        REFERENCES auth.users,
+  edited_at                   timestamptz,
+  deleted_at                  timestamptz,                                 -- soft-delete (Berater entfernt unsinnigen Schritt)
+
+  created_at                  timestamptz NOT NULL DEFAULT now(),
+  updated_at                  timestamptz NOT NULL DEFAULT now(),
+
+  UNIQUE (walkthrough_session_id, step_number)
+);
+
+CREATE INDEX idx_walkthrough_step_session ON walkthrough_step(walkthrough_session_id, step_number)
+  WHERE deleted_at IS NULL;
+CREATE INDEX idx_walkthrough_step_tenant ON walkthrough_step(tenant_id);
+```
+
+**Constraints:**
+- `step_number >= 1` (NUMERIC CHECK).
+- Soft-Delete via `deleted_at` (Audit-Spur erhalten — Schritt war im Output, Berater hat ihn entfernt).
+
+#### `walkthrough_review_mapping` (NEU) — Stufe 3 Output + Berater-Korrektur
+
+Eine Zeile pro `walkthrough_step` mit der Subtopic-Zuordnung. `subtopic_id IS NULL` bedeutet **Unmapped-Bucket** (DEC-085: kein separater Tabelle, einheitliches Datenmodell). Subtopic-Referenz ist `template_id` + `subtopic_id text` (logische Referenz auf den `template.blocks[].subtopics[]`-JSON-Pfad — kein FK auf eine Tabelle, weil Subtopics innerhalb des Template-JSON leben).
+
+```sql
+CREATE TABLE walkthrough_review_mapping (
+  id                          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id                   uuid        NOT NULL REFERENCES tenants ON DELETE CASCADE,
+  walkthrough_step_id         uuid        NOT NULL UNIQUE REFERENCES walkthrough_step ON DELETE CASCADE,
+
+  -- Subtopic-Zuordnung
+  template_id                 uuid        NOT NULL REFERENCES template,    -- Welches Template
+  template_version            text        NOT NULL,                        -- Eingefroren beim Mapping
+  subtopic_id                 text,                                        -- NULL = Unmapped-Bucket (DEC-085)
+
+  -- Auto-Mapping-Output (Stufe 3)
+  confidence_score            numeric(3,2),                                -- 0.00 - 1.00
+  confidence_band             text        GENERATED ALWAYS AS (            -- Ampel (DEC-087)
+                                CASE
+                                  WHEN subtopic_id IS NULL THEN 'red'      -- Unmapped
+                                  WHEN confidence_score >= 0.85 THEN 'green'
+                                  WHEN confidence_score >= 0.70 THEN 'yellow'
+                                  ELSE 'red'
+                                END
+                              ) STORED,
+  mapping_model               text,                                        -- z.B. 'claude-sonnet-4-20250514-v1:0'
+  mapping_reasoning           text,                                        -- LLM-Begruendung (debug + audit)
+
+  -- Berater-Korrektur
+  reviewer_corrected          boolean     NOT NULL DEFAULT false,
+  reviewer_user_id            uuid        REFERENCES auth.users,
+  reviewed_at                 timestamptz,
+
+  created_at                  timestamptz NOT NULL DEFAULT now(),
+  updated_at                  timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_wkrm_session_subtopic
+  ON walkthrough_review_mapping(walkthrough_step_id, subtopic_id);
+
+CREATE INDEX idx_wkrm_unmapped
+  ON walkthrough_review_mapping(tenant_id, walkthrough_step_id)
+  WHERE subtopic_id IS NULL;
+```
+
+**Constraints:**
+- `confidence_score BETWEEN 0 AND 1`.
+- Wenn `subtopic_id IS NOT NULL`, dann `confidence_score IS NOT NULL` (Stufe 3 setzt immer beides bei Auto-Mapping; Berater-Korrektur via `reviewer_corrected=true` haelt Score auf `1.00`).
+- `reviewer_corrected=true` impliziert `reviewer_user_id IS NOT NULL AND reviewed_at IS NOT NULL`.
+
+#### Status-Maschine `walkthrough_session.status` (erweitert)
+
+Bestehende Werte (V5-Foundation) bleiben. Neue Werte fuer Pipeline-Stufen:
+
+```sql
+status text NOT NULL DEFAULT 'recording'
+  CHECK (status IN (
+    'recording',
+    'uploading',
+    'uploaded',
+    'transcribing',
+    -- NEU Option 2: Pipeline-Stufen
+    'redacting',         -- Stufe 1 PII-Redaction laeuft
+    'extracting',        -- Stufe 2 Schritt-Extraktion laeuft
+    'mapping',           -- Stufe 3 Auto-Mapping laeuft
+    -- gleicher Endstand:
+    'pending_review',    -- Methodik-Review wartet auf Berater
+    'approved',
+    'rejected',
+    'failed'
+  ))
+```
+
+**Pipeline-Trigger-Sequenz:**
+- `transcribed` (V5-Foundation Endstand) wird automatisch durch ai_jobs-Enqueue zu `redacting`. Wenn `redact_pii_job` fertig: `extracting`. Wenn fertig: `mapping`. Wenn fertig: `pending_review`.
+- Fehlt eine Stufe (Bedrock-Outage, Parse-Fehler, etc.): `failed`. Cleanup-Cron erkennt `redacting/extracting/mapping > 1h alt` und markiert ebenfalls `failed` (Recovery, kein automatischer Retry in V5).
+
+#### `knowledge_unit.source` Erweiterung
+
+```sql
+ALTER TABLE knowledge_unit
+  DROP CONSTRAINT knowledge_unit_source_check;
+ALTER TABLE knowledge_unit
+  ADD CONSTRAINT knowledge_unit_source_check
+  CHECK (source IN (
+    -- bestehend:
+    'questionnaire', 'exception', 'ai_draft', 'meeting_final', 'manual',
+    'evidence', 'dialogue',
+    'employee_questionnaire',
+    'walkthrough_transcript',                -- V5-Foundation
+    -- NEU Option 2:
+    'walkthrough_transcript_redacted'        -- Stufe 1 Output
+  ));
+```
+
+`walkthrough_transcript_redacted` lebt als separater knowledge_unit-Eintrag mit Verweis auf das Original via `evidence_refs={ original_kuId, walkthrough_session_id }` (DEC-084). RLS und Policies sind identisch zur `walkthrough_transcript`-Source — keine erweiterte Sichtbarkeit.
+
+**KU-Sichtbarkeit von approved walkthrough_step (DEC-090):** V5 Option 2 produziert approved Schritte in `walkthrough_step`, **erstellt aber keine `knowledge_unit`-Eintraege fuer SOPs**. Die KU-Bruecke (Schritte → knowledge_unit-Source `walkthrough` → Handbuch-Snapshot) ist V5.1-Scope (FEAT-038). In V5 Option 2 sind approved walkthrough-Schritte standalone in `walkthrough_step` und nirgendwo sonst sichtbar — bewusster Scope-Schnitt, hindert keine V5.1-Erweiterung.
+
+### Capture-Entry-Point: Self-Spawn-Pattern (Q-V5-F gefixt) — DEC-080
+
+#### Problem (aus SLC-071-Browser-Smoke-Versuch 2026-05-06)
+
+richard@bellaerts.de (employee, Demo-Tenant) navigierte zu `/employee/capture/walkthrough/<capture_session_id>` und erhielt **HTTP 404**. Diagnose: capture_session-RLS fuer `employee`-Rolle ist auf zugewiesene Sessions (employee_questionnaire-Pattern) restriktiert — eine beliebige Tenant-walkthrough-Session ohne Assignment ist fuer den employee unsichtbar.
+
+#### Architektur-Entscheidung
+
+**Self-Spawn-Pattern** (Adaption von Bridge-Engine FEAT-023): Beim Capture-Start spawnt der employee per Server Action **selbst** eine eigene capture_session mit `capture_mode='walkthrough'` und `owner_user_id=auth.uid()`. RLS-Sichtbarkeit ist trivial via Owner-Match gegeben — keine RLS-Aenderung, keine spezielle Branch-Logik im capture_session-Pfad, kein Drift zur V4-Bridge-Engine.
+
+#### Neuer Entry-Point-Flow
+
+```
+/employee/walkthroughs (Liste eigener Walkthroughs + Button "Neuen Walkthrough starten")
+       → Klick "Neuen Walkthrough starten"
+            → Server Action startWalkthroughSession()
+                 → INSERT capture_session (capture_mode='walkthrough', owner_user_id=user.id, tenant_id=user.tenantId, status='in_progress')
+                 → INSERT walkthrough_session (recorded_by_user_id=user.id, capture_session_id=neuId, tenant_id, status='recording')
+                 → Returns walkthroughSessionId
+       → Redirect /employee/walkthroughs/[walkthroughSessionId]/record
+            → Recording-UI (siehe V5-Foundation Flow 1, MediaRecorder + Direct-Upload)
+       → Nach Stopp + Upload → Redirect /employee/walkthroughs/[walkthroughSessionId]
+            → Status-Polling-Page (Pipeline-Progress)
+```
+
+**Konsequenz fuer SLC-071-Code:**
+- Bestehender `/employee/capture/walkthrough/[capture_session_id]`-Pfad wird durch `/employee/walkthroughs/[walkthroughSessionId]/record` ersetzt.
+- `requestWalkthroughUpload(captureSessionId)` wird zu `requestWalkthroughUpload(walkthroughSessionId)` (capture_session existiert intern, ist nicht UI-User-facing).
+- `WalkthroughCapture.tsx` Komponente bleibt unveraendert in Funktionalitaet (MediaRecorder + Upload), nur Routing-Wrapping aendert sich.
+- AC-10/11/12 Browser-Smoke wird nach dem Routing-Fix durchziehbar — **unblock fuer SLC-071-Slice-Closing**.
+
+#### BL-086 Q-V5-F-Fix (Pflicht-Output)
+
+Status: open → bekommt durch dieses /architecture die Architektur-Entscheidung (`status='approved'` in DEC-Form + Code-Pfad-Skizze). Implementation gehoert in den ersten Option-2-Slice (`/slice-planning V5 Option 2` entscheidet final, ob das in einen re-scoped SLC-071 oder einen neuen SLC-PII-Foundation-Block gefasst wird). Bis Implementation bleibt SLC-071 Browser-Smoke pending.
+
+### AI-Pipeline Architektur
+
+#### Job-Handler-Struktur (Worker)
+
+Neue Files unter `src/workers/ai/`:
+
+- `walkthrough-redact-pii-worker.ts` — Job-Type `walkthrough_redact_pii`
+- `walkthrough-extract-steps-worker.ts` — Job-Type `walkthrough_extract_steps`
+- `walkthrough-map-subtopics-worker.ts` — Job-Type `walkthrough_map_subtopics`
+
+Alle drei Worker nutzen das bestehende Pattern (Polling-Loop, claim, run, mark complete/failed) und teilen sich Bedrock-Client + Cost-Ledger-Schreiben + error_log-Audit.
+
+Pipeline-Trigger-Logik in `confirm-walkthrough-pipeline-step.ts`:
+
+```typescript
+// Pseudocode — Worker-internal nach erfolgreichem Stufen-Abschluss
+async function advancePipeline(walkthroughSessionId: string) {
+  const ws = await getWalkthroughSession(walkthroughSessionId);
+  switch (ws.status) {
+    case 'transcribing':       // Whisper just finished
+      await setStatus(ws.id, 'redacting');
+      await enqueueAiJob('walkthrough_redact_pii', { walkthroughSessionId: ws.id });
+      break;
+    case 'redacting':
+      await setStatus(ws.id, 'extracting');
+      await enqueueAiJob('walkthrough_extract_steps', { walkthroughSessionId: ws.id });
+      break;
+    case 'extracting':
+      await setStatus(ws.id, 'mapping');
+      await enqueueAiJob('walkthrough_map_subtopics', { walkthroughSessionId: ws.id });
+      break;
+    case 'mapping':
+      await setStatus(ws.id, 'pending_review');
+      break;
+  }
+}
+```
+
+#### Stufe 1 — PII-Redaction (`walkthrough_redact_pii`)
+
+- **Input**: knowledge_unit mit source='walkthrough_transcript' und walkthrough_session_id.
+- **Prompt**: System-Prompt aus `src/lib/ai/prompts/walkthrough/pii_redact.ts` mit konservativen Pattern-Regeln (PII-Pattern-Library = system-wide constant in `src/lib/ai/pii-patterns/`, DEC-082).
+- **Output**: redacted-Text als neuer knowledge_unit mit source='walkthrough_transcript_redacted', evidence_refs={ original_kuId, walkthrough_session_id }, confidence='medium'.
+- **Audit**: Bedrock-Region eu-central-1, Modell-ID, Token-Count, Timestamp pro Run via existing ai_cost_ledger.
+
+#### Stufe 2 — Schritt-Extraktion (`walkthrough_extract_steps`)
+
+- **Input**: redacted-knowledge_unit + walkthrough_session-Metadaten.
+- **Prompt**: `src/lib/ai/prompts/walkthrough/step_extract.ts` mit Schritt-Strukturierungs-Schema (analog V2 SOP-Generation Pattern, FEAT-012).
+- **Output**: N walkthrough_step-Rows (action, responsible, timeframe, success_criterion, dependencies, transcript_snippet, transcript_offset_start/end). Worker setzt step_number=1..N in Reihenfolge der Extraction.
+- **Edge-Case**: Wenn N=0 (Walkthrough zu unstrukturiert): walkthrough_step bleibt leer, Pipeline geht trotzdem zu `mapping` → `pending_review` mit leerem Tree und Hinweis im UI.
+
+#### Stufe 3 — Auto-Mapping (`walkthrough_map_subtopics`) — Bridge-Engine-Pattern Reverse-Direction
+
+- **Input**: Alle walkthrough_step der Session + aktiver Template-JSON (Subtopic-Tree des Tenants).
+- **Pattern-Reuse FEAT-023 Bridge-Engine**: Bridge-Engine in V4 spawnt **vom Subtopic** ausgehend `capture_session`-Vorschlaege. V5 Option 2 invertiert: **vom walkthrough_step** ausgehend wird der passende Subtopic gemappt.
+- **Prompt**: `src/lib/ai/prompts/walkthrough/subtopic_map.ts` — Liste der Schritte + Subtopic-Tree als JSON, Aufgabe: pro Schritt einen Subtopic zuordnen oder "unmapped" markieren mit Confidence-Score 0..1.
+- **Output**: N walkthrough_review_mapping-Rows. Wenn Confidence >= `WALKTHROUGH_MAPPING_CONFIDENCE_THRESHOLD` (Default 0.7, ENV-Override DEC-084): subtopic_id gesetzt. Sonst: subtopic_id=NULL (Unmapped-Bucket).
+- **Audit**: confidence_score + mapping_reasoning persistiert pro Mapping.
+
+#### Pipeline-Failure-Handling
+
+- Pro Stufe: try/catch, bei Fehler `setStatus(ws.id, 'failed')` + error_log-Eintrag mit category='walkthrough_pipeline_failure', stage='redact_pii|extract_steps|map_subtopics'.
+- Cleanup-Cron `walkthrough-cleanup-daily` (V5-Foundation, erweitert): erkennt `status IN ('redacting','extracting','mapping') AND updated_at < NOW() - INTERVAL '1 hour'` und setzt `failed` (Recovery von Worker-Crash). Pattern aus IMP-156 Stale-Status-Recovery (Business-System).
+- Kein automatischer Retry in V5 Option 2 (DEC: Retry kommt in V5.x). Manueller Re-Trigger via Cron-Heuristik oder spaeter via Berater-UI.
+
+### Methodik-Review-UI Architektur (FEAT-040)
+
+#### Routen
+
+| Route | Rollen | Zweck |
+|-------|--------|-------|
+| `/admin/walkthroughs` | strategaize_admin | Cross-Tenant Pending-Liste (status='pending_review'), oldest-first, mit Subtopic-Mapping-Stats (mapped/unmapped Counts). |
+| `/admin/tenants/[id]/walkthroughs` | strategaize_admin + tenant_admin (own tenant) | Per-Tenant Pending-Liste. |
+| `/admin/walkthroughs/[id]` | strategaize_admin + tenant_admin (own tenant) | Methodik-Review-Detail: Subtopic-Tree + Unmapped-Bucket + Pflicht-Checkbox + Approve/Reject. |
+| `/employee/walkthroughs` | tenant_member, employee | Eigene Walkthroughs (Status sichtbar, kein Mapping-Edit). |
+| `/employee/walkthroughs/[id]` | tenant_member, employee | Eigener Walkthrough Status-Polling-Page. |
+
+#### Methodik-Review-View Komponenten
+
+```
+/admin/walkthroughs/[id] (page.tsx, Server Component)
+  ├─ <WalkthroughHeader walkthroughSession={ws} />              -- Metadaten (Aufnehmer, Dauer, Datum, Status)
+  ├─ <SubtopicTreeReview                                        -- Pattern-Reuse FEAT-023 BridgeReviewTree
+  │     template={template}
+  │     mappings={reviewMappings}
+  │     steps={walkthroughSteps}
+  │     onMove={moveStepMapping}
+  │     onEdit={editStep}
+  │     onDelete={softDeleteStep}
+  │   />
+  ├─ <UnmappedBucket                                            -- Schritte mit subtopic_id=NULL, Select-Move-Aktionen
+  │     steps={unmappedSteps}
+  │     mappings={unmappedMappings}
+  │     subtopicOptions={subtopicTreeFlat}
+  │     onMoveTo={moveStepMapping}
+  │   />
+  ├─ <RawTranscriptToggle                                       -- Optional Audit-Toggle (DEC-088)
+  │     walkthroughSessionId={ws.id}
+  │     onToggle={logRawTranscriptView}                         -- 1 error_log-Entry pro Toggle-Aktivierung
+  │   />
+  └─ <ApprovalForm                                              -- Pflicht-Checkbox + Approve/Reject + Note
+        onSubmit={approveOrRejectWalkthroughMethodology}
+      />
+```
+
+#### Move-Pattern (DEC-086 Select-Move)
+
+UI: pro Schritt Button "Verschieben" → Inline-Dropdown mit Subtopic-Liste (flat-tree). Klick = Server Action `moveWalkthroughStepMapping({ stepId, newSubtopicId | null })` → UPDATE walkthrough_review_mapping SET subtopic_id, reviewer_corrected=true, reviewer_user_id, reviewed_at, confidence_band recompute (GENERATED column macht das in DB).
+
+Keine HTML5 Drag-Drop in V5 — niedrigerer JS-Komplexitaets-Footprint, einfacher zu testen, Tastatur-tauglich.
+
+#### Confidence-Anzeige (DEC-087 Ampel)
+
+UI rendert pro Schritt eine farbige Pille:
+- gruen (`confidence_band='green'`, score >= 0.85): "hohe Konfidenz"
+- gelb (`confidence_band='yellow'`, 0.7 <= score < 0.85): "mittlere Konfidenz"
+- rot (`confidence_band='red'`, score < 0.7 oder unmapped): "Unmapped" / "niedrige Konfidenz"
+
+Numerischer Score sichtbar in Tooltip on-hover (debug + audit, kein primaerer UI-Pfad).
+
+#### Pflicht-Checkbox-Gate (Re-Validation DEC-077 → DEC-090)
+
+Approve-Form hat Checkbox: "Ich habe geprueft: keine kundenspezifischen oder sensitiven Inhalte in den extrahierten SOPs sichtbar". Approve-Button bleibt disabled bis Checkbox aktiv.
+
+Server Action `approveOrRejectWalkthroughMethodology({ walkthroughSessionId, decision, privacyCheckboxConfirmed, reviewerNote, rejectionReason })`:
+- decision='approved' verlangt privacyCheckboxConfirmed=true (HTTP 422 sonst).
+- decision='approved' verlangt walkthroughSession.status='pending_review'.
+- UPDATE walkthrough_session SET status='approved', reviewer_user_id, reviewed_at, privacy_checkbox_confirmed=true, reviewer_note.
+- decision='rejected': UPDATE walkthrough_session SET status='rejected', reviewer_user_id, reviewed_at, rejection_reason.
+- Audit-Log via error_log mit category='walkthrough_methodology_review'.
+
+#### Cockpit-Card "Pending Walkthroughs"
+
+Pattern-Reuse aus V4.1 SLC-042 block_review-Cockpit-Card. Zeigt Anzahl pending_review Walkthroughs pro Tenant + globaler Berater-Cross-Tenant-Sicht. Page-Refresh-only (kein Polling, DEC-060-Konsistenz).
+
+#### Roh-Transkript-Toggle (DEC-088 Audit)
+
+Optional fuer Edge-Cases (Berater zweifelt an Schritt-Extraktion, will Original-Transkript-Snippet sehen):
+- Toggle-Click setzt session-state "raw transcript visible" + sendet Server Action `logRawTranscriptView(walkthroughSessionId)` → INSERT error_log (category='walkthrough_raw_transcript_view', user_id, walkthrough_session_id, timestamp).
+- **Ein** Audit-Eintrag pro Toggle-Aktivierung, kein per-Snippet-Logging (DEC-088 erklaert: hinreichend fuer "wer hat wann was eingesehen", vermeidet Audit-Log-Spam).
+- Kein Toggle "Roh-Video anzeigen" in V5 — Roh-Video bleibt im Storage als Audit, kein UI-Pfad in V5 Option 2.
+
+### RLS-Modell Option 2
+
+#### `walkthrough_step` 4-Rollen-Matrix (3 Policies)
+
+| Rolle | SELECT | INSERT | UPDATE | DELETE |
+|-------|--------|--------|--------|--------|
+| `strategaize_admin` | alle Tenants | service_role only | alle Tenants | service_role only |
+| `tenant_admin` | nur eigener Tenant | service_role only | nur eigener Tenant (Edit + soft-delete via deleted_at) | service_role only |
+| `tenant_member` | nur eigene walkthrough_session | service_role only | nein | nein |
+| `employee` | nur eigene walkthrough_session | service_role only | nein | nein |
+
+```sql
+CREATE POLICY "walkthrough_step_select" ON walkthrough_step
+  FOR SELECT TO authenticated
+  USING (
+    auth.user_role() = 'strategaize_admin'
+    OR (
+      auth.user_role() = 'tenant_admin'
+      AND tenant_id = auth.user_tenant_id()
+    )
+    OR EXISTS (
+      SELECT 1 FROM walkthrough_session ws
+      WHERE ws.id = walkthrough_step.walkthrough_session_id
+        AND ws.recorded_by_user_id = auth.uid()
+    )
+  );
+
+-- INSERT: nur service_role (Worker schreibt). Keine Authenticated-Policy.
+-- UPDATE: tenant_admin (eigener Tenant) + strategaize_admin
+CREATE POLICY "walkthrough_step_update" ON walkthrough_step
+  FOR UPDATE TO authenticated
+  USING (
+    auth.user_role() = 'strategaize_admin'
+    OR (
+      auth.user_role() = 'tenant_admin'
+      AND tenant_id = auth.user_tenant_id()
+    )
+  )
+  WITH CHECK (
+    auth.user_role() = 'strategaize_admin'
+    OR (
+      auth.user_role() = 'tenant_admin'
+      AND tenant_id = auth.user_tenant_id()
+    )
+  );
+```
+
+#### `walkthrough_review_mapping` 4-Rollen-Matrix (3 Policies)
+
+| Rolle | SELECT | INSERT | UPDATE (Move) | DELETE |
+|-------|--------|--------|---------------|--------|
+| `strategaize_admin` | alle Tenants | service_role only | alle Tenants | service_role only |
+| `tenant_admin` | nur eigener Tenant | service_role only | nur eigener Tenant | service_role only |
+| `tenant_member` | nur eigene walkthrough_session | service_role only | nein | nein |
+| `employee` | nur eigene walkthrough_session | service_role only | nein | nein |
+
+Policy-Struktur identisch zu `walkthrough_step`, nur `tenant_id`-Filter angepasst.
+
+#### Test-Matrix Pflicht (Erweiterung SC-V5-5)
+
+Vitest-Integration-Test gegen Coolify-DB. **Neue 8 Faelle pro Tabelle** = 16 zusaetzliche Faelle:
+- 4 Rollen × (SELECT own / SELECT other / UPDATE own / UPDATE other) = 16 Faelle pro Tabelle.
+- Plus walkthrough_session bestehende 16 Faelle (V5-Foundation) = **48 RLS-Test-Faelle** insgesamt fuer V5 Option 2.
+- SAVEPOINT-Pattern fuer expected Permission-Denials (per `coolify-test-setup.md`).
+
+### Capture-Session-Modus-Registry-Update
+
+Bestehende Annahme V5-Foundation: Walkthrough wird als produktiver `capture_mode='walkthrough'` registriert, `walkthrough_stub` aus UI entfernt. Option 2 unveraendert — der Self-Spawn-Pattern (DEC-080) erzeugt capture_session-Rows mit demselben Mode.
+
+### Migrations-Plan Option 2 — MIG-032 (NEU, geplant)
+
+**MIG-032** buendelt drei additive Migrations zu V5 Option 2 (Detail in MIGRATIONS.md):
+
+- Migration 085 — `085_v5opt2_walkthrough_step.sql`: CREATE TABLE walkthrough_step + Indizes + RLS-Policies (3 Policies, 4-Rollen-Matrix).
+- Migration 086 — `086_v5opt2_walkthrough_review_mapping.sql`: CREATE TABLE walkthrough_review_mapping (mit GENERATED confidence_band Column) + Indizes + RLS-Policies.
+- Migration 087 — `087_v5opt2_status_and_source_extension.sql`: CHECK-Erweiterung walkthrough_session.status um 'redacting','extracting','mapping' + knowledge_unit.source um 'walkthrough_transcript_redacted'. Beide rein additive Werte, rueckwaerts-kompatibel.
+
+Alle 3 Migrations idempotent (CREATE TABLE IF NOT EXISTS / DROP CONSTRAINT IF EXISTS / CREATE POLICY IF NOT EXISTS).
+
+Apply per `sql-migration-hetzner.md` (base64-Pipe + `psql -U postgres` ueber Coolify-Container `supabase-db-bwkg80w04wgccos48gcws8cs-...`). MIG-032 wird im ersten Option-2-Backend-Slice deployed (final in /slice-planning).
+
+### V5 Option 2 Decisions (Cross-Reference)
+
+V5-Foundation bleibt:
+- **DEC-074..078** unveraendert accepted (kein supersede).
+- **DEC-077 Privacy-Checkbox** wandert vom Roh-Video-Approve-Pfad zum Methodik-Review-Approve-Pfad — Re-Validation in DEC-090.
+
+V5 Option 2 neu:
+- **DEC-080** — Capture-Entry-Point Self-Spawn-Pattern (Q-V5-F kritisch).
+- **DEC-081** — Bedrock Sonnet fuer alle 3 AI-Pipeline-Stufen, Haiku-Optimization deferred (Q-V5-G).
+- **DEC-082** — PII-Pattern-Library system-wide in `src/lib/ai/pii-patterns/`, kein per-Tenant in V5 (Q-V5-H).
+- **DEC-083** — Original + Redacted-Transkript beide als knowledge_unit-Eintrag (Q-V5-I).
+- **DEC-084** — Auto-Mapping-Confidence-Schwelle 0.7 als ENV-Default `WALKTHROUGH_MAPPING_CONFIDENCE_THRESHOLD` (Q-V5-J).
+- **DEC-085** — Unmapped-Bucket via `walkthrough_review_mapping.subtopic_id IS NULL`, kein separater Tabellen-Bucket (Q-V5-K).
+- **DEC-086** — Select-Move-Pattern fuer Mapping-Korrektur, kein Drag-Drop (Q-V5-L).
+- **DEC-087** — Confidence-Anzeige als Ampel (gruen/gelb/rot), numerisch nur in Tooltip (Q-V5-M).
+- **DEC-088** — Roh-Transkript-Toggle Audit nur Aktivierung loggen, kein per-Snippet (Q-V5-N).
+- **DEC-089** — Inherited-DEC-V5OPT2: V5-Scope-Aenderung anchored auf Strategaize-Dev-System DEC-079.
+- **DEC-090** — V5 Option 2 produziert approved walkthrough_step standalone, KU-Sichtbarkeit + Handbuch-Integration erst V5.1 (FEAT-038).
+- **DEC-091** — DEC-074..078 Re-Validation: alle accepted, DEC-077 Privacy-Checkbox-Pflicht wandert zum Methodik-Review-Approve.
+
+### Bridge-Engine-Pattern-Konsistenz (FEAT-023 Reverse-Direction)
+
+Stufe 3 Auto-Mapping nutzt das **Bridge-Engine-Pattern aus V4 FEAT-023 in Reverse-Direction**:
+
+| Aspekt | FEAT-023 Bridge-Engine (V4) | V5 Option 2 Auto-Mapping (Stufe 3) |
+|--------|------------------------------|-------------------------------------|
+| Richtung | Subtopic → spawn capture_session-Vorschlag | walkthrough_step → ordne Subtopic zu |
+| Input | GF-Blueprint-Output (KUs + Diagnose) + Template | walkthrough_step-Liste + Template-Subtopic-Tree |
+| Output | Liste vorgeschlagener Mitarbeiter-Aufgaben | walkthrough_review_mapping (step → subtopic_id mit Confidence) |
+| Berater-Gate | Review-UI (FEAT-023 Approve/Reject) | Methodik-Review-UI (FEAT-040 Move + Approve) |
+| Bedrock-Adapter | bedrock-client.ts | bedrock-client.ts (gleicher) |
+| Cost-Logging | ai_cost_ledger | ai_cost_ledger (gleicher) |
+
+**Kein Code-Drift erlaubt** (Pflicht-Constraint per RPT-170 + Memory-Anker): das Mapping-Worker muss dieselbe Bedrock-Adapter-Aufruf-Konvention, dieselben Audit-Felder, denselben Cost-Logging-Pfad nutzen wie die Bridge-Engine — nur die Prompt-Direction kehrt sich um.
+
+### Security / Privacy Option 2
+
+#### Pre-Approve-Sicht (R-V5-3 Privacy-Leak Mitigation, verstaerkt)
+
+- Roh-WebM ist NUR fuer `recorded_by_user_id` + `tenant_admin` (eigener Tenant) + `strategaize_admin` lesbar (V5-Foundation, unveraendert).
+- **Roh-Transkript** (knowledge_unit `source='walkthrough_transcript'`) folgt derselben RLS und ist im Berater-UI nur via expliziten Roh-Transkript-Toggle sichtbar (DEC-088 mit Audit-Log).
+- **Redacted-Transkript** (`source='walkthrough_transcript_redacted'`) ist die primaere Berater-Sicht — PII bereits Bedrock-redacted via Pattern-Library.
+- **walkthrough_step + walkthrough_review_mapping** sind die **eigentliche Berater-Sicht**: PII-frei, strukturiert, methodisch.
+- Kein Public-URL, kein Embed-Code, keine Cross-Tenant-Sichtbarkeit.
+
+#### PII-Pattern-Library (DEC-082)
+
+System-wide constant unter `src/lib/ai/pii-patterns/index.ts`:
+
+```typescript
+export const PII_PATTERNS = {
+  KUNDENNAME:    { placeholder: '[KUNDE]',  description: '...' },
+  EMAIL:         { placeholder: '[EMAIL]',  description: '...' },
+  IBAN:          { placeholder: '[IBAN]',   description: '...' },
+  TELEFON:       { placeholder: '[TEL]',    description: '...' },
+  PREIS_BETRAG:  { placeholder: '[BETRAG]', description: '...' },
+  INTERNE_ID:    { placeholder: '[ID]',     description: '...' },
+  INTERN_KOMM:   { placeholder: '[INTERN]', description: '...' },
+};
+```
+
+Pattern werden im Bedrock-Prompt als Beispiel-Liste mitgegeben, plus konservative Guidance "im Zweifel maskieren". Synthetische Test-Suite (90% Recall-Soll, SC-V5-6) lebt unter `src/lib/ai/pii-patterns/__tests__/`.
+
+#### DSGVO-Posture Option 2
+
+- Bedrock-Region `eu-central-1` (Frankfurt) fuer alle 3 AI-Stufen — DSGVO-konform.
+- Whisper unveraendert self-hosted (V2-Etabliertes-Pattern).
+- PII-Redaction reduziert sensitive Daten **vor** Berater-Sicht — Methodik-Output ist ohne Personenbezug nutzbar.
+- Pre-Production-Compliance-Gate (Anwaltspruefung + Azure-EU + ISSUE-042) bleibt aufgeschoben (Memory feedback_compliance_gate_later) — V5 Option 2 bleibt Internal-Test-Mode.
+
+### Constraints und Tradeoffs Option 2
+
+#### Constraint — Sequenzielle Pipeline (3 Failure-Points)
+
+3 Bedrock-Calls pro Walkthrough = 3 potentielle Failure-Points (R-V5-9). Mitigation: Cleanup-Cron mit Stale-Detection (>1h in `redacting/extracting/mapping` → `failed`), error_log pro Stufe, manueller Re-Trigger via Cron-Recovery. **Tradeoff bewusst**: Sequenz ist klarer als Parallelisierung (jeder Schritt baut auf dem Output des vorherigen auf — Stufe 2 braucht redacted-Text aus Stufe 1, Stufe 3 braucht walkthrough_step aus Stufe 2). Parallelisierung ist nicht moeglich.
+
+#### Constraint — Auto-Mapping-Qualitaet (R-V5-7)
+
+Bei unstrukturierten Walkthroughs koennten viele Schritte im Unmapped-Bucket landen. Mitigation: Confidence-Schwelle 0.7 (DEC-084) ist konservativ; Berater-Move-UI als Sicherheitsnetz; Test-Suite mit echten Walkthroughs vor V5-Release; ENV-Override erlaubt Tuning ohne Re-Deploy. **Tradeoff bewusst**: lieber zu viel Unmapped als falsch zugeordnet — Berater korrigiert Unmapped-Bucket schneller als Mis-Mapping erkennen.
+
+#### Constraint — Bedrock-Kosten (R-V5-8)
+
+~$0.045 pro Walkthrough (3 Sonnet-Passes a ~5k Tokens) × 100/Monat = $4.50. **Bagatelle.** Haiku-Optimization (DEC-081) deferred bis Volumen oder Latenz ein realer Faktor wird.
+
+#### Constraint — Kein Re-Processing
+
+V5 Option 2 produziert pro Walkthrough genau einen Pipeline-Run. Re-Processing (z.B. nach PII-Pattern-Update oder Subtopic-Tree-Aenderung) ist V5.x-Scope. **Tradeoff bewusst**: einfache Status-Maschine, keine Versionierung von Schritten/Mappings in V5.
+
+### Open Technical Questions Option 2
+
+Alle 9 Q-V5-F..N sind durch DEC-080..088 geklaert. **Keine offenen technischen Fragen** zur V5-Option-2-Architektur.
+
+### Recommended Implementation Direction
+
+#### Slice-Empfehlung (an /slice-planning V5 Option 2)
+
+PRD-Skizze (RPT-170 Tabelle, 7 Slices) bleibt nach Architektur-Pruefung tragfaehig. Architektur-bedingte Verfeinerung:
+
+| Slice | Scope (architektur-praezisiert) | Geschaetzt |
+|-------|----------------------------------|------------|
+| SLC-071 (re-validate) | Bestehender Code @ ebb3eaf bleibt verwertbar; **Self-Spawn-Pattern-Routing** (`/employee/walkthroughs` + `startWalkthroughSession` + Redirect) hinzu; AC-10/11/12 Browser-Smoke nachholen. **Slice-Status-Entscheidung in /slice-planning**: als-ist akzeptieren + Routing-Patch in Folge-Slice ODER als Sub-Task in re-scoped SLC-071-Foundation. | ~2-3 MTs (nur Routing-Patch + Smoke) |
+| SLC-072 (unveraendert) | Whisper-Worker `walkthrough_transcribe` aus V5-Foundation-Plan. Pipeline-Trigger erweitert: nach erfolgreichem Whisper auto-enqueue Stufe 1 (`walkthrough_redact_pii`). | ~5 MTs |
+| SLC-PII | Migration 087 (status+source-Erweiterung) + walkthrough_redact_pii Worker + PII-Pattern-Library + synthetische Test-Suite (≥90% Recall) + KU-Persistierung redacted | ~4-5 MTs |
+| SLC-EXT | Migration 085 (walkthrough_step) + walkthrough_extract_steps Worker + Schritt-Extraction-Prompt + walkthrough_step-Persistierung + Test mit ≥5 Test-Walkthroughs | ~4-5 MTs |
+| SLC-MAP | Migration 086 (walkthrough_review_mapping) + walkthrough_map_subtopics Worker + Mapping-Prompt + Bridge-Engine-Pattern-Reuse-Test (≥70% Schritte mit Confidence ≥0.7) | ~3-4 MTs |
+| SLC-REV | Methodik-Review-UI: 3 Routen + SubtopicTreeReview + UnmappedBucket + Move-Action + Approve-Form mit Pflicht-Checkbox + Cockpit-Card + RawTranscriptToggle mit Audit | ~6-7 MTs |
+| SLC-CLN | Capture-Mode-Registry-Update (`walkthrough` produktiv, `walkthrough_stub` aus UI) + 48-Faelle-RLS-Matrix (walkthrough_session 16 + walkthrough_step 16 + walkthrough_review_mapping 16) + Cleanup-Cron erweitert um Stale-Pipeline-Recovery + Lint/Build/Test-Gate | ~4-5 MTs |
+
+**Gesamt:** 7 Slices, ~28-34 MTs, geschaetzt **~5-6.5 Tage Implementation** (entspricht DEC-079-Aufwand).
+
+#### Sequencing
+
+1. **SLC-071-Routing-Patch zuerst** — Self-Spawn-Pattern + Browser-Smoke. Voraussetzung fuer alles weitere (sonst kein Capture-Eintritt fuer Mitarbeiter).
+2. **SLC-072 Whisper-Worker** — produziert Pipeline-Input. Voraussetzung fuer SLC-PII.
+3. **SLC-PII → SLC-EXT → SLC-MAP** strikt sequentiell — jede Stufe braucht Output der Vorherigen.
+4. **SLC-REV** kann parallel zu SLC-MAP laufen, sobald walkthrough_step + walkthrough_review_mapping-Schemas live (also nach SLC-EXT-Migration 085 + SLC-MAP-Migration 086).
+5. **SLC-CLN** als Letzter — Registry, Test-Matrix-Vollstaendigkeit, Cleanup-Erweiterung. Vor /final-check.
+
+#### Pflicht-Gates fuer V5 Option 2 Release
+
+- **SC-V5-5 RLS-Matrix gruen** (48 Faelle Vitest gegen Coolify-DB).
+- **SC-V5-6 PII-Redaction-Recall ≥90%** auf synthetischer Test-Suite.
+- **SC-V5-7 Auto-Mapping ≥70% Schritte** mit Confidence ≥0.7 zugeordnet (Test-Walkthroughs).
+- **SC-V5-1 Mitarbeiter-Self-Test**: Nicht-Tech-User-Smoke ueber gesamten Capture+Pipeline-Pfad (Permissions → Recording → Stopp → Upload → Pipeline-Wartezeit → Status pending_review erscheint im Berater-UI).
+- **SC-V5-4 Berater-Methodik-Review-Smoke** ueber alle 3 Admin-Routen (cross-tenant, per-tenant, detail) inkl. Move-Between-Subtopics + Approve mit/ohne Checkbox.
+- **SC-V5-8 Code-Quality**: 0 Lint-Errors, 0 Lint-Warnings, alle Vitest gruen, `npm audit --omit=dev` = 0 Vulns.
+
+### Naechster Schritt V5 Option 2
+
+`/slice-planning V5 Option 2` — die 7 Slice-Empfehlungen oben in finale Slice-Files zerlegen, MTs nummerieren, slices/INDEX.md updaten, Sequenz-Reihenfolge final festlegen, BL-085+086 + Status setzen. SLC-071-Slice-Closing-Entscheidung: als-ist akzeptieren mit nachgelagerten Routing-Patch als ersten Option-2-Slice ODER neu schneiden.
+
+V5.1 (`/architecture V5.1` offen, `/requirements V5.1` done und auf FEAT-038 geshrinkt) wird **nach** V5-Option-2-Release angegangen — V5.1 nutzt approved walkthrough_step als Input fuer Handbuch-Integration (DEC-090).

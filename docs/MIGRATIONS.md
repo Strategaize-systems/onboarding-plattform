@@ -429,3 +429,122 @@ Der uebernommene Blueprint-Stand ist noch nicht auf einer Onboarding-Plattform-I
   - **Idempotenz-Test:** alle 3 Migrations 2x appliziert → keine zusaetzlichen Aenderungen, nur RAISE NOTICE-Wiederholungen + DROP IF EXISTS-skip-Notices.
   - **RLS-Translation:** ARCHITECTURE.md V5-Sketch verwendet `(auth.jwt()->>'role')` + `tenant_user`-Tabelle (Pattern aus generischen Supabase-Tutorials). Onboarding-Plattform nutzt produktiv `auth.user_role()` + `auth.user_tenant_id()` Helper-Funktionen, die aus der `profiles`-Tabelle lesen (sql/functions.sql, etabliert seit V1). Migration uebersetzt Sketches auf das real verwendete Pattern. Architektur-Intent (4-Rollen-Matrix, Tenant-Isolation, Self-only fuer tenant_member/employee) ist identisch — nur die SQL-Syntax differiert. Dokumentiert in DEC-Eintraege bzw. Slice-Report fuer SLC-071.
 - Live-Deploy: offen (geplant fuer /backend SLC-071 nach User-Backup-Bestaetigung).
+
+### MIG-032 — V5 Option 2 Methodik-Schicht Schema (Migrations 085+086+087, geplant)
+- Date: 2026-05-06 (Architektur done, Apply geplant in /backend Option-2-Pipeline-Slices auf Hetzner Onboarding)
+- Scope: Drei additive Migrations fuer V5 Option 2 (Methodik-Schicht: PII-Redaction, Schritt-Extraktion, Auto-Mapping). Keine Aenderung an bestehenden Tabellen ausser additiver CHECK-Erweiterungen, die nur neue Werte zulassen.
+  - **Migration 085 — `085_v5opt2_walkthrough_step.sql`**: CREATE TABLE `walkthrough_step` (extracted SOP-Schritte aus Stage 2). FKs: tenant_id → tenants ON DELETE CASCADE, walkthrough_session_id → walkthrough_session ON DELETE CASCADE, edited_by_user_id → auth.users. UNIQUE (walkthrough_session_id, step_number). Soft-Delete via deleted_at. 2 Indizes (session+step_number partial WHERE deleted_at IS NULL, tenant). RLS aktivieren. 3 Policies: SELECT (4-Rollen wie walkthrough_session), UPDATE (strategaize_admin + tenant_admin eigener Tenant), kein DELETE (soft-delete). INSERT-Policy bewusst weggelassen — Worker schreibt via service_role (BYPASSRLS).
+  - **Migration 086 — `086_v5opt2_walkthrough_review_mapping.sql`**: CREATE TABLE `walkthrough_review_mapping` (Stage 3 Output + Berater-Korrektur). FKs: tenant_id → tenants ON DELETE CASCADE, walkthrough_step_id → walkthrough_step ON DELETE CASCADE (UNIQUE), template_id → template (eingefroren via template_version), reviewer_user_id → auth.users. GENERATED-Column `confidence_band` (gruen/gelb/rot per DEC-087). 2 Partial Indizes (mapped, unmapped). RLS aktivieren. 3 Policies: SELECT, UPDATE (Move) — gleiche 4-Rollen-Matrix wie walkthrough_step. CHECK confidence_score BETWEEN 0 AND 1.
+  - **Migration 087 — `087_v5opt2_status_and_source_extension.sql`**: CHECK-Erweiterung `walkthrough_session.status` um `'redacting'`, `'extracting'`, `'mapping'` (Pipeline-Stufen). CHECK-Erweiterung `knowledge_unit.source` um `'walkthrough_transcript_redacted'`. Beide rein additive Werte, rueckwaerts-kompatibel — bestehende Rows bleiben gueltig.
+- Reason: V5 Option 2 (DEC-079, DEC-089-anchored auf Strategaize-Dev-System) erfordert eine 3-stufige asynchrone AI-Pipeline (DEC-080..088) zwischen Whisper-Transkription und Berater-Methodik-Review. Drei neue Worker-Job-Handler schreiben in zwei neue Tabellen + erweitern Status-Maschine. Das Schema ist greenfield (keine Backfill-Notwendigkeit, keine Drift-Risiken zu V5-Foundation). Splitting in 3 Files erlaubt unabhaengiges Rollback (Step-Tabelle vs. Mapping-Tabelle vs. CHECK-Erweiterung).
+- Affected Areas:
+  - Neue Tabelle `public.walkthrough_step` mit RLS aktiviert
+  - Neue Tabelle `public.walkthrough_review_mapping` mit RLS aktiviert + GENERATED Column
+  - `public.walkthrough_session.status` CHECK erweitert um 3 Pipeline-Stufen
+  - `public.knowledge_unit.source` CHECK erweitert um Redacted-Transkript-Quelle
+  - Worker-Code: drei neue Job-Handler `walkthrough_redact_pii`, `walkthrough_extract_steps`, `walkthrough_map_subtopics` (kein DDL, App-Code in Option-2-Slices)
+  - Routing-Code: neue Server Action `startWalkthroughSession` (DEC-080 Self-Spawn), neue Server Actions fuer Methodik-Review (Edit/Move/Approve)
+  - RLS-Test-Matrix erweitert um beide neue Tabellen (4 Rollen × 4 Operationen × 2 Tabellen = 32 zusaetzliche Faelle, plus walkthrough_session 16 = 48 Faelle gesamt fuer V5 Option 2)
+- Risk: Niedrig. Migration 085+086 sind Greenfield-Tabellen (keine Backfill, keine FK-Konflikte mit bestehenden Daten). Migration 087 ist additive CHECK-Erweiterung (rueckwaerts-kompatibel). Apply-Pattern ist Standard `sql-migration-hetzner.md` (base64-Pipe + `psql -U postgres` ueber Coolify-Container). Pre-Apply-Pflicht: keine — additive Strukturen, aber Pre-Apply-Backup ist User-Standard. Risiko-Faktor minimal: GENERATED Column auf Postgres 15+ supported, kein Funktion-Drift gegenueber V1+ Helper-Funktionen `auth.user_role()` + `auth.user_tenant_id()`.
+- Rollback Notes:
+  - **085 Rollback**: `DROP TABLE IF EXISTS public.walkthrough_step CASCADE;` (CASCADE entfernt FKs aus walkthrough_review_mapping).
+  - **086 Rollback**: `DROP TABLE IF EXISTS public.walkthrough_review_mapping CASCADE;`.
+  - **087 Rollback**: `ALTER TABLE walkthrough_session DROP CONSTRAINT walkthrough_session_status_check; ALTER TABLE walkthrough_session ADD CONSTRAINT walkthrough_session_status_check CHECK (status IN ('recording','uploading','uploaded','transcribing','pending_review','approved','rejected','failed'));` (gleichermassen fuer knowledge_unit_source_check ohne `'walkthrough_transcript_redacted'`). Voraussetzung: keine `walkthrough_session` mit status IN ('redacting','extracting','mapping') und keine `knowledge_unit` mit source='walkthrough_transcript_redacted' existiert.
+  - Rollback-Reihenfolge bei Komplett-Revert: 1. App-Image revert auf pre-V5-Option-2 (Worker-Job-Handler ignorieren neue Job-Types). 2. Coolify-Worker pausieren. 3. Pending ai_jobs mit den 3 neuen Job-Types canceln. 4. SQL-Rollback in Reihenfolge 086 → 085 → 087.
+- Format-Skizze (final in /backend Option-2-Pipeline-Slices, MT-1 jeder Migration):
+  ```sql
+  -- 085_v5opt2_walkthrough_step.sql (idempotent via IF NOT EXISTS)
+  CREATE TABLE IF NOT EXISTS public.walkthrough_step (
+    id                          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id                   uuid        NOT NULL REFERENCES public.tenants ON DELETE CASCADE,
+    walkthrough_session_id      uuid        NOT NULL REFERENCES public.walkthrough_session ON DELETE CASCADE,
+    step_number                 integer     NOT NULL CHECK (step_number >= 1),
+    action                      text        NOT NULL,
+    responsible                 text,
+    timeframe                   text,
+    success_criterion           text,
+    dependencies                text,
+    transcript_snippet          text,
+    transcript_offset_start     integer,
+    transcript_offset_end       integer,
+    edited_by_user_id           uuid        REFERENCES auth.users,
+    edited_at                   timestamptz,
+    deleted_at                  timestamptz,
+    created_at                  timestamptz NOT NULL DEFAULT now(),
+    updated_at                  timestamptz NOT NULL DEFAULT now(),
+    UNIQUE (walkthrough_session_id, step_number)
+  );
+  CREATE INDEX IF NOT EXISTS idx_walkthrough_step_session
+    ON public.walkthrough_step(walkthrough_session_id, step_number)
+    WHERE deleted_at IS NULL;
+  CREATE INDEX IF NOT EXISTS idx_walkthrough_step_tenant
+    ON public.walkthrough_step(tenant_id);
+  ALTER TABLE public.walkthrough_step ENABLE ROW LEVEL SECURITY;
+  -- SELECT-Policy: 4-Rollen-Matrix (RLS-Translation siehe MIG-031, gleiche Helper-Funktionen)
+  -- UPDATE-Policy: strategaize_admin + tenant_admin (eigener Tenant)
+  -- KEIN INSERT-Policy: Worker schreibt via service_role
+  GRANT SELECT, UPDATE ON public.walkthrough_step TO authenticated;
+  GRANT ALL ON public.walkthrough_step TO service_role;
+  CREATE TRIGGER trg_walkthrough_step_set_updated_at
+    BEFORE UPDATE ON public.walkthrough_step
+    FOR EACH ROW EXECUTE FUNCTION public._set_updated_at();
+  ```
+  ```sql
+  -- 086_v5opt2_walkthrough_review_mapping.sql (idempotent via IF NOT EXISTS)
+  CREATE TABLE IF NOT EXISTS public.walkthrough_review_mapping (
+    id                          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id                   uuid        NOT NULL REFERENCES public.tenants ON DELETE CASCADE,
+    walkthrough_step_id         uuid        NOT NULL UNIQUE REFERENCES public.walkthrough_step ON DELETE CASCADE,
+    template_id                 uuid        NOT NULL REFERENCES public.template,
+    template_version            text        NOT NULL,
+    subtopic_id                 text,
+    confidence_score            numeric(3,2) CHECK (confidence_score IS NULL OR (confidence_score >= 0 AND confidence_score <= 1)),
+    confidence_band             text        GENERATED ALWAYS AS (
+                                  CASE
+                                    WHEN subtopic_id IS NULL THEN 'red'
+                                    WHEN confidence_score >= 0.85 THEN 'green'
+                                    WHEN confidence_score >= 0.70 THEN 'yellow'
+                                    ELSE 'red'
+                                  END
+                                ) STORED,
+    mapping_model               text,
+    mapping_reasoning           text,
+    reviewer_corrected          boolean     NOT NULL DEFAULT false,
+    reviewer_user_id            uuid        REFERENCES auth.users,
+    reviewed_at                 timestamptz,
+    created_at                  timestamptz NOT NULL DEFAULT now(),
+    updated_at                  timestamptz NOT NULL DEFAULT now()
+  );
+  CREATE INDEX IF NOT EXISTS idx_wkrm_session_subtopic
+    ON public.walkthrough_review_mapping(walkthrough_step_id, subtopic_id);
+  CREATE INDEX IF NOT EXISTS idx_wkrm_unmapped
+    ON public.walkthrough_review_mapping(tenant_id, walkthrough_step_id)
+    WHERE subtopic_id IS NULL;
+  ALTER TABLE public.walkthrough_review_mapping ENABLE ROW LEVEL SECURITY;
+  -- SELECT + UPDATE Policies (gleiche Matrix wie walkthrough_step)
+  GRANT SELECT, UPDATE ON public.walkthrough_review_mapping TO authenticated;
+  GRANT ALL ON public.walkthrough_review_mapping TO service_role;
+  ```
+  ```sql
+  -- 087_v5opt2_status_and_source_extension.sql (idempotent via DROP CONSTRAINT IF EXISTS)
+  ALTER TABLE public.walkthrough_session
+    DROP CONSTRAINT IF EXISTS walkthrough_session_status_check;
+  ALTER TABLE public.walkthrough_session
+    ADD CONSTRAINT walkthrough_session_status_check
+    CHECK (status IN (
+      'recording','uploading','uploaded','transcribing',
+      'redacting','extracting','mapping',
+      'pending_review','approved','rejected','failed'
+    ));
+  ALTER TABLE public.knowledge_unit
+    DROP CONSTRAINT IF EXISTS knowledge_unit_source_check;
+  ALTER TABLE public.knowledge_unit
+    ADD CONSTRAINT knowledge_unit_source_check
+    CHECK (source IN (
+      'questionnaire','exception','ai_draft','meeting_final','manual',
+      'evidence','dialogue','employee_questionnaire',
+      'walkthrough_transcript','walkthrough_transcript_redacted'
+    ));
+  ```
+  Apply per `sql-migration-hetzner.md`-Pattern in Option-2-Pipeline-Slices (final in /slice-planning, vermutlich SLC-PII fuer 087, SLC-EXT fuer 085, SLC-MAP fuer 086 — oder gebuendelt in Option-2-Foundation-Slice). Verifikation: `\d walkthrough_step` zeigt 18 Columns + 3 Policies + 2 Indizes + Trigger, `\d walkthrough_review_mapping` zeigt GENERATED-Column + 2 Indizes + 2 Policies, `pg_get_constraintdef` zeigt erweiterte CHECK auf walkthrough_session.status (11 Werte) und knowledge_unit.source (10 Werte).
+- Live-Deploy: offen (geplant fuer Option-2-Pipeline-Slices nach Slice-Planning).
