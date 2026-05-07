@@ -83,7 +83,7 @@ export const FIXTURE_REKLAMATION: WalkthroughFixture = {
   expectedActionPatterns: [
     /(Reklamation|aufnehm|aufnehmen)/i,
     /(Doku|Fehler-Doku|dokument)/i,
-    /(Lager|pruef|vorraet)/i,
+    /(Lager|pruef|pr[uü]f|vorraet|verf[uü]gbar|verfueg)/i,
     /(Versand|verschick|liefer)/i,
   ],
   mockBedrockOutput: JSON.stringify([
