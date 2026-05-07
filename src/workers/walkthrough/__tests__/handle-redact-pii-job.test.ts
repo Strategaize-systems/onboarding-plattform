@@ -52,6 +52,7 @@ interface MockState {
   inserts: InsertRecord[];
   kuInsertError: Error | null;
   jobInsertError: Error | null;
+  costInsertError: { message: string; code?: string } | null;
   rpcCalls: { name: string; args: Record<string, unknown> }[];
   rpcError: Error | null;
   bedrockResult: string;
@@ -71,6 +72,7 @@ const state: MockState = {
   inserts: [],
   kuInsertError: null,
   jobInsertError: null,
+  costInsertError: null,
   rpcCalls: [],
   rpcError: null,
   bedrockResult: "",
@@ -146,10 +148,12 @@ function makeAdminClient() {
               },
             };
           }
-          // ai_cost_ledger oder andere Inserts ohne select chain (fire-and-forget)
+          // ai_cost_ledger: Promise<{ error: null | { message, code? } }> ohne .select chain
           return {
-            then(onFulfilled: (v: { error: null }) => unknown) {
-              return Promise.resolve({ error: null }).then(onFulfilled);
+            then(
+              onFulfilled: (v: { error: { message: string; code?: string } | null }) => unknown,
+            ) {
+              return Promise.resolve({ error: state.costInsertError }).then(onFulfilled);
             },
           };
         },
@@ -230,6 +234,7 @@ beforeEach(() => {
   state.inserts = [];
   state.kuInsertError = null;
   state.jobInsertError = null;
+  state.costInsertError = null;
   state.rpcCalls = [];
   state.rpcError = null;
   state.bedrockResult =
@@ -299,6 +304,25 @@ describe("handleRedactPiiJob — happy path", () => {
     );
 
     // 5. ai_job complete via RPC
+    expect(state.rpcCalls).toEqual([
+      { name: "rpc_complete_ai_job", args: { p_job_id: JOB_ID } },
+    ]);
+  });
+
+  it("captures a warning but completes successfully when ai_cost_ledger INSERT fails", async () => {
+    state.costInsertError = { message: "violates check constraint", code: "23514" };
+
+    await handleRedactPiiJob(makeJob());
+
+    // Warning logged
+    expect(state.capturedWarnings.some((w) => w.message.includes("ai_cost_ledger"))).toBe(true);
+    // KU + ai_job INSERTs liefen trotzdem durch
+    expect(state.inserts.some((i) => i.table === "knowledge_unit")).toBe(true);
+    expect(state.inserts.some((i) => i.table === "ai_jobs")).toBe(true);
+    // Pipeline-Trigger feuerte
+    const sessionUpdates = state.updates.filter((u) => u.table === "walkthrough_session");
+    expect(sessionUpdates.map((u) => u.patch.status)).toEqual(["extracting"]);
+    // Job complete
     expect(state.rpcCalls).toEqual([
       { name: "rpc_complete_ai_job", args: { p_job_id: JOB_ID } },
     ]);

@@ -190,7 +190,11 @@ export async function handleRedactPiiJob(job: ClaimedJob): Promise<void> {
       estimatedInputTokens * COST_PER_INPUT_TOKEN +
       estimatedOutputTokens * COST_PER_OUTPUT_TOKEN;
 
-    await adminClient.from("ai_cost_ledger").insert({
+    // Cost-Logging: error-Handling explizit, damit ein CHECK-Fehler oder RLS-Fehler nicht silent
+    // verschluckt wird (RPT-183 — pre-MIG-088 schluckte der INSERT mit role='walkthrough_pii_redactor'
+    // den CHECK-Violation-Error). Cost-Tracking ist nice-to-have, KEIN Pipeline-Blocker — wir loggen
+    // das Problem, lassen aber den restlichen Erfolgspfad weiterlaufen.
+    const { error: costError } = await adminClient.from("ai_cost_ledger").insert({
       tenant_id: session.tenant_id,
       job_id: job.id,
       model_id: MODEL_ID,
@@ -201,6 +205,19 @@ export async function handleRedactPiiJob(job: ClaimedJob): Promise<void> {
       role: "walkthrough_pii_redactor",
       feature: "walkthrough_pii_redaction",
     });
+    if (costError) {
+      captureWarning(
+        `walkthrough_redact_pii: ai_cost_ledger INSERT failed (non-fatal): ${costError.message}`,
+        {
+          source: LOG_SOURCE,
+          metadata: {
+            jobId: job.id,
+            walkthroughSessionId: sessionId,
+            costErrorCode: (costError as { code?: string }).code,
+          },
+        },
+      );
+    }
 
     // 7. Pipeline-Trigger: redacting → extracting + enqueue walkthrough_extract_steps
     //    Stufe-2-Handler kommt mit SLC-077; bis dahin bleibt der enqueueed Job pending.
