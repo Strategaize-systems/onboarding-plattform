@@ -14,6 +14,7 @@ import { handleExtractionJob } from "../dialogue/handle-extraction-job";
 import { handleBridgeJob } from "../bridge/handle-bridge-job";
 import { handleWalkthroughStubJob } from "../capture-modes/walkthrough-stub/handle";
 import { handleHandbookSnapshotJob } from "../handbook/handle-snapshot-job";
+import { handleWalkthroughTranscribeJob } from "../walkthrough/handle-transcribe-job";
 
 // Validate required environment variables
 const REQUIRED_ENV = [
@@ -68,6 +69,7 @@ async function main(): Promise<void> {
   console.log("[worker] Knowledge Unit Condensation Worker starting...");
   console.log("[worker] walkthrough_stub handler registered");
   console.log("[worker] handbook_snapshot_generation handler registered");
+  console.log("[worker] walkthrough_transcribe handler registered");
   validateEnv();
   setupShutdown();
 
@@ -82,7 +84,8 @@ async function main(): Promise<void> {
     handleExtractionJob,
     (job) => handleBridgeJob(job),
     handleWalkthroughStubJob,
-    handleHandbookSnapshotJob
+    handleHandbookSnapshotJob,
+    handleWalkthroughTranscribeJob
   );
 }
 
