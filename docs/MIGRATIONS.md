@@ -435,6 +435,7 @@ Der uebernommene Blueprint-Stand ist noch nicht auf einer Onboarding-Plattform-I
 
 #### Live-Status pro Migration
 - **Migration 087 — LIVE 2026-05-07** auf Hetzner Onboarding (159.69.207.29). Container `supabase-db-bwkg80w04wgccos48gcws8cs-082801990676` (zum Zeitpunkt des Apply; Suffix wandert nach Coolify-Redeploys). Apply via base64-Pipe + `psql -U postgres` (sql-migration-hetzner.md). Pre-Apply-Backup: pg_get_constraintdef-Snapshot vor Apply (8 status-Werte + 9 source-Werte). Post-Apply: 11 status-Werte + 10 source-Werte verifiziert. Idempotent: Re-Apply mittels DROP IF EXISTS + ADD CONSTRAINT akzeptiert wiederholte Laeufe ohne Drift.
+- **Migration 088 — LIVE 2026-05-07** (SLC-076 /qa Hotfix nach RPT-183, /qa entdeckte 0 ai_cost_ledger-Eintraege bei 4 PII-Smokes). `ai_cost_ledger.role` CHECK erweitert um drei V5-Option-2-Pipeline-Roles (`walkthrough_pii_redactor`, `walkthrough_step_extractor`, `walkthrough_subtopic_mapper`). Apply identisch zu 087 (base64-Pipe + `psql -U postgres`). Post-Apply: 14 Roles verifiziert. SLC-077 + SLC-078 koennen Cost-Tracking ohne weitere Migration nutzen.
 - **Migration 085** — geplant fuer SLC-077 MT-1 (walkthrough_step + RLS).
 - **Migration 086** — geplant fuer SLC-078 MT-1 (walkthrough_review_mapping + GENERATED Column + RLS).
 
