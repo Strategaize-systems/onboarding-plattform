@@ -15,11 +15,11 @@
 //   /tmp/<id>.webm wird nach jedem Pfad (success+failure) entfernt.
 //   extractAudioBuffer kapselt eigenes /tmp-Cleanup fuer das WAV.
 //
-// V5 Option 2 Pipeline-Trigger (SLC-076 MT-5):
-//   Am Ende des Erfolgspfads ruft ein optionaler Pipeline-Trigger
-//   advanceWalkthroughPipeline(sessionId), der status auf 'redacting' setzt
-//   und einen ai_jobs-Eintrag fuer walkthrough_redact_pii erzeugt. Solange
-//   SLC-076 nicht geliefert ist, bleibt es bei 'pending_review'.
+// V5 Option 2 Pipeline-Trigger (SLC-076 MT-5, deployed):
+//   Am Ende des Erfolgspfads ruft advanceWalkthroughPipeline(sessionId).
+//   Es setzt status 'transcribing' → 'redacting' und erzeugt einen ai_jobs-Eintrag
+//   fuer walkthrough_redact_pii. Status 'pending_review' wird erst nach Stufe 3
+//   (Auto-Mapping, SLC-078) erreicht.
 
 import { writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -29,6 +29,7 @@ import { createAdminClient } from "../../lib/supabase/admin";
 import { getWhisperProvider } from "../../lib/ai/whisper/factory";
 import { extractAudioBuffer } from "../dialogue/audio-extract";
 import { captureException, captureInfo, captureWarning } from "../../lib/logger";
+import { advanceWalkthroughPipeline } from "../../lib/walkthrough/pipeline-trigger";
 import type { ClaimedJob } from "../condensation/claim-loop";
 
 interface WalkthroughTranscribePayload {
@@ -198,21 +199,24 @@ export async function handleWalkthroughTranscribeJob(
       );
     }
 
-    // 8. Status='pending_review' + transcript metadata.
-    const { error: doneError } = await adminClient
+    // 8a. Persist transcript metadata. Status-Wechsel uebernimmt der Pipeline-Trigger (Schritt 8b).
+    const { error: metaError } = await adminClient
       .from("walkthrough_session")
       .update({
-        status: "pending_review",
         transcript_completed_at: new Date().toISOString(),
         transcript_model: WHISPER_MODEL,
         transcript_knowledge_unit_id: kuRow.id,
       })
       .eq("id", sessionId);
-    if (doneError) {
+    if (metaError) {
       throw new Error(
-        `walkthrough_transcribe: status='pending_review' UPDATE failed: ${doneError.message}`
+        `walkthrough_transcribe: transcript metadata UPDATE failed: ${metaError.message}`
       );
     }
+
+    // 8b. Pipeline-Trigger (V5 Option 2 SLC-076 MT-5):
+    //     transcribing → redacting + enqueue walkthrough_redact_pii.
+    const advance = await advanceWalkthroughPipeline(adminClient, sessionId);
 
     // 9. Mark ai_job complete.
     const { error: completeError } = await adminClient.rpc(
@@ -228,7 +232,9 @@ export async function handleWalkthroughTranscribeJob(
     captureInfo(
       `walkthrough_transcribe: session=${sessionId} done in ${
         Date.now() - startMs
-      }ms (transcript=${transcriptText.length} chars, audio≈${durationSeconds}s)`,
+      }ms (transcript=${transcriptText.length} chars, audio≈${durationSeconds}s, status ${
+        advance.fromStatus
+      } → ${advance.toStatus}, next-job=${advance.enqueuedJobType ?? "none"})`,
       {
         source: LOG_SOURCE,
         metadata: {
@@ -236,6 +242,9 @@ export async function handleWalkthroughTranscribeJob(
           walkthroughSessionId: sessionId,
           transcriptChars: transcriptText.length,
           audioSeconds: durationSeconds,
+          nextStatus: advance.toStatus,
+          enqueuedJobType: advance.enqueuedJobType,
+          enqueuedJobId: advance.enqueuedJobId,
         },
       }
     );

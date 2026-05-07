@@ -52,6 +52,8 @@ interface MockState {
   capturedExceptions: { error: unknown; metadata: unknown }[];
   capturedWarnings: { message: string; metadata: unknown }[];
   capturedInfos: { message: string; metadata: unknown }[];
+  advanceCalls: { walkthroughSessionId: string }[];
+  advanceError: Error | null;
 }
 
 const state: MockState = {
@@ -74,6 +76,8 @@ const state: MockState = {
   capturedExceptions: [],
   capturedWarnings: [],
   capturedInfos: [],
+  advanceCalls: [],
+  advanceError: null,
 };
 
 function makeAdminClient() {
@@ -183,6 +187,19 @@ vi.mock("../../../lib/logger", () => ({
   },
 }));
 
+vi.mock("../../../lib/walkthrough/pipeline-trigger", () => ({
+  async advanceWalkthroughPipeline(_admin: unknown, walkthroughSessionId: string) {
+    state.advanceCalls.push({ walkthroughSessionId });
+    if (state.advanceError) throw state.advanceError;
+    return {
+      fromStatus: "transcribing",
+      toStatus: "redacting",
+      enqueuedJobType: "walkthrough_redact_pii",
+      enqueuedJobId: "99999999-9999-9999-9999-999999999999",
+    };
+  },
+}));
+
 // Import AFTER mocks so the handler picks the mocked modules up.
 const { handleWalkthroughTranscribeJob } = await import(
   "../handle-transcribe-job"
@@ -235,6 +252,8 @@ beforeEach(() => {
   state.capturedExceptions = [];
   state.capturedWarnings = [];
   state.capturedInfos = [];
+  state.advanceCalls = [];
+  state.advanceError = null;
 });
 
 // ---------------------------------------------------------------------------
@@ -242,16 +261,18 @@ beforeEach(() => {
 // ---------------------------------------------------------------------------
 
 describe("handleWalkthroughTranscribeJob — happy path", () => {
-  it("flips status uploaded → transcribing → pending_review and inserts a knowledge_unit", async () => {
+  it("flips status uploaded → transcribing, persists transcript metadata, and triggers PII pipeline", async () => {
     await handleWalkthroughTranscribeJob(makeJob());
 
     const sessionUpdates = state.updates.filter(
       (u) => u.table === "walkthrough_session"
     );
+    // Worker selbst macht 2 UPDATEs: status='transcribing' (Start), transcript metadata (ohne status).
+    // Der Status-Wechsel auf 'redacting' liegt im gemockten advanceWalkthroughPipeline.
     expect(sessionUpdates).toHaveLength(2);
     expect(sessionUpdates[0].patch.status).toBe("transcribing");
     expect(sessionUpdates[0].patch).toHaveProperty("transcript_started_at");
-    expect(sessionUpdates[1].patch.status).toBe("pending_review");
+    expect(sessionUpdates[1].patch).not.toHaveProperty("status");
     expect(sessionUpdates[1].patch.transcript_model).toBe("whisper-medium");
     expect(sessionUpdates[1].patch.transcript_knowledge_unit_id).toBe(
       "66666666-6666-6666-6666-666666666666"
@@ -260,6 +281,11 @@ describe("handleWalkthroughTranscribeJob — happy path", () => {
 
     expect(state.audioExtractCalls).toBe(1);
     expect(state.whisperCalls).toBe(1);
+
+    // Pipeline-Trigger wird mit der session-id aufgerufen (V5 Option 2 SLC-076 MT-5).
+    expect(state.advanceCalls).toEqual([
+      { walkthroughSessionId: "11111111-1111-1111-1111-111111111111" },
+    ]);
 
     const kuInsert = state.inserts.find((i) => i.table === "knowledge_unit");
     expect(kuInsert).toBeDefined();
