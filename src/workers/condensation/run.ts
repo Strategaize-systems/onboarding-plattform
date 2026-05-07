@@ -16,6 +16,7 @@ import { handleWalkthroughStubJob } from "../capture-modes/walkthrough-stub/hand
 import { handleHandbookSnapshotJob } from "../handbook/handle-snapshot-job";
 import { handleWalkthroughTranscribeJob } from "../walkthrough/handle-transcribe-job";
 import { handleRedactPiiJob } from "../walkthrough/handle-redact-pii-job";
+import { handleExtractStepsJob } from "../walkthrough/handle-extract-steps-job";
 
 // Validate required environment variables
 const REQUIRED_ENV = [
@@ -72,6 +73,7 @@ async function main(): Promise<void> {
   console.log("[worker] handbook_snapshot_generation handler registered");
   console.log("[worker] walkthrough_transcribe handler registered");
   console.log("[worker] walkthrough_redact_pii handler registered");
+  console.log("[worker] walkthrough_extract_steps handler registered");
   validateEnv();
   setupShutdown();
 
@@ -88,7 +90,8 @@ async function main(): Promise<void> {
     handleWalkthroughStubJob,
     handleHandbookSnapshotJob,
     handleWalkthroughTranscribeJob,
-    handleRedactPiiJob
+    handleRedactPiiJob,
+    handleExtractStepsJob
   );
 }
 
