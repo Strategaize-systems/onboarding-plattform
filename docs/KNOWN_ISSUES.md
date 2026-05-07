@@ -1,5 +1,13 @@
 # Known Issues
 
+### ISSUE-039 — Status-Page 404 nach Upload — failure_reason Spaltennamen-Mismatch (SLC-071-Pre-Existing)
+- Status: resolved
+- Severity: High
+- Area: V5 Option 2 / SLC-071 Status-Polling-Page / Schema-Mismatch
+- Summary: Nach erfolgreicher Aufnahme + Upload landeten Mitarbeiter auf `/employee/walkthroughs/<id>` mit HTTP 404. Pre-existierender SLC-071-MT-7-Bug, nicht durch SLC-075 eingefuehrt: `WalkthroughStatusPage` und `/api/walkthroughs/[id]/status` selektieren `failure_reason`, die Tabelle (Migration 083) hat aber `rejection_reason`. PostgREST gibt einen Spalten-Fehler zurueck → `error || !row` triggered `notFound()`. Der Bug wurde nie entdeckt, weil keiner die Status-Page ueber den Upload-Pfad erreichen konnte (Q-V5-F-Block + die SLC-075 Hairpin/Kong/MIME-Bugs blockten alles).
+- Impact: AC-12-Status-Anzeige nach Upload broken — User sieht 404 obwohl walkthrough_session erfolgreich uploaded ist (Live-DB-Test bestaetigt: `33ea58be-81b0-4f1e-9860-9ab57a40a5d1` status='uploaded' duration_sec=13 file_size=2974051).
+- Resolution: Hotfix 2026-05-07 in `/doctor SLC-075` Round 4 (RPT-178). Drei Files mit `failure_reason` -> `rejection_reason` umbenannt: `src/app/employee/walkthroughs/[id]/page.tsx` (Server-Component-SELECT + initial-Prop-Mapping), `src/app/api/walkthroughs/[id]/status/route.ts` (Polling-Endpoint), `src/components/capture-modes/walkthrough/WalkthroughStatusPolling.tsx` (Interface + UI-Render). 0 Test-Aenderungen — pure-logic-Tests in walkthrough-capture-logic.ts unbetroffen.
+
 ### ISSUE-038 — Walkthrough-Upload HTTP 415 invalid_mime_type (codec-Suffix vs Bucket-Filter)
 - Status: resolved
 - Severity: High

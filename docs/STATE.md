@@ -10,8 +10,8 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: **V5 Option 2 SLC-075 /doctor Round 3 done 2026-05-06 (RPT-177)**. Round 2 (Commit `6f24b5c`) deployed → User-Smoke Round 3 deckte ISSUE-038 auf: HTTP 415 `invalid_mime_type — video/webm;codecs=vp9,opus is not supported` weil `walkthroughs`-Bucket `allowed_mime_types=['video/webm']` exact-match macht. Hotfix: client-side Content-Type-Header beim PUT auf `video/webm` strippen (Codec-Suffix raus), Blob behaelt vollen MIME-Type, RFC 7231 erlaubt das. Bucket-Filter bleibt strict (Security-by-Design). 16/16 Vitest GREEN, lint 0/0, build PASS. **Naechster Schritt: User-Coolify-Deploy Round 3 + Browser-Smoke Round 3.**
-- Current Phase: V5 Option 2 Implementation (SLC-075 /doctor Round 3 done, awaiting Re-Deploy + Browser-Smoke).
+- Current Focus: **V5 Option 2 SLC-075 /doctor Round 4 done 2026-05-07 (RPT-178)**. Round 3 (Commit `55aca07`) deployed → Upload PASS (Live-DB confirmed: walkthrough_session 33ea58be... status='uploaded' duration_sec=13 file_size=2.97MB). Aber Status-Page returned 404 wegen pre-existierendem SLC-071-Bug: SELECT auf `failure_reason` aber Tabelle hat `rejection_reason` (ISSUE-039). 3 Files (page.tsx + status-route.ts + WalkthroughStatusPolling.tsx) gefixt. 16/16 Vitest GREEN, lint 0/0, build PASS. **Naechster Schritt: User-Coolify-Deploy + Browser-Smoke Round 4 = letzter offener Pflicht-Gate.**
+- Current Phase: V5 Option 2 Implementation (SLC-075 /doctor Round 4 done, awaiting Re-Deploy + Browser-Smoke Round 4).
 
 ## Immediate Next Steps
 1. **User-Coolify-Deploy** des aktuellen HEAD-Commits (Sidebar + signedUrl-Rewrite-Hotfix). Kein neuer ENV, keine Migration, keine Worker-Aenderung.

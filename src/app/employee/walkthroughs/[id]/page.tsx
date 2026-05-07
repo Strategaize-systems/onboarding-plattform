@@ -29,7 +29,7 @@ export default async function WalkthroughStatusPage({
   const { data: row, error } = await supabase
     .from("walkthrough_session")
     .select(
-      "id, status, transcript_completed_at, reviewed_at, reviewer_note, failure_reason, duration_sec, created_at"
+      "id, status, transcript_completed_at, reviewed_at, reviewer_note, rejection_reason, duration_sec, created_at"
     )
     .eq("id", id)
     .maybeSingle();
@@ -63,7 +63,7 @@ export default async function WalkthroughStatusPage({
           transcript_completed_at: row.transcript_completed_at,
           reviewed_at: row.reviewed_at,
           reviewer_note: row.reviewer_note,
-          failure_reason: row.failure_reason,
+          rejection_reason: row.rejection_reason,
           duration_sec: row.duration_sec,
         }}
       />

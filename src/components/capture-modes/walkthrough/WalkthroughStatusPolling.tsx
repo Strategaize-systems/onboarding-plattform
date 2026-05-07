@@ -26,7 +26,7 @@ interface WalkthroughStatusRow {
   transcript_completed_at: string | null;
   reviewed_at: string | null;
   reviewer_note: string | null;
-  failure_reason: string | null;
+  rejection_reason: string | null;
   duration_sec: number | null;
 }
 
@@ -124,9 +124,9 @@ export function WalkthroughStatusPolling({ walkthroughId, initial }: Props) {
         </div>
       ) : null}
 
-      {row.status === "failed" && row.failure_reason ? (
+      {row.status === "failed" && row.rejection_reason ? (
         <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
-          <strong className="font-semibold">Grund:</strong> {row.failure_reason}
+          <strong className="font-semibold">Grund:</strong> {row.rejection_reason}
         </div>
       ) : null}
 

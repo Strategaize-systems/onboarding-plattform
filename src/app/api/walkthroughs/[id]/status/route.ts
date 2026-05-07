@@ -32,7 +32,7 @@ export async function GET(
   const { data, error } = await supabase
     .from("walkthrough_session")
     .select(
-      "id, status, transcript_completed_at, reviewed_at, reviewer_note, failure_reason, created_at, duration_sec"
+      "id, status, transcript_completed_at, reviewed_at, reviewer_note, rejection_reason, created_at, duration_sec"
     )
     .eq("id", id)
     .maybeSingle();
