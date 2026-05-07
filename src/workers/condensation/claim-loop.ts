@@ -14,7 +14,7 @@ export interface ClaimedJob {
 
 export type JobHandler = (job: ClaimedJob) => Promise<void>;
 
-const JOB_TYPES = ["knowledge_unit_condensation", "recondense_with_gaps", "sop_generation", "diagnosis_generation", "evidence_extraction", "dialogue_transcription", "dialogue_extraction", "bridge_generation", "walkthrough_stub_processing", "walkthrough_transcribe", "walkthrough_redact_pii", "walkthrough_extract_steps", "handbook_snapshot_generation"] as const;
+const JOB_TYPES = ["knowledge_unit_condensation", "recondense_with_gaps", "sop_generation", "diagnosis_generation", "evidence_extraction", "dialogue_transcription", "dialogue_extraction", "bridge_generation", "walkthrough_stub_processing", "walkthrough_transcribe", "walkthrough_redact_pii", "walkthrough_extract_steps", "walkthrough_map_subtopics", "handbook_snapshot_generation"] as const;
 
 /**
  * Start the polling claim-loop.
@@ -34,7 +34,8 @@ export async function startClaimLoop(
   handbookSnapshotHandler?: JobHandler,
   walkthroughTranscribeHandler?: JobHandler,
   walkthroughRedactPiiHandler?: JobHandler,
-  walkthroughExtractStepsHandler?: JobHandler
+  walkthroughExtractStepsHandler?: JobHandler,
+  walkthroughMapSubtopicsHandler?: JobHandler
 ): Promise<never> {
   const pollMs = parseInt(process.env.AI_WORKER_POLL_MS || "2000", 10);
   const adminClient = createAdminClient();
@@ -116,6 +117,11 @@ export async function startClaimLoop(
           walkthroughExtractStepsHandler
         ) {
           await walkthroughExtractStepsHandler(job);
+        } else if (
+          job.job_type === "walkthrough_map_subtopics" &&
+          walkthroughMapSubtopicsHandler
+        ) {
+          await walkthroughMapSubtopicsHandler(job);
         } else {
           await handler(job);
         }

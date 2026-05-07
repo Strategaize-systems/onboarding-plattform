@@ -4477,7 +4477,7 @@ CREATE INDEX idx_walkthrough_step_tenant ON walkthrough_step(tenant_id);
 
 #### `walkthrough_review_mapping` (NEU) — Stufe 3 Output + Berater-Korrektur
 
-Eine Zeile pro `walkthrough_step` mit der Subtopic-Zuordnung. `subtopic_id IS NULL` bedeutet **Unmapped-Bucket** (DEC-085: kein separater Tabelle, einheitliches Datenmodell). Subtopic-Referenz ist `template_id` + `subtopic_id text` (logische Referenz auf den `template.blocks[].subtopics[]`-JSON-Pfad — kein FK auf eine Tabelle, weil Subtopics innerhalb des Template-JSON leben).
+Eine Zeile pro `walkthrough_step` mit der Subtopic-Zuordnung. `subtopic_id IS NULL` bedeutet **Unmapped-Bucket** (DEC-085: kein separater Tabelle, einheitliches Datenmodell). Subtopic-Referenz ist `template_id` + `subtopic_id text` als logische String-Referenz auf den `unterbereich`-Wert einer Template-Frage (z.B. "Block A / A1 Grundverständnis"). **DEC-092 Drift-Korrektur (in /backend SLC-078):** Architecture-Doc nahm urspruenglich `template.blocks[].subtopics[]` an — diese Struktur existiert im realen Template-Schema NICHT. Effektive Subtopic-Schicht lebt in `blocks[].questions[].unterbereich`. Migration 086 (`subtopic_id text`) ist von der Korrektur unabhaengig kompatibel.
 
 ```sql
 CREATE TABLE walkthrough_review_mapping (
@@ -4664,9 +4664,10 @@ async function advancePipeline(walkthroughSessionId: string) {
 #### Stufe 3 — Auto-Mapping (`walkthrough_map_subtopics`) — Bridge-Engine-Pattern Reverse-Direction
 
 - **Input**: Alle walkthrough_step der Session + aktiver Template-JSON (Subtopic-Tree des Tenants).
+- **Subtopic-Tree-Quelle (DEC-092)**: Tree wird aus `template.blocks[].questions[].unterbereich`-Werten gebildet. Default-Filter: nur unterbereich-Werte, in denen mind. 1 Frage `sop_trigger=true` ist (Prozess-Subtopics, reduziert Prompt-Laenge bei Templates mit ~50 unterbereich-Werten). Fallback: alle unterbereich-Werte wenn nach Filter kein Subtopic uebrig bleibt. Helper-Funktion `buildSubtopicTree(blocks)` in `src/workers/walkthrough/handle-map-subtopics-job.ts`.
 - **Pattern-Reuse FEAT-023 Bridge-Engine**: Bridge-Engine in V4 spawnt **vom Subtopic** ausgehend `capture_session`-Vorschlaege. V5 Option 2 invertiert: **vom walkthrough_step** ausgehend wird der passende Subtopic gemappt.
 - **Prompt**: `src/lib/ai/prompts/walkthrough/subtopic_map.ts` — Liste der Schritte + Subtopic-Tree als JSON, Aufgabe: pro Schritt einen Subtopic zuordnen oder "unmapped" markieren mit Confidence-Score 0..1.
-- **Output**: N walkthrough_review_mapping-Rows. Wenn Confidence >= `WALKTHROUGH_MAPPING_CONFIDENCE_THRESHOLD` (Default 0.7, ENV-Override DEC-084): subtopic_id gesetzt. Sonst: subtopic_id=NULL (Unmapped-Bucket).
+- **Output**: N walkthrough_review_mapping-Rows. Wenn Confidence >= `WALKTHROUGH_MAPPING_CONFIDENCE_THRESHOLD` (Default 0.7, ENV-Override DEC-084) UND subtopic_id im Tree liegt: subtopic_id gesetzt. Sonst: subtopic_id=NULL (Unmapped-Bucket). Worker-Validierung: LLM-erfundene subtopic_id-Strings (nicht im Tree) werden auf NULL gekippt — verhindert Halluzinations-Drift.
 - **Audit**: confidence_score + mapping_reasoning persistiert pro Mapping.
 
 #### Pipeline-Failure-Handling
