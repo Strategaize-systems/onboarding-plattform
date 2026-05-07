@@ -835,9 +835,9 @@
       "title": "V5 Capture-Entry-Point Self-Spawn-Pattern implementieren (Q-V5-F geloest in DEC-080)",
       "type": "fix",
       "priority": "high",
-      "status": "in_progress",
+      "status": "done",
       "version": "V5",
-      "description": "NEU 2026-05-06 aus SLC-071 Browser-Smoke-Versuch. ARCHITEKTUR-ENTSCHIEDEN 2026-05-06 in DEC-080 (RPT-171). Slice-Zuordnung 2026-05-06 in /slice-planning V5 Option 2: SLC-075 (~3 MTs) als ERSTER Option-2-Slice. CODE-SIDE DONE 2026-05-06 in /backend SLC-075 (RPT-173): startWalkthroughSession via service_role + atomare capture_session+walkthrough_session-Erzeugung mit Rollback-on-Fail, requestWalkthroughUpload-Signatur auf walkthroughSessionId, /employee/walkthroughs Liste + /employee/walkthroughs/[id]/record Recorder-Wrapper, alte Route /employee/capture/walkthrough/[id] geloescht. 13/13 Vitest GREEN, lint 0/0, build PASS. Pending: AC-10/11/12 Browser-Smoke auf Live-URL fuer Slice-Closing (in /qa SLC-075).",
+      "description": "DONE 2026-05-07. Selbst-Spawn-Pattern via SLC-075 implementiert (RPT-173..178). End-to-End-Browser-Smoke PASS auf https://onboarding.strategaizetransition.com mit richard@bellaerts.de: AC-10 (Liste+Sidebar) + AC-11 (Self-Spawn+Permissions+MediaRecorder) + AC-12 (Stop+Upload+Status uploaded) alle gruen. Live-DB-Verifikation: walkthrough_session 33ea58be... + 75098a5d... beide status='uploaded', ffprobe bestaetigt vp9-Video + opus-Audio (Mikrofon mit aufgenommen). 4 sequential Doctor-Runden haben Sidebar-Luecke (ISSUE-037) + Hairpin-NAT signedUrl (ISSUE-036 Round 1) + Kong apikey (ISSUE-036 Round 2) + codec-MIME-Filter (ISSUE-038) + SLC-071-Schema-Mismatch failure_reason (ISSUE-039) gefixt. 16/16 Vitest GREEN, alle 5 ISSUEs resolved. Final-Deploy-Commit: 0ce9f81.",
       "createdAt": "2026-05-06"
     }
   ]

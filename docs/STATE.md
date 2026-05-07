@@ -10,12 +10,18 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: **V5 Option 2 SLC-075 /doctor Round 4 done 2026-05-07 (RPT-178)**. Round 3 (Commit `55aca07`) deployed → Upload PASS (Live-DB confirmed: walkthrough_session 33ea58be... status='uploaded' duration_sec=13 file_size=2.97MB). Aber Status-Page returned 404 wegen pre-existierendem SLC-071-Bug: SELECT auf `failure_reason` aber Tabelle hat `rejection_reason` (ISSUE-039). 3 Files (page.tsx + status-route.ts + WalkthroughStatusPolling.tsx) gefixt. 16/16 Vitest GREEN, lint 0/0, build PASS. **Naechster Schritt: User-Coolify-Deploy + Browser-Smoke Round 4 = letzter offener Pflicht-Gate.**
-- Current Phase: V5 Option 2 Implementation (SLC-075 /doctor Round 4 done, awaiting Re-Deploy + Browser-Smoke Round 4).
+- Current Focus: **V5 Option 2 SLC-071 + SLC-075 RELEASED 2026-05-07 — Walkthrough-Foundation komplett.** Browser-Smoke User-bestaetigt PASS (Status-Page + neue Aufnahme + Upload). Live-DB-Beleg via ffprobe: 2 walkthrough_session uploaded, vp9 Video + opus Audio (Mikrofon-Track bestaetigt). 4 Doctor-Runden + RPT-173..178 + 5 ISSUEs (036/037/038/039) alle resolved. Finale Image: `0ce9f81` healthy live. **Naechster Schritt: `/backend SLC-072` — Whisper-Worker** (FEAT-035, 5 MTs, ~0.5d). Job-Handler `walkthrough_transcribe`: ai_jobs-Pickup → Storage-Download → ffmpeg Audio-Extract → Whisper-Adapter (V2 reuse) → knowledge_unit-INSERT mit source='walkthrough_transcript' → Status `uploaded → transcribing → pending_review`. Pipeline-Trigger zu `redacting` kommt erst in SLC-076 MT-5. Bestehender Whisper-Worker aus V2 (FEAT-015) wird wiederverwendet, kein neuer Container.
+- Current Phase: V5 Option 2 Implementation — Foundation complete (SLC-071+075), naechster Slice = SLC-072 Whisper-Worker.
 
 ## Immediate Next Steps
-1. **User-Coolify-Deploy** des aktuellen HEAD-Commits (Sidebar + signedUrl-Rewrite-Hotfix). Kein neuer ENV, keine Migration, keine Worker-Aenderung.
-2. **AC-11+AC-12 Browser-Smoke Round 2** mit `richard@bellaerts.de`: (a) Login `/employee` → Sidebar zeigt jetzt "Walkthroughs" → klicken, (b) "Neuen Walkthrough starten" → Permissions → 5-10s aufnehmen → Stoppen, (c) Erwartung: Upload-Progress 0→100% → Redirect auf Status-Page mit Status `uploaded`. Bei PASS: Records-Final-Sync. Bei FAIL: Browser-DevTools-Network-Tab Output an mich → /doctor Round 2.
+1. **`/backend SLC-072`** — Whisper-Worker Job-Handler `walkthrough_transcribe`. 5 MTs ~0.5d. Wiederverwendet V2-Whisper-Adapter (FEAT-015). Out-of-Scope (in SLC-076 MT-5): Pipeline-Trigger zu `redacting`. Out-of-Scope (in V5.1): KI-Pre-Filter fuer Berater-Review.
+2. **`/qa SLC-072`** danach mit Live-Worker-Smoke (echtes Walkthrough → transcribed knowledge_unit).
+3. **`/backend SLC-076`** PII-Redaction (5 MTs, MIG-087).
+4. **`/backend SLC-077`** Schritt-Extraktion (5 MTs, MIG-085).
+5. **`/backend SLC-078`** ∥ **`/frontend SLC-079`** Auto-Mapping + Methodik-Review-UI (4+7 MTs).
+6. **BL-076 Cron-Idempotenz-Hotfix** Mid-Stream zwischen SLC-079 und SLC-074.
+7. **`/backend SLC-074`** (re-scoped) Registry+48-Faelle-RLS+Cleanup (5 MTs).
+8. **Gesamt-V5-Option-2-/qa** + /final-check + /go-live + /deploy.
 3. **`/backend SLC-072`** — Whisper-Worker (5 MTs) — bestehende Spec mit Pipeline-Trigger-Patch in SLC-076 MT-5. Erst nach SLC-075-Slice-Closing (User-Smoke).
 4. **`/backend SLC-076`** — Stufe 1 PII-Redaction (Migration 087 + walkthrough_redact_pii Worker + PII-Pattern-Library + synthetische Test-Suite SC-V5-6 ≥90% Recall, ~5 MTs).
 5. **`/backend SLC-077`** — Stufe 2 Schritt-Extraktion (Migration 085 + walkthrough_extract_steps Worker + ≥5 Test-Walkthroughs, ~5 MTs).
