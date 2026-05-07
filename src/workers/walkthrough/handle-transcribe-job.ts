@@ -161,18 +161,32 @@ export async function handleWalkthroughTranscribeJob(
     }
 
     // 7. Insert knowledge_unit. tenant_id is taken from the session row — no
-    // tenant switch is possible (R5 mitigation).
+    // tenant switch is possible (R5 mitigation). block_key='unassigned' matches
+    // the dialogue-extraction pattern (DEC-040 free-text KU). The recorder is
+    // tracked via evidence_refs (mirrors walkthrough_session.recorded_by_user_id)
+    // and updated_by; the schema has no separate created_by_user_id column.
+    const titleSource = transcriptText.replace(/\s+/g, " ").trim();
+    const title =
+      titleSource.length > 80
+        ? `${titleSource.slice(0, 77).trimEnd()}...`
+        : titleSource || "Walkthrough-Transkript";
     const { data: kuRow, error: kuError } = await adminClient
       .from("knowledge_unit")
       .insert({
         tenant_id: session.tenant_id,
         capture_session_id: session.capture_session_id,
+        block_checkpoint_id: null,
+        block_key: "unassigned",
         source: "walkthrough_transcript",
         unit_type: "observation",
         confidence: "medium",
+        title,
         body: transcriptText,
-        evidence_refs: { walkthrough_session_id: session.id },
-        created_by_user_id: session.recorded_by_user_id,
+        evidence_refs: {
+          walkthrough_session_id: session.id,
+          recorded_by_user_id: session.recorded_by_user_id,
+        },
+        updated_by: session.recorded_by_user_id,
       })
       .select("id")
       .single();

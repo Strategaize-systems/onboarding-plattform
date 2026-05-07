@@ -279,17 +279,35 @@ describe("handleWalkthroughTranscribeJob — happy path", () => {
     expect(ku!.row).toMatchObject({
       tenant_id: "22222222-2222-2222-2222-222222222222",
       capture_session_id: "33333333-3333-3333-3333-333333333333",
+      block_checkpoint_id: null,
+      block_key: "unassigned",
       source: "walkthrough_transcript",
       unit_type: "observation",
       confidence: "medium",
-      created_by_user_id: "44444444-4444-4444-4444-444444444444",
+      updated_by: "44444444-4444-4444-4444-444444444444",
     });
     expect(ku!.row.evidence_refs).toEqual({
       walkthrough_session_id: "11111111-1111-1111-1111-111111111111",
+      recorded_by_user_id: "44444444-4444-4444-4444-444444444444",
     });
     expect(ku!.row.body).toBe(
       "Heute zeige ich euch wie wir Reklamationen bearbeiten."
     );
+    expect(ku!.row.title).toBe(
+      "Heute zeige ich euch wie wir Reklamationen bearbeiten."
+    );
+  });
+
+  it("truncates long transcripts to a usable title", async () => {
+    state.whisperResult = {
+      text: "A".repeat(120) + " tail",
+    };
+
+    await handleWalkthroughTranscribeJob(makeJob());
+
+    const ku = state.inserts.find((i) => i.table === "knowledge_unit");
+    expect(ku!.row.title).toMatch(/\.\.\.$/);
+    expect((ku!.row.title as string).length).toBeLessThanOrEqual(80);
   });
 
   it("skips and completes without throwing when status != 'uploaded'", async () => {
