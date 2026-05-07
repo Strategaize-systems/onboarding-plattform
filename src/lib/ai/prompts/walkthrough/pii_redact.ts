@@ -25,7 +25,7 @@ REGELN:
 3. Behalte Funktions- und Rollenbezeichnungen ("der Vertriebsleiter", "die Buchhaltung") — sie sind nicht PII.
 4. Fachbegriffe, Tools, Methoden ("Pflichtenheft", "SAP", "Onboarding-Prozess") bleiben unveraendert.
 5. Allgemeine Mengen oder Bandbreiten ohne Personenbezug ("ungefaehr 10 Prozent", "im niedrigen sechsstelligen Bereich") bleiben unveraendert.
-6. Konkrete Preise und Konditionen mit Personen-/Firmenbezug fallen unter PREIS_BETRAG. Allgemeine Preisangaben wie "der Standardpreis" bleiben.
+6. JEDER konkrete Geldbetrag (mit Zahl + Waehrung oder Zahl + Prozent) faellt unter PREIS_BETRAG — auch wenn kein Personenname oder Firmenname im Satz steht. Im Walkthrough-Kontext ist jeder genannte Geldbetrag PII. Nur Bandbreiten ohne konkrete Zahl ("im niedrigen sechsstelligen Bereich") bleiben unmaskiert.
 7. URLs zu oeffentlichen Webseiten (z.B. firmenseite.de) sind keine PII; interne Tool-URLs (Confluence, Notion, Wiki) sind INTERN_KOMM.
 
 OUTPUT-FORMAT (HART):

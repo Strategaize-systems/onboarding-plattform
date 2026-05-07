@@ -34,7 +34,7 @@ export const PII_PATTERNS = {
   PREIS_BETRAG: {
     placeholder: "[BETRAG]",
     description:
-      "Konkrete Preise und Geldbetraege in EUR oder Prozentsatz-Konditionen mit Bezug zu konkreten Auftraegen (z.B. '12.500 EUR', '15.000 Euro', '8,5% Rabatt fuer Kunde X')",
+      "JEDER konkrete Geldbetrag in EUR/Euro/Dollar (z.B. '12.500 EUR', '850,00 Euro', '25.000 EUR netto', '47.250 Euro brutto', '2.500 EUR pro Tag') sowie konkrete Rabatt-/Kondition-Prozente mit Auftrags-Bezug ('8,5% Rabatt'). Im Walkthrough-Kontext ist jeder genannte Geldbetrag PII — keine Ausnahmen fuer 'Listenpreis', 'Standardangebot' oder 'Auftrag'. Nur grobe Bandbreiten ohne Zahl ('niedriger sechsstelliger Bereich') bleiben unmaskiert.",
   },
   INTERNE_ID: {
     placeholder: "[ID]",
