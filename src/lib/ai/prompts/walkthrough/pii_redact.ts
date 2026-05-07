@@ -28,14 +28,19 @@ REGELN:
 6. Konkrete Preise und Konditionen mit Personen-/Firmenbezug fallen unter PREIS_BETRAG. Allgemeine Preisangaben wie "der Standardpreis" bleiben.
 7. URLs zu oeffentlichen Webseiten (z.B. firmenseite.de) sind keine PII; interne Tool-URLs (Confluence, Notion, Wiki) sind INTERN_KOMM.
 
-OUTPUT:
-Gib ausschliesslich den redacted-Text zurueck. Keine Vorrede, keine Erklaerung, kein Markdown-Codeblock.`;
+OUTPUT-FORMAT (HART):
+- Antworte AUSSCHLIESSLICH mit dem redacted-Text.
+- Beginne deine Antwort direkt mit dem ersten Wort des redacted-Textes.
+- Keine Vorrede ("Hier ist der redacted Text:", "Klar, ich helfe dir:" etc.).
+- Keine Schluss-Erklaerung ("Ich habe folgende Stellen ersetzt:" etc.).
+- Kein Markdown-Codeblock, keine Anfuehrungszeichen um den Text.
+- Wenn der Text keinerlei PII enthaelt: gib ihn unveraendert wortgetreu zurueck.`;
 }
 
+// User-Message: nur der Text, kein Aufgaben-Trailer.
+// Der Trailer am Ende der User-Message hat in einem Live-Smoke (SLC-076 MT-4) dazu gefuehrt,
+// dass Bedrock den Trailer mit in die Antwort gesetzt hat. Anweisungen leben jetzt nur im
+// System-Prompt; die User-Message liefert ausschliesslich den Eingabe-Text.
 export function buildPiiRedactUserMessage(originalText: string): string {
-  return `Eingabe-Text:
-
-${originalText}
-
-Aufgabe: Gib den Text mit allen PII-Items durch Platzhalter ersetzt zurueck. Nur den redacted-Text, sonst nichts.`;
+  return originalText;
 }
