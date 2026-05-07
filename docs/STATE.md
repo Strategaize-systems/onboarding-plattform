@@ -10,25 +10,17 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: **V5 Option 2 SLC-072 DONE 2026-05-07 — walkthrough_transcribe Worker live + Live-Smoke PASS.** 3 walkthrough_session 8/12/13s WebM komplett `uploaded → transcribing → pending_review` durchgelaufen in 3.8-6.5s Wall-Time pro Job (Spec <2min). 3 deutsche Transkripte als knowledge_unit (source='walkthrough_transcript', unit_type='observation', confidence='medium') persistiert. Worker `(healthy)` 7+min, ffmpeg 8.0.1. **Mid-Stream-Hotfix:** Live-Smoke deckte Schema-Drift in Slice-Spec auf — `created_by_user_id` existiert nicht auf knowledge_unit, ersetzt durch evidence_refs.recorded_by_user_id + updated_by + title-Truncation + block_key='unassigned' (commit 753ddff). Tests 7/7 gruen (3 happy + 3 fail + 1 truncation). RPT-180 (/backend) + RPT-181 (/qa). **Naechster Schritt: `/backend SLC-076`** Stufe 1 PII-Redaction (MIG-087, 5 MTs, ~3-4h).
-- Current Phase: V5 Option 2 Implementation — SLC-072 done, naechster Slice SLC-076 PII-Redaction.
+- Current Focus: **V5 Option 2 SLC-076 DONE 2026-05-07 — Stufe 1 PII-Redaction Pipeline live + Live-Smoke 3/3 PASS + Bedrock-Recall SC-V5-6 PASS (350/350 = 100%).** Migration 087 live appliziert (status-Maschine 11 Werte + knowledge_unit.source 10 Werte). Worker-Handler `walkthrough_redact_pii` live im Worker-Container (Boot-Log "walkthrough_redact_pii handler registered"). 3 walkthrough_session durchgelaufen `redacting → extracting` (1× isoliert PII, 1× End-to-End ab Whisper, 1× isoliert PII): jeweils Original-KU `walkthrough_transcript` + Redacted-KU `walkthrough_transcript_redacted` mit evidence_refs={original_kuId, walkthrough_session_id, recorded_by_user_id} entstanden, Pipeline-Trigger feuert korrekt, Folge-Job `walkthrough_extract_steps` queued (wartet auf SLC-077-Handler). Pipeline-Latenz: Whisper 10.3s + PII 12.5-50.5s, weit unter Slice-Spec-Soll <2min. Bedrock-Live-Recall (350 deutsche PII-Items, 7 Kategorien, ~$0.04 Test-Run) lieferte nach 1 Iteration (PREIS_BETRAG-Pattern geschaerft, commit c395c2c) **100% Recall pro Kategorie + global**. 2 In-Phase-Bugs gefixt: (1) User-Trailer-Pollution → Anweisungen komplett im System-Prompt, commit f275da5; (2) PREIS_BETRAG-Recall 0% → Pattern-Library + Prompt-Regel #6 schaerfen, commit c395c2c. Tests 24/24 Vitest gruen. Commits 6e36fa4 + f275da5 + c395c2c auf main, Worker live mit c395c2c. **Naechster Schritt: `/backend SLC-077`** Stufe 2 Schritt-Extraktion (MIG-085, 5 MTs, ~5h).
+- Current Phase: V5 Option 2 Implementation — SLC-076 done, naechster Slice SLC-077 Schritt-Extraktion.
 
 ## Immediate Next Steps
-1. **`/backend SLC-076`** Stufe 1 PII-Redaction (MIG-087 + walkthrough_redact_pii Worker + PII-Pattern-Library + synthetische Test-Suite SC-V5-6 ≥90% Recall, ~5 MTs).
-4. **`/backend SLC-077`** Schritt-Extraktion (5 MTs, MIG-085).
-5. **`/backend SLC-078`** ∥ **`/frontend SLC-079`** Auto-Mapping + Methodik-Review-UI (4+7 MTs).
-6. **BL-076 Cron-Idempotenz-Hotfix** Mid-Stream zwischen SLC-079 und SLC-074.
-7. **`/backend SLC-074`** (re-scoped) Registry+48-Faelle-RLS+Cleanup (5 MTs).
-8. **Gesamt-V5-Option-2-/qa** + /final-check + /go-live + /deploy.
-3. **`/backend SLC-072`** — Whisper-Worker (5 MTs) — bestehende Spec mit Pipeline-Trigger-Patch in SLC-076 MT-5. Erst nach SLC-075-Slice-Closing (User-Smoke).
-4. **`/backend SLC-076`** — Stufe 1 PII-Redaction (Migration 087 + walkthrough_redact_pii Worker + PII-Pattern-Library + synthetische Test-Suite SC-V5-6 ≥90% Recall, ~5 MTs).
-5. **`/backend SLC-077`** — Stufe 2 Schritt-Extraktion (Migration 085 + walkthrough_extract_steps Worker + ≥5 Test-Walkthroughs, ~5 MTs).
-6. **`/backend SLC-078`** — Stufe 3 Auto-Mapping (Migration 086 + walkthrough_map_subtopics Worker mit Bridge-Engine-Pattern Reverse-Direction + Coverage-Test SC-V5-7 ≥70%, ~4 MTs).
-7. **`/frontend SLC-079`** — Methodik-Review-UI (3 Admin-Routen + SubtopicTreeReview + UnmappedBucket + Move-Pattern + Pflicht-Checkbox + Cockpit-Card + RawTranscriptToggle + SC-V5-4 Berater-Smoke, ~7 MTs). Kann parallel zu SLC-078 starten sobald SLC-077-Migration 085 + SLC-078-Migration 086 live sind.
-8. **BL-076 Cron-Idempotenz-Hotfix** als atomare Aenderung zwischen SLC-079 und SLC-074. Pattern-Vorlage fuer SLC-074 Cleanup-Cron-Erweiterung.
-9. **`/backend SLC-074`** (re-scoped) — Capture-Mode-Registry + 48-Faelle-RLS-Matrix (16 walkthrough_session + 16 walkthrough_step + 16 walkthrough_review_mapping) + Cleanup-Cron erweitert um Stale-Pipeline-Recovery + Lint/Build/Test/Audit-Gate (~5 MTs).
-10. **Gesamt-V5-Option-2-/qa** nach SLC-074 (SC-V5-1, SC-V5-4..8 vollstaendig verifiziert), dann /final-check + /go-live + /deploy.
-11. **V5.1 /architecture** offen, kommt nach V5-Option-2-Release (DEC-090: V5.1 nutzt approved walkthrough_step als Input fuer Handbuch-Integration FEAT-038).
+1. **`/backend SLC-077`** — Stufe 2 Schritt-Extraktion (Migration 085 + walkthrough_extract_steps Worker + ≥5 Test-Walkthroughs, ~5 MTs). Picked vom bereits queueten ai_jobs walkthrough_extract_steps (3 pending Jobs aus SLC-076-Smoke werden direkt durchlaufen sobald Handler live).
+2. **`/backend SLC-078`** — Stufe 3 Auto-Mapping (Migration 086 + walkthrough_map_subtopics Worker mit Bridge-Engine-Pattern Reverse-Direction + Coverage-Test SC-V5-7 ≥70%, ~4 MTs).
+3. **`/frontend SLC-079`** — Methodik-Review-UI (3 Admin-Routen + SubtopicTreeReview + UnmappedBucket + Move-Pattern + Pflicht-Checkbox + Cockpit-Card + RawTranscriptToggle + SC-V5-4 Berater-Smoke, ~7 MTs). Kann parallel zu SLC-078 starten sobald SLC-077-Migration 085 + SLC-078-Migration 086 live sind.
+4. **BL-076 Cron-Idempotenz-Hotfix** als atomare Aenderung zwischen SLC-079 und SLC-074. Pattern-Vorlage fuer SLC-074 Cleanup-Cron-Erweiterung.
+5. **`/backend SLC-074`** (re-scoped) — Capture-Mode-Registry + 48-Faelle-RLS-Matrix (16 walkthrough_session + 16 walkthrough_step + 16 walkthrough_review_mapping) + Cleanup-Cron erweitert um Stale-Pipeline-Recovery + Lint/Build/Test/Audit-Gate (~5 MTs).
+6. **Gesamt-V5-Option-2-/qa** nach SLC-074 (SC-V5-1, SC-V5-4..8 vollstaendig verifiziert), dann /final-check + /go-live + /deploy.
+7. **V5.1 /architecture** offen, kommt nach V5-Option-2-Release (DEC-090: V5.1 nutzt approved walkthrough_step als Input fuer Handbuch-Integration FEAT-038).
 
 ## Active Scope
 **V4 — Zwei-Ebenen-Verschmelzung, 6 Features Code-done, 8 Slices Code-done:**
