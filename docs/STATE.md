@@ -10,13 +10,11 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 ## Current State
 - High-Level State: implementing
-- Current Focus: **V5 Option 2 SLC-072 /backend code-side DONE 2026-05-07 — walkthrough_transcribe Worker-Handler implementiert.** Neuer `handleWalkthroughTranscribeJob` in `src/workers/walkthrough/handle-transcribe-job.ts` (11-Schritt-Pipeline: Payload-Validation → Load-Session → Status-Skip → Status='transcribing' → Storage-Download → ffmpeg via existing extractAudioBuffer → Whisper-Adapter (DEC-018 reuse) → knowledge_unit-INSERT (source='walkthrough_transcript', unit_type='observation', confidence='medium') → Status='pending_review' + transcript_knowledge_unit_id → rpc_complete_ai_job → /tmp-Cleanup im finally). Failed-Path setzt status='failed' + error_log + re-throw. Job-Type `walkthrough_transcribe` in JOB_TYPES + Dispatch + run.ts registriert (Boot-Log "walkthrough_transcribe handler registered"). 6/6 Vitest-Cases gruen, Lint clean, Worker-Bundle 193 KB. **Naechster Schritt: User-Coolify-Redeploy + `/qa SLC-072` Live-Smoke** mit den 2 existing uploaded Walkthroughs (33ea58be... + 75098a5d...) — Wall-Time-Messung uploaded → pending_review (<2min Soll), Backwards-Compat-Check fuer alte Job-Types, ffmpeg-Sanity, AC-13 Worker `(healthy)`. RPT-180.
-- Current Phase: V5 Option 2 Implementation — SLC-072 code-side done, awaiting Live-Smoke; danach SLC-076 PII-Redaction.
+- Current Focus: **V5 Option 2 SLC-072 DONE 2026-05-07 — walkthrough_transcribe Worker live + Live-Smoke PASS.** 3 walkthrough_session 8/12/13s WebM komplett `uploaded → transcribing → pending_review` durchgelaufen in 3.8-6.5s Wall-Time pro Job (Spec <2min). 3 deutsche Transkripte als knowledge_unit (source='walkthrough_transcript', unit_type='observation', confidence='medium') persistiert. Worker `(healthy)` 7+min, ffmpeg 8.0.1. **Mid-Stream-Hotfix:** Live-Smoke deckte Schema-Drift in Slice-Spec auf — `created_by_user_id` existiert nicht auf knowledge_unit, ersetzt durch evidence_refs.recorded_by_user_id + updated_by + title-Truncation + block_key='unassigned' (commit 753ddff). Tests 7/7 gruen (3 happy + 3 fail + 1 truncation). RPT-180 (/backend) + RPT-181 (/qa). **Naechster Schritt: `/backend SLC-076`** Stufe 1 PII-Redaction (MIG-087, 5 MTs, ~3-4h).
+- Current Phase: V5 Option 2 Implementation — SLC-072 done, naechster Slice SLC-076 PII-Redaction.
 
 ## Immediate Next Steps
-1. **User-Coolify-Redeploy** Worker-Container nach SLC-072 commit (`feedback_manual_deploy.md`).
-2. **`/qa SLC-072`** Live-Worker-Smoke: existing uploaded Walkthroughs (33ea58be... + 75098a5d...) durch den neuen Handler laufen lassen. Pflicht-Gates: Wall-Time uploaded → pending_review <2min, Worker-Logs sauber ueber 5 Jobs, Backwards-Compat fuer V2/V3/V4-Job-Types, ffmpeg ≥4.x, knowledge_unit mit deutschem Transkript-Body, Worker-Container `(healthy)`.
-3. **`/backend SLC-076`** PII-Redaction (5 MTs, MIG-087).
+1. **`/backend SLC-076`** Stufe 1 PII-Redaction (MIG-087 + walkthrough_redact_pii Worker + PII-Pattern-Library + synthetische Test-Suite SC-V5-6 ≥90% Recall, ~5 MTs).
 4. **`/backend SLC-077`** Schritt-Extraktion (5 MTs, MIG-085).
 5. **`/backend SLC-078`** ∥ **`/frontend SLC-079`** Auto-Mapping + Methodik-Review-UI (4+7 MTs).
 6. **BL-076 Cron-Idempotenz-Hotfix** Mid-Stream zwischen SLC-079 und SLC-074.

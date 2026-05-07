@@ -240,7 +240,7 @@ V5-Scope wurde am 2026-05-06 nach USP-Stress-Test re-geplant (DEC-079 Strategaiz
 | ID | Slice | Feature | Status | Priority | Created |
 |----|-------|---------|--------|----------|---------|
 | SLC-071 | [Walkthrough Foundation: MIG-031 + Capture-UI + Direct-Upload](SLC-071-walkthrough-foundation-capture-upload.md) | FEAT-034 | done | Blocker | 2026-05-05 |
-| SLC-072 | [Walkthrough Whisper-Worker (Job-Handler `walkthrough_transcribe`)](SLC-072-walkthrough-whisper-worker.md) | FEAT-035 | in_progress | High | 2026-05-05 |
+| SLC-072 | [Walkthrough Whisper-Worker (Job-Handler `walkthrough_transcribe`)](SLC-072-walkthrough-whisper-worker.md) | FEAT-035 | done | High | 2026-05-05 |
 | SLC-073 | [Walkthrough Berater-Review-UI (Roh-Video) — DEFERRED per DEC-079](SLC-073-walkthrough-berater-review-ui.md) | FEAT-036 | deferred | Low | 2026-05-05 |
 | SLC-074 | [Registry-Update + 48-Faelle-RLS-Matrix + Cleanup-Cron (V5 Option 2 Re-Scope)](SLC-074-walkthrough-registry-rls-cleanup.md) | FEAT-034, FEAT-035, FEAT-037, FEAT-040 | planned | Blocker | 2026-05-05 |
 | SLC-075 | [Walkthrough Routing-Patch + Self-Spawn-Pattern (Q-V5-F)](SLC-075-walkthrough-routing-patch-self-spawn.md) | FEAT-034 | done | Blocker | 2026-05-06 |
