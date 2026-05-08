@@ -9,6 +9,11 @@ export interface ReminderCandidate {
   accepted_at: string;
   reminders_opt_out: boolean;
   unsubscribe_token: string;
+  // Stages that already have a status='sent' log entry for this user
+  // (regardless of date). Cross-day idempotency: prevents Stage1 spam
+  // across consecutive days when workdays-since stays in [3, 7).
+  // Optional for backwards-compat with older callers; treated as [] if absent.
+  already_sent_stages?: ReminderStage[];
 }
 
 export interface ReminderLogRow {
@@ -85,6 +90,15 @@ export async function processReminders(opts: ProcessOptions): Promise<ProcessRes
   for (const c of candidates) {
     const stage = pickStage(c.accepted_at, now);
     if (!stage) continue;
+
+    // Cross-day idempotency: ISSUE-035 / BL-076.
+    // pickStage returns "stage1" for any workday in [3, 7), so without this
+    // guard the cron would resend Stage1 every day from W3 to W6. The
+    // (user, stage, sent_date) UNIQUE-constraint only blocks same-day dupes.
+    if ((c.already_sent_stages ?? []).includes(stage)) {
+      result.skipped_already_sent++;
+      continue;
+    }
 
     if (c.reminders_opt_out) {
       // Idempotent log: if already logged today, ON CONFLICT keeps it as is.

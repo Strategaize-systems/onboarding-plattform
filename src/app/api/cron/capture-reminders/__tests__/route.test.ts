@@ -28,7 +28,11 @@ function makeStore(args: {
   const inserted: Array<{ key: string; status: string }> = [];
   return {
     async loadCandidates() {
-      return args.candidates;
+      // Defensive default: tests that omit already_sent_stages get empty array.
+      return args.candidates.map((c) => ({
+        ...c,
+        already_sent_stages: c.already_sent_stages ?? [],
+      }));
     },
     async insertLog(row) {
       const key = `${row.employee_user_id}:${row.reminder_stage}:${row.sent_date}`;
@@ -136,6 +140,53 @@ describe("processReminders — Stage selection + Idempotency", () => {
     expect(result.stage1_sent).toBe(0);
     expect(sendMail).not.toHaveBeenCalled();
     expect(store.inserted[0]?.status).toBe("skipped_opt_out");
+  });
+
+  it("BL-076: cross-day idempotency — Stage1 already sent yesterday must not resend today", async () => {
+    // Regression for ISSUE-035: pickStage returns "stage1" for workdays 3..6.
+    // Without cross-day guard, the cron would resend Stage1 on each of those
+    // days. Loader marks already_sent_stages from reminder_log status='sent'.
+    const acceptedAt = new Date("2026-04-27T09:00:00Z").toISOString();
+    const day4 = new Date("2026-04-30T09:00:00Z"); // 3 workdays after Mon W1
+    const day5 = new Date("2026-05-01T09:00:00Z"); // 4 workdays after Mon W1
+    const candidateDay4: ReminderCandidate = {
+      user_id: "u-cross",
+      email: "u-cross@example.com",
+      tenant_id: "t1",
+      tenant_name: "Acme",
+      accepted_at: acceptedAt,
+      reminders_opt_out: false,
+      unsubscribe_token: "tok-cross",
+      already_sent_stages: [], // First run: nothing sent yet.
+    };
+    const sendMail = vi.fn().mockResolvedValue({});
+
+    // Day 4: first Stage1 send.
+    const store1 = makeStore({ candidates: [candidateDay4] });
+    const r1 = await processReminders({
+      store: store1,
+      transport: { sendMail },
+      captureUrl: "https://onboarding.strategaizetransition.com/dashboard",
+      now: day4,
+    });
+    expect(r1.stage1_sent).toBe(1);
+    expect(sendMail).toHaveBeenCalledTimes(1);
+
+    // Day 5: loader now reports already_sent_stages=['stage1'], cron skips.
+    const candidateDay5: ReminderCandidate = {
+      ...candidateDay4,
+      already_sent_stages: ["stage1"],
+    };
+    const store2 = makeStore({ candidates: [candidateDay5] });
+    const r2 = await processReminders({
+      store: store2,
+      transport: { sendMail },
+      captureUrl: "https://onboarding.strategaizetransition.com/dashboard",
+      now: day5,
+    });
+    expect(r2.stage1_sent).toBe(0);
+    expect(r2.skipped_already_sent).toBe(1);
+    expect(sendMail).toHaveBeenCalledTimes(1); // still 1 — no duplicate
   });
 
   it("PFLICHT-Test: two cron runs on the same day produce 0 duplicate mails (Idempotency, SC-V4.2-12)", async () => {

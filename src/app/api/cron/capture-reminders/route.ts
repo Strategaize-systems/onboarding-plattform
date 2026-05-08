@@ -7,6 +7,7 @@ import {
   type ReminderCandidate,
   type ReminderLogRow,
 } from "@/lib/reminders/process-reminders";
+import type { ReminderStage } from "@/lib/reminders/send-reminder";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -80,6 +81,30 @@ function buildStore(supabase: SupabaseLike): ReminderStore {
         });
       }
 
+      // 4. Already-sent stages per user (cross-day idempotency, ISSUE-035 / BL-076).
+      //    Only status='sent' blocks. status='failed' allows retry on next run.
+      const { data: sentLogs, error: lErr } = await supabase
+        .from("reminder_log")
+        .select("employee_user_id, reminder_stage")
+        .in("employee_user_id", userIds)
+        .eq("status", "sent");
+
+      if (lErr) {
+        throw new Error(`loadCandidates(reminder_log) failed: ${lErr.message}`);
+      }
+      const sentStages = new Map<string, Set<ReminderStage>>();
+      for (const row of (sentLogs ?? []) as Array<{
+        employee_user_id: string;
+        reminder_stage: ReminderStage;
+      }>) {
+        let set = sentStages.get(row.employee_user_id);
+        if (!set) {
+          set = new Set<ReminderStage>();
+          sentStages.set(row.employee_user_id, set);
+        }
+        set.add(row.reminder_stage);
+      }
+
       const result: ReminderCandidate[] = [];
       for (const inv of accepted) {
         if (active.has(inv.accepted_user_id)) continue; // already started
@@ -96,6 +121,9 @@ function buildStore(supabase: SupabaseLike): ReminderStore {
           accepted_at: inv.accepted_at,
           reminders_opt_out: s.reminders_opt_out,
           unsubscribe_token: s.unsubscribe_token,
+          already_sent_stages: Array.from(
+            sentStages.get(inv.accepted_user_id) ?? new Set<ReminderStage>()
+          ),
         });
       }
       return result;

@@ -755,7 +755,7 @@
       "title": "capture-reminders Cron-Idempotenz-Logik pruefen + Hotfix (ISSUE-035)",
       "type": "fix",
       "priority": "medium",
-      "status": "open",
+      "status": "done",
       "version": null,
       "description": "Bei /post-launch V4.3+V4.4 (RPT-162, 2026-05-05) entdeckt: reminder_log zeigt 4× Stage1 an gleichen Empfaenger an 4 aufeinanderfolgenden Tagen (01-04.05.) plus Stage2 heute. V4.2-Spec sagt 'Stufe 1 nach 3 Werktagen, Stufe 2 nach 7 Werktagen, Idempotenz' — Verhalten widerspricht der Spec. UNIQUE-Constraint blockiert nur Mehrfach-Send pro Tag, nicht ueber Tage. Investigation-Punkte: (a) Wie ermittelt der Cron, ob Stage1 schon gesendet wurde? (b) Wird reminder_log nach gleichem employee_user_id+reminder_stage ohne sent_date-Filter gequeryt? (c) Ist die Cron-Logik buggy oder die UNIQUE-Constraint zu schwach? Hotfix-Bedarf vor Pre-Production-Cutover (Spam-Reputation-Risiko bei Echt-Kunden). Im Pilot/Internal-Test-Mode unkritisch. Verweis: ISSUE-035 in /docs/KNOWN_ISSUES.md. **/slice-planning V5 Option 2 2026-05-06: BL-076 ist Mid-Stream-Slot zwischen SLC-079 und SLC-074. SLC-074 erweitert walkthrough-cleanup-daily um Stale-Pipeline-Recovery und braucht das gefixte Idempotenz-Pattern aus BL-076 als Vorlage. BL-076 muss DONE sein vor SLC-074-Beginn.**",
       "createdAt": "2026-05-05"
