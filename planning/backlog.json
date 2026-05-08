@@ -805,7 +805,7 @@
       "title": "FEAT-037 Walkthrough AI-Pipeline (PII + Schritt-Extraktion + Auto-Mapping)",
       "type": "feature",
       "priority": "high",
-      "status": "in_progress",
+      "status": "done",
       "version": "V5",
       "description": "Vorgezogen aus V5.1 nach V5 per DEC-079 (2026-05-06). Slice-Zuordnung 2026-05-06 in /slice-planning V5 Option 2: SLC-076 (PII, ~5 MTs) + SLC-077 (Schritt-Extraktion, ~5 MTs) + SLC-078 (Auto-Mapping, ~4 MTs) = 14 MTs. Whisper-Transkript durchlaeuft 3-stufige Bedrock-Sonnet-Pipeline (eu-central-1, DEC-081): (1) PII-Redaction-Pass mit Pattern-Library system-wide constant DEC-082 zu Platzhaltern; (2) Schritt-Extraktion-Pass produziert walkthrough_step-Rows aus DEC-090; (3) Auto-Mapping-Pass ordnet Schritte Subtopics zu (Bridge-Engine-Pattern-Reuse FEAT-023 Reverse-Direction, Confidence-Score, Unmapped-Bucket via subtopic_id IS NULL DEC-085). Sequenzielle Worker-Jobs. Status-Maschine transcribed → redacting → extracting → mapping → pending_review. PII-Pattern-Library SC-V5-6 (≥90% Recall) + Auto-Mapping SC-V5-7 (≥70% Confidence-Coverage).",
       "createdAt": "2026-05-05"
