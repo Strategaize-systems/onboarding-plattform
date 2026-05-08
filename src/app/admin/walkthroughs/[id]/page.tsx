@@ -146,11 +146,12 @@ export default async function WalkthroughDetailPage({ params }: PageProps) {
         .maybeSingle()
     : { data: null };
 
-  // Steps + Mappings — zwei separate Queries (PostgREST-Embedded-Select fand FK nicht zuverlaessig)
+  // Steps + Mappings — zwei separate Queries (PostgREST-Embedded-Select fand FK nicht zuverlaessig).
+  // walkthrough_step hat KEIN reviewer_corrected-Feld (nur walkthrough_review_mapping hat das, siehe MIG-032).
   const { data: stepRows, error: stepsError } = await admin
     .from("walkthrough_step")
     .select(
-      "id, step_number, action, responsible, timeframe, success_criterion, dependencies, reviewer_corrected",
+      "id, step_number, action, responsible, timeframe, success_criterion, dependencies",
     )
     .eq("walkthrough_session_id", id)
     .is("deleted_at", null)
@@ -238,7 +239,8 @@ export default async function WalkthroughDetailPage({ params }: PageProps) {
     (templateRes.data?.blocks as unknown) ?? [],
   );
 
-  // Build steps + mappings (mappings via Map-Lookup statt embedded select)
+  // Build steps + mappings (mappings via Map-Lookup statt embedded select).
+  // reviewer_corrected lebt am mapping (siehe walkthrough_review_mapping), nicht am step.
   const steps: SubtopicTreeStep[] = (stepRows ?? []).map((row) => {
     const stepId = row.id as string;
     const mapping = mappingsByStepId.get(stepId) ?? null;
@@ -250,7 +252,6 @@ export default async function WalkthroughDetailPage({ params }: PageProps) {
       timeframe: (row.timeframe as string | null) ?? null,
       success_criterion: (row.success_criterion as string | null) ?? null,
       dependencies: (row.dependencies as string | null) ?? null,
-      reviewer_corrected: Boolean(row.reviewer_corrected),
       mapping,
     };
   });

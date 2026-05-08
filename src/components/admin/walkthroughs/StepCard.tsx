@@ -20,7 +20,6 @@ export interface StepCardData {
   timeframe: string | null;
   success_criterion: string | null;
   dependencies: string | null;
-  reviewer_corrected: boolean;
 }
 
 export interface StepMappingMeta {
