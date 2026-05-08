@@ -147,7 +147,7 @@ export default async function WalkthroughDetailPage({ params }: PageProps) {
     : { data: null };
 
   // Steps + Mappings — zwei separate Queries (PostgREST-Embedded-Select fand FK nicht zuverlaessig)
-  const { data: stepRows } = await admin
+  const { data: stepRows, error: stepsError } = await admin
     .from("walkthrough_step")
     .select(
       "id, step_number, action, responsible, timeframe, success_criterion, dependencies, reviewer_corrected",
@@ -155,6 +155,19 @@ export default async function WalkthroughDetailPage({ params }: PageProps) {
     .eq("walkthrough_session_id", id)
     .is("deleted_at", null)
     .order("step_number", { ascending: true });
+
+  if (stepsError) {
+    console.error("[walkthrough-detail] steps query error", {
+      sessionId: id,
+      error: stepsError.message,
+      code: (stepsError as { code?: string }).code,
+    });
+  } else {
+    console.log("[walkthrough-detail] loaded", {
+      sessionId: id,
+      stepCount: (stepRows ?? []).length,
+    });
+  }
 
   const stepIds = (stepRows ?? []).map((r) => r.id as string);
   const mappingsByStepId = new Map<
@@ -168,12 +181,25 @@ export default async function WalkthroughDetailPage({ params }: PageProps) {
     }
   >();
   if (stepIds.length > 0) {
-    const { data: mappingRows } = await admin
+    const { data: mappingRows, error: mappingsError } = await admin
       .from("walkthrough_review_mapping")
       .select(
         "walkthrough_step_id, subtopic_id, confidence_score, confidence_band, mapping_reasoning, reviewer_corrected",
       )
       .in("walkthrough_step_id", stepIds);
+    if (mappingsError) {
+      console.error("[walkthrough-detail] mappings query error", {
+        sessionId: id,
+        stepIdsCount: stepIds.length,
+        error: mappingsError.message,
+      });
+    } else {
+      console.log("[walkthrough-detail] mappings", {
+        sessionId: id,
+        stepIdsCount: stepIds.length,
+        mappingCount: (mappingRows ?? []).length,
+      });
+    }
     for (const m of mappingRows ?? []) {
       mappingsByStepId.set(m.walkthrough_step_id as string, {
         subtopic_id: (m.subtopic_id as string | null) ?? null,
