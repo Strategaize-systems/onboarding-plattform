@@ -4966,3 +4966,225 @@ PRD-Skizze (RPT-170 Tabelle, 7 Slices) bleibt nach Architektur-Pruefung tragfaeh
 `/slice-planning V5 Option 2` — die 7 Slice-Empfehlungen oben in finale Slice-Files zerlegen, MTs nummerieren, slices/INDEX.md updaten, Sequenz-Reihenfolge final festlegen, BL-085+086 + Status setzen. SLC-071-Slice-Closing-Entscheidung: als-ist akzeptieren mit nachgelagerten Routing-Patch als ersten Option-2-Slice ODER neu schneiden.
 
 V5.1 (`/architecture V5.1` offen, `/requirements V5.1` done und auf FEAT-038 geshrinkt) wird **nach** V5-Option-2-Release angegangen — V5.1 nutzt approved walkthrough_step als Input fuer Handbuch-Integration (DEC-090).
+
+---
+
+## V5.1 Architektur — Walkthrough Handbuch-Integration (FEAT-038)
+
+Architecture done 2026-05-08 nach `/architecture V5.1`. V5.1 ist auf FEAT-038 geshrinkt (DEC-079 / DEC-090). V5-Methodik-Schicht (PII + Schritt-Extraktion + Auto-Mapping + Berater-Review) ist live (REL-013, 2026-05-08); V5.1 schliesst den Output-Loop: approved `walkthrough_step` + `walkthrough_review_mapping` fliessen in den Unternehmerhandbuch-Snapshot als neuer Section-Source-Typ `walkthrough` mit inline HTML5-`<video>`-Embed.
+
+### V5.1 Architektur-Summary
+
+V5.1 erweitert die V4-Handbuch-Foundation (FEAT-026 + FEAT-028) um einen neuen Section-Source-Typ. Der bestehende deterministische Snapshot-Worker (`src/workers/handbook/handle-snapshot-job.ts`) bekommt einen zusaetzlichen Loader fuer approved Walkthroughs und einen neuen Renderer-Pfad. Pro approved Walkthrough rendert der Worker Markdown mit Schritt-Liste (gruppiert nach Subtopic-ID aus `walkthrough_review_mapping`) und einem inline `<video src="/api/walkthrough/{sessionId}/embed">`-Tag. Der Embed-Endpoint ist ein Storage-Proxy nach dem ISSUE-025-Resolution-Pattern (Range-faehig fuer Browser-Seek). Der Reader rendert das Video via existing `rehype-raw`-Plugin direkt im Markdown — keine UI-Zusatzkomponente noetig.
+
+### V5.1 Main Components
+
+| Komponente | Pfad | Aenderung |
+|---|---|---|
+| Snapshot-Worker | `src/workers/handbook/handle-snapshot-job.ts` | +Loader `loadApprovedWalkthroughs(adminClient, tenantId)` + Walkthroughs-Pass-Through an Renderer |
+| Schema-Validator | `src/workers/handbook/validate-schema.ts` | +`SectionSourceType = "walkthrough"` (validate `min_status='approved'`, optional `subtopic_keys[]`) |
+| Section-Renderer | `src/workers/handbook/sections.ts` | +`renderWalkthroughsSection(section, walkthroughs)` Markdown mit `<video>`+Schritt-Liste pro Subtopic |
+| Worker-Types | `src/workers/handbook/types.ts` | +`WalkthroughRow` + Source-Type-Erweiterung |
+| Storage-Proxy | `src/app/api/walkthrough/[sessionId]/embed/route.ts` (NEU) | Range-faehiger HTTP-Proxy auf `walkthroughs`-Bucket; RPC-RLS-Check; Audit-Log einmalig pro Reader-Page-Load |
+| RPC | `rpc_get_walkthrough_video_path` (NEU, Migration 089) | Tenant+Rolle+Status='approved'-Check; gibt `storage_path` oder `error` zurueck |
+| Reader-Stale-Check | `src/lib/handbook/load-snapshot-content.ts` (oder `src/app/dashboard/handbook/[snapshotId]/page.tsx`) | Stale-Signal erweitert: `latest_approved_walkthrough.created_at > snapshot.created_at` triggert Banner |
+| Cockpit-Card | existing "Walkthroughs zur Review" (V5 Hotfix) | +Sub-Hint "Snapshot empfehlbar" wenn approved Walkthroughs nach letztem Snapshot |
+| Default-Template | `template.handbook_schema` (Migration 089 DML) | Walkthroughs-Section idempotent in Demo-Templates einfuegen (Position nach SOPs) |
+
+### V5.1 Datenmodell — keine neuen Tabellen
+
+V5.1 fuegt **keine neue Tabelle** hinzu. Alle benoetigten Daten existieren bereits aus V5 Option 2:
+
+- `walkthrough_session` (Migration 083) — Status `approved`, `tenant_id`, `recorded_by_user_id`, `created_at`, `duration_ms`
+- `walkthrough_step` (Migration 085) — Schritt-Liste mit `step_number`, `action`, `responsible`, `timeframe`, `success_criterion`, `transcript_snippet`
+- `walkthrough_review_mapping` (Migration 086) — `subtopic_id` (nullable), `confidence_band`, `reviewer_corrected`
+- `walkthroughs` Storage-Bucket (Migration 084) — Roh-Video als `{tenant_id}/{session_id}.webm`
+
+Schema-Erweiterung **JSONB-only** in `template.handbook_schema`:
+
+```json
+{
+  "sections": [
+    {
+      "key": "walkthroughs",
+      "title": "Walkthroughs",
+      "order": 15,
+      "sources": [
+        { "type": "walkthrough", "filter": { "min_status": "approved" } }
+      ],
+      "render": { "subsections_by": "subtopic", "intro_template": null }
+    }
+  ]
+}
+```
+
+### V5.1 Data Flow
+
+```
+GENERATE-PHASE (Worker, on-demand via Berater "Snapshot generieren")
+  [tenant_admin/strategaize_admin loest Trigger]
+       ↓
+  [handle-snapshot-job.ts]
+    ├─ loadKnowledgeUnits + loadDiagnoses + loadSops (V4, unveraendert)
+    └─ NEU: loadApprovedWalkthroughs(adminClient, tenant_id)
+            -> walkthrough_session.status='approved'
+            -> JOIN walkthrough_step (deleted_at IS NULL, ORDER BY step_number)
+            -> JOIN walkthrough_review_mapping (subtopic_id, confidence_band)
+       ↓
+  [renderHandbook(schema, kus, diagnoses, sops, walkthroughs)]
+    └─ Pro Section mit type='walkthrough':
+       renderWalkthroughsSection(section, walkthroughs)
+       -> H1 Section-Title + <a id="section-walkthroughs">
+       -> Pro approved Walkthrough:
+          - H2 "{Recorder-Name} — {Datum} ({Dauer})"
+          - <video src="/api/walkthrough/{session_id}/embed" controls preload="metadata">
+          - Subtopic-Gruppen via walkthrough_review_mapping.subtopic_id
+            -> H3 "{subtopic_id}" (oder "Unzugeordnete Schritte" fuer NULL)
+            -> Schritt-Liste mit action/responsible/timeframe/success_criterion
+       ↓
+  [zip-builder.ts]
+    └─ XX_walkthroughs.md neben anderen Section-Files
+       ↓
+  [handbook Storage-Bucket: {tenant_id}/{snapshot_id}.zip]
+
+
+READ-PHASE (Reader, GET /dashboard/handbook/[snapshotId])
+  [Reader-Page server-side]
+    └─ loadSnapshotContent entpackt ZIP -> SectionFile[]
+       ↓
+  [HandbookReader.tsx Client]
+    └─ react-markdown + rehype-raw rendert Markdown inkl. <video>-Tag
+       ↓
+  [Browser HTML5 Player]
+    └─ GET /api/walkthrough/{session_id}/embed (mit Range: bytes=0-)
+       ↓
+  [Storage-Proxy /api/walkthrough/[sessionId]/embed/route.ts]
+    1. createClient() + getUser()  -> 401 wenn unauth
+    2. supabase.rpc('rpc_get_walkthrough_video_path', { p_walkthrough_session_id })
+       -> tenant_id-Check + role-Check + status='approved'-Check
+       -> liefert { storage_path } oder { error: 'forbidden' | 'not_found' | 'not_approved' }
+    3. EINMAL pro Reader-Page-Load: captureInfo (audit_log, category='walkthrough_video_embed')
+       -> Range-Request-Storm dedupliziert via session-cookie / first-byte-only
+    4. adminClient.storage.from('walkthroughs').download(storage_path) -> Blob
+    5. Range-Header parsen:
+       - Kein Range: 200 OK + Full Body
+       - Range: bytes=N-M: 206 Partial Content + slice(N, M+1) + Content-Range
+    6. Response Headers:
+       - Content-Type: video/webm
+       - Accept-Ranges: bytes
+       - Cache-Control: private, no-store
+```
+
+### V5.1 Range-Request-Pattern (Pflicht)
+
+HTML5 `<video>` startet Wiedergabe mit `Range: bytes=0-` (Initial-Probe), springt dann via Range-Header beim Seeking. Ohne 206-Support laedt der Browser entweder die ganze Datei (~50-100 MB bei 30min Walkthrough) vor erster Frame-Anzeige oder Seek funktioniert garnicht. Implementation:
+
+```typescript
+const range = request.headers.get('range');
+if (range) {
+  const [, start, end] = range.match(/bytes=(\d+)-(\d*)/) ?? [];
+  const startByte = Number(start);
+  const endByte = end ? Number(end) : arrayBuffer.byteLength - 1;
+  const slice = arrayBuffer.slice(startByte, endByte + 1);
+  return new NextResponse(slice, {
+    status: 206,
+    headers: {
+      'Content-Type': 'video/webm',
+      'Content-Range': `bytes ${startByte}-${endByte}/${arrayBuffer.byteLength}`,
+      'Accept-Ranges': 'bytes',
+      'Content-Length': String(slice.byteLength),
+      'Cache-Control': 'private, no-store',
+    },
+  });
+}
+return new NextResponse(arrayBuffer, { status: 200, headers: { /* ... */ } });
+```
+
+**Tradeoff bewusst (V5.1 Internal-Test-Mode):** Storage-Proxy laedt das ganze Blob via `adminClient.storage.download()` und sliced in-memory. Bei 100 MB Video × N Range-Requests pro Session belastet das den App-Container-RAM und den internen Kong-Bandwidth-Pfad. Akzeptabel fuer Internal-Test-Mode (max ~5 gleichzeitige Reader). **Pre-Production-Alternative (deferred):** Range-Header an Storage-Backend durchreichen via Stream/Pipe — komplexer, aber bandwidth-effizient. Wird Re-Eval in V5.2+ falls Reader-Last sichtbar steigt.
+
+### V5.1 External Dependencies — keine neuen
+
+- KEINE neuen npm-Pakete (`react-markdown` + `rehype-raw` aus V4.1 reichen aus; `<video>` rendert direkt durch)
+- KEINE neuen Worker-Job-Typen (Snapshot-Generation ist existing `handbook_snapshot_generation` — kein Re-Wiring)
+- KEINE neuen Storage-Buckets (`walkthroughs` aus V5 wird wiederverwendet)
+- KEINE neuen Bedrock-Calls (Snapshot-Generation ist deterministisch, kostenfrei)
+
+### V5.1 Security / Privacy
+
+- **Storage-Proxy haelt `walkthroughs`-Bucket privat** — kein Public-Read, keine Signed-URLs an Browser ausgeliefert (ISSUE-025-Resolution-Pattern).
+- **RPC-basierter RLS-Check** in `rpc_get_walkthrough_video_path` prueft drei Bedingungen vor jedem Embed: (a) `walkthrough_session.tenant_id = current_tenant_via_jwt`, (b) `current_role IN ('tenant_admin','strategaize_admin')`, (c) `walkthrough_session.status = 'approved'`. Der Embed liefert KEIN Roh-Video fuer pending_review, rejected oder failed Sessions.
+- **Audit-Log einmalig pro Reader-Page-Load**, nicht pro Range-Request — Range-Storm wuerde sonst hunderte Audit-Eintraege pro Reader-Session erzeugen. Implementierung: Server-side Audit-Insert beim Reader-Page-Load (existing `loadSnapshotContent` als Hook), nicht im Storage-Proxy. Audit-Category `walkthrough_video_embed` analog DEC-088 (`walkthrough_raw_transcript_view`).
+- **DSGVO-Posture unveraendert**: Roh-Video bleibt im `walkthroughs`-Bucket, Video-Level-PII-Redaction ist Pre-Production-Compliance-Gate-Pflicht (per `feedback_compliance_gate_later`). V5.1 setzt Internal-Test-Mode fort.
+- **Snapshot-Stabilitaet**: Cleanup-Cron (SLC-074) loescht nur `rejected>30d` und `failed>7d`. **Approved Walkthroughs bleiben dauerhaft** — Snapshots referenzieren `walkthrough_session.id` direkt; bei Loeschung waere `<video>`-URL tot. Pre-Existing Cleanup-Logik passt zu V5.1-Snapshot-Anforderung ohne Aenderung.
+
+### V5.1 Constraints und Tradeoffs
+
+- **Globale "Walkthroughs"-Section** statt inline-Verteilung pro Subtopic in bestehende Sections. Begruendung: Inline-Verteilung wuerde Section-Renderer-Drift erzeugen (KU + Diagnose + SOP + Walkthrough mischen pro Subtopic), fragmentiert das Reader-Erlebnis. Globale Section gibt Walkthroughs eine eigene Lese-Stelle. Inline-Verteilung kommt in V5.2+ falls User-Feedback es fordert.
+- **Walkthroughs-Section-Position** Default `order=15` (zwischen SOPs und Validation-Layer). Pro Template via `handbook_schema.sections[].order` anpassbar — kein DDL noetig.
+- **Manuelles Re-Generation-Trigger** statt Auto-Trigger pro approved Walkthrough. Begruendung: Auto-Trigger wuerde bei vielen Walkthroughs Worker-Storm produzieren; Berater-Trigger ist Quality-Gate-konform (FEAT-029-Pattern).
+- **Range-Support Pflicht** im Storage-Proxy — Browser-Seek ohne Range = unbrauchbar bei 30min-Videos.
+- **Cross-Snapshot-Suche kostenfrei dazu**: existing client-side Volltext-Suche (V4.3 SLC-054) umfasst Walkthroughs-Markdown automatisch — kein Code-Touch.
+- **Stale-Snapshot-Marker erweitert**: existing Pattern (`block_checkpoint.created_at > snapshot.created_at`) wird um `walkthrough_session.status='approved' AND approved_at > snapshot.created_at` erweitert. Reader-Banner zeigt einheitlichen Hinweis "Es gibt neuere Daten — neuen Snapshot generieren".
+
+### V5.1 Open Questions resolved
+
+- **Q-V5.1-A** Section-Position-Default → **DEC-095**: eigene Section "Walkthroughs", Default `order=15`, pro Template via `handbook_schema.sections[].order` anpassbar.
+- **Q-V5.1-B** Embed-Player → **DEC-096**: HTML5 native `<video>` + Range-faehiger Storage-Proxy. Kein iframe, kein Signed-URL, kein adaptive Streaming.
+- **Q-V5.1-C** Snapshot-Re-Generation-Trigger → **DEC-097**: manuell ueber existing Trigger-Workflow (V4.1 SLC-042-Pattern). Stale-Banner via approved_at vs. snapshot.created_at.
+
+### V5.1 Technische DECs (akkommodiert in `/docs/DECISIONS.md`)
+
+- **DEC-095** Walkthroughs als eigener Section-Source-Typ in `handbook_schema` (nicht inline in andere Sections, nicht eigene Route).
+- **DEC-096** HTML5 `<video>` mit Range-faehigem Storage-Proxy (`/api/walkthrough/[sessionId]/embed`) — ISSUE-025-Resolution-Pattern-Reuse, kein iframe, kein Signed-URL, kein HLS.
+- **DEC-097** Manuelles Re-Generation-Trigger fuer Walkthrough-Updates (kein Auto-Trigger), Stale-Banner-Logic erweitert.
+- **DEC-098** Walkthrough-Embed-Audit nur einmalig pro Reader-Page-Load (server-side bei `loadSnapshotContent`), nicht pro Range-Request — Spam-Prevention.
+- **DEC-099** RPC-basierter RLS-Check `rpc_get_walkthrough_video_path` analog `rpc_get_handbook_snapshot_path` — keine direkte Storage-Policy, weil walkthroughs-Bucket per V5-Foundation private bleibt.
+
+### V5.1 Migration-Plan
+
+**MIG-033 (Migration 089) `089_v51_walkthrough_handbook_integration.sql`** (geplant):
+
+- DDL: `CREATE OR REPLACE FUNCTION rpc_get_walkthrough_video_path(p_walkthrough_session_id UUID) RETURNS jsonb` — RLS-Check (Tenant + Rolle + Status='approved') + return `storage_path` oder `error`-JSONB
+- DML: idempotent `template.handbook_schema` der Demo-Templates (`exit_readiness`, `mitarbeiter_wissenserhebung`) um Walkthroughs-Section erweitern; Pre-Apply-Backup pflicht; idempotent via `handbook_schema -> 'sections' NOT @> ...`-Check
+- Apply-Pattern: `sql-migration-hetzner.md` (base64-Pipe + `psql -U postgres`)
+- Rollback: `DROP FUNCTION IF EXISTS rpc_get_walkthrough_video_path` + DML-Reverse via Pre-Apply-Backup-Restore
+
+### V5.1 Slice-Empfehlung (final in `/slice-planning V5.1`)
+
+**SLC-091 V5.1 Backend (Renderer + Storage-Proxy + RPC + MIG-033)** — ~5-7 MTs, ~1.5 Tage:
+- MT-1 `validate-schema.ts` + `types.ts` erweitern um `SectionSourceType="walkthrough"` + `WalkthroughRow`
+- MT-2 Loader `loadApprovedWalkthroughs(adminClient, tenantId)` mit JOIN walkthrough_session+step+mapping
+- MT-3 Renderer `renderWalkthroughsSection` mit inline `<video>` + Subtopic-gruppierter Schritt-Liste
+- MT-4 RPC `rpc_get_walkthrough_video_path` (Migration 089 DDL) + Migration 089 DML idempotent fuer Demo-Templates
+- MT-5 Storage-Proxy `/api/walkthrough/[sessionId]/embed/route.ts` mit Range-Support
+- MT-6 Vitest fuer Loader, Renderer, Endpoint, RPC (~10 Tests)
+- MT-7 Live-Apply Migration 089 + Verifikation
+
+**SLC-092 V5.1 Frontend (Reader-Integration + Stale-Marker + Audit + RLS-Matrix)** — ~3-5 MTs, ~1-1.5 Tage:
+- MT-1 React-markdown allowedElements pruefen (`video` zulassen falls disallowedElements aktiv) + CSS fuer `<video>` (`max-w-full`, `rounded`, `shadow`)
+- MT-2 Stale-Banner-Logic erweitern um `latest_approved_walkthrough vs. snapshot.created_at`
+- MT-3 Audit-Log `walkthrough_video_embed` einmalig pro Reader-Page-Load (in `loadSnapshotContent`)
+- MT-4 RLS-Test `walkthrough-embed-rls.test.ts` (4-Rollen-Matrix gegen Coolify-DB, SAVEPOINT-Pattern)
+- MT-5 Browser-Smoke (User-Pflicht: Reader oeffnen, Snapshot mit Walkthroughs anzeigen, Video abspielen, Seek testen, Cross-Tenant 404 verifizieren)
+
+**Total V5.1: 2 Slices, ~10-13 MTs, ~3-4 Tage** (konsistent mit RPT-170-Schaetzung).
+
+### V5.1 Sequenz und Pflicht-Gates
+
+1. **SLC-091 zuerst** — Backend-Foundation (Renderer + Endpoint + RPC). Vor SLC-092 abschliessen, weil Frontend Backend testen muss.
+2. **SLC-092 danach** — Reader-Integration + RLS-Matrix + Browser-Smoke.
+
+#### Pflicht-Gates fuer V5.1 Release
+
+- **SC-V5.1-1 Snapshot rendert Walkthroughs**: nach Snapshot-Generation enthaelt das ZIP `XX_walkthroughs.md` mit Markdown-Section pro approved Walkthrough.
+- **SC-V5.1-2 Embed-Player spielt Video ab + Seek funktioniert**: HTML5 `<video>` laedt via Storage-Proxy, Browser kann seek-en (Range-Requests 206).
+- **SC-V5.1-3 Cross-Tenant-Schutz**: tenant_admin von Tenant B bekommt 403/404 fuer `/api/walkthrough/[sessionId]/embed` mit Tenant-A-Session.
+- **SC-V5.1-4 Stale-Banner triggert** wenn approved Walkthrough nach letztem Snapshot existiert.
+- **RLS-Matrix walkthrough-embed**: 4 Rollen × 3 Status (approved/pending_review/rejected) × 2 Tenant-Konstellationen = 24 Faelle gruen.
+- **Browser-Smoke User-Pflicht**: Reader-Page mit echtem Walkthrough-Snapshot — Video abspielen, Seek testen, Stale-Banner verifizieren.
+
+### Naechster Schritt V5.1
+
+`/slice-planning V5.1` — die 2 Slice-Empfehlungen (SLC-091 + SLC-092) in finale Slice-Files zerlegen, MTs final nummerieren, slices/INDEX.md updaten, BL-082 + Migration 089 + Migration-Apply-Slice festlegen, Sequenz-Reihenfolge final festlegen.
+
+V5.1-Pre-Conditions: V5 Option 2 STABLE (Cron-Run-Verifikation 2026-05-09 03:00 ausstehend) + `/post-launch` V5 PASS (~14:00 Europe/Berlin). V5.1-`/slice-planning` kann parallel laufen — V5.1-`/backend SLC-091` startet erst nach V5-STABLE.

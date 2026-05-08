@@ -555,3 +555,111 @@ Der uebernommene Blueprint-Stand ist noch nicht auf einer Onboarding-Plattform-I
   ```
   Apply per `sql-migration-hetzner.md`-Pattern in Option-2-Pipeline-Slices (final in /slice-planning, vermutlich SLC-PII fuer 087, SLC-EXT fuer 085, SLC-MAP fuer 086 — oder gebuendelt in Option-2-Foundation-Slice). Verifikation: `\d walkthrough_step` zeigt 18 Columns + 3 Policies + 2 Indizes + Trigger, `\d walkthrough_review_mapping` zeigt GENERATED-Column + 2 Indizes + 2 Policies, `pg_get_constraintdef` zeigt erweiterte CHECK auf walkthrough_session.status (11 Werte) und knowledge_unit.source (10 Werte).
 - Live-Deploy: offen (geplant fuer Option-2-Pipeline-Slices nach Slice-Planning).
+
+### MIG-033 — V5.1 Walkthrough Handbuch-Integration: rpc_get_walkthrough_video_path + handbook_schema-DML (Migration 089)
+- Date: 2026-05-08 (Architektur done) — geplante Apply in `/backend SLC-091` MT-4+MT-7 nach V5-Option-2-STABLE.
+- Scope: Eine additive Migration fuer V5.1 (Walkthrough-Handbuch-Embed-Foundation). Kein neues Tabellen-DDL — V5.1 nutzt ausschliesslich existing Tabellen aus MIG-031+MIG-032. Migration enthaelt zwei Komponenten:
+  - **DDL** — `CREATE OR REPLACE FUNCTION public.rpc_get_walkthrough_video_path(p_walkthrough_session_id uuid) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER`. Logik per DEC-099: Lookup walkthrough_session, Tenant-Check via `auth.user_tenant_id()`, Rolle-Check via `auth.user_role()` IN ('tenant_admin','strategaize_admin'), Status-Check `= 'approved'`. Returns `{ storage_path, approved_at }` oder `{ error: 'not_found' | 'forbidden' | 'not_approved' }`.
+  - **DML** — Idempotente UPDATE der zwei produktiven Templates (`exit_readiness`, `mitarbeiter_wissenserhebung`) auf `template.handbook_schema` zur Erweiterung um eine Walkthroughs-Section mit Default `order=15`. Idempotent via JSONB-Containment-Check `WHERE NOT (handbook_schema -> 'sections' @> ...)`. Bestehende Templates ohne `handbook_schema` (NULL) werden nicht angefasst — nur Templates mit existing Sections-Array werden erweitert.
+- Reason: V5.1 (FEAT-038, RPT-170 Requirements + diese /architecture V5.1) braucht zwei Schema-seitige Foundation-Stuecke fuer den Handbuch-Embed-Pfad: (1) eine RPC, die als RLS-Gateway fuer den Storage-Proxy `/api/walkthrough/[sessionId]/embed` dient (DEC-099, Pattern-Reuse von `rpc_get_handbook_snapshot_path` aus FEAT-028 SLC-040), und (2) ein DML-Update der Default-Templates, damit beim Live-Deploy V5.1 sofort Walkthroughs-Sections in neuen Snapshots erscheinen ohne dass der Berater jedes Template manuell anpassen muss. Die DML ist Daten-Migration, nicht Schema — `handbook_schema` ist JSONB und akzeptiert beliebige Section-Definitionen ohne DDL-Aenderung. Beide Komponenten in einer Migration gebuendelt, weil sie zusammen ein logisches V5.1-Foundation-Stueck sind und einzeln keinen Wert haben.
+- Affected Areas:
+  - Neue SQL-Function `public.rpc_get_walkthrough_video_path(uuid)` mit SECURITY DEFINER + GRANT EXECUTE TO authenticated
+  - Daten-Migration in `public.template.handbook_schema` JSONB-Field fuer 2 produktive Templates (exit_readiness, mitarbeiter_wissenserhebung)
+  - Worker-Code: `validate-schema.ts` akzeptiert neuen `SectionSourceType="walkthrough"` (App-Code, kein DDL — in /backend SLC-091 MT-1)
+  - App-Code: neuer Endpoint `src/app/api/walkthrough/[sessionId]/embed/route.ts` (kein DDL — in /backend SLC-091 MT-5)
+  - RLS-Test-Matrix erweitert um 24 Faelle (4 Rollen × 3 Status × 2 Tenant-Konstellationen) in `walkthrough-embed-rls.test.ts` (in /frontend SLC-092 MT-4)
+- Risk: Niedrig. (1) `CREATE OR REPLACE FUNCTION` ist idempotent und betrifft keine bestehenden Daten. (2) DML auf `template.handbook_schema` ist additive JSONB-Erweiterung mit Pre-Apply-Containment-Check — bei Re-Apply wird Section nicht doppelt eingefuegt. SECURITY DEFINER bringt RLS-Bypass-Risiko, aber die Function selbst implementiert die Authorization-Checks (Tenant + Rolle + Status) — gleiches Pattern wie `rpc_get_handbook_snapshot_path` (FEAT-028, seit V4.1 stabil produktiv). Pre-Apply-Pflicht: Backup von `template.handbook_schema` fuer beide produktiven Templates vor DML-Apply. Apply-Pattern Standard `sql-migration-hetzner.md` (base64-Pipe + `psql -U postgres`).
+- Rollback Notes:
+  - **DDL Rollback**: `DROP FUNCTION IF EXISTS public.rpc_get_walkthrough_video_path(uuid);` — Endpoint `/api/walkthrough/[sessionId]/embed` faellt mit 500 (RPC nicht gefunden), aber neue Snapshots wuerden die Walkthroughs-Section weiter rendern (Markdown ist statisch, Video-URLs broken). Pre-Rollback-Pflicht: existing Snapshots mit Walkthrough-Sections sind statisch und reflektieren das Roll-back nicht. Praktisch: Rollback nur sinnvoll wenn V5.1-Code-Deploy auch revertiert.
+  - **DML Rollback**: Pre-Apply-Backup-Restore via `UPDATE template SET handbook_schema = '<backup>' WHERE id = '<id>'` — nur sinnvoll wenn die Walkthroughs-Section an mind. einem Template aktiv geworden ist und Snapshots damit erstellt wurden. Bei Pre-Apply-Backup-Vorhaltung trivial.
+  - Rollback-Reihenfolge bei Komplett-Revert V5.1: 1. App-Image revert auf V5-Stand (REL-013, `93a9d7a`) — Worker-Renderer-Pfad ignoriert `walkthrough`-Source-Type (validate-schema.ts pre-V5.1 unterstuetzt das nicht). 2. Optional DDL Rollback `DROP FUNCTION` (kann auch live bleiben, wirkungslos ohne Endpoint). 3. Optional DML Rollback (Walkthroughs-Section in `handbook_schema` bleibt cosmetic, Worker pre-V5.1 ignoriert `type='walkthrough'` mit Schema-Validation-Error -> Fail-Fast pro Snapshot-Job; Rollback ist hier praktisch Pflicht).
+- Format-Skizze (final in /backend SLC-091 MT-4):
+  ```sql
+  -- 089_v51_walkthrough_handbook_integration.sql
+
+  -- 1. RPC fuer Storage-Proxy-RLS-Check (DEC-099)
+  CREATE OR REPLACE FUNCTION public.rpc_get_walkthrough_video_path(
+    p_walkthrough_session_id uuid
+  )
+  RETURNS jsonb
+  LANGUAGE plpgsql
+  SECURITY DEFINER
+  SET search_path = public, auth
+  AS $$
+  DECLARE
+    v_session record;
+    v_role    text;
+    v_tenant  uuid;
+  BEGIN
+    -- Authorization-Context
+    v_role := auth.user_role();
+    v_tenant := auth.user_tenant_id();
+
+    IF v_role IS NULL THEN
+      RETURN jsonb_build_object('error', 'unauthenticated');
+    END IF;
+
+    -- Reader-Zugriff nur fuer tenant_admin + strategaize_admin (V4.1 DEC-V4.1-2)
+    IF v_role NOT IN ('tenant_admin', 'strategaize_admin') THEN
+      RETURN jsonb_build_object('error', 'forbidden');
+    END IF;
+
+    -- Session laden (RLS aktiv via SECURITY DEFINER -> bypass; Authorization manuell oben)
+    SELECT id, tenant_id, status, created_at
+      INTO v_session
+      FROM public.walkthrough_session
+      WHERE id = p_walkthrough_session_id;
+
+    IF NOT FOUND THEN
+      RETURN jsonb_build_object('error', 'not_found');
+    END IF;
+
+    -- Tenant-Check: tenant_admin nur eigener Tenant; strategaize_admin cross-tenant
+    IF v_role = 'tenant_admin' AND v_session.tenant_id != v_tenant THEN
+      RETURN jsonb_build_object('error', 'forbidden');
+    END IF;
+
+    -- Status-Check: nur approved Sessions liefern Video
+    IF v_session.status != 'approved' THEN
+      RETURN jsonb_build_object('error', 'not_approved', 'status', v_session.status);
+    END IF;
+
+    -- Storage-Path-Convention aus V5 (Migration 084): {tenant_id}/{session_id}.webm
+    RETURN jsonb_build_object(
+      'storage_path', v_session.tenant_id::text || '/' || v_session.id::text || '.webm',
+      'created_at',   v_session.created_at
+    );
+  END;
+  $$;
+
+  GRANT EXECUTE ON FUNCTION public.rpc_get_walkthrough_video_path(uuid) TO authenticated;
+
+  -- 2. DML: Walkthroughs-Section in produktive Templates idempotent einfuegen
+  UPDATE public.template
+  SET handbook_schema = jsonb_set(
+    handbook_schema,
+    '{sections}',
+    (handbook_schema -> 'sections') || jsonb_build_array(
+      jsonb_build_object(
+        'key',   'walkthroughs',
+        'title', 'Walkthroughs',
+        'order', 15,
+        'sources', jsonb_build_array(
+          jsonb_build_object(
+            'type',   'walkthrough',
+            'filter', jsonb_build_object('min_status', 'approved')
+          )
+        ),
+        'render', jsonb_build_object(
+          'subsections_by', 'subtopic',
+          'intro_template', null
+        )
+      )
+    )
+  )
+  WHERE handbook_schema IS NOT NULL
+    AND handbook_schema ? 'sections'
+    AND NOT (handbook_schema -> 'sections' @> '[{"key":"walkthroughs"}]'::jsonb);
+  ```
+  Apply per `sql-migration-hetzner.md`-Pattern in `/backend SLC-091 MT-7`. Verifikation: `\df rpc_get_walkthrough_video_path` zeigt Function (SECURITY DEFINER, owner postgres), `SELECT id, name, handbook_schema -> 'sections' FROM template` zeigt Walkthroughs-Section in beiden produktiven Templates an Position 15. Smoke-RPC-Call `SELECT rpc_get_walkthrough_video_path('<existing-approved-session-id>')` (manuell als postgres-User mit gesetzter `request.jwt.claim`) liefert `{ storage_path, created_at }`-JSONB.
+- Live-Deploy: offen (geplant fuer `/backend SLC-091 MT-7` nach V5-Option-2-STABLE und `/slice-planning V5.1`).

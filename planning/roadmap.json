@@ -80,8 +80,8 @@
     {
       "id": "v5-1",
       "name": "V5.1",
-      "status": "planned",
-      "summary": "Walkthrough Handbuch-Integration — geshrinkt nach V5 Option 2 (DEC-079, 2026-05-06). 1 Feature: FEAT-038 Handbuch-Integration (approved mapped SOPs aus V5 Option 2 fliessen in Unternehmerhandbuch-Snapshot als neuer Section-Typ 'Walkthroughs' mit Schritt-Liste + Embed-Link zum Roh-Video via Storage-Proxy-Pattern aus V4.1 ISSUE-025 Resolution; Section-Position konfigurierbar pro Template). AI-Pipeline (PII + Schritt-Extraktion + Auto-Mapping) ist nicht mehr V5.1 — wurde nach V5 vorgezogen. Slice-Skizze: 2 Slices, ~8-10 MTs, ~3-4 Tage. Requirements re-done 2026-05-06 (RPT-170). Sequenz: V5 Option 2 deployed -> V5.1 startet.",
+      "status": "active",
+      "summary": "Walkthrough Handbuch-Integration — geshrinkt nach V5 Option 2 (DEC-079, 2026-05-06). 1 Feature: FEAT-038 Handbuch-Integration (approved mapped SOPs aus V5 Option 2 fliessen in Unternehmerhandbuch-Snapshot als neuer Section-Source-Typ 'walkthrough' mit Schritt-Liste + inline HTML5 <video>-Embed via Range-faehigem Storage-Proxy /api/walkthrough/[sessionId]/embed; Section-Position default order=15 nach SOPs, pro Template via handbook_schema.sections[].order anpassbar). AI-Pipeline (PII + Schritt-Extraktion + Auto-Mapping) ist nicht mehr V5.1 — wurde nach V5 vorgezogen. Requirements done 2026-05-06 (RPT-170). Architecture done 2026-05-08 (RPT-197): 5 DECs (DEC-095..099), MIG-033 mit Migration 089 (rpc_get_walkthrough_video_path + handbook_schema-DML), 2 Slices SLC-091 (Backend) + SLC-092 (Frontend), ~10-13 MTs, ~3-4 Tage. Sequenz: V5 Option 2 STABLE (Cron-Run-Verifikation 2026-05-09 03:00 ausstehend) + /post-launch V5 -> /slice-planning V5.1 -> /backend SLC-091 -> /frontend SLC-092 -> Gesamt-/qa V5.1 -> Final-Check -> Go-Live -> Deploy als REL-014.",
       "order": 12
     },
     {
