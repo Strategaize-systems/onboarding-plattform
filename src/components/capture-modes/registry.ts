@@ -32,6 +32,7 @@ export type CaptureMode =
   | "evidence"
   | "dialogue"
   | "employee_questionnaire"
+  | "walkthrough"
   | "walkthrough_stub";
 
 /**
@@ -100,7 +101,19 @@ export const CAPTURE_MODE_REGISTRY: Record<CaptureMode, CaptureModeMeta> = {
     productive: true,
     StubComponent: null,
   },
+  walkthrough: {
+    basePath: "/employee/walkthroughs",
+    workerJobType: "walkthrough_transcribe",
+    displayName: "Walkthrough",
+    productive: true,
+    StubComponent: null,
+  },
   walkthrough_stub: {
+    // V4 SLC-038 Spike — ersetzt durch produktiven 'walkthrough' in V5
+    // Option 2. Code unter src/components/capture-modes/walkthrough-stub/
+    // bleibt als Architektur-Beispiel fuer FEAT-025 Capture-Mode-Hooks
+    // (SC-V4-6-Beweis). productive: false haelt den Eintrag aus jeder
+    // Mode-Auswahl-UI heraus.
     basePath: "/capture",
     workerJobType: "walkthrough_stub_processing",
     displayName: "Walkthrough-Mode (Spike)",

@@ -8,15 +8,23 @@ import {
 } from "../registry";
 
 describe("CAPTURE_MODE_REGISTRY", () => {
-  it("contains every known V4 mode key", () => {
+  it("contains every known V4 + V5 Option 2 mode key", () => {
     const expected = [
       "questionnaire",
       "evidence",
       "dialogue",
       "employee_questionnaire",
+      "walkthrough",
       "walkthrough_stub",
     ].sort();
     expect([...ALL_CAPTURE_MODES].sort()).toEqual(expected);
+  });
+
+  it("walkthrough (V5 Option 2) is productive and routes under /employee/walkthroughs", () => {
+    expect(CAPTURE_MODE_REGISTRY.walkthrough.productive).toBe(true);
+    expect(CAPTURE_MODE_REGISTRY.walkthrough.basePath).toBe("/employee/walkthroughs");
+    expect(CAPTURE_MODE_REGISTRY.walkthrough.workerJobType).toBe("walkthrough_transcribe");
+    expect(CAPTURE_MODE_REGISTRY.walkthrough.StubComponent).toBeNull();
   });
 
   it("default fallback is questionnaire", () => {

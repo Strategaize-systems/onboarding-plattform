@@ -795,7 +795,7 @@
       "title": "V5 Walkthrough-Registry-Update + Cleanup-Cron + RLS-Matrix (Re-scoped Option 2)",
       "type": "feature",
       "priority": "high",
-      "status": "in_progress",
+      "status": "done",
       "version": "V5",
       "description": "Re-scoped 2026-05-06 per DEC-079. Slice-Zuordnung 2026-05-06 in /slice-planning V5 Option 2: SLC-074 (re-scoped). Capture-Mode-Registry-Update (walkthrough produktiv, walkthrough_stub UI-deaktiviert), Coolify-Scheduled-Task walkthrough-cleanup-daily erweitert um Stale-Pipeline-Recovery fuer transcribing+redacting+extracting+mapping (>1h → failed), 4-Rollen-RLS-Matrix auf 48 Faelle (16 walkthrough_session + 16 walkthrough_step + 16 walkthrough_review_mapping), V5-Option-2-Release-Gate (0 Lint, 0 Warnings, 0 npm-Vulns). MT-Count: ~5.",
       "createdAt": "2026-05-05"
