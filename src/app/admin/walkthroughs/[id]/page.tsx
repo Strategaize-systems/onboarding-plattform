@@ -146,15 +146,45 @@ export default async function WalkthroughDetailPage({ params }: PageProps) {
         .maybeSingle()
     : { data: null };
 
-  // Steps + Mappings
+  // Steps + Mappings — zwei separate Queries (PostgREST-Embedded-Select fand FK nicht zuverlaessig)
   const { data: stepRows } = await admin
     .from("walkthrough_step")
     .select(
-      "id, step_number, action, responsible, timeframe, success_criterion, dependencies, reviewer_corrected, walkthrough_review_mapping(subtopic_id, confidence_score, confidence_band, mapping_reasoning, reviewer_corrected)",
+      "id, step_number, action, responsible, timeframe, success_criterion, dependencies, reviewer_corrected",
     )
     .eq("walkthrough_session_id", id)
     .is("deleted_at", null)
     .order("step_number", { ascending: true });
+
+  const stepIds = (stepRows ?? []).map((r) => r.id as string);
+  const mappingsByStepId = new Map<
+    string,
+    {
+      subtopic_id: string | null;
+      confidence_score: number | null;
+      confidence_band: "green" | "yellow" | "red";
+      mapping_reasoning: string | null;
+      reviewer_corrected: boolean;
+    }
+  >();
+  if (stepIds.length > 0) {
+    const { data: mappingRows } = await admin
+      .from("walkthrough_review_mapping")
+      .select(
+        "walkthrough_step_id, subtopic_id, confidence_score, confidence_band, mapping_reasoning, reviewer_corrected",
+      )
+      .in("walkthrough_step_id", stepIds);
+    for (const m of mappingRows ?? []) {
+      mappingsByStepId.set(m.walkthrough_step_id as string, {
+        subtopic_id: (m.subtopic_id as string | null) ?? null,
+        confidence_score: (m.confidence_score as number | null) ?? null,
+        confidence_band:
+          ((m.confidence_band as string) as "green" | "yellow" | "red") ?? "red",
+        mapping_reasoning: (m.mapping_reasoning as string | null) ?? null,
+        reviewer_corrected: Boolean(m.reviewer_corrected),
+      });
+    }
+  }
 
   // Original-Transkript fuer RawTranscriptToggle
   let originalTranscript = "";
@@ -182,20 +212,12 @@ export default async function WalkthroughDetailPage({ params }: PageProps) {
     (templateRes.data?.blocks as unknown) ?? [],
   );
 
-  // Build steps + mappings
+  // Build steps + mappings (mappings via Map-Lookup statt embedded select)
   const steps: SubtopicTreeStep[] = (stepRows ?? []).map((row) => {
-    const mappingArr = row.walkthrough_review_mapping as
-      | Array<{
-          subtopic_id: string | null;
-          confidence_score: number | null;
-          confidence_band: "green" | "yellow" | "red";
-          mapping_reasoning: string | null;
-          reviewer_corrected: boolean;
-        }>
-      | null;
-    const mapping = Array.isArray(mappingArr) ? mappingArr[0] ?? null : null;
+    const stepId = row.id as string;
+    const mapping = mappingsByStepId.get(stepId) ?? null;
     return {
-      id: row.id as string,
+      id: stepId,
       step_number: row.step_number as number,
       action: (row.action as string) ?? "",
       responsible: (row.responsible as string | null) ?? null,
@@ -203,15 +225,7 @@ export default async function WalkthroughDetailPage({ params }: PageProps) {
       success_criterion: (row.success_criterion as string | null) ?? null,
       dependencies: (row.dependencies as string | null) ?? null,
       reviewer_corrected: Boolean(row.reviewer_corrected),
-      mapping: mapping
-        ? {
-            subtopic_id: mapping.subtopic_id ?? null,
-            confidence_score: mapping.confidence_score ?? null,
-            confidence_band: mapping.confidence_band ?? "red",
-            mapping_reasoning: mapping.mapping_reasoning ?? null,
-            reviewer_corrected: Boolean(mapping.reviewer_corrected),
-          }
-        : null,
+      mapping,
     };
   });
 

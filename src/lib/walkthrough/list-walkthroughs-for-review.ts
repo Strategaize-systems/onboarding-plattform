@@ -70,7 +70,7 @@ export async function listWalkthroughsForReview(
     ),
   );
 
-  // Parallel laden: Tenants + Profiles + Steps mit Mapping
+  // Parallel laden: Tenants + Profiles + Steps (Mappings separat im 2. Schritt)
   const [tenantsRes, profilesRes, stepsRes] = await Promise.all([
     admin
       .from("tenants")
@@ -84,9 +84,7 @@ export async function listWalkthroughsForReview(
       : Promise.resolve({ data: [], error: null }),
     admin
       .from("walkthrough_step")
-      .select(
-        "id, walkthrough_session_id, walkthrough_review_mapping(subtopic_id)",
-      )
+      .select("id, walkthrough_session_id")
       .in("walkthrough_session_id", sessionIds)
       .is("deleted_at", null),
   ]);
@@ -99,6 +97,33 @@ export async function listWalkthroughsForReview(
   }
   if (stepsRes.error) {
     throw new Error(`steps lookup failed: ${stepsRes.error.message}`);
+  }
+
+  const stepIdToSession = new Map<string, string>();
+  for (const s of stepsRes.data ?? []) {
+    stepIdToSession.set(
+      s.id as string,
+      s.walkthrough_session_id as string,
+    );
+  }
+
+  // Mappings separat laden (PostgREST-Embedded-Select fand FK nicht zuverlaessig)
+  const mappingBySessionStepKey = new Map<string, string | null>();
+  if (stepIdToSession.size > 0) {
+    const stepIds = Array.from(stepIdToSession.keys());
+    const { data: mappingRows, error: mappingErr } = await admin
+      .from("walkthrough_review_mapping")
+      .select("walkthrough_step_id, subtopic_id")
+      .in("walkthrough_step_id", stepIds);
+    if (mappingErr) {
+      throw new Error(`mappings lookup failed: ${mappingErr.message}`);
+    }
+    for (const m of mappingRows ?? []) {
+      mappingBySessionStepKey.set(
+        m.walkthrough_step_id as string,
+        (m.subtopic_id as string | null) ?? null,
+      );
+    }
   }
 
   const tenantMap = new Map<string, string>();
@@ -114,16 +139,12 @@ export async function listWalkthroughsForReview(
   // Mapping-Stats pro Session
   const mappedCount = new Map<string, number>();
   const unmappedCount = new Map<string, number>();
-  for (const step of stepsRes.data ?? []) {
-    const sid = step.walkthrough_session_id as string;
-    const mappingArr = step.walkthrough_review_mapping as
-      | Array<{ subtopic_id: string | null }>
-      | null;
-    const mapping = Array.isArray(mappingArr) ? mappingArr[0] : null;
-    if (mapping && mapping.subtopic_id) {
-      mappedCount.set(sid, (mappedCount.get(sid) ?? 0) + 1);
+  for (const [stepId, sessionId] of stepIdToSession) {
+    const subtopicId = mappingBySessionStepKey.get(stepId);
+    if (subtopicId) {
+      mappedCount.set(sessionId, (mappedCount.get(sessionId) ?? 0) + 1);
     } else {
-      unmappedCount.set(sid, (unmappedCount.get(sid) ?? 0) + 1);
+      unmappedCount.set(sessionId, (unmappedCount.get(sessionId) ?? 0) + 1);
     }
   }
 
