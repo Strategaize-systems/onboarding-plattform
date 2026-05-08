@@ -6,7 +6,7 @@ import { DashboardSidebar } from "@/components/dashboard-sidebar";
 import { HelpButton } from "@/components/help-button";
 
 interface Props {
-  profile: { email: string; role: string };
+  profile: { email: string; role: string; tenant_id?: string | null };
   children: React.ReactNode;
 }
 

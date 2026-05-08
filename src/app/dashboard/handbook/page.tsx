@@ -111,7 +111,11 @@ export default async function HandbookSelectionPage() {
 
   return (
     <HandbookSelectionShell
-      profile={{ email: profile.email as string, role: profile.role as string }}
+      profile={{
+        email: profile.email as string,
+        role: profile.role as string,
+        tenant_id: (profile.tenant_id as string | null) ?? null,
+      }}
     >
       <div className="mx-auto max-w-3xl space-y-6">
         <div>

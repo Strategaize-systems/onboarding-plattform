@@ -13,7 +13,7 @@ import { Menu, X } from "lucide-react";
 import { DashboardSidebar } from "@/components/dashboard-sidebar";
 
 interface HandbookSelectionShellProps {
-  profile: { email: string; role: string };
+  profile: { email: string; role: string; tenant_id?: string | null };
   children: ReactNode;
 }
 

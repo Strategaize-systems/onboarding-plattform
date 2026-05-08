@@ -3,8 +3,10 @@ import { createClient } from "@/lib/supabase/server";
 import { loadCockpitMetrics } from "@/lib/cockpit/load-metrics";
 import { getReviewSummary } from "@/lib/handbook/get-review-summary";
 import { getInactiveEmployeesCount } from "@/lib/dashboard/inactive-employees";
+import { getWalkthroughReviewSummary } from "@/lib/walkthrough/get-walkthrough-summary";
 import { BlockReviewStatusCard } from "@/components/cockpit/BlockReviewStatusCard";
 import { InactiveEmployeesCard } from "@/components/cockpit/InactiveEmployeesCard";
+import { WalkthroughReviewStatusCard } from "@/components/cockpit/WalkthroughReviewStatusCard";
 import { DashboardClient } from "./dashboard-client";
 import { StatusCockpit } from "./StatusCockpit";
 // SLC-047 Wizard-Trigger — eigentlich ueber dashboard/layout.tsx geplant
@@ -116,12 +118,33 @@ export default async function DashboardPage() {
     );
   }
 
+  // V5 Option 2 Hotfix — Cockpit-Card "Walkthroughs zur Review" fuer tenant_admin.
+  // Klick fuehrt zu /admin/tenants/[tenantId]/walkthroughs (Per-Tenant-Liste).
+  // Card erscheint immer wenn tenant_admin + tenant_id (auch bei 0 Walkthroughs:
+  // "Noch keine Walkthroughs"-Hint, neutraler Tone). Konsistent mit Sidebar-
+  // Eintrag, der ebenfalls immer sichtbar ist.
+  let walkthroughCard: React.ReactNode = null;
+  if (profile.role === "tenant_admin" && profile.tenant_id) {
+    const walkthroughSummary = await getWalkthroughReviewSummary(
+      supabase,
+      profile.tenant_id,
+    );
+    walkthroughCard = (
+      <WalkthroughReviewStatusCard
+        summary={walkthroughSummary}
+        role="tenant_admin"
+        tenantId={profile.tenant_id}
+      />
+    );
+  }
+
   const cockpitContent =
     profile.role === "tenant_admin" && metrics ? (
       <StatusCockpit
         metrics={metrics}
         reviewCard={reviewCard}
         inactiveCard={inactiveCard}
+        walkthroughCard={walkthroughCard}
       />
     ) : null;
 

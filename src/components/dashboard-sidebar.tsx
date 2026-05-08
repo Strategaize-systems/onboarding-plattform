@@ -4,12 +4,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { logout } from "@/app/login/actions";
-import { PlusCircle, LogOut, ArrowLeft, Users, GitMerge, BookOpen } from "lucide-react";
+import { PlusCircle, LogOut, ArrowLeft, Users, GitMerge, BookOpen, Video } from "lucide-react";
 
 interface DashboardSidebarProps {
   profile: {
     email: string;
     role: string;
+    tenant_id?: string | null;
   };
   activePage: "capture";
 }
@@ -87,8 +88,19 @@ export function DashboardSidebar({ profile, activePage }: DashboardSidebarProps)
           const isHandbookActive =
             pathname.startsWith("/admin/handbook") ||
             pathname.startsWith("/dashboard/handbook");
+          const isWalkthroughsActive =
+            pathname.startsWith("/admin/walkthroughs") ||
+            (pathname.startsWith("/admin/tenants/") &&
+              pathname.includes("/walkthroughs"));
           const isCaptureActive =
-            activePage === "capture" && !isTeamActive && !isBridgeActive && !isHandbookActive;
+            activePage === "capture" &&
+            !isTeamActive &&
+            !isBridgeActive &&
+            !isHandbookActive &&
+            !isWalkthroughsActive;
+          const walkthroughsHref = profile.tenant_id
+            ? `/admin/tenants/${profile.tenant_id}/walkthroughs`
+            : "/admin/walkthroughs";
           return (
             <>
               <Link
@@ -138,6 +150,23 @@ export function DashboardSidebar({ profile, activePage }: DashboardSidebarProps)
                   <div className="text-sm font-bold leading-snug">Bridge</div>
                   <div className={`text-[10px] uppercase tracking-wider font-semibold mt-0.5 ${isBridgeActive ? "text-white/50" : "text-slate-500"}`}>
                     Folge-Aufgaben fuer das Team
+                  </div>
+                </div>
+              </Link>
+              {/* Walkthroughs — SLC-079 / V5 Option 2: tenant_admin reviewt mapped SOPs. */}
+              <Link
+                href={walkthroughsHref}
+                className={`flex w-full items-center gap-3 rounded-xl px-4 py-3.5 text-left transition-all duration-200 ${
+                  isWalkthroughsActive
+                    ? "bg-gradient-to-r from-brand-primary to-brand-primary-dark text-white shadow-[0_8px_16px_-4px_rgba(68,84,184,0.35)]"
+                    : "text-slate-300 hover:bg-white/[0.06]"
+                }`}
+              >
+                <Video className="h-4 w-4" />
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-bold leading-snug">Walkthroughs</div>
+                  <div className={`text-[10px] uppercase tracking-wider font-semibold mt-0.5 ${isWalkthroughsActive ? "text-white/50" : "text-slate-500"}`}>
+                    Methodik-Review
                   </div>
                 </div>
               </Link>

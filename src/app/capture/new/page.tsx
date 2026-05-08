@@ -28,7 +28,7 @@ export default async function CaptureNewPage() {
   const templates = await listTemplates(supabase);
 
   return (
-    <TenantAdminShell profile={{ email: profile.email ?? "", role: profile.role }}>
+    <TenantAdminShell profile={{ email: profile.email ?? "", role: profile.role, tenant_id: profile.tenant_id }}>
       <StartSessionClient templates={templates} />
     </TenantAdminShell>
   );

@@ -11,6 +11,8 @@ interface Props {
   reviewCard?: ReactNode;
   /** SLC-049: optionale 7. Karte fuer "Mitarbeiter ohne Aktivitaet". */
   inactiveCard?: ReactNode;
+  /** V5 Option 2 Hotfix: optionale 8. Karte fuer Walkthrough-Methodik-Review. */
+  walkthroughCard?: ReactNode;
 }
 
 /**
@@ -23,7 +25,12 @@ interface Props {
  *
  * Alle Karten sind klickbar und fuehren zur jeweiligen Detail-Route.
  */
-export function StatusCockpit({ metrics, reviewCard, inactiveCard }: Props) {
+export function StatusCockpit({
+  metrics,
+  reviewCard,
+  inactiveCard,
+  walkthroughCard,
+}: Props) {
   const nextStep = computeRecommendedNextStep(metrics);
   const captureHref = metrics.captureSessionId
     ? `/capture/${metrics.captureSessionId}`
@@ -157,6 +164,8 @@ export function StatusCockpit({ metrics, reviewCard, inactiveCard }: Props) {
         />
 
         {reviewCard}
+
+        {walkthroughCard}
 
         {inactiveCard}
       </div>

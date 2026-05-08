@@ -20,7 +20,7 @@ export default async function AdminLayout({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id, role, email")
+    .select("id, role, email, tenant_id")
     .eq("id", user.id)
     .single();
 
@@ -44,7 +44,13 @@ export default async function AdminLayout({
   }
 
   return (
-    <TenantAdminShell profile={{ email: profile.email, role: profile.role }}>
+    <TenantAdminShell
+      profile={{
+        email: profile.email,
+        role: profile.role,
+        tenant_id: profile.tenant_id,
+      }}
+    >
       {children}
     </TenantAdminShell>
   );
