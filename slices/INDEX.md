@@ -235,13 +235,13 @@ BL-067 ist KEIN Code-Slice — direkter Editor-Workflow vom User selbst. 5 Help-
 
 ## V5 Slices (Walkthrough-Mode + Methodik-Schicht — V5 Option 2 Re-Plan 2026-05-06)
 
-V5-Scope wurde am 2026-05-06 nach USP-Stress-Test re-geplant (DEC-079 Strategaize-Dev-System + DEC-089 Onboarding-Anker). Roh-Video-Berater-Review (FEAT-036, SLC-073) wurde **deferred**. Stattdessen vorgezogene Methodik-Schicht aus V5.1 (PII-Redaction + Schritt-Extraktion + Auto-Mapping + Methodik-Review-UI). Resultat: 7 Slices statt urspruenglicher 4.
+V5-Scope wurde am 2026-05-06 nach USP-Stress-Test re-geplant (DEC-079 Strategaize-Dev-System + DEC-089 Onboarding-Anker). Roh-Video-Berater-Review (FEAT-036, SLC-073) wurde **superseded by SLC-079** (Status finalisiert 2026-05-08 nach RPT-193 — Begriff `superseded` statt `deferred`, weil DEC-079 explizit "kein Re-Open-Pfad in V5.x" sagt; "deferred" suggerierte faelschlich "kommt spaeter"). Stattdessen vorgezogene Methodik-Schicht aus V5.1 (PII-Redaction + Schritt-Extraktion + Auto-Mapping + Methodik-Review-UI). Resultat: 7 Slices statt urspruenglicher 4.
 
 | ID | Slice | Feature | Status | Priority | Created |
 |----|-------|---------|--------|----------|---------|
 | SLC-071 | [Walkthrough Foundation: MIG-031 + Capture-UI + Direct-Upload](SLC-071-walkthrough-foundation-capture-upload.md) | FEAT-034 | done | Blocker | 2026-05-05 |
 | SLC-072 | [Walkthrough Whisper-Worker (Job-Handler `walkthrough_transcribe`)](SLC-072-walkthrough-whisper-worker.md) | FEAT-035 | done | High | 2026-05-05 |
-| SLC-073 | [Walkthrough Berater-Review-UI (Roh-Video) — DEFERRED per DEC-079](SLC-073-walkthrough-berater-review-ui.md) | FEAT-036 | deferred | Low | 2026-05-05 |
+| SLC-073 | [Walkthrough Berater-Review-UI (Roh-Video) — SUPERSEDED BY SLC-079](SLC-073-walkthrough-berater-review-ui.md) | FEAT-036 | superseded | Low | 2026-05-05 |
 | SLC-074 | [Registry-Update + 48-Faelle-RLS-Matrix + Cleanup-Cron (V5 Option 2 Re-Scope)](SLC-074-walkthrough-registry-rls-cleanup.md) | FEAT-034, FEAT-035, FEAT-037, FEAT-040 | done | Blocker | 2026-05-05 |
 | SLC-075 | [Walkthrough Routing-Patch + Self-Spawn-Pattern (Q-V5-F)](SLC-075-walkthrough-routing-patch-self-spawn.md) | FEAT-034 | done | Blocker | 2026-05-06 |
 | SLC-076 | [Walkthrough Stufe 1 PII-Redaction (Migration 087 + Pattern-Library + Worker)](SLC-076-walkthrough-pii-redaction.md) | FEAT-037 | done | High | 2026-05-06 |
@@ -265,7 +265,7 @@ Reihenfolge (mit Mid-Stream-Hotfix-Slot fuer BL-076 zwischen SLC-079 und SLC-074
 - **BL-076 Cron-Idempotenz-Hotfix** (Mid-Stream zwischen SLC-079 und SLC-074): Fix der V4.2 capture-reminders-Cron-Idempotenz-Logik (ISSUE-035). **Bewusst zwischen SLC-079 und SLC-074 platziert**, weil SLC-074 den `walkthrough-cleanup-daily`-Cron erweitert um Stale-Pipeline-Recovery und das gefixte Idempotenz-Pattern aus BL-076 dort sofort uebernehmen kann. Eigene atomare Aenderung, eigener Commit, kein Code-Merge mit V5-Slices.
 - **SLC-074** (V5-Option-2-Abschluss, re-scoped): Capture-Mode-Registry-Update + **48-Faelle-RLS-Matrix** (16 walkthrough_session + 16 walkthrough_step + 16 walkthrough_review_mapping) + Cleanup-Cron erweitert um Stale-Pipeline-Recovery (`redacting/extracting/mapping > 1h → failed`) + Lint/Build/Test/Audit gruen als V5 Option 2 Release-Gate. Vor Gesamt-V5-Option-2-/qa. ~5 MTs.
 
-**Gesamt V5 Option 2:** 7 Option-2-Slices (SLC-072 + SLC-074 + SLC-075..079) + SLC-071 als-ist + SLC-073 deferred = **34 MTs / ~5-6.5 Tage Implementation** (entspricht ARCHITECTURE.md V5 Option 2 Empfehlung + DEC-079-Aufwand).
+**Gesamt V5 Option 2:** 7 Option-2-Slices (SLC-072 + SLC-074 + SLC-075..079) + SLC-071 als-ist + SLC-073 superseded by SLC-079 = **34 MTs / ~5-6.5 Tage Implementation** (entspricht ARCHITECTURE.md V5 Option 2 Empfehlung + DEC-079-Aufwand).
 
 **Parallelisierbar:**
 - SLC-079 kann parallel zu SLC-078 starten sobald SLC-077 done ist (Schemas walkthrough_step + walkthrough_review_mapping live nach Migration 085 + 086 — d.h. nach SLC-077-MT-1 + SLC-078-MT-1).
@@ -285,7 +285,7 @@ Reihenfolge (mit Mid-Stream-Hotfix-Slot fuer BL-076 zwischen SLC-079 und SLC-074
 ### V5 Out-of-Scope (deferred V5.1+)
 
 - Walkthrough-Embed im Handbuch-Reader + KU-Bruecke walkthrough_step → knowledge_unit → V5.1 (FEAT-038, DEC-090, BL-082)
-- FEAT-036 Roh-Video-Berater-Review → SLC-073 deferred (per DEC-079, kein Re-Open-Pfad in V5.x geplant)
+- FEAT-036 Roh-Video-Berater-Review → SLC-073 superseded by SLC-079 (per DEC-079 strukturell durch FEAT-040 Methodik-Review-UI ersetzt, kein Re-Open-Pfad in V5.x geplant; Roh-Daten-Einsicht laeuft via `RawTranscriptToggle` in SLC-079 mit Audit-Log DEC-088)
 - Mehrsprachige Transkription (DE only fuer V5)
 - Mobile-Capture, Klick-Tracking, DOM-Snapshots → V6+
 - Re-Open-Pfad fuer rejected → V5.2+

@@ -37,7 +37,7 @@
       "priority": "medium",
       "status": "deferred",
       "version": null,
-      "description": "Freitext-Eintraege pro Block — REVERTED 2026-04-17. Kein Use-Case: kein Berater neben Teilnehmer im Onboarding-Modell. SLC-007 Code entfernt. FEAT-004 reverted.",
+      "description": "Freitext-Eintraege pro Block â€” REVERTED 2026-04-17. Kein Use-Case: kein Berater neben Teilnehmer im Onboarding-Modell. SLC-007 Code entfernt. FEAT-004 reverted.",
       "createdAt": "2026-04-14"
     },
     {
@@ -77,7 +77,7 @@
       "priority": "high",
       "status": "done",
       "version": "V1",
-      "description": "tenant_owner → tenant_admin per Migration 026 + Code-Rename. Migration 026 auf Hetzner ausgefuehrt 2026-04-15, QA durch (RPT-008 Pass, MT-4 Test-Automation an SLC-002a delegiert). Siehe /slices/SLC-002-rollen-umbenennung.md.",
+      "description": "tenant_owner â†’ tenant_admin per Migration 026 + Code-Rename. Migration 026 auf Hetzner ausgefuehrt 2026-04-15, QA durch (RPT-008 Pass, MT-4 Test-Automation an SLC-002a delegiert). Siehe /slices/SLC-002-rollen-umbenennung.md.",
       "createdAt": "2026-04-14"
     },
     {
@@ -167,7 +167,7 @@
       "priority": "medium",
       "status": "deferred",
       "version": null,
-      "description": "REVERTED 2026-04-17. Exception-Feld + Tests + submit-action-Integration entfernt. Kein Berater neben Teilnehmer — Feature hat keinen Use-Case.",
+      "description": "REVERTED 2026-04-17. Exception-Feld + Tests + submit-action-Integration entfernt. Kein Berater neben Teilnehmer â€” Feature hat keinen Use-Case.",
       "createdAt": "2026-04-14"
     },
     {
@@ -257,7 +257,7 @@
       "priority": "high",
       "status": "done",
       "version": "V2",
-      "description": "Orchestrator erkennt Luecken → generiert Nachfragen → Kunde beantwortet im Questionnaire → Re-Verdichtung. Max 2 Runden, danach Meeting-Agenda. Schliesst den Feedback-Loop automatisch. Siehe FEAT-011.",
+      "description": "Orchestrator erkennt Luecken â†’ generiert Nachfragen â†’ Kunde beantwortet im Questionnaire â†’ Re-Verdichtung. Max 2 Runden, danach Meeting-Agenda. Schliesst den Feedback-Loop automatisch. Siehe FEAT-011.",
       "createdAt": "2026-04-19"
     },
     {
@@ -287,7 +287,7 @@
       "priority": "medium",
       "status": "done",
       "version": "V2",
-      "description": "Zweites Template (Thema TBD — Q6), Template-Auswahl bei Session-Erstellung, template-spezifische Owner-Felder (DEC-012), template-spezifischer SOP-Prompt. Beweist Template-Flexibilitaet in Praxis. Siehe FEAT-014.",
+      "description": "Zweites Template (Thema TBD â€” Q6), Template-Auswahl bei Session-Erstellung, template-spezifische Owner-Felder (DEC-012), template-spezifischer SOP-Prompt. Beweist Template-Flexibilitaet in Praxis. Siehe FEAT-014.",
       "createdAt": "2026-04-19"
     },
     {
@@ -307,7 +307,7 @@
       "priority": "high",
       "status": "done",
       "version": "V2",
-      "description": "KI-generierte Diagnose pro Unterthema im template-spezifischen Output-Format. Neues diagnosis_schema auf Template, block_diagnosis-Tabelle, Diagnose-UI im Debrief (Generate, View, Edit, Confirm, Export). SOP erst nach Diagnose-Bestaetigung. Kernprodukt-Feature — Bruecke zwischen KU-Verdichtung und Meeting mit Auftraggeber. Architektur done (DEC-022..024). Siehe FEAT-016.",
+      "description": "KI-generierte Diagnose pro Unterthema im template-spezifischen Output-Format. Neues diagnosis_schema auf Template, block_diagnosis-Tabelle, Diagnose-UI im Debrief (Generate, View, Edit, Confirm, Export). SOP erst nach Diagnose-Bestaetigung. Kernprodukt-Feature â€” Bruecke zwischen KU-Verdichtung und Meeting mit Auftraggeber. Architektur done (DEC-022..024). Siehe FEAT-016.",
       "createdAt": "2026-04-19"
     },
     {
@@ -337,7 +337,7 @@
       "priority": "high",
       "status": "done",
       "version": "V3",
-      "description": "Auftraggeber erstellt strukturierte Gespraechsvorgabe (Themen, Leitfragen, Ziele). Basismässige KI-Unterstuetzung (Vorschlaege aus Template-Kontext). Bewusster Produkt-Split: volle KI-Vorbereitung nur mit Intelligence Platform. Siehe FEAT-018.",
+      "description": "Auftraggeber erstellt strukturierte Gespraechsvorgabe (Themen, Leitfragen, Ziele). BasismÃ¤ssige KI-Unterstuetzung (Vorschlaege aus Template-Kontext). Bewusster Produkt-Split: volle KI-Vorbereitung nur mit Intelligence Platform. Siehe FEAT-018.",
       "createdAt": "2026-04-21"
     },
     {
@@ -357,7 +357,7 @@
       "priority": "high",
       "status": "done",
       "version": "V3",
-      "description": "MP4 → Whisper-Transkription → KI-Verarbeitung gegen Meeting Guide → Knowledge Units + Meeting-Summary + Gap Detection. Neuer Job-Typ dialogue_extraction. Transkript persistent gespeichert. Siehe FEAT-020.",
+      "description": "MP4 â†’ Whisper-Transkription â†’ KI-Verarbeitung gegen Meeting Guide â†’ Knowledge Units + Meeting-Summary + Gap Detection. Neuer Job-Typ dialogue_extraction. Transkript persistent gespeichert. Siehe FEAT-020.",
       "createdAt": "2026-04-21"
     },
     {
@@ -417,7 +417,7 @@
       "priority": "high",
       "status": "done",
       "version": "V4",
-      "description": "Bridge-Engine generiert aus GF-Blueprint-Output (KUs + Diagnose) automatisch Vorschlaege fuer Mitarbeiter-Capture-Aufgaben. tenant_admin reviewed/freigibt — kein Auto-Push. On-demand (DEC-037). Hybrid-Mechanismus: Template-Schablone + KI-Verfeinerung + max 3 Free-Form (DEC-034). Cost-Logging pro Bridge-Aufruf Pflicht. Stale-Trigger bei neuem Block-Submit (DEC-039). Siehe FEAT-023. Slices: SLC-035 (Backend+RPCs+Worker), SLC-036 (Review-UI).",
+      "description": "Bridge-Engine generiert aus GF-Blueprint-Output (KUs + Diagnose) automatisch Vorschlaege fuer Mitarbeiter-Capture-Aufgaben. tenant_admin reviewed/freigibt â€” kein Auto-Push. On-demand (DEC-037). Hybrid-Mechanismus: Template-Schablone + KI-Verfeinerung + max 3 Free-Form (DEC-034). Cost-Logging pro Bridge-Aufruf Pflicht. Stale-Trigger bei neuem Block-Submit (DEC-039). Siehe FEAT-023. Slices: SLC-035 (Backend+RPCs+Worker), SLC-036 (Review-UI).",
       "createdAt": "2026-04-23"
     },
     {
@@ -507,7 +507,7 @@
       "priority": "high",
       "status": "done",
       "version": "V4.1",
-      "description": "Requirements done 2026-04-28 als FEAT-029. Schema: neue block_review-Tabelle mit RLS, Status pending|approved|rejected, Audit-Felder. Granularitaet: Block-Approval (DEC-V4.1-4, kein KU-Override in V4.1). Quality-Gate: weich (DEC-V4.1-5) — Trigger-Button immer aktiv, Confirm-Dialog 'X/Y reviewed' bei <100%. Konsolidierter Review-View block-zentriert (DEC-V4.1-6). Worker-Filter erweitert um block_review.status='approved' (nur fuer source='employee_questionnaire' KUs). Backfill-Strategie offen (Q-V4.1-A). Cockpit-Card 'Mitarbeiter-Bloecke reviewed' auf /dashboard.",
+      "description": "Requirements done 2026-04-28 als FEAT-029. Schema: neue block_review-Tabelle mit RLS, Status pending|approved|rejected, Audit-Felder. Granularitaet: Block-Approval (DEC-V4.1-4, kein KU-Override in V4.1). Quality-Gate: weich (DEC-V4.1-5) â€” Trigger-Button immer aktiv, Confirm-Dialog 'X/Y reviewed' bei <100%. Konsolidierter Review-View block-zentriert (DEC-V4.1-6). Worker-Filter erweitert um block_review.status='approved' (nur fuer source='employee_questionnaire' KUs). Backfill-Strategie offen (Q-V4.1-A). Cockpit-Card 'Mitarbeiter-Bloecke reviewed' auf /dashboard.",
       "createdAt": "2026-04-27"
     },
     {
@@ -577,7 +577,7 @@
       "priority": "medium",
       "status": "done",
       "version": "V4.3",
-      "description": "Handbuch-Worker schreibt im INDEX.md die TOC-Links als [Title](01_section.md). Im Reader fuehrt das zu 404 weil die .md-URL relativ aufgeloest wird. SLC-045 iter-2 hat das im Render-Path via components.a-Override gefixt (commit 6188a23) — funktioniert, aber die ZIP-Download-Variante leidet darunter nicht. Sauberer: Worker schreibt direkt In-App-Anchor-Links und der ZIP-Download-Pfad nutzt Post-Processing.",
+      "description": "Handbuch-Worker schreibt im INDEX.md die TOC-Links als [Title](01_section.md). Im Reader fuehrt das zu 404 weil die .md-URL relativ aufgeloest wird. SLC-045 iter-2 hat das im Render-Path via components.a-Override gefixt (commit 6188a23) â€” funktioniert, aber die ZIP-Download-Variante leidet darunter nicht. Sauberer: Worker schreibt direkt In-App-Anchor-Links und der ZIP-Download-Pfad nutzt Post-Processing.",
       "createdAt": "2026-04-29"
     },
     {
@@ -612,17 +612,17 @@
     },
     {
       "id": "BL-062",
-      "title": "Tooltip 1/5 Inactive-Badge Hover-Target zu klein (16x16) — UX-Improvement",
+      "title": "Tooltip 1/5 Inactive-Badge Hover-Target zu klein (16x16) â€” UX-Improvement",
       "type": "improvement",
       "priority": "low",
       "status": "done",
       "version": "V4.3",
-      "description": "Der Tooltip-Trigger-Button auf der InactiveEmployeesCard (`?`-Symbol) ist mit `h-4 w-4` nur 16x16px gross. Tooltip wiring + content sind technisch korrekt (live verifiziert via Playwright-Hover, Content 'Mitarbeiter mit accepted Invitation aber ohne Block-Submit' rendert), aber End-User trifft den Bereich praktisch kaum — Tooltip erscheint im manuellen Hover oft nicht. Aufgedeckt im V4.2 Gesamt-/qa Browser-Smoke 2026-05-01 (User-Feedback). Fix-Optionen: (1) Target auf h-6 w-6 (24x24) vergroessern, (2) ganzen Card-Header-Text als Tooltip-Trigger nutzen, (3) Touch-Target 44x44 mit transparentem Hit-Bereich um den `?`. Severity: Low (Funktion da, UX-Hindernis).",
+      "description": "Der Tooltip-Trigger-Button auf der InactiveEmployeesCard (`?`-Symbol) ist mit `h-4 w-4` nur 16x16px gross. Tooltip wiring + content sind technisch korrekt (live verifiziert via Playwright-Hover, Content 'Mitarbeiter mit accepted Invitation aber ohne Block-Submit' rendert), aber End-User trifft den Bereich praktisch kaum â€” Tooltip erscheint im manuellen Hover oft nicht. Aufgedeckt im V4.2 Gesamt-/qa Browser-Smoke 2026-05-01 (User-Feedback). Fix-Optionen: (1) Target auf h-6 w-6 (24x24) vergroessern, (2) ganzen Card-Header-Text als Tooltip-Trigger nutzen, (3) Touch-Target 44x44 mit transparentem Hit-Bereich um den `?`. Severity: Low (Funktion da, UX-Hindernis).",
       "createdAt": "2026-05-01"
     },
     {
       "id": "BL-063",
-      "title": "Help-Mechanismen konsolidieren — SLC-050 HelpSheet + Learning Center vereinen",
+      "title": "Help-Mechanismen konsolidieren â€” SLC-050 HelpSheet + Learning Center vereinen",
       "type": "improvement",
       "priority": "medium",
       "status": "done",
@@ -647,7 +647,7 @@
       "priority": "medium",
       "status": "done",
       "version": "V4.3",
-      "description": "Aus ISSUE-031 (V4.2 SLC-046 Doctor): Wizard-State-UPDATE ueber tenants-Tabelle wurde silent durch RLS geblockt, weil tenants nur SELECT-Policy hatte (kein UPDATE). Fix war createAdminClient() (Service-Role) fuer den UPDATE-Pfad. Pattern muss als ADR (DEC) dokumentiert werden, damit kuenftige State-Maschinen-Updates konsistent gehandhabt werden — ohne dass jeder Implementer die Falle neu entdeckt. Frage: createAdminClient() fuer alle State-UPDATEs ODER RLS-UPDATE-Policies pro Spalte? Der ADR muss beide Optionen evaluieren + finale Empfehlung mit Sicherheits-Tradeoffs liefern. Affected: alle zukuenftigen Tenant-State-, User-State- und Domain-State-Maschinen.",
+      "description": "Aus ISSUE-031 (V4.2 SLC-046 Doctor): Wizard-State-UPDATE ueber tenants-Tabelle wurde silent durch RLS geblockt, weil tenants nur SELECT-Policy hatte (kein UPDATE). Fix war createAdminClient() (Service-Role) fuer den UPDATE-Pfad. Pattern muss als ADR (DEC) dokumentiert werden, damit kuenftige State-Maschinen-Updates konsistent gehandhabt werden â€” ohne dass jeder Implementer die Falle neu entdeckt. Frage: createAdminClient() fuer alle State-UPDATEs ODER RLS-UPDATE-Policies pro Spalte? Der ADR muss beide Optionen evaluieren + finale Empfehlung mit Sicherheits-Tradeoffs liefern. Affected: alle zukuenftigen Tenant-State-, User-State- und Domain-State-Maschinen.",
       "createdAt": "2026-05-01"
     },
     {
@@ -667,17 +667,17 @@
       "priority": "medium",
       "status": "deferred",
       "version": null,
-      "description": "Content-Only Item — direkter User-Editor-Workflow ohne Release-Bindung. Aus V4.4 Pinning entfernt 2026-05-05 nach /post-launch V4.4 (RPT-162) — V4.4 ist released, BL-067 laeuft parallel weiter. 5 Help-Markdown-Files unter src/content/help/*.md (dashboard.md, capture.md, bridge.md, reviews.md, handbook.md, je 180-243 Worter). Review-Pflichten: Begriffs-Konsistenz mit UI, Tonalitaet (Du-Form), keine Doppelungen, fehlende Schritte ergaenzen, ggf. Tooltips am Page-Start ergaenzen. Kein Code-Slice noetig. Output: aktualisierte 5 .md-Files + Commit. Wird abgeschlossen sobald User die inhaltliche Review macht.",
+      "description": "Content-Only Item â€” direkter User-Editor-Workflow ohne Release-Bindung. Aus V4.4 Pinning entfernt 2026-05-05 nach /post-launch V4.4 (RPT-162) â€” V4.4 ist released, BL-067 laeuft parallel weiter. 5 Help-Markdown-Files unter src/content/help/*.md (dashboard.md, capture.md, bridge.md, reviews.md, handbook.md, je 180-243 Worter). Review-Pflichten: Begriffs-Konsistenz mit UI, Tonalitaet (Du-Form), keine Doppelungen, fehlende Schritte ergaenzen, ggf. Tooltips am Page-Start ergaenzen. Kein Code-Slice noetig. Output: aktualisierte 5 .md-Files + Commit. Wird abgeschlossen sobald User die inhaltliche Review macht.",
       "createdAt": "2026-05-01"
     },
     {
       "id": "BL-068",
-      "title": "V4.4 Lint-Sweep — 7 Pre-existing-Errors aus SLC-053 ESLint-9-Migration",
+      "title": "V4.4 Lint-Sweep â€” 7 Pre-existing-Errors aus SLC-053 ESLint-9-Migration",
       "type": "improvement",
       "priority": "medium",
       "status": "done",
       "version": "V4.4",
-      "description": "Aus SLC-053 (V4.3 ESLint-9 flat-config-Migration, RPT-134) sichtbar gemacht: 7 Pre-existing react-hooks-Errors + 6 Warnings im V2-V4.2-Code, die seit Wochen unentdeckt waren weil next lint in Next 16 broken war. Errors: (1) BridgeProposalEditDialog.tsx:66 setState in useEffect (V4 Bridge), (2) EvidenceFileList.tsx:186 Date.now() in render (V2 Evidence — kann FALSE-POSITIVE sein, neue React-19/react-hooks-Plugin-Regel sehr strikt), (3) FileUploadZone.tsx:57+64 uploadFile accessed-before-declared (V2 Evidence — REAL hoisting/TDZ-Risk), (4) jitsi-meeting.tsx:103 setIframeError() in catch-Block of useEffect (V3 Dialogue), (5+6) SearchResultsList.tsx:30 unescaped-entities (V4.1 Reader, Style), (7) shadcn sidebar.tsx:665 Math.random in useMemo (Library, FALSE-POSITIVE). Warnings: 3x unused-eslint-disable-directives in document-parser.ts + claim-loop.ts, 1x missing dep useCallback in FileUploadZone, 1x alt-text in EvidenceFileList, 2x anonymous-default-export in eslint.config.mjs/email-stub.mjs (low-prio Style). V4.3 Slice-Disziplin: Lint-Sweep ist Out-of-Scope. V4.4 oder eigener Maintenance-Sprint. Empfohlene Reihenfolge: zuerst pruefen welche Errors True-Positive vs False-Positive sind (insbesondere Math.random/Date.now-Pattern bei react-hooks/purity-Plugin), dann True-Positive fixen, False-Positive akzeptieren via Inline-Disable mit Begruendung. Aufwand-Schaetzung: ~2-3h pro Datei mit Code-Touch + Tests.",
+      "description": "Aus SLC-053 (V4.3 ESLint-9 flat-config-Migration, RPT-134) sichtbar gemacht: 7 Pre-existing react-hooks-Errors + 6 Warnings im V2-V4.2-Code, die seit Wochen unentdeckt waren weil next lint in Next 16 broken war. Errors: (1) BridgeProposalEditDialog.tsx:66 setState in useEffect (V4 Bridge), (2) EvidenceFileList.tsx:186 Date.now() in render (V2 Evidence â€” kann FALSE-POSITIVE sein, neue React-19/react-hooks-Plugin-Regel sehr strikt), (3) FileUploadZone.tsx:57+64 uploadFile accessed-before-declared (V2 Evidence â€” REAL hoisting/TDZ-Risk), (4) jitsi-meeting.tsx:103 setIframeError() in catch-Block of useEffect (V3 Dialogue), (5+6) SearchResultsList.tsx:30 unescaped-entities (V4.1 Reader, Style), (7) shadcn sidebar.tsx:665 Math.random in useMemo (Library, FALSE-POSITIVE). Warnings: 3x unused-eslint-disable-directives in document-parser.ts + claim-loop.ts, 1x missing dep useCallback in FileUploadZone, 1x alt-text in EvidenceFileList, 2x anonymous-default-export in eslint.config.mjs/email-stub.mjs (low-prio Style). V4.3 Slice-Disziplin: Lint-Sweep ist Out-of-Scope. V4.4 oder eigener Maintenance-Sprint. Empfohlene Reihenfolge: zuerst pruefen welche Errors True-Positive vs False-Positive sind (insbesondere Math.random/Date.now-Pattern bei react-hooks/purity-Plugin), dann True-Positive fixen, False-Positive akzeptieren via Inline-Disable mit Begruendung. Aufwand-Schaetzung: ~2-3h pro Datei mit Code-Touch + Tests.",
       "createdAt": "2026-05-02"
     },
     {
@@ -687,7 +687,7 @@
       "priority": "low",
       "status": "done",
       "version": "V4.4",
-      "description": "audit-umlauts.mjs aus SLC-052 zeigt 328 Vorkommnisse in sql/migrations/046_seed_demo_template.sql (Demo-Template-Seed). Datei-Edit hat keine Wirkung auf bereits in der Live-DB stehenden Daten — braucht separate UPDATE-Migration die templates.blocks/sop_prompt JSONB-Felder umlaut-korrigiert. Out-of-scope SLC-052 (Hygiene-Code-Slice, kein Daten-Slice).",
+      "description": "audit-umlauts.mjs aus SLC-052 zeigt 328 Vorkommnisse in sql/migrations/046_seed_demo_template.sql (Demo-Template-Seed). Datei-Edit hat keine Wirkung auf bereits in der Live-DB stehenden Daten â€” braucht separate UPDATE-Migration die templates.blocks/sop_prompt JSONB-Felder umlaut-korrigiert. Out-of-scope SLC-052 (Hygiene-Code-Slice, kein Daten-Slice).",
       "createdAt": "2026-05-02"
     },
     {
@@ -697,7 +697,7 @@
       "priority": "low",
       "status": "open",
       "version": null,
-      "description": "Cross-Repo-Aufgabe ausgeloest durch IS V6+ Discovery RPT-013 (StrategAIze Intelligence Studio). Neuer Capture-Mode `external_validation` parallel zu den bestehenden Modi (questionnaire, dialogue, evidence, walkthrough_stub). Erweitert CAPTURE_MODE_REGISTRY um Eintrag mit basePath `/external-validation`, workerJobType `external_validation_extraction`, displayName, productive: true. Output ist NICHT ein normales KU sondern ein strukturiertes Profil-Objekt (Operator Profile bei founder/operator-Templates, Market Insight bei market_participant/industry_expert-Templates). RBAC-Erweiterung: neuer Role-Typ `external_participant` (Befragter, einmal-token-Login analog Demo-Tenant-Pattern); Tenant ist die User-Org, der Befragte ist NICHT der Tenant-Owner. Foundation-Slice: Schema-Erweiterung capture_session.capture_mode-Enum + neue Tabelle external_participation_token + RLS-Adaptionen. **Pre-Condition fuer IS V9** — kann aber unabhaengig vor V9-Start gebaut werden. Versionierung offen: vermutlich Onboarding-V6 oder V7 (nach V5 Walkthrough/Diary).",
+      "description": "Cross-Repo-Aufgabe ausgeloest durch IS V6+ Discovery RPT-013 (StrategAIze Intelligence Studio). Neuer Capture-Mode `external_validation` parallel zu den bestehenden Modi (questionnaire, dialogue, evidence, walkthrough_stub). Erweitert CAPTURE_MODE_REGISTRY um Eintrag mit basePath `/external-validation`, workerJobType `external_validation_extraction`, displayName, productive: true. Output ist NICHT ein normales KU sondern ein strukturiertes Profil-Objekt (Operator Profile bei founder/operator-Templates, Market Insight bei market_participant/industry_expert-Templates). RBAC-Erweiterung: neuer Role-Typ `external_participant` (Befragter, einmal-token-Login analog Demo-Tenant-Pattern); Tenant ist die User-Org, der Befragte ist NICHT der Tenant-Owner. Foundation-Slice: Schema-Erweiterung capture_session.capture_mode-Enum + neue Tabelle external_participation_token + RLS-Adaptionen. **Pre-Condition fuer IS V9** â€” kann aber unabhaengig vor V9-Start gebaut werden. Versionierung offen: vermutlich Onboarding-V6 oder V7 (nach V5 Walkthrough/Diary).",
       "createdAt": "2026-05-02"
     },
     {
@@ -707,7 +707,7 @@
       "priority": "low",
       "status": "open",
       "version": null,
-      "description": "Cross-Repo-Aufgabe ausgeloest durch IS V6+ Discovery RPT-013. Neues Template fuer Capture-Mode external_validation: 5-7 Bloecke fuer Operator-/Gruender-Tauglichkeits-Pruefung. Block-Skizze: (1) Lebens-/Operator-Fit (Freiheitsverstaendnis, Standardisierungs-Bereitschaft), (2) Track Record (frueheres Bauen, Skalieren, Exits), (3) Personalitaet (Zusammenarbeit, Konfliktverhalten, Selbstwahrnehmung), (4) Kapital-Verstaendnis (CAP-Tabelle, Verwaesserung, Bootstrap-vs-Investor), (5) Standardisierungs-Bereitschaft (Bauen-an-System statt an-Person), (6) Lebens-Kompatibilitaet als Operator (Familienmodell, Mobilitaet, Kapazitaet), optional (7) Domain-Spezifika. Diagnosis-Schema: Operator-Profile-JSON (kompatibel mit IS V8 Operator-Profile-Object). SOP nicht relevant — Output ist Profil, nicht Prozess. Aufwand inkl. KI-Prompt-Tuning ~3-5 Tage.",
+      "description": "Cross-Repo-Aufgabe ausgeloest durch IS V6+ Discovery RPT-013. Neues Template fuer Capture-Mode external_validation: 5-7 Bloecke fuer Operator-/Gruender-Tauglichkeits-Pruefung. Block-Skizze: (1) Lebens-/Operator-Fit (Freiheitsverstaendnis, Standardisierungs-Bereitschaft), (2) Track Record (frueheres Bauen, Skalieren, Exits), (3) Personalitaet (Zusammenarbeit, Konfliktverhalten, Selbstwahrnehmung), (4) Kapital-Verstaendnis (CAP-Tabelle, Verwaesserung, Bootstrap-vs-Investor), (5) Standardisierungs-Bereitschaft (Bauen-an-System statt an-Person), (6) Lebens-Kompatibilitaet als Operator (Familienmodell, Mobilitaet, Kapazitaet), optional (7) Domain-Spezifika. Diagnosis-Schema: Operator-Profile-JSON (kompatibel mit IS V8 Operator-Profile-Object). SOP nicht relevant â€” Output ist Profil, nicht Prozess. Aufwand inkl. KI-Prompt-Tuning ~3-5 Tage.",
       "createdAt": "2026-05-02"
     },
     {
@@ -757,7 +757,7 @@
       "priority": "medium",
       "status": "done",
       "version": null,
-      "description": "Bei /post-launch V4.3+V4.4 (RPT-162, 2026-05-05) entdeckt: reminder_log zeigt 4× Stage1 an gleichen Empfaenger an 4 aufeinanderfolgenden Tagen (01-04.05.) plus Stage2 heute. V4.2-Spec sagt 'Stufe 1 nach 3 Werktagen, Stufe 2 nach 7 Werktagen, Idempotenz' — Verhalten widerspricht der Spec. UNIQUE-Constraint blockiert nur Mehrfach-Send pro Tag, nicht ueber Tage. Investigation-Punkte: (a) Wie ermittelt der Cron, ob Stage1 schon gesendet wurde? (b) Wird reminder_log nach gleichem employee_user_id+reminder_stage ohne sent_date-Filter gequeryt? (c) Ist die Cron-Logik buggy oder die UNIQUE-Constraint zu schwach? Hotfix-Bedarf vor Pre-Production-Cutover (Spam-Reputation-Risiko bei Echt-Kunden). Im Pilot/Internal-Test-Mode unkritisch. Verweis: ISSUE-035 in /docs/KNOWN_ISSUES.md. **/slice-planning V5 Option 2 2026-05-06: BL-076 ist Mid-Stream-Slot zwischen SLC-079 und SLC-074. SLC-074 erweitert walkthrough-cleanup-daily um Stale-Pipeline-Recovery und braucht das gefixte Idempotenz-Pattern aus BL-076 als Vorlage. BL-076 muss DONE sein vor SLC-074-Beginn.**",
+      "description": "Bei /post-launch V4.3+V4.4 (RPT-162, 2026-05-05) entdeckt: reminder_log zeigt 4Ã— Stage1 an gleichen Empfaenger an 4 aufeinanderfolgenden Tagen (01-04.05.) plus Stage2 heute. V4.2-Spec sagt 'Stufe 1 nach 3 Werktagen, Stufe 2 nach 7 Werktagen, Idempotenz' â€” Verhalten widerspricht der Spec. UNIQUE-Constraint blockiert nur Mehrfach-Send pro Tag, nicht ueber Tage. Investigation-Punkte: (a) Wie ermittelt der Cron, ob Stage1 schon gesendet wurde? (b) Wird reminder_log nach gleichem employee_user_id+reminder_stage ohne sent_date-Filter gequeryt? (c) Ist die Cron-Logik buggy oder die UNIQUE-Constraint zu schwach? Hotfix-Bedarf vor Pre-Production-Cutover (Spam-Reputation-Risiko bei Echt-Kunden). Im Pilot/Internal-Test-Mode unkritisch. Verweis: ISSUE-035 in /docs/KNOWN_ISSUES.md. **/slice-planning V5 Option 2 2026-05-06: BL-076 ist Mid-Stream-Slot zwischen SLC-079 und SLC-074. SLC-074 erweitert walkthrough-cleanup-daily um Stale-Pipeline-Recovery und braucht das gefixte Idempotenz-Pattern aus BL-076 als Vorlage. BL-076 muss DONE sein vor SLC-074-Beginn.**",
       "createdAt": "2026-05-05"
     },
     {
@@ -782,12 +782,12 @@
     },
     {
       "id": "BL-079",
-      "title": "FEAT-036 Walkthrough Berater-Review (Roh-Video-Approval) — DEFERRED",
+      "title": "FEAT-036 Walkthrough Berater-Review (Roh-Video) - SUPERSEDED BY FEAT-040/SLC-079",
       "type": "feature",
       "priority": "low",
       "status": "deferred",
       "version": "V5",
-      "description": "DEFERRED 2026-05-06 per DEC-079 (V5 Option 2). Berater-Review eines Roh-Videos ist kein Strategaize-Methodik-Differenzierer. Ersetzt durch BL-085 (FEAT-040 Methodik-Review-UI, mapped SOPs statt Roh-Video). Roh-Aufnahme bleibt im Storage als Audit/Re-Processing-Quelle, kein Berater-UI-Pfad in V5. Spaetere Rueckkehr als optionale Audit-View in V5.x offen.",
+      "description": "Roh-Video-Berater-Review verworfen per DEC-079 (USP-Stress-Test 2026-05-06). Strukturell ersetzt durch FEAT-040 (SLC-079 Methodik-Review-UI mit Subtopic-Tree + Unmapped-Bucket + Pflicht-Privacy-Checkbox). Kein Re-Open-Pfad in V5.x geplant. Roh-Daten-Einsicht fuer Berater laeuft ueber RawTranscriptToggle mit Audit-Log (DEC-088) in SLC-079, nicht ueber Roh-Video. Status finalisiert 2026-05-08 nach RPT-193.",
       "createdAt": "2026-05-05"
     },
     {
@@ -797,7 +797,7 @@
       "priority": "high",
       "status": "done",
       "version": "V5",
-      "description": "Re-scoped 2026-05-06 per DEC-079. Slice-Zuordnung 2026-05-06 in /slice-planning V5 Option 2: SLC-074 (re-scoped). Capture-Mode-Registry-Update (walkthrough produktiv, walkthrough_stub UI-deaktiviert), Coolify-Scheduled-Task walkthrough-cleanup-daily erweitert um Stale-Pipeline-Recovery fuer transcribing+redacting+extracting+mapping (>1h → failed), 4-Rollen-RLS-Matrix auf 48 Faelle (16 walkthrough_session + 16 walkthrough_step + 16 walkthrough_review_mapping), V5-Option-2-Release-Gate (0 Lint, 0 Warnings, 0 npm-Vulns). MT-Count: ~5.",
+      "description": "Re-scoped 2026-05-06 per DEC-079. Slice-Zuordnung 2026-05-06 in /slice-planning V5 Option 2: SLC-074 (re-scoped). Capture-Mode-Registry-Update (walkthrough produktiv, walkthrough_stub UI-deaktiviert), Coolify-Scheduled-Task walkthrough-cleanup-daily erweitert um Stale-Pipeline-Recovery fuer transcribing+redacting+extracting+mapping (>1h â†’ failed), 4-Rollen-RLS-Matrix auf 48 Faelle (16 walkthrough_session + 16 walkthrough_step + 16 walkthrough_review_mapping), V5-Option-2-Release-Gate (0 Lint, 0 Warnings, 0 npm-Vulns). MT-Count: ~5.",
       "createdAt": "2026-05-05"
     },
     {
@@ -807,7 +807,7 @@
       "priority": "high",
       "status": "done",
       "version": "V5",
-      "description": "Vorgezogen aus V5.1 nach V5 per DEC-079 (2026-05-06). Slice-Zuordnung 2026-05-06 in /slice-planning V5 Option 2: SLC-076 (PII, ~5 MTs) + SLC-077 (Schritt-Extraktion, ~5 MTs) + SLC-078 (Auto-Mapping, ~4 MTs) = 14 MTs. Whisper-Transkript durchlaeuft 3-stufige Bedrock-Sonnet-Pipeline (eu-central-1, DEC-081): (1) PII-Redaction-Pass mit Pattern-Library system-wide constant DEC-082 zu Platzhaltern; (2) Schritt-Extraktion-Pass produziert walkthrough_step-Rows aus DEC-090; (3) Auto-Mapping-Pass ordnet Schritte Subtopics zu (Bridge-Engine-Pattern-Reuse FEAT-023 Reverse-Direction, Confidence-Score, Unmapped-Bucket via subtopic_id IS NULL DEC-085). Sequenzielle Worker-Jobs. Status-Maschine transcribed → redacting → extracting → mapping → pending_review. PII-Pattern-Library SC-V5-6 (≥90% Recall) + Auto-Mapping SC-V5-7 (≥70% Confidence-Coverage).",
+      "description": "Vorgezogen aus V5.1 nach V5 per DEC-079 (2026-05-06). Slice-Zuordnung 2026-05-06 in /slice-planning V5 Option 2: SLC-076 (PII, ~5 MTs) + SLC-077 (Schritt-Extraktion, ~5 MTs) + SLC-078 (Auto-Mapping, ~4 MTs) = 14 MTs. Whisper-Transkript durchlaeuft 3-stufige Bedrock-Sonnet-Pipeline (eu-central-1, DEC-081): (1) PII-Redaction-Pass mit Pattern-Library system-wide constant DEC-082 zu Platzhaltern; (2) Schritt-Extraktion-Pass produziert walkthrough_step-Rows aus DEC-090; (3) Auto-Mapping-Pass ordnet Schritte Subtopics zu (Bridge-Engine-Pattern-Reuse FEAT-023 Reverse-Direction, Confidence-Score, Unmapped-Bucket via subtopic_id IS NULL DEC-085). Sequenzielle Worker-Jobs. Status-Maschine transcribed â†’ redacting â†’ extracting â†’ mapping â†’ pending_review. PII-Pattern-Library SC-V5-6 (â‰¥90% Recall) + Auto-Mapping SC-V5-7 (â‰¥70% Confidence-Coverage).",
       "createdAt": "2026-05-05"
     },
     {
@@ -827,7 +827,7 @@
       "priority": "high",
       "status": "done",
       "version": "V5",
-      "description": "NEU 2026-05-06 per DEC-079 (V5 Option 2). Slice-Zuordnung 2026-05-06 in /slice-planning V5 Option 2: SLC-079 (~7 MTs). Berater-UI fuer Review + Approval extrahierter SOP-Schritte gemappt zu Subtopics — nicht des Roh-Videos. Cross-Tenant /admin/walkthroughs + Pro-Tenant /admin/tenants/[id]/walkthroughs + Detail /admin/walkthroughs/[id] mit Subtopic-Tree + zugeordnete Schritte + Unmapped-Bucket + Confidence-Ampel (DEC-087) + Select-Move-Pattern (DEC-086). Pflicht-Privacy-Checkbox vor Approve (DEC-091, Re-Validation DEC-077). Optional Toggle 'Roh-Transkript anzeigen' mit Audit-Log (DEC-088); KEIN Roh-Video-UI-Pfad. Cockpit-Card 'Pending Walkthroughs' analog block_review (V4.1 SLC-042). Pattern-Reuse aus V4 FEAT-023 Bridge-Review-UI + V4.1 FEAT-029 block_review. Ersetzt deferred FEAT-036.",
+      "description": "NEU 2026-05-06 per DEC-079 (V5 Option 2). Slice-Zuordnung 2026-05-06 in /slice-planning V5 Option 2: SLC-079 (~7 MTs). Berater-UI fuer Review + Approval extrahierter SOP-Schritte gemappt zu Subtopics â€” nicht des Roh-Videos. Cross-Tenant /admin/walkthroughs + Pro-Tenant /admin/tenants/[id]/walkthroughs + Detail /admin/walkthroughs/[id] mit Subtopic-Tree + zugeordnete Schritte + Unmapped-Bucket + Confidence-Ampel (DEC-087) + Select-Move-Pattern (DEC-086). Pflicht-Privacy-Checkbox vor Approve (DEC-091, Re-Validation DEC-077). Optional Toggle 'Roh-Transkript anzeigen' mit Audit-Log (DEC-088); KEIN Roh-Video-UI-Pfad. Cockpit-Card 'Pending Walkthroughs' analog block_review (V4.1 SLC-042). Pattern-Reuse aus V4 FEAT-023 Bridge-Review-UI + V4.1 FEAT-029 block_review. Ersetzt deferred FEAT-036.",
       "createdAt": "2026-05-06"
     },
     {
@@ -847,7 +847,7 @@
       "priority": "low",
       "status": "open",
       "version": null,
-      "description": "User-Idea 2026-05-08 nach V5-Option-2-Live-Test: Wenn der Mitarbeiter waehrend des Walkthroughs erklaert was er klickt und macht, entsteht im Endprodukt aus einer einzigen Aufnahme nicht nur eine Methodik-Quelle (V5 Scope: Schritte → Subtopics → Berater-Approval → Unternehmer-Handbuch), sondern auch ein Roh-Schulungsvideo, das fuer interne Mitarbeiter-Onboarding wiederverwertbar waere. Strategischer Hook: Verkaufs-Argument an Kunden 'lasst euren besten Mitarbeiter einmalig was zeigen, wir machen daraus SOPs UND ein Schulungsvideo' — gerade bei neuen Features oder Onboarding neuer Mitarbeiter wertvoll. Scope dieser Idea: nur Strategaize-interne Loesung, KEIN externer Tutorial-Generator (kein Narakeet/Synthesia/Playwright-Pfad — der user-guide-Skill bleibt fuer das Strategaize-eigene Learning Center separat). Implementierungs-Skizze: (a) zweiter Konsumenten-Pfad fuer dieselbe walkthrough_session auf Kunden-Seite; (b) Polish-Schritt aus Roh-Video + Transkript zu kompaktem Video (Trimming, Auto-Highlights, ggf. Sprecher-Voiceover-Refinement); (c) eigener UI-Pfad fuer Mitarbeiter-Lerncenter im Mandanten-Cockpit. Datenbasis ist bereits da (walkthrough_session.storage_path + walkthrough_step + Transkript-KU). Kein V5-Code-Touch, kein Re-Open eines Slices. Trigger fuer Aufnahme als Slice/Feature: explizite Kundenanfrage ODER strategische GTM-Entscheidung 'Strategaize bietet auch Schulungsvideos'. Out of scope bleibt strikt: Klick-Tracking, DOM-Selektoren, Tango-/Scribe-Style-Anleitungen — User-Entscheidung 2026-05-08.",
+      "description": "User-Idea 2026-05-08 nach V5-Option-2-Live-Test: Wenn der Mitarbeiter waehrend des Walkthroughs erklaert was er klickt und macht, entsteht im Endprodukt aus einer einzigen Aufnahme nicht nur eine Methodik-Quelle (V5 Scope: Schritte â†’ Subtopics â†’ Berater-Approval â†’ Unternehmer-Handbuch), sondern auch ein Roh-Schulungsvideo, das fuer interne Mitarbeiter-Onboarding wiederverwertbar waere. Strategischer Hook: Verkaufs-Argument an Kunden 'lasst euren besten Mitarbeiter einmalig was zeigen, wir machen daraus SOPs UND ein Schulungsvideo' â€” gerade bei neuen Features oder Onboarding neuer Mitarbeiter wertvoll. Scope dieser Idea: nur Strategaize-interne Loesung, KEIN externer Tutorial-Generator (kein Narakeet/Synthesia/Playwright-Pfad â€” der user-guide-Skill bleibt fuer das Strategaize-eigene Learning Center separat). Implementierungs-Skizze: (a) zweiter Konsumenten-Pfad fuer dieselbe walkthrough_session auf Kunden-Seite; (b) Polish-Schritt aus Roh-Video + Transkript zu kompaktem Video (Trimming, Auto-Highlights, ggf. Sprecher-Voiceover-Refinement); (c) eigener UI-Pfad fuer Mitarbeiter-Lerncenter im Mandanten-Cockpit. Datenbasis ist bereits da (walkthrough_session.storage_path + walkthrough_step + Transkript-KU). Kein V5-Code-Touch, kein Re-Open eines Slices. Trigger fuer Aufnahme als Slice/Feature: explizite Kundenanfrage ODER strategische GTM-Entscheidung 'Strategaize bietet auch Schulungsvideos'. Out of scope bleibt strikt: Klick-Tracking, DOM-Selektoren, Tango-/Scribe-Style-Anleitungen â€” User-Entscheidung 2026-05-08.",
       "createdAt": "2026-05-08"
     }
   ]

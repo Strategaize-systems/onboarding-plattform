@@ -79,11 +79,11 @@ Re-scoped 2026-05-06 per DEC-079 (Strategaize-Dev-System) nach USP-Stress-Test.
 | FEAT-037 | Walkthrough AI-Pipeline (PII-Redaction + Schritt-Extraktion + Auto-Mapping) | done | [Spec](FEAT-037-walkthrough-ai-pipeline.md) | 2026-05-05 |
 | FEAT-040 | Walkthrough Methodik-Review-UI (Mapped SOPs statt Roh-Video) | done | [Spec](FEAT-040-walkthrough-methodik-review-ui.md) | 2026-05-06 |
 
-### V5 Deferred / Removed
+### V5 Superseded / Removed
 
 | ID | Feature | Status | Begruendung |
 |----|---------|--------|-------------|
-| FEAT-036 | Walkthrough Berater-Review (Roh-Video-Approval) | deferred | DEC-079 — kein Methodik-Differenzierer; ersetzt durch FEAT-040 in V5 |
+| FEAT-036 | Walkthrough Berater-Review (Roh-Video-Approval) — SUPERSEDED BY FEAT-040 | superseded | DEC-079 (USP-Stress-Test 2026-05-06): kein Methodik-Differenzierer; strukturell ersetzt durch FEAT-040 (SLC-079 Methodik-Review-UI). Status finalisiert 2026-05-08 nach RPT-193 (`superseded` statt `deferred`, weil DEC-079 explizit "kein Re-Open-Pfad in V5.x" sagt). Roh-Daten-Einsicht via RawTranscriptToggle in SLC-079 (DEC-088). |
 
 ## V5.1 Features (Walkthrough Handbuch-Integration — geshrinkt nach V5 Option 2)
 
