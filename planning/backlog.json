@@ -839,6 +839,16 @@
       "version": "V5",
       "description": "DONE 2026-05-07. Selbst-Spawn-Pattern via SLC-075 implementiert (RPT-173..178). End-to-End-Browser-Smoke PASS auf https://onboarding.strategaizetransition.com mit richard@bellaerts.de: AC-10 (Liste+Sidebar) + AC-11 (Self-Spawn+Permissions+MediaRecorder) + AC-12 (Stop+Upload+Status uploaded) alle gruen. Live-DB-Verifikation: walkthrough_session 33ea58be... + 75098a5d... beide status='uploaded', ffprobe bestaetigt vp9-Video + opus-Audio (Mikrofon mit aufgenommen). 4 sequential Doctor-Runden haben Sidebar-Luecke (ISSUE-037) + Hairpin-NAT signedUrl (ISSUE-036 Round 1) + Kong apikey (ISSUE-036 Round 2) + codec-MIME-Filter (ISSUE-038) + SLC-071-Schema-Mismatch failure_reason (ISSUE-039) gefixt. 16/16 Vitest GREEN, alle 5 ISSUEs resolved. Final-Deploy-Commit: 0ce9f81.",
       "createdAt": "2026-05-06"
+    },
+    {
+      "id": "BL-087",
+      "title": "Walkthrough-Aufnahmen als interne Schulungsvideos / Bedienungsanleitungen wiederverwenden (Idea, post-V5)",
+      "type": "idea",
+      "priority": "low",
+      "status": "open",
+      "version": null,
+      "description": "User-Idea 2026-05-08 nach V5-Option-2-Live-Test: Wenn der Mitarbeiter waehrend des Walkthroughs erklaert was er klickt und macht, entsteht im Endprodukt aus einer einzigen Aufnahme nicht nur eine Methodik-Quelle (V5 Scope: Schritte → Subtopics → Berater-Approval → Unternehmer-Handbuch), sondern auch ein Roh-Schulungsvideo, das fuer interne Mitarbeiter-Onboarding wiederverwertbar waere. Strategischer Hook: Verkaufs-Argument an Kunden 'lasst euren besten Mitarbeiter einmalig was zeigen, wir machen daraus SOPs UND ein Schulungsvideo' — gerade bei neuen Features oder Onboarding neuer Mitarbeiter wertvoll. Scope dieser Idea: nur Strategaize-interne Loesung, KEIN externer Tutorial-Generator (kein Narakeet/Synthesia/Playwright-Pfad — der user-guide-Skill bleibt fuer das Strategaize-eigene Learning Center separat). Implementierungs-Skizze: (a) zweiter Konsumenten-Pfad fuer dieselbe walkthrough_session auf Kunden-Seite; (b) Polish-Schritt aus Roh-Video + Transkript zu kompaktem Video (Trimming, Auto-Highlights, ggf. Sprecher-Voiceover-Refinement); (c) eigener UI-Pfad fuer Mitarbeiter-Lerncenter im Mandanten-Cockpit. Datenbasis ist bereits da (walkthrough_session.storage_path + walkthrough_step + Transkript-KU). Kein V5-Code-Touch, kein Re-Open eines Slices. Trigger fuer Aufnahme als Slice/Feature: explizite Kundenanfrage ODER strategische GTM-Entscheidung 'Strategaize bietet auch Schulungsvideos'. Out of scope bleibt strikt: Klick-Tracking, DOM-Selektoren, Tango-/Scribe-Style-Anleitungen — User-Entscheidung 2026-05-08.",
+      "createdAt": "2026-05-08"
     }
   ]
 }
