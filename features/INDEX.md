@@ -74,10 +74,10 @@ Re-scoped 2026-05-06 per DEC-079 (Strategaize-Dev-System) nach USP-Stress-Test.
 
 | ID | Feature | Status | Spec | Created |
 |----|---------|--------|------|---------|
-| FEAT-034 | Walkthrough Capture-Session (Web-only Recording) | done | [Spec](FEAT-034-walkthrough-capture-session.md) | 2026-05-05 |
-| FEAT-035 | Walkthrough Whisper-Transkription | done | [Spec](FEAT-035-walkthrough-whisper-transcription.md) | 2026-05-05 |
-| FEAT-037 | Walkthrough AI-Pipeline (PII-Redaction + Schritt-Extraktion + Auto-Mapping) | done | [Spec](FEAT-037-walkthrough-ai-pipeline.md) | 2026-05-05 |
-| FEAT-040 | Walkthrough Methodik-Review-UI (Mapped SOPs statt Roh-Video) | done | [Spec](FEAT-040-walkthrough-methodik-review-ui.md) | 2026-05-06 |
+| FEAT-034 | Walkthrough Capture-Session (Web-only Recording) | deployed | [Spec](FEAT-034-walkthrough-capture-session.md) | 2026-05-05 |
+| FEAT-035 | Walkthrough Whisper-Transkription | deployed | [Spec](FEAT-035-walkthrough-whisper-transcription.md) | 2026-05-05 |
+| FEAT-037 | Walkthrough AI-Pipeline (PII-Redaction + Schritt-Extraktion + Auto-Mapping) | deployed | [Spec](FEAT-037-walkthrough-ai-pipeline.md) | 2026-05-05 |
+| FEAT-040 | Walkthrough Methodik-Review-UI (Mapped SOPs statt Roh-Video) | deployed | [Spec](FEAT-040-walkthrough-methodik-review-ui.md) | 2026-05-06 |
 
 ### V5 Superseded / Removed
 
