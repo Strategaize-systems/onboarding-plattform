@@ -825,7 +825,7 @@
       "title": "FEAT-040 Walkthrough Methodik-Review-UI (Mapped SOPs statt Roh-Video)",
       "type": "feature",
       "priority": "high",
-      "status": "in_progress",
+      "status": "done",
       "version": "V5",
       "description": "NEU 2026-05-06 per DEC-079 (V5 Option 2). Slice-Zuordnung 2026-05-06 in /slice-planning V5 Option 2: SLC-079 (~7 MTs). Berater-UI fuer Review + Approval extrahierter SOP-Schritte gemappt zu Subtopics — nicht des Roh-Videos. Cross-Tenant /admin/walkthroughs + Pro-Tenant /admin/tenants/[id]/walkthroughs + Detail /admin/walkthroughs/[id] mit Subtopic-Tree + zugeordnete Schritte + Unmapped-Bucket + Confidence-Ampel (DEC-087) + Select-Move-Pattern (DEC-086). Pflicht-Privacy-Checkbox vor Approve (DEC-091, Re-Validation DEC-077). Optional Toggle 'Roh-Transkript anzeigen' mit Audit-Log (DEC-088); KEIN Roh-Video-UI-Pfad. Cockpit-Card 'Pending Walkthroughs' analog block_review (V4.1 SLC-042). Pattern-Reuse aus V4 FEAT-023 Bridge-Review-UI + V4.1 FEAT-029 block_review. Ersetzt deferred FEAT-036.",
       "createdAt": "2026-05-06"

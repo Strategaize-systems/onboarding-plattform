@@ -47,7 +47,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ChevronDown, ChevronRight, ClipboardCheck, Pencil, Trash2, UserMinus, ShieldCheck } from "lucide-react";
+import { ChevronDown, ChevronRight, ClipboardCheck, Pencil, Trash2, UserMinus, ShieldCheck, Mic } from "lucide-react";
 
 interface TenantUser {
   id: string;
@@ -91,9 +91,11 @@ const LANG_LABELS: Record<string, string> = { de: "DE", en: "EN", nl: "NL" };
 export function TenantsClient({
   email,
   pendingReviewsByTenant = {},
+  pendingWalkthroughsByTenant = {},
 }: {
   email: string;
   pendingReviewsByTenant?: Record<string, number>;
+  pendingWalkthroughsByTenant?: Record<string, number>;
 }) {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(true);
@@ -550,6 +552,29 @@ export function TenantsClient({
                             >
                               <ClipboardCheck className="h-3 w-3" />
                               {pending} {pending === 1 ? "Review" : "Reviews"}
+                            </Link>
+                          );
+                        })()}
+                        {(() => {
+                          const pendingWalk = pendingWalkthroughsByTenant[tenant.id] ?? 0;
+                          const isYellow = pendingWalk > 0;
+                          return (
+                            <Link
+                              href={`/admin/tenants/${tenant.id}/walkthroughs`}
+                              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors ${
+                                isYellow
+                                  ? "bg-amber-100 text-amber-800 hover:bg-amber-200"
+                                  : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                              }`}
+                              data-testid="tenant-pending-walkthroughs-badge"
+                              title={
+                                isYellow
+                                  ? `${pendingWalk} pending Walkthroughs — klicken zum Pruefen`
+                                  : "Keine pendenden Walkthroughs"
+                              }
+                            >
+                              <Mic className="h-3 w-3" />
+                              {pendingWalk} {pendingWalk === 1 ? "Walkthrough" : "Walkthroughs"}
                             </Link>
                           );
                         })()}

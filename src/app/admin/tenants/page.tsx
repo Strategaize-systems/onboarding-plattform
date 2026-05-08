@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { loadCrossTenantCockpit } from "@/lib/cockpit/load-cross-tenant";
 import { pendingCountsByTenant } from "@/lib/reviews/pending-counts-by-tenant";
+import { countPendingWalkthroughsByTenant } from "@/lib/walkthrough/list-walkthroughs-for-review";
 import { TenantsClient } from "./tenants-client";
 import { CrossTenantCockpit } from "./CrossTenantCockpit";
 
@@ -31,14 +32,22 @@ export default async function AdminTenantsPage() {
   let cockpitRows: Awaited<ReturnType<typeof loadCrossTenantCockpit>> = [];
   // SLC-043 MT-3 — Pending-Reviews-Counts pro Tenant fuer den Quick-Stats-Badge.
   let pendingByTenant: Record<string, number> = {};
+  // SLC-079 MT-6 — Pending-Walkthroughs-Counts pro Tenant.
+  let pendingWalkthroughsByTenant: Record<string, number> = {};
   try {
     const adminClient = createAdminClient();
-    const [cockpit, pending] = await Promise.all([
+    const [cockpit, pending, pendingWalkthroughs] = await Promise.all([
       loadCrossTenantCockpit(adminClient),
       pendingCountsByTenant(adminClient).catch(() => new Map<string, number>()),
+      countPendingWalkthroughsByTenant(adminClient).catch(
+        () => new Map<string, number>(),
+      ),
     ]);
     cockpitRows = cockpit;
     pendingByTenant = Object.fromEntries(pending.entries());
+    pendingWalkthroughsByTenant = Object.fromEntries(
+      pendingWalkthroughs.entries(),
+    );
   } catch (err) {
     const { captureException } = await import("@/lib/logger");
     captureException(err, { source: "admin/tenants/loadCrossTenantCockpit" });
@@ -50,6 +59,7 @@ export default async function AdminTenantsPage() {
       <TenantsClient
         email={profile.email ?? ""}
         pendingReviewsByTenant={pendingByTenant}
+        pendingWalkthroughsByTenant={pendingWalkthroughsByTenant}
       />
     </div>
   );

@@ -247,7 +247,7 @@ V5-Scope wurde am 2026-05-06 nach USP-Stress-Test re-geplant (DEC-079 Strategaiz
 | SLC-076 | [Walkthrough Stufe 1 PII-Redaction (Migration 087 + Pattern-Library + Worker)](SLC-076-walkthrough-pii-redaction.md) | FEAT-037 | done | High | 2026-05-06 |
 | SLC-077 | [Walkthrough Stufe 2 Schritt-Extraktion (Migration 085 + Worker)](SLC-077-walkthrough-step-extraction.md) | FEAT-037 | done | High | 2026-05-06 |
 | SLC-078 | [Walkthrough Stufe 3 Auto-Mapping (Migration 086 + Bridge-Engine-Reuse)](SLC-078-walkthrough-subtopic-mapping.md) | FEAT-037 | done | High | 2026-05-06 |
-| SLC-079 | [Walkthrough Methodik-Review-UI (FEAT-040)](SLC-079-walkthrough-methodik-review-ui.md) | FEAT-040 | planned | High | 2026-05-06 |
+| SLC-079 | [Walkthrough Methodik-Review-UI (FEAT-040)](SLC-079-walkthrough-methodik-review-ui.md) | FEAT-040 | done | High | 2026-05-06 |
 
 ### V5 Option 2 Execution Order
 
