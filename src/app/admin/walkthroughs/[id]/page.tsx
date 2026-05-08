@@ -8,6 +8,7 @@ import { ArrowLeft } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { captureWarning } from "@/lib/logger";
 import { WalkthroughHeader } from "@/components/admin/walkthroughs/WalkthroughHeader";
 import {
   SubtopicTreeReview,
@@ -158,15 +159,14 @@ export default async function WalkthroughDetailPage({ params }: PageProps) {
     .order("step_number", { ascending: true });
 
   if (stepsError) {
-    console.error("[walkthrough-detail] steps query error", {
-      sessionId: id,
-      error: stepsError.message,
-      code: (stepsError as { code?: string }).code,
-    });
-  } else {
-    console.log("[walkthrough-detail] loaded", {
-      sessionId: id,
-      stepCount: (stepRows ?? []).length,
+    captureWarning("walkthrough_step query failed", {
+      source: "walkthrough_review",
+      metadata: {
+        category: "walkthrough_review_load",
+        walkthrough_session_id: id,
+        error_message: stepsError.message,
+        error_code: (stepsError as { code?: string }).code,
+      },
     });
   }
 
@@ -189,16 +189,14 @@ export default async function WalkthroughDetailPage({ params }: PageProps) {
       )
       .in("walkthrough_step_id", stepIds);
     if (mappingsError) {
-      console.error("[walkthrough-detail] mappings query error", {
-        sessionId: id,
-        stepIdsCount: stepIds.length,
-        error: mappingsError.message,
-      });
-    } else {
-      console.log("[walkthrough-detail] mappings", {
-        sessionId: id,
-        stepIdsCount: stepIds.length,
-        mappingCount: (mappingRows ?? []).length,
+      captureWarning("walkthrough_review_mapping query failed", {
+        source: "walkthrough_review",
+        metadata: {
+          category: "walkthrough_review_load",
+          walkthrough_session_id: id,
+          step_ids_count: stepIds.length,
+          error_message: mappingsError.message,
+        },
       });
     }
     for (const m of mappingRows ?? []) {
