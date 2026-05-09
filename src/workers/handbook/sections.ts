@@ -17,6 +17,9 @@ import type {
   SectionSourceFilter,
   SopRow,
   SubsectionsBy,
+  WalkthroughMappingRow,
+  WalkthroughRow,
+  WalkthroughStepRow,
 } from "./types";
 
 const STATUS_RANK: Record<string, number> = {
@@ -30,6 +33,7 @@ interface RenderSectionInput {
   knowledgeUnits: KnowledgeUnitRow[];
   diagnoses: DiagnosisRow[];
   sops: SopRow[];
+  walkthroughs?: WalkthroughRow[]; // V5.1 SLC-091
   crossLinksFromSection: CrossLink[];
   sectionFileMap: Record<string, string>;
   sectionAnchorMap: Record<string, string>;
@@ -41,14 +45,31 @@ export interface RenderedSection {
   knowledgeUnitCount: number;
   diagnosisCount: number;
   sopCount: number;
+  walkthroughCount: number; // V5.1
 }
 
 /**
  * Rendert eine Section in Markdown. Output-Filename folgt
  * `{order:02d}_{section.key}.md`.
+ *
+ * V5.1 SLC-091: Wenn `section.sources` mind. einen `walkthrough`-Source-Eintrag
+ * enthaelt, wird der Walkthroughs-Renderer-Pfad gewaehlt (deterministisch, kein
+ * Mischbetrieb mit KU/Diagnose/SOP). DEC-095: Walkthroughs leben in eigener
+ * Section, kein Inline-Mischen mit anderen Source-Typen.
  */
 export function renderSection(input: RenderSectionInput): RenderedSection {
-  const { section, knowledgeUnits, diagnoses, sops, crossLinksFromSection, sectionFileMap, sectionAnchorMap } = input;
+  const { section, knowledgeUnits, diagnoses, sops, walkthroughs, crossLinksFromSection, sectionFileMap, sectionAnchorMap } = input;
+
+  // V5.1 SLC-091 — Walkthroughs-Section-Branch (DEC-095).
+  if (section.sources.some((s) => s.type === "walkthrough")) {
+    return renderWalkthroughsSection({
+      section,
+      walkthroughs: walkthroughs ?? [],
+      crossLinksFromSection,
+      sectionFileMap,
+      sectionAnchorMap,
+    });
+  }
 
   const filteredKus = filterKnowledgeUnits(section.sources, knowledgeUnits);
   const filteredDiags = filterDiagnoses(section.sources, diagnoses);
@@ -114,7 +135,210 @@ export function renderSection(input: RenderSectionInput): RenderedSection {
     knowledgeUnitCount: filteredKus.length,
     diagnosisCount: filteredDiags.length,
     sopCount: filteredSops.length,
+    walkthroughCount: 0,
   };
+}
+
+/* ----------------------- Walkthroughs-Renderer (V5.1) ------------------- */
+
+interface RenderWalkthroughsInput {
+  section: HandbookSection;
+  walkthroughs: WalkthroughRow[];
+  crossLinksFromSection: CrossLink[];
+  sectionFileMap: Record<string, string>;
+  sectionAnchorMap: Record<string, string>;
+}
+
+/**
+ * V5.1 SLC-091 — Renderer fuer Walkthroughs-Section. Pro approved Walkthrough
+ * H2-Block mit `<video>`-Embed (Storage-Proxy-Pfad), Subtopic-gruppierter
+ * Schritt-Liste + Unmapped-Bucket. Kein LLM, deterministisch.
+ *
+ * Embed-URL-Convention (DEC-096): `/api/walkthrough/{session_id}/embed`
+ * (Storage-Proxy mit Range-Support, RPC-RLS-Check via DEC-099).
+ */
+export function renderWalkthroughsSection(input: RenderWalkthroughsInput): RenderedSection {
+  const { section, walkthroughs, crossLinksFromSection, sectionFileMap, sectionAnchorMap } = input;
+
+  const lines: string[] = [];
+
+  // 1. Section-Header
+  lines.push(`# ${section.title}`);
+  lines.push("");
+
+  const sectionSlug = sectionAnchorMap[section.key];
+  if (sectionSlug) {
+    lines.push(`<a id="section-${sectionSlug}"></a>`);
+    lines.push("");
+  }
+
+  // 2. Intro-Template (oder Default)
+  const intro =
+    section.render.intro_template && section.render.intro_template.trim().length > 0
+      ? section.render.intro_template.trim()
+      : "_In diesem Abschnitt finden Sie freigegebene Walkthroughs der Mitarbeiter — Bildschirmaufnahmen mit extrahierten SOP-Schritten._";
+  lines.push(intro);
+  lines.push("");
+
+  // 3. Cross-Links
+  if (crossLinksFromSection.length > 0) {
+    lines.push("> **Querverweise:**");
+    for (const link of crossLinksFromSection) {
+      const targetFile = sectionFileMap[link.to_section];
+      if (targetFile) {
+        lines.push(`> - Siehe [${link.to_section}](${targetFile})`);
+      }
+    }
+    lines.push("");
+  }
+
+  // 4. Inhalt
+  if (walkthroughs.length === 0) {
+    lines.push("_Es wurden noch keine Walkthroughs freigegeben._");
+    lines.push("");
+  } else {
+    for (const wt of walkthroughs) {
+      lines.push(...renderSingleWalkthrough(wt));
+    }
+  }
+
+  const filename = sectionFileMap[section.key] ?? `${pad2(section.order)}_${section.key}.md`;
+
+  return {
+    filename,
+    markdown: lines.join("\n").replace(/\n{3,}/g, "\n\n").trimEnd() + "\n",
+    knowledgeUnitCount: 0,
+    diagnosisCount: 0,
+    sopCount: 0,
+    walkthroughCount: walkthroughs.length,
+  };
+}
+
+function renderSingleWalkthrough(wt: WalkthroughRow): string[] {
+  const out: string[] = [];
+
+  // H2 Header: Recorder + Datum + Dauer
+  const date = formatWalkthroughDate(wt.created_at);
+  const duration = formatDuration(wt.duration_sec);
+  const headerSuffix = duration ? ` (${duration})` : "";
+  out.push(`## ${escapeMd(wt.recorder_display_name)} — ${date}${headerSuffix}`);
+  out.push("");
+
+  // Anchor
+  const sessionShort = wt.id.slice(0, 8);
+  out.push(`<a id="walkthrough-${sessionShort}"></a>`);
+  out.push("");
+
+  // Embed-Player (DEC-096)
+  out.push(
+    `<video src="/api/walkthrough/${wt.id}/embed" controls preload="metadata" style="max-width:100%;border-radius:0.5rem;background:#000;display:block;margin:1rem 0;"></video>`,
+  );
+  out.push("");
+
+  // Subtopic-Gruppierung
+  const stepsWithMapping = groupStepsBySubtopic(wt.steps, wt.mappings);
+  const subtopicKeys = Array.from(stepsWithMapping.mapped.keys()).sort();
+
+  for (const subtopic of subtopicKeys) {
+    const subtopicSteps = stepsWithMapping.mapped.get(subtopic) ?? [];
+    if (subtopicSteps.length === 0) continue;
+    out.push(`### ${escapeMd(subtopic)}`);
+    out.push("");
+    out.push(...renderStepList(subtopicSteps));
+    out.push("");
+  }
+
+  if (stepsWithMapping.unmapped.length > 0) {
+    out.push("### Unzugeordnete Schritte");
+    out.push("");
+    out.push(...renderStepList(stepsWithMapping.unmapped));
+    out.push("");
+  }
+
+  return out;
+}
+
+interface GroupedSteps {
+  mapped: Map<string, WalkthroughStepRow[]>;
+  unmapped: WalkthroughStepRow[];
+}
+
+function groupStepsBySubtopic(
+  steps: WalkthroughStepRow[],
+  mappings: WalkthroughMappingRow[],
+): GroupedSteps {
+  const mappingByStepId = new Map<string, WalkthroughMappingRow>();
+  for (const m of mappings) {
+    mappingByStepId.set(m.walkthrough_step_id, m);
+  }
+
+  const mapped = new Map<string, WalkthroughStepRow[]>();
+  const unmapped: WalkthroughStepRow[] = [];
+
+  for (const step of steps) {
+    const mapping = mappingByStepId.get(step.id);
+    if (mapping?.subtopic_id) {
+      const arr = mapped.get(mapping.subtopic_id) ?? [];
+      arr.push(step);
+      mapped.set(mapping.subtopic_id, arr);
+    } else {
+      unmapped.push(step);
+    }
+  }
+  return { mapped, unmapped };
+}
+
+function renderStepList(steps: WalkthroughStepRow[]): string[] {
+  const out: string[] = [];
+  // Innerhalb eines Subtopic-Buckets nach step_number sortieren
+  const sorted = [...steps].sort((a, b) => a.step_number - b.step_number);
+  let i = 1;
+  for (const step of sorted) {
+    out.push(`${i}. **${escapeMd(step.action)}**`);
+    const metaParts: string[] = [];
+    if (step.responsible && step.responsible.trim()) {
+      metaParts.push(`_Verantwortlich:_ ${escapeMd(step.responsible.trim())}`);
+    }
+    if (step.timeframe && step.timeframe.trim()) {
+      metaParts.push(`_Frist:_ ${escapeMd(step.timeframe.trim())}`);
+    }
+    if (metaParts.length > 0) {
+      out.push(`   ${metaParts.join(" | ")}`);
+    }
+    if (step.success_criterion && step.success_criterion.trim()) {
+      out.push(
+        `   _Erfolg:_ ${escapeMd(step.success_criterion.trim().split("\n").join(" "))}`,
+      );
+    }
+    if (step.dependencies && step.dependencies.trim()) {
+      out.push(`   _Voraussetzungen:_ ${escapeMd(step.dependencies.trim())}`);
+    }
+    i++;
+  }
+  return out;
+}
+
+function formatWalkthroughDate(iso: string): string {
+  // Deterministisch: yyyy-mm-dd (UTC) ohne Locale-Drift
+  try {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return iso;
+    const y = d.getUTCFullYear();
+    const m = pad2(d.getUTCMonth() + 1);
+    const day = pad2(d.getUTCDate());
+    return `${y}-${m}-${day}`;
+  } catch {
+    return iso;
+  }
+}
+
+function formatDuration(durationSec: number | null): string | null {
+  if (durationSec === null || durationSec === undefined) return null;
+  if (!Number.isFinite(durationSec) || durationSec < 0) return null;
+  const total = Math.round(durationSec);
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  return `${m}:${pad2(s)}`;
 }
 
 /* ----------------------------- Filter-Logik ----------------------------- */

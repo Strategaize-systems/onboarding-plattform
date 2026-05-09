@@ -167,6 +167,26 @@ describe("validateHandbookSchema", () => {
     expect(() => validateHandbookSchema(bad)).toThrow(/render/);
   });
 
+  it("akzeptiert walkthrough als Source-Type (V5.1 SLC-091)", () => {
+    const ok = {
+      sections: [
+        {
+          key: "walkthroughs",
+          title: "Walkthroughs",
+          order: 15,
+          sources: [
+            { type: "walkthrough", filter: { min_status: "approved" } },
+          ],
+          render: { subsections_by: "subtopic", intro_template: null },
+        },
+      ],
+    };
+    const result = validateHandbookSchema(ok);
+    expect(result.sections).toHaveLength(1);
+    expect(result.sections[0].sources[0].type).toBe("walkthrough");
+    expect(result.sections[0].sources[0].filter.min_status).toBe("approved");
+  });
+
   it("akzeptiert intro_template = null", () => {
     const ok = {
       sections: [

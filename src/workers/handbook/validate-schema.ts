@@ -12,7 +12,15 @@ import type {
   SubsectionsBy,
 } from "./types";
 
-const ALLOWED_SOURCE_TYPES = new Set(["knowledge_unit", "diagnosis", "sop"]);
+// V5.1 SLC-091: 'walkthrough' als vierter Source-Type (DEC-095).
+// Filter unterstuetzt min_status='approved' (gefiltert im Loader) und optional
+// subtopic_keys[] (V5.2+ reserved, in V5.1 vom Renderer ignoriert).
+const ALLOWED_SOURCE_TYPES = new Set([
+  "knowledge_unit",
+  "diagnosis",
+  "sop",
+  "walkthrough",
+]);
 const ALLOWED_SUBSECTIONS_BY: ReadonlySet<SubsectionsBy> = new Set([
   "subtopic",
   "block_key",

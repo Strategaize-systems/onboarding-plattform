@@ -17,6 +17,7 @@ import {
   countBlockReviewStatuses,
   loadBlockReviewState,
 } from "./block-review-filter";
+import { loadApprovedWalkthroughs } from "./load-walkthroughs";
 import type {
   DiagnosisRow,
   KnowledgeUnitRow,
@@ -162,8 +163,14 @@ export async function handleHandbookSnapshotJob(job: ClaimedJob): Promise<void> 
       content: (r.content ?? {}) as SopRow["content"],
     }));
 
+    // 7b. SLC-091 V5.1 — Lade approved Walkthroughs (FEAT-038)
+    const walkthroughs = await loadApprovedWalkthroughs(
+      adminClient,
+      snapshot.tenant_id as string,
+    );
+
     console.log(
-      `[handbook-job] Loaded ${knowledgeUnits.length} KUs, ${diagnoses.length} diagnoses, ${sops.length} sops`,
+      `[handbook-job] Loaded ${knowledgeUnits.length} KUs, ${diagnoses.length} diagnoses, ${sops.length} sops, ${walkthroughs.length} walkthroughs`,
     );
 
     // 8. Render
@@ -174,11 +181,12 @@ export async function handleHandbookSnapshotJob(job: ClaimedJob): Promise<void> 
       knowledgeUnits,
       diagnoses,
       sops,
+      walkthroughs,
       generatedAt: new Date(),
     });
     const renderMs = Date.now() - renderStart;
     console.log(
-      `[handbook-job] Rendered ${rendered.counts.section_count} sections in ${renderMs}ms`,
+      `[handbook-job] Rendered ${rendered.counts.section_count} sections (kus=${rendered.counts.knowledge_unit_count}, diag=${rendered.counts.diagnosis_count}, sops=${rendered.counts.sop_count}, walkthroughs=${rendered.counts.walkthrough_count}) in ${renderMs}ms`,
     );
 
     // 9. ZIP bauen
@@ -202,6 +210,9 @@ export async function handleHandbookSnapshotJob(job: ClaimedJob): Promise<void> 
 
     // 11. UPDATE handbook_snapshot -> ready
     // SLC-041: metadata enthaelt Audit-Counter fuer Block-Review-Status (AC-14).
+    // SLC-091 (V5.1): metadata.walkthrough_count + metadata.walkthrough_session_ids
+    // fuer Reader-Audit (DEC-098) und Cockpit-Sub-Hint.
+    const walkthroughSessionIds = walkthroughs.map((w) => w.id);
     const { error: updErr } = await adminClient
       .from("handbook_snapshot")
       .update({
@@ -216,6 +227,8 @@ export async function handleHandbookSnapshotJob(job: ClaimedJob): Promise<void> 
           pending_blocks: reviewCounts.pending_blocks,
           approved_blocks: reviewCounts.approved_blocks,
           rejected_blocks: reviewCounts.rejected_blocks,
+          walkthrough_count: rendered.counts.walkthrough_count,
+          walkthrough_session_ids: walkthroughSessionIds,
         },
       })
       .eq("id", snapshot.id);

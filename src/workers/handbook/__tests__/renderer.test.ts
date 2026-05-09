@@ -44,6 +44,7 @@ describe("renderHandbook", () => {
       knowledge_unit_count: 0,
       diagnosis_count: 0,
       sop_count: 0,
+      walkthrough_count: 0,
     });
   });
 
@@ -193,6 +194,7 @@ describe("renderHandbook", () => {
       knowledge_unit_count: 3, // 1 in geschaeftsmodell + 2 in operatives
       diagnosis_count: 1,
       sop_count: 1,
+      walkthrough_count: 0,
     });
   });
 });
