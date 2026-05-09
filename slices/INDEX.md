@@ -249,6 +249,52 @@ V5-Scope wurde am 2026-05-06 nach USP-Stress-Test re-geplant (DEC-079 Strategaiz
 | SLC-078 | [Walkthrough Stufe 3 Auto-Mapping (Migration 086 + Bridge-Engine-Reuse)](SLC-078-walkthrough-subtopic-mapping.md) | FEAT-037 | done | High | 2026-05-06 |
 | SLC-079 | [Walkthrough Methodik-Review-UI (FEAT-040)](SLC-079-walkthrough-methodik-review-ui.md) | FEAT-040 | done | High | 2026-05-06 |
 
+## V5.1 Slices (Walkthrough Handbuch-Integration — FEAT-038)
+
+V5.1-Scope auf FEAT-038 geshrinkt nach DEC-079 V5-Option-2-Pivot (RPT-170 Requirements re-done 2026-05-06). Architecture done 2026-05-08 (RPT-197) — alle 3 Open Questions Q-V5.1-A/B/C entschieden, 5 DECs (DEC-095..099), 1 Migration MIG-033 (Migration 089: rpc_get_walkthrough_video_path SECURITY DEFINER + handbook_schema-DML idempotent fuer 2 produktive Templates). Foundation 100% Reuse aus V4.1+V5: keine neuen Tabellen, keine neuen Buckets, keine neuen npm-Pakete, keine neuen Worker-Job-Typen, keine neuen Bedrock-Calls. Slice-Numbering: V5.1 = SLC-09X-Block (V5 = SLC-07X-Block, V5.0.X-Hotfix-Reservierung = SLC-08X frei).
+
+| ID | Slice | Feature | Status | Priority | Created |
+|----|-------|---------|--------|----------|---------|
+| SLC-091 | [Walkthrough Handbuch-Section-Renderer + Storage-Proxy + RPC + MIG-033](SLC-091-walkthrough-handbook-section-renderer.md) | FEAT-038 | planned | High | 2026-05-08 |
+| SLC-092 | [Walkthrough Handbuch-Reader-Integration + Stale-Marker + Audit + RLS-Matrix](SLC-092-walkthrough-handbook-reader-integration.md) | FEAT-038 | planned | High | 2026-05-08 |
+
+### V5.1 Execution Order
+
+Reihenfolge strikt sequentiell:
+
+**SLC-091 (Backend) → Coolify-Deploy + MIG-033 Live-Apply → SLC-092 (Frontend + RLS-Matrix + Browser-Smoke)**
+
+- **SLC-091** (Backend-Foundation, ~5-7 MTs, ~1.5 Tage): Schema-Validator-Erweiterung + Loader + Renderer + Worker-Integration + Migration 089 SQL-File + Storage-Proxy-Endpoint mit Range-Support + Vitest 8+. MT-7 ist Migration 089 Live-Apply auf Hetzner (Pre-Apply-Backup pflicht).
+- **SLC-092** (Frontend-Integration, ~3-5 MTs, ~1-1.5 Tage): react-markdown `<video>` Render-Path + Stale-Banner-Erweiterung + Audit-Log-Hook (DEC-098) + 12-24-Faelle-RLS-Matrix gegen Coolify-DB + User-Pflicht-Browser-Smoke (11-Punkte-Checklist). Optional MT-5 Cockpit-Card-Sub-Hint.
+
+**Total V5.1: 2 Slices, ~10-13 MTs, ~3-4 Tage Implementation + Release-Sequenz.**
+
+### V5.1 Pflicht-Gates fuer Release
+
+- **SC-V5.1-1 Snapshot rendert Walkthroughs**: nach Snapshot-Generation enthaelt das ZIP `XX_walkthroughs.md` mit Markdown-Section pro approved Walkthrough.
+- **SC-V5.1-2 Embed-Player spielt Video ab + Seek funktioniert**: HTML5 `<video>` laedt via Storage-Proxy, Browser kann seek-en (Range-Requests 206).
+- **SC-V5.1-3 Cross-Tenant-Schutz**: tenant_admin von Tenant B bekommt 403/404 fuer `/api/walkthrough/[sessionId]/embed` mit Tenant-A-Session.
+- **SC-V5.1-4 Stale-Banner triggert** wenn approved Walkthrough nach letztem Snapshot existiert.
+- **RLS-Matrix walkthrough-embed**: 12-24 Faelle gruen (4 Rollen × 3 Status × 2 Tenant-Konstellationen, oder Subset wenn redundant).
+- **Browser-Smoke User-Pflicht**: Reader-Page mit echtem Walkthrough-Snapshot — Video abspielen, Seek testen, Stale-Banner verifizieren, Audit-Log-Eintrag pro Page-Load (NICHT pro Range-Request).
+- **Code-Quality**: `npm run lint` 0/0, `npm run build` PASS, `npm run test` alle gruen, `npm audit --omit=dev` keine neuen Vulns (V5.1 fuegt keine npm-Deps hinzu).
+
+### V5.1 Pre-Conditions
+
+- V5 Option 2 STABLE (Cron-Run-Verifikation 2026-05-09 03:00 ausstehend)
+- `/post-launch V5` PASS (~14:00 Europe/Berlin nach 18-24h-Window)
+- Mindestens 1 approved walkthrough_session als Test-Daten — bereits erfuellt via SC-V5-4 (`75098a5d` user-approved 2026-05-08)
+
+### V5.1 Out-of-Scope (deferred V5.2+)
+
+- Walkthrough-Embedding inline in andere Sections (z.B. SOP-Section) → V5.2+ (DEC-095)
+- Stream/Pipe Range-Implementation (bandwidth-effizient, Pre-Production-Pattern) → V5.2+ (DEC-096)
+- Auto-Re-Generation-Trigger pro approved Walkthrough mit Throttle → V5.2+ (DEC-097)
+- Walkthrough-Search im Reader → V5.2+ (FEAT-038-Spec — existing Cross-Snapshot-Suche umfasst Walkthroughs-Markdown automatisch via V4.3 SLC-054)
+- Subtitle-Tracks aus Whisper-Transkript → V5.2+ (FEAT-038-Spec)
+- Adaptive Streaming / HLS → Pre-Production
+- Video-Level-PII-Redaction → Pre-Production-Compliance-Gate
+
 ### V5 Option 2 Execution Order
 
 Reihenfolge (mit Mid-Stream-Hotfix-Slot fuer BL-076 zwischen SLC-079 und SLC-074):
