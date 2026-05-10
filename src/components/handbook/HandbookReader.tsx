@@ -206,6 +206,26 @@ function H3WithPermalink({
   );
 }
 
+// SLC-092 MT-1 — Walkthrough-Video-Embed (DEC-095, DEC-096).
+// Worker emittiert `<video src="/api/walkthrough/{id}/embed" controls
+// preload="metadata" style="...">` im Markdown (sections.ts:234). rehype-raw
+// laesst den Tag durch, wir reichern hier nur Tailwind-Klassen an, damit das
+// Styling im Reader unter Brand-Hierarchie laeuft (Tailwind uebersteuert die
+// inline style-Defaults aus dem Worker — z.B. unsere `bg-black` ueberlagert
+// `background:#000`, identisch). `controls` und `preload` werden defensiv
+// hier wieder gesetzt, weil die Worker-Default-Attribute boolesche/string
+// HTML-Attribute sind, die ueber {...props} transparent durchlaufen.
+function VideoEmbed(props: ComponentPropsWithoutRef<"video">) {
+  return (
+    <video
+      {...props}
+      controls
+      preload="metadata"
+      className="my-6 block w-full max-w-full rounded-lg bg-black shadow-md"
+    />
+  );
+}
+
 export function HandbookReader({
   sections,
   indexMarkdown,
@@ -242,6 +262,7 @@ export function HandbookReader({
                 ),
                 h2: H2WithPermalink,
                 h3: H3WithPermalink,
+                video: VideoEmbed,
               }}
             >
               {indexMarkdown}
@@ -311,6 +332,7 @@ export function HandbookReader({
                     ),
                     h2: H2WithPermalink,
                     h3: H3WithPermalink,
+                    video: VideoEmbed,
                   }}
                 >
                   {stripLeadingH1(section.markdown)}

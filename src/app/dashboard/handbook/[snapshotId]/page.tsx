@@ -20,7 +20,10 @@ import {
   loadSnapshotContent,
   type SectionFile,
 } from "@/lib/handbook/load-snapshot-content";
+import { checkSnapshotStale } from "@/lib/handbook/check-snapshot-stale";
+import { extractWalkthroughIds } from "@/lib/handbook/extract-walkthrough-ids";
 import { loadCrossSearchSnapshots } from "@/lib/handbook/load-cross-search-snapshots";
+import { captureInfo } from "@/lib/logger";
 import type { CrossSearchSnapshot } from "@/lib/handbook/cross-snapshot-search";
 import { ReaderShell } from "@/components/handbook/ReaderShell";
 import type { ReaderSnapshotMeta } from "@/components/handbook/types";
@@ -143,17 +146,16 @@ export default async function HandbookReaderPage({ params }: PageProps) {
     .eq("id", snapshotRow.tenant_id)
     .maybeSingle();
 
-  // Stale-Check: gibt es block_checkpoints der GF-Session, die NACH der
-  // Snapshot-Erzeugung angelegt wurden? Tenant-weit waere strenger, aber die
-  // Slice-Spec definiert den Stale-Check auf der GF-Session (snapshot.capture_session_id).
+  // Stale-Check (V4.1 SLC-042 + V5.1 SLC-092):
+  //   - block_checkpoints der GF-Session nach Snapshot-Erzeugung
+  //   - approved walkthrough_sessions des Tenants nach Snapshot-Erzeugung (DEC-097)
   let isStale = false;
   if (snapshotRow.status === "ready") {
-    const { count } = await adminClient
-      .from("block_checkpoint")
-      .select("id", { count: "exact", head: true })
-      .eq("capture_session_id", snapshotRow.capture_session_id)
-      .gt("created_at", snapshotRow.created_at);
-    isStale = (count ?? 0) > 0;
+    isStale = await checkSnapshotStale(adminClient, {
+      capture_session_id: snapshotRow.capture_session_id as string,
+      tenant_id: snapshotRow.tenant_id as string,
+      created_at: snapshotRow.created_at as string,
+    });
   }
 
   const helpMarkdown = loadHelpMarkdown("handbook");
@@ -211,6 +213,25 @@ export default async function HandbookReaderPage({ params }: PageProps) {
     isLargeSnapshot = content.isLargeSnapshot;
   } catch (err) {
     loadError = err instanceof Error ? err.message : String(err);
+  }
+
+  // SLC-092 MT-3 — Audit-Log einmalig pro Reader-Page-Load (DEC-098).
+  // Wir sind hier nach Tenant-/Auth-Check; Cross-Tenant-Leser haben oben via
+  // notFound() abgebrochen, also wird kein Audit fuer Forbidden-Faelle
+  // geschrieben. Audit nur, wenn der Snapshot tatsaechlich Walkthrough-Embeds
+  // referenziert — sonst ist er fuer V5.1-Audit nicht relevant.
+  const walkthroughSessionIds = extractWalkthroughIds(sections, indexMarkdown);
+  if (walkthroughSessionIds.length > 0) {
+    captureInfo("walkthrough_video_embed", {
+      source: "handbook/reader",
+      userId: user.id,
+      metadata: {
+        category: "walkthrough_video_embed",
+        snapshot_id: snapshotRow.id,
+        tenant_id: snapshotRow.tenant_id,
+        walkthrough_session_ids: walkthroughSessionIds,
+      },
+    });
   }
 
   return (
