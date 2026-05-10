@@ -1,5 +1,14 @@
 # Known Issues
 
+### ISSUE-040 — fast-xml-builder high-Vulnerability (npm-Audit-Drift seit 2026-05-08, NICHT V5.1-induziert)
+- Status: open
+- Severity: Low
+- Area: Dependencies / Security
+- Summary: `npm audit --omit=dev` meldet ab 2026-05-08 (Re-Audit in /qa SLC-091) eine zusaetzliche **high** Vulnerability `fast-xml-builder <=1.1.6` mit 2 Advisories: GHSA-5wm8-gmm8-39j9 (attribute values mit unwanted quotes umgehen Filter) + GHSA-45c6-75p6-83cc (Comment Value regex bypass). Fast-xml-builder ist eine indirekte Dependency, nicht direkt im package.json gelistet. Vor 2026-05-08 zeigte `npm audit` 4 Vulns (1 low icu-minify + 3 moderate next-intl/postcss); jetzt 5 Vulns (4 vorherige + 1 high fast-xml-builder).
+- Impact: Build-Time-only. fast-xml-builder ist Build-Time-Tool fuer XML-Generation (vermutlich Sitemap/RSS oder vergleichbar). Kein Runtime-XSS-Vector im Onboarding-Code, weil keine User-Input-XML-Stringify-Pfade existieren. Kein Production-Risk.
+- Workaround: Upstream-Bump abwarten oder via npm-Override `"overrides": {"fast-xml-builder": ">=1.1.7"}` forcen — letzteres ggf. mit Compat-Test pruefen.
+- Next Action: Bei naechstem Maintenance-Sprint (`npm outdated` + `npm audit fix --force` testen). KEIN /qa-SLC-091-Blocker — pre-existing seit 2026-05-08, nicht durch V5.1-Code induziert (verifiziert via `git diff package.json package-lock.json` zeigt keine V5.1-Aenderung).
+
 ### ISSUE-039 — Status-Page 404 nach Upload — failure_reason Spaltennamen-Mismatch (SLC-071-Pre-Existing)
 - Status: resolved
 - Severity: High

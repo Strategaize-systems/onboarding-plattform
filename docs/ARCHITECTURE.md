@@ -5142,10 +5142,10 @@ return new NextResponse(arrayBuffer, { status: 200, headers: { /* ... */ } });
 
 ### V5.1 Migration-Plan
 
-**MIG-033 (Migration 089) `089_v51_walkthrough_handbook_integration.sql`** (geplant):
+**MIG-033 (Migration 089) `089_v51_walkthrough_handbook_integration.sql`** (LIVE 2026-05-10):
 
 - DDL: `CREATE OR REPLACE FUNCTION rpc_get_walkthrough_video_path(p_walkthrough_session_id UUID) RETURNS jsonb` — RLS-Check (Tenant + Rolle + Status='approved') + return `storage_path` oder `error`-JSONB
-- DML: idempotent `template.handbook_schema` der Demo-Templates (`exit_readiness`, `mitarbeiter_wissenserhebung`) um Walkthroughs-Section erweitern; Pre-Apply-Backup pflicht; idempotent via `handbook_schema -> 'sections' NOT @> ...`-Check
+- DML: idempotent `template.handbook_schema` aller Templates **mit `handbook_schema IS NOT NULL`** um Walkthroughs-Section erweitern; Pre-Apply-Backup pflicht; idempotent via `handbook_schema -> 'sections' NOT @> ...`-Check. **Live-Realitaet zum Apply-Zeitpunkt: nur 1 Template (`Exit-Readiness`) hatte ein `handbook_schema`** — Sections 8 → 9. `mitarbeiter_wissenserhebung` hat `handbook_schema IS NULL` und wurde korrekt ausgelassen. V5.1-Doku sprach urspruenglich von "2 produktiven Templates", was die Live-Schema-Realitaet uebersah; siehe RPT-200 fuer Live-Drift-Doku.
 - Apply-Pattern: `sql-migration-hetzner.md` (base64-Pipe + `psql -U postgres`)
 - Rollback: `DROP FUNCTION IF EXISTS rpc_get_walkthrough_video_path` + DML-Reverse via Pre-Apply-Backup-Restore
 
