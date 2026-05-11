@@ -1,5 +1,14 @@
 # Known Issues
 
+### ISSUE-046 — Embed-Route gibt 500 statt 400 bei invalidem UUID-Format
+- Status: open
+- Severity: Medium
+- Area: API / Validation / V5.1 Walkthrough-Embed
+- Summary: `src/app/api/walkthrough/[sessionId]/embed/route.ts` validiert die `sessionId` nicht gegen UUID-Pattern vor dem RPC-Call. Bei `GET /api/walkthrough/not-a-uuid/embed` failed die RPC `rpc_get_walkthrough_video_path($1::uuid)` mit Postgres-Cast-Exception, der Catch-Block triggert `captureException` + HTTP 500 INTERNAL_ERROR statt 400 BAD_REQUEST.
+- Impact: Minimal in Production — Browser sendet ausschliesslich UUIDs aus dem Snapshot-Markdown, die Worker-emittiert sind. Bei direkter URL-Manipulation oder Scraper-Hits entstehen 500er-Spam-Eintraege in `error_log` statt klar identifizierbarer 400er. Kein Security-Bypass, kein Funktions-Impact.
+- Workaround: Keiner noetig.
+- Next Action: Inline-Fix vor REL-014 (~10min) oder V5.2-Slice. Fix-Pattern aus `src/app/admin/handbook/actions.ts:39` uebernehmen: `UUID_RE.test(sessionId)` vor RPC-Call ergaenzen, Catch-Block weiter fuer echte RPC-Fehler nutzen, neue Vitest fuer 400-Pfad. Entdeckt in /qa SLC-092 (RPT-202) 2026-05-11 via Playwright-MCP-Browser-Smoke (Cross-Tenant-Test 11b).
+
 ### ISSUE-040 — fast-xml-builder high-Vulnerability (npm-Audit-Drift seit 2026-05-08, NICHT V5.1-induziert)
 - Status: open
 - Severity: Low
