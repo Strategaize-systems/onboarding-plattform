@@ -939,6 +939,16 @@
       "version": "V6",
       "description": "V6 Pflicht-Vorbereitung — KEIN Skill-Block, KEIN V6-Live-Block (User entscheidet zeitlich). GTM-Frage: Wie kommt User an die ersten 5-8 NRW-Steuerberater? Vorhandener Kandidaten-Korridor (LinkedIn-Cold-Outreach an Mittelstands-spezialisierte Kanzleien, Fachverband-Veranstaltungen Steuerberaterkammer NRW + Mittelstands-Tagungen, Empfehlung ueber bestehendes B2B-Netzwerk, Content-Pull, Branchen-Magazin-Artikel). Output: konkrete Target-Liste + Kanal-Entscheidung + Erstkontakt-Pitch (1 Seite, klar, ohne Sales-Ueberladung). Verweis: MULTIPLIER_MODEL.md Achse 9. NL-Pilot ist warmer Kontakt (Steuerberater des Users) — separater Akquise-Pfad noetig.",
       "createdAt": "2026-05-11"
+    },
+    {
+      "id": "BL-097",
+      "title": "Tenant-spezifische Restore-Faehigkeit (V7+)",
+      "type": "feature",
+      "priority": "low",
+      "status": "deferred",
+      "version": null,
+      "description": "Eingebracht durch DEC-103 (/architecture V6, 2026-05-11). V6 akzeptiert Voll-Restore-Limit: bei Mandanten-Datenverlust ist nur globales Coolify-DB-Restore moeglich, kein selektiver Tenant-Restore. Operativ pragmatisch fuer 4-7 V6-Pilot-Mandanten — jeder Datenverlust waere ohnehin operativer Eskalations-Fall. V7+ Slice waere: eigener Worker-Pfad fuer Logical-Tenant-Dump in Storage + Diff-Apply-Mechanik + Restore-UI fuer strategaize_admin. Aufwand-Schaetzung ~3-5 Tage. Operativ-Doku in /docs/RUNBOOK.md (V6 Update) muss das Voll-Restore-Limit als Klausel abbilden. Bei realem Vorfall in V6-Pilot-Phase: ad-hoc Logical-Dump des betroffenen Tenants vor Voll-Restore + Re-Apply nach Restore.",
+      "createdAt": "2026-05-11"
     }
   ]
 }

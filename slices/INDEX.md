@@ -358,3 +358,129 @@ Reihenfolge: **SLC-061 → SLC-062**
 - Pre-Apply-Backup + Post-Apply-Audit fuer SLC-062.
 - V4.3-Regression-Smoke pro Slice (Reader, Help-Sheet, Cross-Search, Bridge-Edit, Jitsi-Meeting).
 - Gesamt-V4.4-/qa nach SLC-062 (SC-V4.4-1..6 vollstaendig verifiziert).
+
+## V6 Slices (Multiplikator-Foundation — Steuerberater-Partner-Erweiterung)
+
+V6-Scope (RPT-209 Requirements + RPT-210 Architecture + RPT-211 Slice-Planning). 6 Features (FEAT-041..046) in 6 Slices (SLC-101..106) zerlegt. Slice-Numbering V6 = SLC-1XX-Block (V5 = SLC-07X, V5.1 = SLC-09X, V5.0.X-Hotfix-Reservierung = SLC-08X frei). Reuse-Quote ~60% — Capture-Mode-Architektur FEAT-025, RLS-Defense-in-Depth-Pattern V4/V5 inkl. SAVEPOINT, next-intl + lokalisierte Bedrock-Prompts, Tenant-Onboarding-Wizard FEAT-031, Lead-Intake-API Business-System mit First-Touch-Lock+UTM, DEC-091 Privacy-Checkbox-Pattern, DEC-099 RPC-SECURITY-DEFINER-Pattern, Walkthrough-Storage-Proxy-Pattern (SLC-091). Migration MIG-034 in 3 sequenziellen Migration-Files (090+091+092) ueber 3 Slices verteilt.
+
+| ID | Slice | Feature | Status | Priority | Created |
+|----|-------|---------|--------|----------|---------|
+| SLC-101 | [Partner-Tenant Foundation + RLS + Pen-Test-Suite (Migration 090)](SLC-101-partner-tenant-foundation-rls-pentest.md) | FEAT-041 | planned | Blocker | 2026-05-11 |
+| SLC-102 | [Partner-Organisation + Onboarding-Flow + Admin-Dashboard](SLC-102-partner-organization-admin-dashboard.md) | FEAT-042 | planned | High | 2026-05-11 |
+| SLC-103 | [Partner-Client-Mapping + Mandanten-Einladung](SLC-103-partner-client-mapping-mandanten-einladung.md) | FEAT-043 | planned | High | 2026-05-11 |
+| SLC-104 | [Partner-Branding + CSS-Custom-Properties + RPC (Migration 091)](SLC-104-partner-branding-css-custom-properties.md) | FEAT-044 | planned | High | 2026-05-11 |
+| SLC-105 | [Diagnose-Werkzeug + Light-Pipeline + Bericht-Renderer (Stop-Gate BL-095)](SLC-105-diagnose-werkzeug-light-pipeline-renderer.md) | FEAT-045 | planned | High | 2026-05-11 |
+| SLC-106 | [Lead-Push opt-in + Outbound Webhook + DSGVO-Audit (Migration 092)](SLC-106-lead-push-opt-in-outbound-webhook.md) | FEAT-046 | planned | High | 2026-05-11 |
+
+### V6 Execution Order
+
+Strikt sequentielle Pflicht-Reihenfolge fuer SLC-101 → SLC-102 → SLC-103 → SLC-104 → SLC-105 → SLC-106.
+
+- **SLC-101 (Foundation + Pen-Test, Pflicht-Vorgaenger fuer ALLE):** Migration 090 + neue Rolle `partner_admin` + `partner_organization` + `partner_client_mapping` Schema + RLS-Policy-Updates auf bestehenden Tabellen + **Pen-Test-Suite mit mind. 96 V6 + 94 Regression = 190 Faelle** (DEC-110). Pflicht-Gate: SLC-102..106 duerfen erst nach Pen-Test PASS starten.
+- **SLC-102 (Partner-Org + Admin-Dashboard):** Strategaize-Admin-UI `/admin/partners` + Partner-Admin-Dashboard-Strukturen `/partner/dashboard` + Auth-Routing-Erweiterung fuer `partner_admin` + Server Actions (`createPartnerOrganization`, `invitePartnerAdmin`, `updatePartnerStammdaten`, `acceptPartnerAdminInvitation`). Reuse: FEAT-031 Magic-Link-Pattern.
+- **SLC-103 (Mandanten-Mapping + Einladung):** `partner_client_mapping`-Server-Actions (`inviteMandant`, `acceptMandantInvitation`, `revokeMandantInvitation`) + Mandanten-Liste-UI im Partner-Dashboard + Mandanten-Dashboard-Erweiterung `/dashboard` mit tenant_kind-aware Welcome-Block + Diagnose-Karte-Placeholder. Pen-Test-Faelle fuer `partner_client_mapping` aus SLC-101-Placeholder aktivieren.
+- **SLC-104 (Branding + CSS-Custom-Props + Migration 091):** `partner_branding_config`-Tabelle + RPC `rpc_get_branding_for_tenant` (DEC-099-Pattern) + Storage-Bucket + CSS-Custom-Properties Setup erstmals (DEC-106 Server-Side Inline-Style im Root-Layout) + Tailwind-Config-Erweiterung + Pflicht-Footer Server-Component (DEC-108) + Branding-UI im Partner-Dashboard mit Live-Preview. Backfill bestehender Partner-Tenants.
+- **SLC-105 (Diagnose-Werkzeug + Light-Pipeline + Renderer):** **STOP-GATE BL-095 Inhalts-Workshop** — kann erst starten wenn 15-25 Fragen + Score-Logik + Pflicht-Output-Aussage vom User vorliegen. Neuer Template-Seed `partner_diagnostic_v1` (Migration 091a) + Worker-Branch in `src/workers/condensation/run.ts` ueber `template.metadata.usage_kind` (DEC-105) + deterministische Score-Compute + Bedrock-Verdichtungs-Prompt + Auto-Finalize-Tx (KU `status='accepted'` + `validation_layer.reviewer_role='system_auto'` + `block_checkpoint.checkpoint_type='auto_final'`) + Mandanten-Run-Flow `/dashboard/diagnose/start` + Bericht-Renderer.
+- **SLC-106 (Lead-Push + Migration 092, LETZTER V6-Slice):** `lead_push_consent` + `lead_push_audit` Tabellen + `ai_jobs.job_type` CHECK-Erweiterung um `'lead_push_retry'` + Outbound HTTP-Adapter `lead-intake.ts` + Server Action `requestLeadPush` mit Pflicht-DSGVO-Checkbox (DEC-091-Pattern, V5 SLC-079 Reuse) + Worker-Handler `lead_push_retry` mit 3-Versuche-Limit (DEC-112) + "Ich will mehr"-Modal + Cross-System-Smoke gegen Business-System.
+
+**Parallelisierbar:**
+- BL-094 (AVV-Templates DE+NL, User-Verantwortung, kein Code), BL-096 (GTM-Akquise-Pitch Achse 9, User-Verantwortung) — beide parallel zum V6-Code-Bau ohne Slice-Block.
+- BL-095 (Inhalts-Workshop, **Stop-Gate fuer SLC-105**) — parallel zu SLC-101..104 + SLC-106 startbar; muss vor SLC-105-Beginn fertig sein.
+
+**Pflicht-Gates fuer V6:**
+- **SC-V6-1 Pen-Test-Suite-PASS (SLC-101)**: mind. 96 V6 + 94 Regression Faelle gegen Coolify-DB im node:20-Container (Cross-Partner + Cross-Client + V4-Regression + V5.1-Regression) — **Pflicht-Vorgaenger fuer alle weiteren V6-Slices** (DEC-110).
+- **SC-V6-2 Strategaize-Admin Partner-Anlage < 5 Minuten (SLC-102)**.
+- **SC-V6-3 Partner-Admin sieht nur eigene Mandanten (SLC-102 + SLC-103)** + Cross-Partner-Isolation in Pen-Test gruen.
+- **SC-V6-4 Mandanten-Magic-Link + Partner-Branding sichtbar (SLC-103 + SLC-104)**.
+- **SC-V6-5 Mandanten-Diagnose end-to-end ohne menschlichen Eingriff (SLC-105)**.
+- **SC-V6-6 Bericht enthaelt deterministischen Score + KI-Kommentar (SLC-105)**: Score-Logic-Vitest deterministisch + Live-Smoke verifiziert.
+- **SC-V6-7 Lead-Push nur bei aktiver Checkbox + korrektem UTM (SLC-106)**.
+- **SC-V6-8 lead_push_audit zeigt success-Eintrag (SLC-106)** + Cross-System-Smoke gegen Business-System contacts-Tabelle.
+- **SC-V6-9 Pflicht-Footer auf allen Seiten sichtbar + via DB-Manipulation nicht entfernbar (SLC-104, DEC-108)**.
+- **SC-V6-10 V5.1-Regression-frei (alle Slices)**: Walkthrough Handbuch-Integration weiter funktional, RLS-Matrix gruen.
+- **SC-V6-11 AVV-Standard-Template DE existiert (BL-094, User-Verantwortung, kein Code-Block)**.
+- **SC-V6-12 User-Pflicht-Klick-Test End-to-End nach Deploy (Gesamt-V6-/qa)**: Demo-Partner + Demo-Mandant + Demo-Diagnose + Demo-Lead-Push.
+
+**Code-Quality-Gates pro Slice:**
+- `npm run lint` 0/0 auf neuen + geaenderten Files.
+- `npm run build` PASS mit dummy-ENV.
+- `npm run test` Vitest-Suite gruen (Pen-Test-Suite aus SLC-101 muss bei jedem Slice gruen bleiben).
+- `npm audit --omit=dev` 0 neue Vulns (V6 fuegt keine npm-Deps hinzu — Tailwind-Config-Erweiterung in SLC-104 ist konfigurativ; alle 6 Slices nutzen Reuse).
+- Pflicht-`/qa` nach jedem `/backend` oder `/frontend` (mandatory-completion-report.md Sektion 9).
+
+**Migration-File-Mapping (per IMP-432 Pattern):**
+- Migration 090 (Foundation + Schema + RLS) → SLC-101 MT-7 (Live-Apply auf Hetzner).
+- Migration 091 (Branding + RPC + CHECK-Erweiterungen + Storage-Bucket) → SLC-104 MT-2.
+- Migration 091a (Template-Seed `partner_diagnostic_v1`) → SLC-105 MT-2. (Separater idempotenter Seed-File.)
+- Migration 092 (Lead-Push-Tabellen + ai_jobs CHECK) → SLC-106 MT-2.
+
+Alle Migrations folgen sql-migration-hetzner.md Pattern (base64-Pipe + `psql -U postgres -v ON_ERROR_STOP=1` + Pre-Apply-Backup unter `/opt/onboarding-plattform-backups/`).
+
+**Foundation-Effort-Markierung (per IMP-433 Pattern):**
+- SLC-104 CSS-Custom-Properties + Tailwind-Theme-Erweiterung sind **Erstmals-Effort** (kein Reuse, neue Plattform-Foundation). Erwarteter MT-Aufwand fuer Tailwind-Theme-Erweiterung: ~1 MT, fuer Server-Side-Resolver-Setup: ~2 MTs.
+- SLC-105 Light-Pipeline-Worker-Branch ist **leichter Erstmals-Effort** (Branch innerhalb bestehender Worker-Funktion, kein neuer Worker-File, kein neuer Job-Typ — DEC-105).
+- SLC-106 Outbound HTTP-Adapter ist **leichter Erstmals-Effort** (erster outbound HTTP-Call der Plattform, aber kein neuer Container — Worker-Job-Handler reused).
+
+**V6 Slice-Aufwand-Schaetzung:**
+
+| Slice | MTs | geschaetzte Dauer (Solo-Founder 2-3h/Woche) |
+|---|---|---|
+| SLC-101 | 7 | 3-4 Tage (Pen-Test-Suite dominiert) |
+| SLC-102 | 8 | 3-4 Tage |
+| SLC-103 | 10 | 3-4 Tage |
+| SLC-104 | 13 | 4-5 Tage (CSS-Custom-Props Erstmals-Effort) |
+| SLC-105 | 12 | 4-6 Tage (abhaengig von Workshop-Output-Qualitaet) |
+| SLC-106 | 13 | 4-5 Tage (Cross-System-Smoke + Retry-Pfad) |
+| **Total** | **63** | **~21-28 Tage** Implementation-Werktage, ~12-20 Kalenderwochen bei Solo-Founder-Tempo |
+
+(Aufwands-Schaetzung konsistent mit STRATEGY_NOTES_2026-05.md Abschnitt 7 Slice-Skizze 11-18 Tage SLC-080..083, wo SLC-080..083 nur die Foundation-Achse umfassten. Hier sind alle 6 V6-Slices inklusive Diagnose-Werkzeug + Lead-Push enthalten — Mehraufwand gegenueber Skizze ist erwartet.)
+
+### V6 Out-of-Scope (deferred V6.1 / V7+)
+
+- **NL-Sprach-Variante** des Diagnose-Werkzeugs → V6.1 (DEC-102, MULTIPLIER_MODEL Achse 7)
+- **Modus-B Webinar-Tooling** → V7 (MULTIPLIER_MODEL Achse 5, nach 3-6 Monaten Modus-A-Erfahrung)
+- **Sekundaerfarbe Vollintegration im Branding** → V6.1 falls Pilot-Feedback
+- **Provisions-Modell + Provisions-Reporting** → V2/V3 (Konzept-V2, technisch V7+) — Attribution-Spur in `lead_push_audit` ist V6 bereit
+- **Tier-System (Partner-Klassifizierung)** → V8+ — `tier` Spalte bereit (DEC-111)
+- **Reverse-Channel M&A (M&A-Berater als 2. Typ)** → V8+ — `partner_kind` Spalte bereit (DEC-111)
+- **Whitelabel** (Strategaize-Hinweis weg) → **niemals** (DEC-108, MULTIPLIER_MODEL T5)
+- **Domain-Mapping pro Partner** → V7+ falls je
+- **Berater-Personal-Mandanten-Zuordnung** (partner_employee) → V7+
+- **Diary-Mode** → V8 (DEC-101, vorher V5/V6, jetzt nach Multiplikator-Priorisierung verschoben)
+- **Aggregierte Markt-Intelligence-Views** → V7+ falls je
+- **Auto-Re-Diagnose-Trigger** → V7+ falls je
+- **Multiple parallele Templates pro Mandant** → V8+
+- **Tenant-spezifische Restore-Faehigkeit** → V7+ als **BL-097 deferred** (DEC-103, Voll-Restore-Limit fuer V6 akzeptiert)
+- **Berater-Override des Auto-Finalize-Berichts** → V7+ falls je
+- **Re-Push bei aktualisiertem Diagnose-Bericht** → V7+
+- **Webhook Business-System → Onboarding Bidirektional** → V7+
+- **Manueller Lead-Push-Trigger durch partner_admin** → V7+ (V6 nur Mandanten-Initiative)
+- **Operations-Dashboard fuer lead_push_failure Re-Push** → V7+ (V6 hat nur DB-Log via error_log)
+- **PDF-Export Diagnose-Bericht** → V6.1+ (V6 nur HTML-Print)
+- **Resend-Magic-Link-Button** → V6.1
+
+### V6 Pre-Conditions
+
+- V5.1 deployed + STABLE (kein paralleler Migration-Apply auf produktive Templates). V6 Migrations sind additiv ohne Beruehrung der V5.1-Schemata.
+- V5.1 18-24h-Beobachtungs-Window darf parallel laufen (kein Block, Migration 090 ist additiv).
+- Pen-Test-Suite-Pattern aus `v5-walkthrough-rls.test.ts` (SAVEPOINT) verfuegbar als Reuse-Vorlage.
+- Coolify-Test-Setup mit node:20-Container gegen Coolify-DB verfuegbar (siehe `coolify-test-setup.md` Rule).
+- SQL-Migration-Hetzner-Procedure (base64 + psql -U postgres) verfuegbar (siehe `sql-migration-hetzner.md` Rule).
+
+### V6 Stop-Gate fuer SLC-105: BL-095 Inhalts-Workshop
+
+**SLC-105 darf nicht starten** bevor BL-095 (Inhalts-Workshop Diagnose-Werkzeug) folgendes liefert:
+- 15-25 konkrete Mandanten-Fragen entlang der 6 MULTIPLIER_MODEL-Bausteine.
+- **Deterministische Score-Logik** pro Frage (Antwort-Wert → 0-100 Score).
+- Pflicht-Output-Aussage als Markdown-Footer.
+
+SLC-101..104 + SLC-106 sind **unabhaengig** und koennen vor Workshop-Abschluss starten.
+
+Falls Workshop-Output nicht tragbar fuer DGN-A (zu offene Fragen, KI-Ermessen zu gross): **Fallback auf DGN-C** (Hybrid mit Strategaize-Quick-Review) via `/architecture`-Revisions-DEC. Kein Code-Aufwand verloren — Pipeline-Logic muss um Review-Step erweitert werden.
+
+### V6 Pflicht-Vorbereitungs-Backlog (parallel zum Code-Bau, kein Skill-Block)
+
+- **BL-094 V6-PREP-AVV**: AVV-Standard-Template DE+NL fuer Steuerberater-Pilots (Pflicht vor erstem Live-Partner).
+- **BL-095 V6-PREP-INHALT**: Inhalts-Workshop Diagnose-Werkzeug (Stop-Gate fuer SLC-105).
+- **BL-096 V6-GTM-AKQUISE**: Achse 9 GTM-Akquise-Pitch (kein V6-Block, parallel).
+- **BL-097 Tenant-spezifische Restore-Faehigkeit (V7+, deferred)**: durch DEC-103 eingebracht — V6 akzeptiert Voll-Restore-Limit, Slice waere V7+.
