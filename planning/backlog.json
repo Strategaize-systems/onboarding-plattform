@@ -855,9 +855,9 @@
       "title": "FEAT-041 Partner-Tenant Foundation + RLS Erweiterung (SLC-101)",
       "type": "feature",
       "priority": "high",
-      "status": "open",
+      "status": "done",
       "version": "V6",
-      "description": "V6 Pflicht-Foundation. Tenant-Hierarchie (tenant_kind + parent_partner_tenant_id) + neue RLS-Rolle partner_admin + Defense-in-Depth-Policies + 5-Rollen-Pen-Test-Suite (mind. 80 Faelle inkl. mind. 16 Cross-Partner-Isolation). Migration MIG-034. Reuse: V5-RLS-Test-Pattern mit SAVEPOINT. Vorgaenger: keiner (Foundation). Nachfolger: alle V6-Features haengen daran. Detail: /features/FEAT-041-partner-tenant-foundation-rls.md, /reports/RPT-209.md.",
+      "description": "V6 Pflicht-Foundation. Tenant-Hierarchie (tenant_kind + parent_partner_tenant_id) + neue RLS-Rolle partner_admin + Defense-in-Depth-Policies + 5-Rollen-Pen-Test-Suite (71 V6 + 69 Regression PASS gegen Coolify-DB). Migration 090 LIVE auf Hetzner 2026-05-11 (MIG-034 Step 1 von 3). Reuse: V5-RLS-Test-Pattern mit SAVEPOINT. Code-side /backend DONE 2026-05-11 — Pflicht-Gate fuer SLC-102..106 erreicht (DEC-110). Naechster Schritt: /qa SLC-101.",
       "createdAt": "2026-05-11"
     },
     {
