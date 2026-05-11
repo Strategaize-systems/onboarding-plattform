@@ -5188,3 +5188,300 @@ return new NextResponse(arrayBuffer, { status: 200, headers: { /* ... */ } });
 `/slice-planning V5.1` — die 2 Slice-Empfehlungen (SLC-091 + SLC-092) in finale Slice-Files zerlegen, MTs final nummerieren, slices/INDEX.md updaten, BL-082 + Migration 089 + Migration-Apply-Slice festlegen, Sequenz-Reihenfolge final festlegen.
 
 V5.1-Pre-Conditions: V5 Option 2 STABLE (Cron-Run-Verifikation 2026-05-09 03:00 ausstehend) + `/post-launch` V5 PASS (~14:00 Europe/Berlin). V5.1-`/slice-planning` kann parallel laufen — V5.1-`/backend SLC-091` startet erst nach V5-STABLE.
+
+## V6 Architektur — Multiplikator-Foundation (Steuerberater-Partner-Erweiterung)
+
+Architecture done 2026-05-11 nach `/architecture V6`. Eingang: RPT-208 Discovery + RPT-209 Requirements + MULTIPLIER_MODEL.md (Konzept entschieden 2026-05-07) + STRATEGY_NOTES_2026-05.md Abschnitt 7 (Architektur-Richtung Option A: Multi-Tenant in Onboarding-Plattform). V6 baut den **Multiplikator-Layer** in die bestehende Plattform: Tenant-Hierarchie mit Partner/Client-Beziehung, neue Rolle `partner_admin`, Co-Branding-Mechanik, Self-Service-Diagnose-Werkzeug mit Auto-Finalize, Lead-Push opt-in an Business-System Lead-Intake.
+
+### V6 Architektur-Summary
+
+V6 ergaenzt die bestehende Onboarding-Plattform um **5 neue Tabellen + 2 Tenant-Spalten + 1 neue RLS-Rolle + 1 neuer Worker-Job-Typ + 1 outbound HTTP-Adapter**. Kein neuer Container, kein neuer Service. Diagnose-Werkzeug ist eine Template-Variante des bestehenden `questionnaire`-Modes (kein neuer Capture-Mode — Discovery-Korrektur gegenueber STRATEGY_NOTES-Skizze, siehe DEC-104). Light-Condensation-Pipeline ist ein Mode-Flag des bestehenden `knowledge_unit_condensation`-Worker-Pfades (kein neuer Job-Typ — DEC-105). Auto-Finalize DGN-A (DEC-100) schreibt KU direkt als `accepted` mit `validation_layer.reviewer_role='system_auto'` und `block_checkpoint.checkpoint_type='auto_final'`. Outbound HTTP-Adapter telefoniert synchron mit dem Business-System Lead-Intake; bei Fail laeuft retry-Job ueber bestehende `ai_jobs`-Queue mit neuem `job_type='lead_push_retry'` (DEC-107). CSS-Custom-Properties (erstmals in der Plattform) werden Server-Side im Root-Layout inline emittiert (kein Client-FOUC, kein Theme-Provider — DEC-106). Pflicht-Footer "Powered by Strategaize" ist hardcoded Server-Component, nicht ueber DB-Config aenderbar (DEC-108). Pen-Test-Suite mit 5-Rollen-Matrix ist Pflicht-Bestandteil von SLC-101 (DEC-110).
+
+Reuse-Quote ~60% — V6 setzt auf bestehende Patterns: Capture-Mode-Architektur (FEAT-025), RLS-Defense-in-Depth + SAVEPOINT-Test-Pattern (V4/V5), next-intl mit DE/EN/NL + lokalisierte Bedrock-Prompts, Tenant-Onboarding-Wizard mit Magic-Link (FEAT-031), Business-System Lead-Intake-API mit First-Touch-Lock+UTM, Privacy-Checkbox-Pattern (DEC-091 V5), RPC-basierte RLS-Auth-Function (DEC-099 V5.1), Audit-Log-Pattern via `error_log` (DEC-088 V5).
+
+### V6 Main Components
+
+| Komponente | Pfad | Aenderung |
+|---|---|---|
+| Web App `app` | `src/app/admin/partners/*` (NEU) | Strategaize-Admin Partner-Verwaltung: Liste, Anlage, Detail, Mandanten-Querblick |
+| Web App `app` | `src/app/partner/dashboard/*` (NEU) | Partner-Admin-Dashboard: Mandanten-Liste, Branding, Einladungs-Mechanik |
+| Web App `app` | `src/app/dashboard/diagnose/*` (NEU) | Mandanten-Diagnose-Run + Bericht-Renderer + "Ich will mehr"-Modal |
+| Web App `app` | `src/app/layout.tsx` + Branding-Resolver | Server-Side Inline-Style mit `--brand-primary/-accent/-logo-url` (DEC-106), Pflicht-Footer-Komponente |
+| Worker | `src/workers/condensation/run.ts` | +Branch `usage_kind='self_service_partner_diagnostic'` → Light-Pipeline (DEC-105): deterministischer Score-Compute → LLM-Verdichtungs-Kommentar → KU mit `status='accepted'` → `validation_layer.reviewer_role='system_auto'` → `block_checkpoint.checkpoint_type='auto_final'` |
+| Worker | `src/workers/lead-push/run.ts` (NEU) | Neuer Job-Handler `lead_push_retry` (DEC-107, DEC-112) — exponentielles Backoff 5min/30min, max. 3 Versuche |
+| Outbound Adapter | `src/lib/integrations/business-system/lead-intake.ts` (NEU) | Erster outbound HTTP-Call der Plattform; Bearer-Auth via ENV `BUSINESS_SYSTEM_INTAKE_API_KEY`; UTM-Attribution `utm_source=partner_<tenant_id>` |
+| Branding-Resolver | `src/lib/branding/resolve.ts` (NEU) | Server-Side Lookup pro Login-Render: `tenant_kind` → eigene/parent_partner/strategaize-default; Output: `{ logoUrl, primaryColor }` |
+| RLS-RPC | `rpc_get_branding_for_tenant` (NEU, MIG-034) | SECURITY DEFINER analog `rpc_get_walkthrough_video_path` (DEC-099); resolved Partner-Tenant-Branding ohne RLS-Bypass im App-Code |
+| Server Actions | `src/app/admin/partners/actions.ts` (NEU) | `createPartnerOrganization`, `invitePartnerAdmin` |
+| Server Actions | `src/app/partner/dashboard/actions.ts` (NEU) | `inviteMandant`, `acceptMandantInvitation`, `revokeMandantInvitation`, `updateBranding`, `uploadLogo` |
+| Server Actions | `src/app/dashboard/diagnose/actions.ts` (NEU) | `submitDiagnoseRun`, `requestLeadPush` (DSGVO-Pflicht-Checkbox-Re-Validation, DEC-091-Pattern) |
+| Storage-Bucket | `partner-branding-assets` (NEU, MIG-034) | Logo-Upload, signed-URL-Pattern aus FEAT-034; max. 500KB, PNG/SVG/JPG, RLS: nur `partner_admin` darf in eigenen Tenant-Folder |
+
+### V6 Datenmodell — 5 neue Tabellen + 2 Tenant-Spalten
+
+#### Tenant-Schema-Erweiterung (`tenants`)
+
+- `tenant_kind text NOT NULL DEFAULT 'direct_client'` mit CHECK IN `('direct_client', 'partner_organization', 'partner_client')`
+- `parent_partner_tenant_id uuid NULL REFERENCES tenants(id) ON DELETE RESTRICT`
+- CHECK-Constraint: `parent_partner_tenant_id` nur gesetzt wenn `tenant_kind='partner_client'`, sonst MUSS NULL
+- Daten-Migration: alle Bestands-Tenants → `tenant_kind='direct_client'`, `parent_partner_tenant_id=NULL`
+
+#### `partner_organization` (Stammdaten Steuerberater-Kanzlei)
+
+- `id uuid PK`, `tenant_id uuid FK UNIQUE` (1:1 mit Partner-Tenant, ON DELETE CASCADE)
+- `legal_name text NOT NULL`, `display_name text NOT NULL`
+- `partner_kind text NOT NULL DEFAULT 'tax_advisor'` CHECK IN `('tax_advisor')` — V8 erweiterbar auf `'ma_advisor'` ohne Schema-Migration (DEC-111)
+- `tier text NULL` — V3+ Tier-System, V6 immer NULL (DEC-111)
+- `contact_email text NOT NULL`, `contact_phone text NULL`
+- `country text NOT NULL` CHECK IN `('DE', 'NL')`
+- `created_by_admin_user_id uuid FK auth.users(id)`
+- `created_at`, `updated_at`
+
+#### `partner_client_mapping` (Sichtbarkeits-Layer)
+
+- `id uuid PK`
+- `partner_tenant_id uuid FK tenants(id) ON DELETE CASCADE`
+- `client_tenant_id uuid FK tenants(id) ON DELETE CASCADE`
+- UNIQUE `(partner_tenant_id, client_tenant_id)` — kein Doppel-Mapping
+- `invited_by_user_id uuid FK auth.users(id)`
+- `invitation_status text NOT NULL` CHECK IN `('invited', 'accepted', 'revoked')`
+- `invited_at`, `accepted_at NULL`, `revoked_at NULL`
+- CHECK via Trigger: `partner_tenant_id.tenant_kind='partner_organization'` AND `client_tenant_id.tenant_kind='partner_client'`
+
+#### `partner_branding_config` (Co-Branding)
+
+- `id uuid PK`, `partner_tenant_id uuid FK UNIQUE` (1:1, ON DELETE CASCADE)
+- `logo_url text NULL` — Storage-Pfad (signed via Proxy, nicht direct), Bucket `partner-branding-assets`
+- `primary_color text NOT NULL DEFAULT '#2563eb'` (Strategaize-Default-Blau), Hex-Format-CHECK
+- `secondary_color text NULL` (optional V6, V6.1 falls Pilot-Feedback)
+- `display_name text NULL` (optional alternativ zu `partner_organization.display_name`)
+- `created_at`, `updated_at`
+
+#### `lead_push_consent` (DSGVO-Audit)
+
+- `id uuid PK`
+- `capture_session_id uuid FK capture_session(id) ON DELETE CASCADE`
+- `mandant_user_id uuid FK auth.users(id)`, `mandant_tenant_id uuid FK tenants(id)`, `partner_tenant_id uuid FK tenants(id)`
+- `consent_given_at timestamptz NOT NULL DEFAULT now()`
+- `consent_text_version text NOT NULL` — z.B. `'v1-2026-05'`, Versionierung des angezeigten Einwilligungs-Texts
+- `consent_ip inet NULL`, `consent_user_agent text NULL`
+- `withdrawal_at timestamptz NULL` — V6 immer NULL, V7+ Rueckruf-Feature
+
+#### `lead_push_audit` (Send-History)
+
+- `id uuid PK`, `consent_id uuid FK lead_push_consent(id) ON DELETE RESTRICT`
+- `attempted_at timestamptz NOT NULL DEFAULT now()`
+- `attempt_number int NOT NULL DEFAULT 1` (1..3)
+- `status text NOT NULL` CHECK IN `('pending', 'success', 'failed')`
+- `business_system_response_status int NULL`, `business_system_contact_id uuid NULL`, `business_system_was_new boolean NULL`
+- `error_message text NULL`
+- `attribution_utm_source text NOT NULL` (z.B. `partner_<tenant_id>`)
+- `attribution_utm_campaign text NOT NULL` (z.B. `partner_diagnostic_v1`)
+- `attribution_utm_medium text NOT NULL DEFAULT 'referral'`
+
+#### Bestehende Tabellen — CHECK-Constraint-Erweiterungen
+
+- `validation_layer.reviewer_role` CHECK erweitert um `'system_auto'`
+- `block_checkpoint.checkpoint_type` CHECK erweitert um `'auto_final'`
+- `template.metadata` JSONB — neuer optionaler Schluessel `usage_kind` mit Wert `'self_service_partner_diagnostic'` (Worker-Branch-Trigger fuer DGN-A-Pipeline)
+- `capture_session.capture_mode` bleibt unveraendert (Diagnose ist `questionnaire` mit Template-Variante, nicht eigener Mode — DEC-104)
+- `knowledge_unit.source` bleibt unveraendert (`questionnaire` ist die Quelle, deterministischer Score landet in `metadata` der KU)
+- `ai_jobs.job_type` CHECK erweitert um `'lead_push_retry'`
+
+### V6 Neue RLS-Rolle: `partner_admin`
+
+**Defense-in-Depth-Pattern** wie V4/V5: jede Policy prueft Rolle UND Tenant-Bindung explizit.
+
+| Tabelle | partner_admin SELECT | partner_admin INSERT/UPDATE | partner_admin DELETE |
+|---|---|---|---|
+| `tenants` (eigener Partner) | `id = auth.user_tenant_id()` | UPDATE `display_name` o.ae. nur eigene Row | nie |
+| `tenants` (eigene Mandanten) | `parent_partner_tenant_id = auth.user_tenant_id()` | nie (Anlage via Server Action, RPC) | nie |
+| `partner_organization` (eigene) | `tenant_id = auth.user_tenant_id()` | UPDATE eigene Stammdaten | nie |
+| `partner_client_mapping` (eigene) | `partner_tenant_id = auth.user_tenant_id()` | INSERT/UPDATE eigene Mappings | nie |
+| `partner_branding_config` (eigene) | `partner_tenant_id = auth.user_tenant_id()` | INSERT/UPDATE eigene | nie |
+| `capture_session` (Mandanten) | EXISTS `partner_client_mapping` mit `client_tenant_id=capture_session.tenant_id` AND `partner_tenant_id=auth.user_tenant_id()` AND `invitation_status='accepted'` | nie (Mandant erstellt selbst) | nie |
+| `knowledge_unit` (Mandanten) | analog via `capture_session.tenant_id` Lookup | nie | nie |
+| `block_checkpoint` (Mandanten) | analog | nie | nie |
+| `lead_push_consent` (eigene Mandanten) | `partner_tenant_id = auth.user_tenant_id()` | nie (Mandant submittet selbst) | nie |
+| `lead_push_audit` (eigene) | via `consent_id → lead_push_consent.partner_tenant_id` | nie | nie |
+| `template` | SELECT (system-weit lesbar) | nie | nie |
+
+**Explizit verboten**: `partner_admin` SELECT auf andere Partner-Tenants, deren Mandanten, deren Daten. Cross-Partner-Read-Isolation ist Pflicht-Test-Bestandteil von SLC-101 (DEC-110).
+
+### V6 Pen-Test-Suite-Plan (SLC-101 Pflicht-Bestandteil)
+
+5 Rollen × 7 V6-Tabellen × 4 Operationen (SELECT/INSERT/UPDATE/DELETE) als Matrix-Baseline. Pflicht-Faelle:
+
+| Faelle-Block | Anzahl | Begruendung |
+|---|---|---|
+| `partner_admin` Cross-Partner-Read-Isolation | 16 | Pro V6-Tabelle: Partner A liest Daten von Partner B → erwarten 0 Rows oder permission denied |
+| `partner_admin` Cross-Client-Read-Isolation | 8 | Partner A liest `capture_session/knowledge_unit/block_checkpoint/lead_push_*` von Mandant unter Partner B |
+| `partner_admin` INSERT/UPDATE/DELETE-Block | 12 | Schreibversuche auf fremde Daten → permission denied (SAVEPOINT-Pattern fuer expected Rejections) |
+| `tenant_admin` (Mandant) Cross-Mandant-Isolation | 8 | Mandant A unter Partner X liest Mandant B unter Partner Y |
+| `tenant_admin` (Mandant) Sicht auf Partner-Daten | 4 | Mandant darf NICHT in `partner_organization`/`partner_client_mapping`/`partner_branding_config` schreiben oder INSERTen |
+| Regression bestehende V5.1-Matrix | 48 | walkthrough-Faelle bleiben gruen — keine V6-RLS-Drift |
+| Regression bestehende V4-Matrix | 46 | Knowledge-Schema bleibt gruen — keine V6-RLS-Drift |
+| Regression neue rolle vs bestehende Direkt-Kunden | 4 | Direkt-Kunde sieht weiterhin nur eigene Tenant — `partner_admin` darf NICHT in Direkt-Kunden-Tenants gucken |
+
+**Mindestens 96 V6-spezifische Faelle + 94 Regression = 190 Test-Faelle.** SAVEPOINT-Pattern fuer expected permission-denied Rejections (sql-migration-hetzner.md Rule). Ausfuehrung im `node:20`-Container gegen Coolify-DB (coolify-test-setup.md Rule).
+
+### V6 Data Flow — End-to-End
+
+#### A. Partner-Onboarding-Flow
+
+```
+Strategaize-Admin (UI /admin/partners)
+  → Server Action createPartnerOrganization()
+    → BEGIN TX
+       INSERT INTO tenants (tenant_kind='partner_organization', ...)
+       INSERT INTO partner_organization (...)
+       INSERT INTO partner_branding_config (primary_color='#2563eb', logo_url=NULL)
+       error_log INSERT (category='partner_organization_created')
+       COMMIT
+  → Server Action invitePartnerAdmin(email, partner_tenant_id)
+    → Magic-Link generieren (FEAT-031-Pattern)
+    → E-Mail an Partner-Owner (next-intl DE-Template)
+Partner-Owner klickt Magic-Link
+  → /accept-invitation?token=... (FEAT-031-Reuse)
+  → INSERT auth.users mit role='partner_admin' + tenant_id=partner_tenant_id
+  → Redirect /partner/dashboard
+```
+
+#### B. Mandanten-Einladungs-Flow
+
+```
+partner_admin (UI /partner/dashboard/clients/new)
+  → Server Action inviteMandant(email, company_name, first_name, last_name)
+    → BEGIN TX
+       INSERT INTO tenants (tenant_kind='partner_client', parent_partner_tenant_id=<partner_tenant_id>, name=company_name)
+       INSERT INTO partner_client_mapping (invitation_status='invited', invited_by_user_id=...)
+       error_log INSERT (category='partner_mandant_invited')
+       COMMIT
+    → Magic-Link generieren
+    → E-Mail an Mandant (next-intl)
+Mandant klickt Link
+  → /accept-invitation?token=...
+  → INSERT auth.users mit role='tenant_admin' + tenant_id=mandant_tenant_id
+  → UPDATE partner_client_mapping SET invitation_status='accepted', accepted_at=now()
+  → Redirect /dashboard
+Mandant sieht Mandanten-Dashboard unter Partner-Branding (siehe C)
+```
+
+#### C. Branding-Resolution beim Mandanten-Login
+
+```
+Mandant authentifiziert → Next.js Root-Layout server-side rendert
+  → resolveBrandingForUser(user_id, tenant_id) (src/lib/branding/resolve.ts)
+    → SELECT rpc_get_branding_for_tenant(<tenant_id>)  // SECURITY DEFINER, kein RLS-Bypass im App-Code
+      → IF tenant_kind='partner_client' THEN
+          SELECT FROM partner_branding_config WHERE partner_tenant_id = parent_partner_tenant_id
+         ELSE IF tenant_kind='partner_organization' THEN
+          SELECT FROM partner_branding_config WHERE partner_tenant_id = tenant_id
+         ELSE
+          RETURN strategaize-default
+  → Root-Layout emittiert <style>:root{--brand-primary:...;--brand-accent:...;--brand-logo-url:url(...);}</style>
+  → Pflicht-Footer-Komponente rendert "Powered by Strategaize" (hardcoded, nicht ueber Branding-Config aenderbar — DEC-108)
+  → Browser zeigt branded UI ohne Client-FOUC
+```
+
+#### D. Diagnose-Werkzeug Light-Condensation-Pipeline (Auto-Finalize DGN-A)
+
+```
+Mandant /dashboard/diagnose/start
+  → Begruessungs-Block (Partner-Branding)
+  → Sequenzieller Frage-Flow (15-25 Fragen aus template.blocks)
+  → Submit aller Antworten
+    → INSERT INTO capture_session (capture_mode='questionnaire', template_id=<partner_diagnostic>)
+    → INSERT INTO ai_jobs (job_type='knowledge_unit_condensation', metadata={ usage_kind: 'self_service_partner_diagnostic', session_id })
+  → Mandant sieht Lade-Screen mit Progress ("Verdichtung laeuft, ~30 Sekunden")
+Worker pickt Job
+  → Branch in src/workers/condensation/run.ts erkennt usage_kind='self_service_partner_diagnostic' (DEC-105)
+  → Score-Compute deterministisch aus template.blocks[].score_rule (KEIN Bedrock-Call)
+  → Bedrock-Call mit Verdichtungs-Prompt (kommentierend, nicht score-generierend) — eu-central-1, Claude Sonnet
+  → BEGIN TX
+     INSERT INTO knowledge_unit (status='accepted', source='questionnaire', metadata={ score: <num>, comment: <text>, score_rule_version }) per Block
+     INSERT INTO validation_layer (reviewer_role='system_auto', action='accept', note='Auto-Finalize per DGN-A')
+     INSERT INTO block_checkpoint (checkpoint_type='auto_final')
+     UPDATE capture_session SET status='finalized'
+     INSERT INTO ai_cost_ledger (tenant_id, tokens_in, tokens_out, usd)
+     COMMIT
+Mandant Polling-Detection → Redirect /dashboard/diagnose/<session_id>/bericht
+Bericht-Renderer (Server-Component):
+  - Header: Score-Visual (6 Blocks)
+  - Pro Block: deterministischer Score + KI-Kommentar
+  - Footer: Pflicht-Output-Aussage aus template.metadata.required_closing_statement
+  - Sub-Karte "Ich will mehr von Strategaize" (FEAT-046 Eingang)
+```
+
+#### E. Lead-Push opt-in End-to-End
+
+```
+Mandant klickt "Ich will mehr" auf Bericht-Page
+  → Modal mit Einwilligungs-Text + Pflicht-Checkbox
+  → Submit (Server Action requestLeadPush) — Pflicht-Re-Validation (DEC-091-Pattern):
+    IF !consent_checkbox THEN return { error: 'privacy_checkbox_required' }
+    IF capture_session.tenant_kind != 'partner_client' THEN return error
+    IF !capture_session_has_finalized_report THEN return error
+  → BEGIN TX
+     INSERT INTO lead_push_consent (consent_given_at, consent_text_version, consent_ip, ...)
+     INSERT INTO lead_push_audit (status='pending', attempt_number=1, attribution_utm_source=partner_<partner_tenant_id>, attribution_utm_campaign=partner_diagnostic_v1)
+     COMMIT
+  → Synchroner HTTP-Call lead-intake.ts → Business-System POST /api/leads/intake (Bearer-Auth)
+    Payload: { first_name, last_name, email, notes: <kompakter Strukturtext aus Diagnose>, utm_source, utm_campaign, utm_medium='referral' }
+    Timeout 10s
+  → IF Success (HTTP 2xx):
+     UPDATE lead_push_audit SET status='success', business_system_response_status=200, business_system_contact_id=<resp.contact_id>, business_system_was_new=<resp.was_new>
+     Confirmation-Block fuer Mandant
+  → IF Fail (HTTP != 2xx OR Timeout):
+     UPDATE lead_push_audit SET status='failed', error_message=<details>
+     INSERT INTO ai_jobs (job_type='lead_push_retry', metadata={ audit_id, attempt: 2 }, scheduled_at=now()+5min)
+     Generischer Fehler-Block fuer Mandant ("Wir kuemmern uns")
+Worker pickt lead_push_retry Job
+  → Erneuter HTTP-Call mit attempt_number=2 (5min nach Fail) bzw. 3 (30min nach 2nd Fail)
+  → Max. 3 Versuche, danach finaler error_log-Eintrag mit category='lead_push_failure' → manueller Strategaize-Admin-Eingriff
+```
+
+### V6 Constraints und Tradeoffs
+
+- **Diagnose ist Template-Variante, kein neuer Capture-Mode (DEC-104).** Reduziert Bauaufwand erheblich (kein neuer Mode-Pipeline, kein neuer Worker-Job-Typ, kein neues UI-Routing-Pattern). Tradeoff: Light-Pipeline ist Branch innerhalb bestehender Worker-Function, nicht eigenstaendiger Worker — Code-Lokalitaet leidet leicht, dafuer Reuse maximal.
+- **Auto-Finalize DGN-A (DEC-100) statt Strategaize-Quick-Review (DGN-B) oder Hybrid (DGN-C).** Skaliert mit Solo-Founder-Kapazitaet ueber V2 hinaus. Quality-Annahme: deterministische Score-Logik aus Template + KI nur kommentierend. **Stop-Gate: Inhalts-Workshop (BL-095) muss Score-Logik liefern, sonst Fallback auf DGN-C.**
+- **CSS-Custom-Properties Server-Side Inline-Style (DEC-106) statt Theme-Provider-Component oder dynamischem `<style>`-Tag client-side.** Kein Client-FOUC, keine Hydration-Drift. Tradeoff: Themable nur via Server-Re-Render (kein Live-Switch im Browser ohne Page-Reload — fuer V6-Scope irrelevant, Pilot-Branding aendert sich nicht waehrend einer Mandanten-Session).
+- **Outbound HTTP synchron + retry-Job-Fallback (DEC-107) statt async-only mit Webhook-Inbound.** Synchron erlaubt sofort sichtbares Bestaetigungs-Feedback an Mandant bei Success. Bei Fail kein verlorener Klick (Audit-Eintrag bleibt). Tradeoff: Synchroner Call blockt User-Submit fuer max. 10s — akzeptabel bei einmaligem Klick mit Erwartung "Anfrage geht raus".
+- **Pflicht-Footer hardcoded Server-Component (DEC-108) statt ueber Branding-Config aenderbar.** Niemand kann den Strategaize-Hinweis entfernen, auch nicht via DB-Manipulation. MULTIPLIER_MODEL Achse 2 T5: Whitelabel ausdruecklich niemals.
+- **`partner_kind` Spalte mit CHECK IN `('tax_advisor')` heute, V8 erweiterbar (DEC-111).** Schema-Spalte heute mitanlegen vermeidet V8-Migration. `tier` Spalte analog — V3+ Tier-System.
+- **Voll-Restore-Limit fuer V6 (DEC-103).** Bei Mandanten-Datenverlust ist nur globales Coolify-DB-Restore moeglich, kein selektiver Tenant-Restore. Operativ pragmatisch — V6 hat keinen Live-Druck fuer Tenant-Restore-Feature. Slice `Tenant-Restore-Faehigkeit` ist V7+ Backlog.
+- **Diary-Mode nach V8 verschoben (DEC-101).** Multiplikator-Foundation hat NL-Investor-Substanz-Prioritaet ueber Diary-Mode (kein Investor-Hebel).
+- **NL-Variante in V6.1 (DEC-102) statt V6 oder V7.** Architektonisch quasi kostenlos (next-intl + lokalisierte Bedrock-Prompts existieren), Aufwand ist Inhalt — V6.1 als kurze Polish-Welle nach V6-Release konsistent.
+
+### V6 Open Technical Questions — alle in DECs entschieden
+
+Die 4 Open Questions aus RPT-209 sind in DEC-100..103 entschieden:
+- Q-V6-A Auto-Finalize → DEC-100 DGN-A
+- Q-V6-B Versions-Re-Numerierung → DEC-101 V6=Multiplikator, V8=Diary
+- Q-V6-C NL-Variante → DEC-102 V6.1
+- Q-V6-D Tenant-Restore → DEC-103 Voll-Restore-Limit fuer V6, Slice V7+
+
+Keine offenen Architektur-Fragen blockieren `/slice-planning V6`.
+
+### V6 Migration MIG-034
+
+Siehe `/docs/MIGRATIONS.md` MIG-034 fuer SQL-Details. Plan: **3 sequenzielle Migration-Files (090-092)**:
+
+1. **090_v6_partner_tenant_foundation.sql** — `tenants` ALTER (tenant_kind + parent_partner_tenant_id + CHECK), neue Rolle `partner_admin`, `partner_organization`-Tabelle + RLS, `partner_client_mapping`-Tabelle + RLS, RLS-Policy-Updates auf bestehende Tabellen fuer neue Rolle.
+2. **091_v6_partner_branding_and_template_metadata.sql** — `partner_branding_config`-Tabelle + RLS, RPC `rpc_get_branding_for_tenant`, `template.metadata.usage_kind` JSONB-Schema-Doku (kein DDL-Aenderung), `validation_layer.reviewer_role` + `block_checkpoint.checkpoint_type` CHECK-Erweiterungen, Storage-Bucket `partner-branding-assets`.
+3. **092_v6_lead_push_audit.sql** — `lead_push_consent`-Tabelle + RLS, `lead_push_audit`-Tabelle + RLS, `ai_jobs.job_type` CHECK-Erweiterung um `'lead_push_retry'`.
+
+Apply-Reihenfolge: 090 → 091 → 092 (mit Pre-Apply-Backup vor jedem Step, sql-migration-hetzner.md Rule). 090 ist Pflicht-Foundation; 091 und 092 koennen in Folge-Slices erst applied werden.
+
+### V6 Naechster Schritt
+
+`/slice-planning V6` — die 6 V6-Slice-Themen (FEAT-041..046) in finale Slice-Files SLC-101..106 zerlegen, MTs final nummerieren, slices/INDEX.md updaten. Pflicht-Reihenfolge:
+
+1. **SLC-101** FEAT-041 Foundation + RLS + Pen-Test-Suite (Migration 090) — **Pflicht-Vorgaenger fuer alle anderen**
+2. **SLC-102** FEAT-042 Partner-Organisation + Admin-Dashboard
+3. **SLC-103** FEAT-043 Partner-Client-Mapping + Mandanten-Einladung
+4. **SLC-104** FEAT-044 Partner-Branding + CSS-Custom-Properties (Migration 091)
+5. **SLC-105** FEAT-045 Diagnose-Werkzeug + Light-Pipeline + Renderer — **Stop-Gate Inhalts-Workshop (BL-095)**, kann erst nach Score-Logik-Vorgabe starten; andere Slices parallel ungeblockt
+6. **SLC-106** FEAT-046 Lead-Push opt-in + outbound Webhook (Migration 092)
+
+V6-Pflicht-Vorbereitung parallel zum Code (KEIN Code-Block): BL-094 AVV-Standard-Template DE+NL, BL-095 Inhalts-Workshop Diagnose-Werkzeug, BL-096 GTM-Akquise-Pitch (Achse 9).

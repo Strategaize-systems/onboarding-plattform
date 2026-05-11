@@ -673,3 +673,204 @@ Der uebernommene Blueprint-Stand ist noch nicht auf einer Onboarding-Plattform-I
   ```
   Apply per `sql-migration-hetzner.md`-Pattern in `/backend SLC-091 MT-7`. Verifikation: `\df rpc_get_walkthrough_video_path` zeigt Function (SECURITY DEFINER, owner postgres), `SELECT id, name, handbook_schema -> 'sections' FROM template` zeigt Walkthroughs-Section in beiden produktiven Templates an Position 15. Smoke-RPC-Call `SELECT rpc_get_walkthrough_video_path('<existing-approved-session-id>')` (manuell als postgres-User mit gesetzter `request.jwt.claim`) liefert `{ storage_path, created_at }`-JSONB.
 - Live-Deploy: offen (geplant fuer `/backend SLC-091 MT-7` nach V5-Option-2-STABLE und `/slice-planning V5.1`).
+
+### MIG-034 — V6 Multiplikator-Foundation: Tenant-Hierarchie + Partner-Tabellen + Lead-Push (Migrations 090+091+092, geplant)
+- Date: 2026-05-11
+- Scope: V6 vollstaendige Schema-Erweiterung fuer Multiplikator-Layer in 3 sequenziellen Migration-Files:
+  - **090_v6_partner_tenant_foundation.sql** — `tenants` ALTER (`tenant_kind` + `parent_partner_tenant_id` + CHECK-Constraints), neue Postgres-Rolle `partner_admin`, `partner_organization`-Tabelle + RLS, `partner_client_mapping`-Tabelle + RLS + Trigger fuer Tenant-Kind-Pruefung, RLS-Policy-Updates auf bestehende Tabellen (`tenants`, `capture_session`, `knowledge_unit`, `block_checkpoint`, `validation_layer`) fuer neue `partner_admin`-Rolle.
+  - **091_v6_partner_branding_and_template_metadata.sql** — `partner_branding_config`-Tabelle + RLS, RPC `rpc_get_branding_for_tenant` (SECURITY DEFINER), `validation_layer.reviewer_role` CHECK-Erweiterung um `'system_auto'`, `block_checkpoint.checkpoint_type` CHECK-Erweiterung um `'auto_final'`, Storage-Bucket `partner-branding-assets` + RLS (analog walkthroughs-Bucket).
+  - **092_v6_lead_push_audit.sql** — `lead_push_consent`-Tabelle + RLS, `lead_push_audit`-Tabelle + RLS, `ai_jobs.job_type` CHECK-Erweiterung um `'lead_push_retry'`.
+- Reason: V6 Multiplikator-Foundation (RPT-209) erfordert Tenant-Hierarchie (Partner haelt Mandanten), neue RLS-Rolle `partner_admin` mit Defense-in-Depth-Policies, Co-Branding-Mechanik mit erstmalig CSS-Custom-Properties Setup (DEC-106), Auto-Finalize-Pipeline-Pattern fuer Diagnose-Werkzeug (DEC-100 + DEC-105), DSGVO-Audit fuer Lead-Push opt-in mit synchron+retry-Mechanik (DEC-107 + DEC-112), Pflicht-Pen-Test-Suite mit 5-Rollen-Matrix (DEC-110). Aufgeteilt in 3 sequenzielle Files damit SLC-101 (Foundation + RLS + Pen-Test) isoliert appliziert werden kann bevor SLC-104 (Branding, Migration 091) und SLC-106 (Lead-Push, Migration 092) starten. Reuse-Pattern: V4/V5-RLS-Defense-in-Depth + SAVEPOINT-Test-Pattern + RPC SECURITY DEFINER (DEC-099 analog).
+- Affected Areas: 5 neue Kerntabellen (`partner_organization`, `partner_client_mapping`, `partner_branding_config`, `lead_push_consent`, `lead_push_audit`), 1 erweiterte Kerntabelle (`tenants`), 3 CHECK-Constraint-Erweiterungen auf bestehenden Tabellen (`validation_layer.reviewer_role`, `block_checkpoint.checkpoint_type`, `ai_jobs.job_type`) plus 1 indirektes Metadata-Schema (`template.metadata.usage_kind` als optionales JSONB-Feld, kein DDL), 1 neuer Storage-Bucket (`partner-branding-assets`), 1 neue Postgres-Rolle (`partner_admin`), 1 neue SECURITY DEFINER RPC (`rpc_get_branding_for_tenant`), RLS-Policy-Updates auf mindestens 5 bestehenden Tabellen (`tenants`, `capture_session`, `knowledge_unit`, `block_checkpoint`, `validation_layer`).
+- Risk: **Mittel-Hoch in der Apply-Phase, Niedrig nach Test-PASS.**
+  - **Risiko (mittel)**: Daten-Migration aller Bestands-Tenants auf `tenant_kind='direct_client'` muss idempotent sein und darf keine Bestands-Funktionalitaet brechen — alle bestehenden RLS-Tests (V4-46 + V5.1-48 = 94 Faelle) muessen nach Migration regression-frei laufen.
+  - **Risiko (hoch wenn nicht getestet)**: Cross-Partner-Isolation-Bug in den neuen RLS-Policies wuerde einem Partner Sicht auf Mandanten anderer Partner geben -> Reputations-Killer. Mitigation: Pen-Test-Suite mit mindestens 96 V6-spezifischen + 94 Regression-Faellen ist Pflicht-Bestandteil von SLC-101 (DEC-110), PASS ist Pre-Condition fuer alle weiteren V6-Slices.
+  - **Risiko (niedrig)**: `partner_client_mapping`-Trigger fuer Tenant-Kind-Pruefung koennte bei Race-Condition (parallele Tenant-Anlage + Mapping-Anlage in unterschiedlichen TXs) inkonsistent sein. Mitigation: Server-Action `inviteMandant` macht beide INSERTs in einer Transaktion (siehe ARCHITECTURE.md V6 Data Flow B).
+  - **Risiko (niedrig)**: `parent_partner_tenant_id` ON DELETE RESTRICT verhindert Loeschen eines Partner-Tenants solange Mandanten existieren. Mitigation: explizit gewollt (Mandanten-Daten-Schutz), Strategaize-Admin muss bewusst Mandanten zuerst migrieren/loeschen.
+- Rollback Notes:
+  - **090 Rollback**: DROP TABLE partner_client_mapping CASCADE -> DROP TABLE partner_organization CASCADE -> DROP ROLE partner_admin -> ALTER TABLE tenants DROP COLUMN parent_partner_tenant_id -> ALTER TABLE tenants DROP COLUMN tenant_kind -> Restore bestehende RLS-Policies aus pre-mig-034-090 Backup. Pre-Apply-Backup Pflicht: `pg_dump --schema-only -d postgres > pre-mig-034-090_<timestamp>.sql`.
+  - **091 Rollback**: DROP TABLE partner_branding_config CASCADE -> DROP FUNCTION rpc_get_branding_for_tenant -> ALTER TABLE validation_layer (CHECK revert) -> ALTER TABLE block_checkpoint (CHECK revert) -> DELETE FROM storage.buckets WHERE id='partner-branding-assets'. Pre-Apply-Backup analog.
+  - **092 Rollback**: DROP TABLE lead_push_audit CASCADE -> DROP TABLE lead_push_consent CASCADE -> ALTER TABLE ai_jobs (CHECK revert). Pre-Apply-Backup analog.
+  - **Voll-Rollback fuer V6** (im Fall eines Pen-Test-Fail oder Pilot-Datenverlust): Voll-Restore aus Coolify-Standard-Daily-Backup. **Voll-Restore-Limit fuer V6 akzeptiert (DEC-103)** — kein selektiver Tenant-Restore moeglich.
+- Live-Deploy: offen (geplant in 3 Schritten pro Slice):
+  - Migration 090 -> `/backend SLC-101 MT-N` (Migration-Apply-MT, Pen-Test PASS Pre-Condition)
+  - Migration 091 -> `/backend SLC-104 MT-N` (Migration-Apply-MT, vor Branding-UI-Implementation)
+  - Migration 092 -> `/backend SLC-106 MT-N` (Migration-Apply-MT, vor Lead-Push-UI-Implementation)
+  - Apply-Pattern fuer jeden Schritt: sql-migration-hetzner.md (base64 + psql -U postgres + Pre-Apply pg_dump-Backup), Verifikation via `\d+ tenants`, `\d+ partner_organization`, `\df rpc_get_branding_for_tenant`, RLS-Pen-Test-Suite PASS gegen Coolify-DB im node:20-Container.
+- Migration SQL Skizze (Schluessel-Stellen, vollstaendige SQL in /backend SLC-101..104..106 als Migration-Files):
+
+  ```sql
+  -- 090 Step 1: tenants Schema-Erweiterung
+  ALTER TABLE public.tenants
+    ADD COLUMN IF NOT EXISTS tenant_kind text NOT NULL DEFAULT 'direct_client'
+      CHECK (tenant_kind IN ('direct_client', 'partner_organization', 'partner_client'));
+  ALTER TABLE public.tenants
+    ADD COLUMN IF NOT EXISTS parent_partner_tenant_id uuid NULL
+      REFERENCES public.tenants(id) ON DELETE RESTRICT;
+  ALTER TABLE public.tenants
+    ADD CONSTRAINT tenants_parent_partner_consistency CHECK (
+      (tenant_kind = 'partner_client' AND parent_partner_tenant_id IS NOT NULL)
+      OR (tenant_kind != 'partner_client' AND parent_partner_tenant_id IS NULL)
+    );
+
+  -- 090 Step 2: neue Rolle
+  DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'partner_admin') THEN
+      CREATE ROLE partner_admin;
+      GRANT USAGE ON SCHEMA public TO partner_admin;
+    END IF;
+  END $$;
+
+  -- 090 Step 3: partner_organization
+  CREATE TABLE IF NOT EXISTS public.partner_organization (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id uuid NOT NULL UNIQUE REFERENCES public.tenants(id) ON DELETE CASCADE,
+    legal_name text NOT NULL,
+    display_name text NOT NULL,
+    partner_kind text NOT NULL DEFAULT 'tax_advisor' CHECK (partner_kind IN ('tax_advisor')),
+    tier text NULL,
+    contact_email text NOT NULL,
+    contact_phone text NULL,
+    country text NOT NULL CHECK (country IN ('DE', 'NL')),
+    created_by_admin_user_id uuid REFERENCES auth.users(id),
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now()
+  );
+  ALTER TABLE public.partner_organization ENABLE ROW LEVEL SECURITY;
+  -- RLS-Policies (Skizze): partner_admin SELECT own, strategaize_admin SELECT all
+  CREATE POLICY po_select_own_partner_admin ON public.partner_organization
+    FOR SELECT TO partner_admin
+    USING (tenant_id = auth.user_tenant_id());
+  CREATE POLICY po_select_strategaize_admin ON public.partner_organization
+    FOR SELECT TO authenticated
+    USING (auth.user_role() = 'strategaize_admin');
+  -- ... weitere Policies analog (siehe ARCHITECTURE.md V6 RLS-Matrix)
+
+  -- 090 Step 4: partner_client_mapping + Trigger
+  CREATE TABLE IF NOT EXISTS public.partner_client_mapping (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    partner_tenant_id uuid NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
+    client_tenant_id uuid NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
+    invited_by_user_id uuid REFERENCES auth.users(id),
+    invitation_status text NOT NULL CHECK (invitation_status IN ('invited', 'accepted', 'revoked')),
+    invited_at timestamptz NOT NULL DEFAULT now(),
+    accepted_at timestamptz NULL,
+    revoked_at timestamptz NULL,
+    UNIQUE (partner_tenant_id, client_tenant_id)
+  );
+  CREATE OR REPLACE FUNCTION public.check_partner_client_mapping_tenant_kinds()
+    RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN
+      IF (SELECT tenant_kind FROM public.tenants WHERE id = NEW.partner_tenant_id) != 'partner_organization' THEN
+        RAISE EXCEPTION 'partner_tenant_id must reference a tenant with tenant_kind=partner_organization';
+      END IF;
+      IF (SELECT tenant_kind FROM public.tenants WHERE id = NEW.client_tenant_id) != 'partner_client' THEN
+        RAISE EXCEPTION 'client_tenant_id must reference a tenant with tenant_kind=partner_client';
+      END IF;
+      RETURN NEW;
+    END $$;
+  CREATE TRIGGER trg_partner_client_mapping_tenant_kinds
+    BEFORE INSERT OR UPDATE ON public.partner_client_mapping
+    FOR EACH ROW EXECUTE FUNCTION public.check_partner_client_mapping_tenant_kinds();
+  ALTER TABLE public.partner_client_mapping ENABLE ROW LEVEL SECURITY;
+  -- RLS-Policies (Skizze) ...
+
+  -- 091 Step 1: partner_branding_config
+  CREATE TABLE IF NOT EXISTS public.partner_branding_config (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    partner_tenant_id uuid NOT NULL UNIQUE REFERENCES public.tenants(id) ON DELETE CASCADE,
+    logo_url text NULL,
+    primary_color text NOT NULL DEFAULT '#2563eb' CHECK (primary_color ~ '^#[0-9a-fA-F]{6}$'),
+    secondary_color text NULL CHECK (secondary_color IS NULL OR secondary_color ~ '^#[0-9a-fA-F]{6}$'),
+    display_name text NULL,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now()
+  );
+  ALTER TABLE public.partner_branding_config ENABLE ROW LEVEL SECURITY;
+  -- RLS-Policies (Skizze) ...
+
+  -- 091 Step 2: rpc_get_branding_for_tenant
+  CREATE OR REPLACE FUNCTION public.rpc_get_branding_for_tenant(p_tenant_id uuid)
+    RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER AS $$
+    DECLARE
+      v_kind text;
+      v_parent uuid;
+      v_branding jsonb;
+    BEGIN
+      SELECT tenant_kind, parent_partner_tenant_id INTO v_kind, v_parent
+      FROM public.tenants WHERE id = p_tenant_id;
+      IF v_kind IS NULL THEN
+        RETURN jsonb_build_object('logo_url', NULL, 'primary_color', '#2563eb', 'secondary_color', NULL);
+      END IF;
+      IF v_kind = 'partner_client' AND v_parent IS NOT NULL THEN
+        SELECT to_jsonb(pbc) INTO v_branding
+          FROM public.partner_branding_config pbc
+          WHERE pbc.partner_tenant_id = v_parent;
+      ELSIF v_kind = 'partner_organization' THEN
+        SELECT to_jsonb(pbc) INTO v_branding
+          FROM public.partner_branding_config pbc
+          WHERE pbc.partner_tenant_id = p_tenant_id;
+      END IF;
+      IF v_branding IS NULL THEN
+        RETURN jsonb_build_object('logo_url', NULL, 'primary_color', '#2563eb', 'secondary_color', NULL);
+      END IF;
+      RETURN v_branding;
+    END $$;
+
+  -- 091 Step 3: CHECK-Constraint-Erweiterungen
+  ALTER TABLE public.validation_layer DROP CONSTRAINT IF EXISTS validation_layer_reviewer_role_check;
+  ALTER TABLE public.validation_layer ADD CONSTRAINT validation_layer_reviewer_role_check
+    CHECK (reviewer_role IN ('strategaize_admin', 'tenant_admin', 'tenant_member', 'employee', 'partner_admin', 'system_auto'));
+  ALTER TABLE public.block_checkpoint DROP CONSTRAINT IF EXISTS block_checkpoint_checkpoint_type_check;
+  ALTER TABLE public.block_checkpoint ADD CONSTRAINT block_checkpoint_checkpoint_type_check
+    CHECK (checkpoint_type IN ('proposed', 'reviewed', 'finalized', 'meeting_final', 'auto_final'));
+
+  -- 091 Step 4: Storage-Bucket
+  INSERT INTO storage.buckets (id, name, public) VALUES ('partner-branding-assets', 'partner-branding-assets', false)
+    ON CONFLICT (id) DO NOTHING;
+  -- Storage-RLS-Policies analog walkthroughs-Bucket
+
+  -- 092 Step 1: lead_push_consent
+  CREATE TABLE IF NOT EXISTS public.lead_push_consent (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    capture_session_id uuid NOT NULL REFERENCES public.capture_session(id) ON DELETE CASCADE,
+    mandant_user_id uuid NOT NULL REFERENCES auth.users(id),
+    mandant_tenant_id uuid NOT NULL REFERENCES public.tenants(id),
+    partner_tenant_id uuid NOT NULL REFERENCES public.tenants(id),
+    consent_given_at timestamptz NOT NULL DEFAULT now(),
+    consent_text_version text NOT NULL,
+    consent_ip inet NULL,
+    consent_user_agent text NULL,
+    withdrawal_at timestamptz NULL
+  );
+  ALTER TABLE public.lead_push_consent ENABLE ROW LEVEL SECURITY;
+  -- RLS-Policies ...
+
+  -- 092 Step 2: lead_push_audit
+  CREATE TABLE IF NOT EXISTS public.lead_push_audit (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    consent_id uuid NOT NULL REFERENCES public.lead_push_consent(id) ON DELETE RESTRICT,
+    attempted_at timestamptz NOT NULL DEFAULT now(),
+    attempt_number int NOT NULL DEFAULT 1,
+    status text NOT NULL CHECK (status IN ('pending', 'success', 'failed')),
+    business_system_response_status int NULL,
+    business_system_contact_id uuid NULL,
+    business_system_was_new boolean NULL,
+    error_message text NULL,
+    attribution_utm_source text NOT NULL,
+    attribution_utm_campaign text NOT NULL,
+    attribution_utm_medium text NOT NULL DEFAULT 'referral'
+  );
+  ALTER TABLE public.lead_push_audit ENABLE ROW LEVEL SECURITY;
+  -- RLS-Policies ...
+
+  -- 092 Step 3: ai_jobs.job_type CHECK-Erweiterung
+  ALTER TABLE public.ai_jobs DROP CONSTRAINT IF EXISTS ai_jobs_job_type_check;
+  ALTER TABLE public.ai_jobs ADD CONSTRAINT ai_jobs_job_type_check
+    CHECK (job_type IN ('knowledge_unit_condensation', 'meeting_snapshot', 'embedding_generation',
+                        'handbook_snapshot_generation', 'capture_reminder',
+                        'walkthrough_transcribe', 'walkthrough_redact_pii', 'walkthrough_extract_steps',
+                        'walkthrough_map_subtopics', 'walkthrough_stub',
+                        'lead_push_retry'));
+  ```
+  (Vollstaendige SQL-Files werden in /backend SLC-101 (Migration 090), /backend SLC-104 (Migration 091) und /backend SLC-106 (Migration 092) erstellt — diese Skizze ist Architektur-Vorgabe, kein Live-Code.)
