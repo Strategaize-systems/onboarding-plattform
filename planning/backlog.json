@@ -815,7 +815,7 @@
       "title": "FEAT-038 Walkthrough Handbuch-Integration",
       "type": "feature",
       "priority": "high",
-      "status": "in_progress",
+      "status": "done",
       "version": "V5.1",
       "description": "Approved mapped Walkthroughs (aus V5 Option 2 walkthrough_review_mapping) erscheinen im Unternehmerhandbuch unter neuer Section 'Walkthroughs' mit Schritt-Liste + Embed-Link zum Roh-Video (Storage-Proxy-Pattern aus V4.1 ISSUE-025 Resolution, RPC-RLS-Check + Range-Support). Section-Position konfigurierbar pro Template (Default order=15 nach SOPs, Migration 089 DML idempotent fuer 2 produktive Templates). Backwards-Compat: alte V4-Snapshots ohne Walkthroughs-Section weiter generierbar. Hinweis: AI-Vorschlag-Editor-UI (urspruenglich V5.1 Scope) ist Teil von FEAT-040 in V5 Option 2. Architecture done 2026-05-08 (RPT-197 + DEC-095..099 + MIG-033). Slice-Skizze: 2 Slices SLC-091 + SLC-092, ~10-13 MTs, ~3-4 Tage. Naechster Schritt: /slice-planning V5.1.",
       "createdAt": "2026-05-05"

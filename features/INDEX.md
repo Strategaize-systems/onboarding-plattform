@@ -89,4 +89,4 @@ Re-scoped 2026-05-06 per DEC-079 (Strategaize-Dev-System) nach USP-Stress-Test.
 
 | ID | Feature | Status | Spec | Created |
 |----|---------|--------|------|---------|
-| FEAT-038 | Walkthrough Handbuch-Integration (approved mapped SOPs in Snapshot) | in_progress | [Spec](FEAT-038-walkthrough-handbuch-integration.md) | 2026-05-05 |
+| FEAT-038 | Walkthrough Handbuch-Integration (approved mapped SOPs in Snapshot) | deployed | [Spec](FEAT-038-walkthrough-handbuch-integration.md) | 2026-05-05 |

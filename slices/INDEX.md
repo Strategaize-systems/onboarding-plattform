@@ -255,8 +255,8 @@ V5.1-Scope auf FEAT-038 geshrinkt nach DEC-079 V5-Option-2-Pivot (RPT-170 Requir
 
 | ID | Slice | Feature | Status | Priority | Created |
 |----|-------|---------|--------|----------|---------|
-| SLC-091 | [Walkthrough Handbuch-Section-Renderer + Storage-Proxy + RPC + MIG-033](SLC-091-walkthrough-handbook-section-renderer.md) | FEAT-038 | done | High | 2026-05-08 |
-| SLC-092 | [Walkthrough Handbuch-Reader-Integration + Stale-Marker + Audit + RLS-Matrix](SLC-092-walkthrough-handbook-reader-integration.md) | FEAT-038 | done | High | 2026-05-08 |
+| SLC-091 | [Walkthrough Handbuch-Section-Renderer + Storage-Proxy + RPC + MIG-033](SLC-091-walkthrough-handbook-section-renderer.md) | FEAT-038 | deployed | High | 2026-05-08 |
+| SLC-092 | [Walkthrough Handbuch-Reader-Integration + Stale-Marker + Audit + RLS-Matrix](SLC-092-walkthrough-handbook-reader-integration.md) | FEAT-038 | deployed | High | 2026-05-08 |
 
 ### V5.1 Execution Order
 
