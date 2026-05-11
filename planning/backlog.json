@@ -865,9 +865,9 @@
       "title": "FEAT-042 Partner-Organisation + Onboarding-Flow + Admin-Dashboard (SLC-102)",
       "type": "feature",
       "priority": "high",
-      "status": "open",
+      "status": "in_progress",
       "version": "V6",
-      "description": "V6. partner_organization-Tabelle + Strategaize-Admin-UI /admin/partners zum Anlegen + Owner-User-Einladung via Magic-Link (FEAT-031-Reuse) + Partner-Admin-Dashboard /partner/dashboard mit eigener Mandanten-Liste + Status-Spalten. Tier-Spalte heute mit anlegen (V3+ Nutzung). partner_kind heute mit anlegen (V8+ erweiterbar). Vorgaenger: FEAT-041. Detail: /features/FEAT-042-partner-organization-onboarding-dashboard.md.",
+      "description": "V6. partner_organization-Tabelle + Strategaize-Admin-UI /admin/partners zum Anlegen + Owner-User-Einladung via Magic-Link (FEAT-031-Reuse) + Partner-Admin-Dashboard /partner/dashboard mit eigener Mandanten-Liste + Status-Spalten. Tier-Spalte heute mit anlegen (V3+ Nutzung). partner_kind heute mit anlegen (V8+ erweiterbar). Vorgaenger: FEAT-041. Detail: /features/FEAT-042-partner-organization-onboarding-dashboard.md. **Status 2026-05-11**: MT-1+MT-2 von 8 MTs durch (Server Actions createPartnerOrganization+invitePartnerAdmin + Auth-Routing + role-check.ts + 49 Vitest + 140 Regression Live-PASS, RPT-214). MT-3..MT-8 (Admin-UI, Partner-Dashboard, Stammdaten, acceptPartnerAdminInvitation, Quality-Gates Full, Browser-Smoke) deferred fuer neue Session.",
       "createdAt": "2026-05-11"
     },
     {

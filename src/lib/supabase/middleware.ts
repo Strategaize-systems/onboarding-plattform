@@ -52,7 +52,7 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Logged in → redirect away from login (role-aware, SLC-034 MT-7)
+  // Logged in → redirect away from login (role-aware, SLC-034 MT-7 + SLC-102 MT-2)
   if (user && pathname === "/login") {
     const url = request.nextUrl.clone();
     const { data: loginProfile } = await supabase
@@ -62,6 +62,8 @@ export async function updateSession(request: NextRequest) {
       .single();
     if (loginProfile?.role === "employee") {
       url.pathname = "/employee";
+    } else if (loginProfile?.role === "partner_admin") {
+      url.pathname = "/partner/dashboard";
     } else if (loginProfile?.role === "strategaize_admin") {
       url.pathname = "/admin/tenants";
     } else {
@@ -88,10 +90,41 @@ export async function updateSession(request: NextRequest) {
       const employeeBlocked =
         pathname.startsWith("/admin") ||
         pathname.startsWith("/dashboard") ||
-        pathname.startsWith("/capture");
+        pathname.startsWith("/capture") ||
+        pathname.startsWith("/partner");
       if (employeeBlocked) {
         const url = request.nextUrl.clone();
         url.pathname = "/employee";
+        url.search = "";
+        return NextResponse.redirect(url);
+      }
+    }
+
+    // SLC-102 MT-2 — partner_admin darf NUR /partner/*, /accept-invitation und /auth/* sehen.
+    // /admin/* und /dashboard/* und /capture/* sind fuer partner_admin gesperrt.
+    if (profile?.role === "partner_admin") {
+      const partnerBlocked =
+        pathname.startsWith("/admin") ||
+        pathname.startsWith("/dashboard") ||
+        pathname.startsWith("/capture") ||
+        pathname.startsWith("/employee");
+      if (partnerBlocked) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/partner/dashboard";
+        url.search = "";
+        return NextResponse.redirect(url);
+      }
+    }
+
+    // SLC-102 MT-2 — /partner/* ist nur partner_admin (+ strategaize_admin via Read-only Impersonate V7+).
+    // V6 sperrt /partner/* fuer tenant_admin, tenant_member, employee.
+    // strategaize_admin darf rein, weil Cross-Tenant-Admin-Sicht generell erlaubt ist.
+    if (pathname.startsWith("/partner")) {
+      const allowedRoles = ["partner_admin", "strategaize_admin"];
+      const userRole = profile?.role ?? null;
+      if (!userRole || !allowedRoles.includes(userRole)) {
+        const url = request.nextUrl.clone();
+        url.pathname = userRole === "tenant_admin" || userRole === "tenant_member" ? "/dashboard" : "/login";
         url.search = "";
         return NextResponse.redirect(url);
       }
