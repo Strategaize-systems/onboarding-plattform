@@ -87,16 +87,37 @@
     {
       "id": "v6",
       "name": "V6",
-      "status": "planned",
-      "summary": "Diary-Mode (zeitlich verteilte In-Situ-Aufnahmen, Mobile/PWA) als zusaetzlicher Capture-Modus. Architektur-Hooks dafuer wurden in V4 vorbereitet. Versionsnummer ehemals V5 (vor 2026-04-23 Re-Numerierung).",
+      "status": "active",
+      "summary": "Multiplikator-Foundation (Steuerberater-Partner-Erweiterung) — technische Umsetzung des MULTIPLIER_MODEL.md-Konzepts (Strategaize-Dev-System, entschieden 2026-05-07) als Multi-Tenant-Erweiterung der Onboarding-Plattform per Architektur-Option-A (STRATEGY_NOTES_2026-05.md Abschnitt 7). Requirements done 2026-05-11 (RPT-209) basierend auf Discovery RPT-208. 6 Features (FEAT-041..046), 6 Slices (SLC-101..106). Scope: Tenant-Hierarchie (tenant_kind direct_client/partner_organization/partner_client + parent_partner_tenant_id), neue RLS-Rolle partner_admin mit 5-Rollen-Pen-Test-Suite, 5 neue Tabellen (partner_organization + partner_client_mapping + partner_branding_config + lead_push_consent + lead_push_audit), Diagnose-Werkzeug als neue Template-Variante des questionnaire-Modes (NICHT neuer Capture-Mode — Discovery-Korrektur per Reuse-Optimierung), Light-Condensation-Pipeline mit Auto-Finalize Option DGN-A (deterministische Score-Logik aus Template, KI nur kommentierend), Diagnose-Bericht-Renderer, Partner-Branding minimal mit CSS-Custom-Properties Setup (erstmals in der Plattform) + Pflicht-Footer Powered-by-Strategaize, Lead-Push opt-in via DSGVO-Pflicht-Checkbox + outbound HTTP an Business-System Lead-Intake-API + Audit-Log mit UTM-Attribution partner_<tenant_id>. Reuse-Quote ~60% (Capture-Mode-Architektur FEAT-025, RLS-Pattern V4/V5, next-intl mit DE/EN/NL, Lead-Intake-API Business-System mit First-Touch-Lock+UTM, DEC-091 Privacy-Checkbox-Pattern, Tenant-Onboarding-Wizard FEAT-031, Handbuch-Reader FEAT-028, Walkthrough-Storage-Pattern). 4 Open Questions vor /architecture V6: Auto-Finalize-Pattern, Versions-Re-Numerierung, NL-Variante-Timing, Tenant-Restore-Faehigkeit. 3 Pflicht-Vorbereitungs-Backlog-Items parallel zum V6-Bau: AVV-Templates DE+NL, Inhalts-Workshop Diagnose-Werkzeug (Stop-Gate fuer SLC-105), Achse-9-Akquise-Pitch. Internal-Test-Mode bis Pre-Production-Compliance-Gate. Diary-Mode (war urspruenglich V6 nach 2026-04-23 Re-Numerierung) verschoben nach V8 wegen NL-Investor-Substanz Q4 2026 als Multiplikator-Treiber.",
       "order": 13
     },
     {
-      "id": "v7",
-      "name": "V7+",
+      "id": "v6-1",
+      "name": "V6.1",
       "status": "planned",
-      "summary": "Queroptionen: Process-Mining-Connector, kollaborative Annotation, Anomalie-Flagging, Prozess-Simulation. Versionsnummer ehemals V6+ (vor 2026-04-23 Re-Numerierung). Falls kunden-getrieben gewollt: Browser-Extension fuer strukturierte Klick-Erfassung + DOM-Snapshots (V5+ baut nur Web-only Capture, Klick-Tracking ist V7+).",
+      "summary": "NL-Sprach-Variante Diagnose-Werkzeug + Polish nach erstem NRW-Pilot-Feedback. Architektonisch quasi kostenlos (next-intl + lokalisierte Bedrock-Prompts existieren seit V1.1), Aufwand primaer Inhalt: nl-Diagnose-Template + nl-Translations UI + nl-Bedrock-Prompt-Variante. Erforderlich fuer MULTIPLIER_MODEL Achse 7 V1-Ziel '1-2 NL-Pilots Q4 2026 als Investor-Substanz'. Plus erwartete Polish-Items aus V6-Pilot-Feedback (z.B. sekundaere Akzentfarbe in Branding, zusaetzliche Sub-Karten im Mandanten-Dashboard, Cron-Tuning fuer Lead-Push-Retry).",
       "order": 14
+    },
+    {
+      "id": "v7",
+      "name": "V7",
+      "status": "planned",
+      "summary": "Multiplikator-Folgearbeit nach Vertrauensaufbau (3-6 Monate Modus-A-Erfahrung). Hauptbestandteil: Modus-B Webinar-Tooling fuer MULTIPLIER_MODEL Achse 5 — Webinar-Einladungs-Management mit Pseudonym-Layer (Mandanten sehen sich untereinander nicht — Wettbewerbsschutz), RSVP-Tracking, anonymitaets-garantierte Teilnehmer-Anzeige, Mandanten-Initiative-Pfad nach Webinar (Mandant klickt 'Ich will mehr', geht den Standard-Diagnose-Werkzeug-Pfad). Weitere V7-Kandidaten: erweiterte Branding-Optionen (sekundaere Akzentfarbe, optional Hintergrundbild), Berater-Personal-Mandanten-Zuordnung innerhalb Partner-Tenant (partner_employee-Rolle mit eingeschraenkter Mandanten-Sicht), Tenant-spezifische Backup/Restore-Faehigkeit, Domain-Mapping pro Partner (steuerberater-x.partner.strategaize.de), Email-Template-Branding (Partner-Logo in Magic-Link-Mail).",
+      "order": 15
+    },
+    {
+      "id": "v8",
+      "name": "V8",
+      "status": "planned",
+      "summary": "Diary-Mode als zusaetzlicher Capture-Modus (zeitlich verteilte In-Situ-Aufnahmen, Mobile/PWA). Architektur-Hooks wurden in V4 vorbereitet (FEAT-025 Capture-Mode-Extension). Versionsnummer ehemals V5 (vor 2026-04-23 Re-Numerierung), dann V6, jetzt V8 nach Multiplikator-Layer-Priorisierung (NL-Investor-Substanz Q4 2026). Diary-Mode adressiert das Erfassen von seltenem, situativem Wissen (z.B. nur monatlich auftretende Ausnahmen), das in Questionnaire/Walkthrough/Dialogue-Modi nicht praktikabel ist.",
+      "order": 16
+    },
+    {
+      "id": "v9",
+      "name": "V9+",
+      "status": "planned",
+      "summary": "Queroptionen: Process-Mining-Connector, kollaborative Annotation, Anomalie-Flagging, Prozess-Simulation. Versionsnummer ehemals V6+ (vor 2026-04-23 Re-Numerierung), dann V7+, jetzt V9+ nach Multiplikator-Layer-Priorisierung. Falls kunden-getrieben gewollt: Browser-Extension fuer strukturierte Klick-Erfassung + DOM-Snapshots (V5+ baut nur Web-only Capture, Klick-Tracking ist V9+).",
+      "order": 17
     }
   ]
 }

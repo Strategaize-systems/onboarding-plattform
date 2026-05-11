@@ -849,6 +849,96 @@
       "version": null,
       "description": "User-Idea 2026-05-08 nach V5-Option-2-Live-Test: Wenn der Mitarbeiter waehrend des Walkthroughs erklaert was er klickt und macht, entsteht im Endprodukt aus einer einzigen Aufnahme nicht nur eine Methodik-Quelle (V5 Scope: Schritte â†’ Subtopics â†’ Berater-Approval â†’ Unternehmer-Handbuch), sondern auch ein Roh-Schulungsvideo, das fuer interne Mitarbeiter-Onboarding wiederverwertbar waere. Strategischer Hook: Verkaufs-Argument an Kunden 'lasst euren besten Mitarbeiter einmalig was zeigen, wir machen daraus SOPs UND ein Schulungsvideo' â€” gerade bei neuen Features oder Onboarding neuer Mitarbeiter wertvoll. Scope dieser Idea: nur Strategaize-interne Loesung, KEIN externer Tutorial-Generator (kein Narakeet/Synthesia/Playwright-Pfad â€” der user-guide-Skill bleibt fuer das Strategaize-eigene Learning Center separat). Implementierungs-Skizze: (a) zweiter Konsumenten-Pfad fuer dieselbe walkthrough_session auf Kunden-Seite; (b) Polish-Schritt aus Roh-Video + Transkript zu kompaktem Video (Trimming, Auto-Highlights, ggf. Sprecher-Voiceover-Refinement); (c) eigener UI-Pfad fuer Mitarbeiter-Lerncenter im Mandanten-Cockpit. Datenbasis ist bereits da (walkthrough_session.storage_path + walkthrough_step + Transkript-KU). Kein V5-Code-Touch, kein Re-Open eines Slices. Trigger fuer Aufnahme als Slice/Feature: explizite Kundenanfrage ODER strategische GTM-Entscheidung 'Strategaize bietet auch Schulungsvideos'. Out of scope bleibt strikt: Klick-Tracking, DOM-Selektoren, Tango-/Scribe-Style-Anleitungen â€” User-Entscheidung 2026-05-08.",
       "createdAt": "2026-05-08"
+    },
+    {
+      "id": "BL-088",
+      "title": "FEAT-041 Partner-Tenant Foundation + RLS Erweiterung (SLC-101)",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V6",
+      "description": "V6 Pflicht-Foundation. Tenant-Hierarchie (tenant_kind + parent_partner_tenant_id) + neue RLS-Rolle partner_admin + Defense-in-Depth-Policies + 5-Rollen-Pen-Test-Suite (mind. 80 Faelle inkl. mind. 16 Cross-Partner-Isolation). Migration MIG-034. Reuse: V5-RLS-Test-Pattern mit SAVEPOINT. Vorgaenger: keiner (Foundation). Nachfolger: alle V6-Features haengen daran. Detail: /features/FEAT-041-partner-tenant-foundation-rls.md, /reports/RPT-209.md.",
+      "createdAt": "2026-05-11"
+    },
+    {
+      "id": "BL-089",
+      "title": "FEAT-042 Partner-Organisation + Onboarding-Flow + Admin-Dashboard (SLC-102)",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V6",
+      "description": "V6. partner_organization-Tabelle + Strategaize-Admin-UI /admin/partners zum Anlegen + Owner-User-Einladung via Magic-Link (FEAT-031-Reuse) + Partner-Admin-Dashboard /partner/dashboard mit eigener Mandanten-Liste + Status-Spalten. Tier-Spalte heute mit anlegen (V3+ Nutzung). partner_kind heute mit anlegen (V8+ erweiterbar). Vorgaenger: FEAT-041. Detail: /features/FEAT-042-partner-organization-onboarding-dashboard.md.",
+      "createdAt": "2026-05-11"
+    },
+    {
+      "id": "BL-090",
+      "title": "FEAT-043 Partner-Client-Mapping + Mandanten-Einladung (SLC-103)",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V6",
+      "description": "V6. partner_client_mapping-Tabelle mit invitation_status (invited/accepted/revoked) + Server Actions inviteMandant/acceptMandantInvitation/revokeMandantInvitation + Mandanten-Dashboard /dashboard mit Begruessungs-Block unter Partner-Branding + Diagnose-Werkzeug-Eingang. Reuse: FEAT-031 Magic-Link, FEAT-022 Verifikations-Token. Vorgaenger: FEAT-041, FEAT-042. Detail: /features/FEAT-043-partner-client-mapping-mandanten-einladung.md.",
+      "createdAt": "2026-05-11"
+    },
+    {
+      "id": "BL-091",
+      "title": "FEAT-044 Partner-Branding minimal + CSS-Custom-Properties Setup (SLC-104)",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V6",
+      "description": "V6. partner_branding_config-Tabelle (Logo + Primary-Color + Pflicht-Footer Strategaize) + Storage-Bucket partner-branding-assets (signed URLs) + CSS-Custom-Properties Setup erstmals in der Plattform (--brand-primary, --brand-accent) + Branding-Resolver Server-Side + Branding-UI /partner/dashboard/branding mit Live-Preview. Scope strikt minimal — Whitelabel niemals (MULTIPLIER_MODEL T5). Vorgaenger: FEAT-041, FEAT-042. Detail: /features/FEAT-044-partner-branding-css-custom-properties.md.",
+      "createdAt": "2026-05-11"
+    },
+    {
+      "id": "BL-092",
+      "title": "FEAT-045 Diagnose-Werkzeug Template + Light-Condensation-Pipeline + Bericht-Renderer (SLC-105)",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V6",
+      "description": "V6 Kern-USP. Neue Template-Variante partner_diagnostic (15-25 Fragen + deterministische Score-Logik aus Inhalts-Workshop) + Light-Condensation-Pipeline mit Auto-Finalize Option DGN-A (KU direkt accepted, validation_layer.reviewer_role=system_auto) + Diagnose-Bericht-Renderer (Score-Visual + KI-Verdichtung + Pflicht-Output-Aussage) + Mandanten-Run-Flow /dashboard/diagnose. Stop-Gate: Inhalts-Workshop muss vor /backend SLC-105 Score-Logik liefern (BL-095). Vorgaenger: FEAT-041, FEAT-043, soft FEAT-044. Detail: /features/FEAT-045-diagnose-werkzeug-template-pipeline-renderer.md.",
+      "createdAt": "2026-05-11"
+    },
+    {
+      "id": "BL-093",
+      "title": "FEAT-046 Lead-Push opt-in + Outbound Webhook + DSGVO-Audit (SLC-106)",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V6",
+      "description": "V6. lead_push_consent + lead_push_audit Tabellen + Server Action requestLeadPush mit Pflicht-DSGVO-Checkbox (DEC-091-Reuse) + outbound HTTP-Adapter src/lib/integrations/business-system/lead-intake.ts + Bearer-Auth via ENV BUSINESS_SYSTEM_INTAKE_URL + BUSINESS_SYSTEM_INTAKE_API_KEY + UTM-Attribution utm_source=partner_<tenant_id> + Worker-Job-Handler lead_push_retry mit 3x exponential Backoff. Reuse: V5 SLC-079 Pflicht-Privacy-Checkbox-Pattern + bestehende ai_jobs-Queue. Vorgaenger: FEAT-041, FEAT-043, FEAT-045. Erster outbound HTTP-Call der Plattform. Detail: /features/FEAT-046-lead-push-opt-in-webhook-dsgvo.md.",
+      "createdAt": "2026-05-11"
+    },
+    {
+      "id": "BL-094",
+      "title": "V6-PREP-AVV: DSGVO-Auftragsverarbeitungsvertrag Standard-Template DE + NL",
+      "type": "improvement",
+      "priority": "high",
+      "status": "open",
+      "version": "V6",
+      "description": "V6 Pflicht-Vorbereitung — KEIN Code, aber V6-Live-Block (kein erster Live-Pilot-Steuerberater ohne AVV). User-Verantwortung. Standard-AVV-Template fuer DE (Steuerberater als Auftragsverarbeiter, Strategaize als Verantwortlicher fuer Diagnose-Funnel) + NL-Variante. Parallel zum V6-Bau bearbeitbar. Verweis: STRATEGY_NOTES_2026-05.md Abschnitt 7 Pflichten vor erstem Live-Partner.",
+      "createdAt": "2026-05-11"
+    },
+    {
+      "id": "BL-095",
+      "title": "V6-PREP-INHALT: Inhalts-Workshop Diagnose-Werkzeug (Stop-Gate fuer SLC-105)",
+      "type": "improvement",
+      "priority": "high",
+      "status": "open",
+      "version": "V6",
+      "description": "V6 Pflicht-Vorbereitung — Stop-Gate fuer /backend SLC-105 (nicht V6 insgesamt). User-Verantwortung. Workshop liefert: 15-25 konkrete Mandanten-Fragen entlang der 6 Bausteine aus MULTIPLIER_MODEL.md Inhaltliche Skizze (Strukturelle KI-Reife, Entscheidungs-Qualitaet, Schriftlich festgehaltene Entscheidungen, SOPs, Unternehmerhandbuch, Workaround-Dunkelziffer) + deterministische Score-Logik pro Frage (Antwort-Wert auf 0-100 Score-Mapping) + finale Pflicht-Output-Aussage in Markdown. Ohne dieses Workshop-Output kann SLC-105 nicht starten und Auto-Finalize-Mechanik DGN-A nicht implementiert werden. Andere V6-Slices (SLC-101..104, SLC-106) unabhaengig — koennen vor Workshop-Abschluss starten.",
+      "createdAt": "2026-05-11"
+    },
+    {
+      "id": "BL-096",
+      "title": "V6-GTM-AKQUISE: Achse 9 Multiplikator-Akquise-Pitch ausarbeiten",
+      "type": "improvement",
+      "priority": "medium",
+      "status": "open",
+      "version": "V6",
+      "description": "V6 Pflicht-Vorbereitung — KEIN Skill-Block, KEIN V6-Live-Block (User entscheidet zeitlich). GTM-Frage: Wie kommt User an die ersten 5-8 NRW-Steuerberater? Vorhandener Kandidaten-Korridor (LinkedIn-Cold-Outreach an Mittelstands-spezialisierte Kanzleien, Fachverband-Veranstaltungen Steuerberaterkammer NRW + Mittelstands-Tagungen, Empfehlung ueber bestehendes B2B-Netzwerk, Content-Pull, Branchen-Magazin-Artikel). Output: konkrete Target-Liste + Kanal-Entscheidung + Erstkontakt-Pitch (1 Seite, klar, ohne Sales-Ueberladung). Verweis: MULTIPLIER_MODEL.md Achse 9. NL-Pilot ist warmer Kontakt (Steuerberater des Users) — separater Akquise-Pfad noetig.",
+      "createdAt": "2026-05-11"
     }
   ]
 }

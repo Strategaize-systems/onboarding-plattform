@@ -1379,3 +1379,79 @@ Nach V5 Option 2 sind alle AI-Pipeline-Schichten und der Berater-Review-Workflow
 V5 Option 2 muss deployed sein, weil V5.1 die approved mapped SOPs aus walkthrough_review_mapping als Input nutzt. Geplante Reihenfolge:
 1. V5 Option 2 → Release als REL-013 → Post-Launch
 2. V5.1 → Release als REL-014
+
+## V6 — Multiplikator-Foundation (Steuerberater-Partner-Erweiterung)
+
+Requirements done 2026-05-11 (RPT-209). Strategische Vorgabe verbindlich: [/docs/MULTIPLIER_MODEL.md](../../strategaize-dev-system/docs/MULTIPLIER_MODEL.md) im Strategaize-Dev-System (Konzept entschieden 2026-05-07) + STRATEGY_NOTES_2026-05.md Abschnitt 7 + PLATFORM.md.
+
+### Problem
+Direkt-Vertrieb an inhabergefuehrte KMU (2-5 Mio EUR Umsatz) braucht 20-30 Cold-Approach-Kontakte pro qualifiziertem Erstgespraech — fuer Solo-Founder mit ~2-3 h/Woche Vertriebskapazitaet strukturell nicht skalierbar. Multiplikator-Strategie ueber Steuerberater (Beziehungs-Anker) liefert qualifizierte Leads + erfuellt NL-Investor-Substanz-Anforderung Q4 2026.
+
+### Goal V6
+Pilot-Steuerberater in NRW (cold start) + NL (warmer Kontakt) sind in Q3 2026 produktiv live, haben jeweils 1-3 Mandanten-Diagnosen abgeschlossen, mindestens 1 Lead-Push ans Business-System erfolgreich.
+
+### V6 In Scope
+- **Tenant-Hierarchie**: `tenant_kind` (`direct_client | partner_organization | partner_client`) + `parent_partner_tenant_id` an bestehender `tenants`-Tabelle
+- **Neue RLS-Rolle `partner_admin`** mit Defense-in-Depth-Policies + 5-Rollen-Pen-Test-Suite
+- **Neue Tabellen**: `partner_organization`, `partner_client_mapping`, `partner_branding_config`, `lead_push_consent`, `lead_push_audit`
+- **Diagnose-Werkzeug** als neue Template-Variante des bestehenden `questionnaire`-Modes (NICHT neuer Capture-Mode — Discovery-Korrektur per Reuse-Optimierung)
+- **Light-Condensation-Pipeline mit Auto-Finalize Option DGN-A**: deterministische Score-Logik aus Template, KI nur fuer kommentierende Verdichtung, KU werden direkt als `status='accepted'` geschrieben
+- **Diagnose-Bericht-Renderer** als neue Server-Component-Familie (Reuse Handbuch-Reader Pattern)
+- **Partner-Branding minimal**: Logo + 1 Akzentfarbe + Pflicht-Footer „Powered by Strategaize" (nicht entfernbar)
+- **CSS-Custom-Properties Setup** (erstmals in der Plattform)
+- **Lead-Push opt-in**: DSGVO-Pflicht-Checkbox + outbound HTTP-Adapter an Business-System Lead-Intake-API + Audit-Log mit UTM-Attribution `partner_<tenant_id>`
+- **DSGVO-Audit**: `lead_push_consent` mit Consent-Text-Version + IP + User-Agent
+
+### V6 Out of Scope (nach Folge-Version verschoben)
+| Out-of-Scope-Item | Begruendung | Verschoben nach |
+|---|---|---|
+| Modus-B Webinar-Tooling (Anonymitaets-Layer) | MULTIPLIER_MODEL Achse 5: nach 3-6 Monaten Modus-A-Erfahrung | V7 |
+| NL-Sprach-Variante Diagnose-Werkzeug | Inhalt + Translations, architektonisch kostenlos | V6.1 |
+| Provisions-Modell + Reporting | Achse 3: V1 keine Provision, aber Attribution-Schema heute mitnehmen | V2/V3 |
+| Tier-System | Achse 7: V3 (50-100 Partner) | V8+ |
+| Reverse-Channel M&A (M&A-Berater als 2. Typ) | Achse 1: V2 2027 | V8+ |
+| Whitelabel (volle Marken-Anpassung) | Achse 2 T5: **niemals** | — |
+| Domain-Mapping pro Partner | V6 nur Inline-Branding | V7+ |
+| Berater-Personal-Mandanten-Zuordnung im Partner-Tenant | V6 nur 1 Owner-User pro Partner | V7+ |
+| Diary-Mode (zeitlich verteilte Mobile-Capture) | War vor 2026-04-23 V5, dann V6 — wird verschoben weil Multiplikator strategisch hoeher priorisiert (NL-Investor-Substanz) | V8 |
+
+### V6 Core Features
+
+| ID | Feature | Slice | Zweck |
+|----|---------|-------|-------|
+| FEAT-041 | Partner-Tenant Foundation + RLS | SLC-101 | Tenant-Hierarchie + partner_admin-Rolle + Pen-Test-Suite |
+| FEAT-042 | Partner-Organisation + Onboarding + Dashboard | SLC-102 | Steuerberater wird angelegt, Owner-User eingeladen, sieht eigene Mandanten |
+| FEAT-043 | Partner-Client-Mapping + Mandanten-Einladung | SLC-103 | Steuerberater laedt Mandant ein, Mandant wird Client-Tenant + gemapped |
+| FEAT-044 | Partner-Branding + CSS-Custom-Properties | SLC-104 | Co-Branding mit Pflicht-Strategaize-Footer |
+| FEAT-045 | Diagnose-Werkzeug Template + Pipeline + Renderer | SLC-105 | Mandanten-Self-Service-Diagnose mit Auto-Finalize-Bericht |
+| FEAT-046 | Lead-Push opt-in + Webhook + DSGVO-Audit | SLC-106 | Bei „Ich will mehr"-Klick: Lead ans Business-System mit Attribution |
+
+### V6 Success Criteria (siehe RPT-209 fuer Detail)
+
+- SC-V6-1 Pen-Test-Suite mit 5-Rollen-Matrix PASS
+- SC-V6-5 Mandant durchlaeuft Diagnose end-to-end ohne menschlichen Eingriff → Bericht automatisch generiert
+- SC-V6-6 Bericht enthaelt deterministischen Score aus Template (kein KI-Score) + KI-Verdichtungs-Kommentar
+- SC-V6-7 „Ich will mehr"-Klick mit Pflicht-DSGVO-Checkbox → Lead landet im Business-System mit korrektem UTM-Source
+- SC-V6-9 Pflicht-Footer „Powered by Strategaize" auf jeder Partner-/Mandanten-Seite, nicht entfernbar
+- SC-V6-10 V5.1-Funktionen regression-frei
+
+### V6 Open Questions (vor /architecture V6 zu klaeren)
+
+- **Q-V6-A Auto-Finalize DGN-A vs DGN-B vs DGN-C** — Empfehlung DGN-A, User-Bestaetigung im /architecture
+- **Q-V6-B Versions-Re-Numerierung** — Diary nach V8, V7 = Multiplikator-Folgearbeit (Modus-B Webinar etc.)
+- **Q-V6-C NL-Sprach-Variante** — Empfehlung V6.1 direkt nach V6
+- **Q-V6-D Tenant-Restore-Faehigkeit** — Empfehlung Voll-Restore-Limit fuer V6, Slice fuer V7+
+
+### V6 Pflicht-Vorbereitung (kein Code, parallel zum V6-Bau)
+
+- **BL-V6-PREP-AVV** AVV-Standard-Template DE + NL — Pflicht vor erstem Live-Pilot
+- **BL-V6-PREP-INHALT** Inhalts-Workshop Diagnose-Werkzeug — Stop-Gate fuer /backend SLC-105 (15-25 Fragen + Score-Logik + Pflicht-Output-Aussage)
+- **BL-V6-GTM-AKQUISE** Achse 9 Multiplikator-Akquise-Pitch — GTM-Frage, kein Skill-Block, parallel zum V6-Bau
+
+### V6 Delivery Mode
+
+Internal-Test-Mode (analog V4.3..V5.1) bis Pre-Production-Compliance-Gate. Erste Pilot-Steuerberater (cold-start NRW + warmer Kontakt NL) sind Teil der Pilot-Phase. **Kein** allgemein-oeffentliches Self-Service-Sign-up. AVV + Opt-in-Mechanik DSGVO-konform, Pre-Production-Compliance-Gate weiter aufgeschoben.
+
+### Detail-Spec
+
+Siehe `/reports/RPT-209.md` fuer vollstaendige V6-Requirements + Feature-Specs unter `/features/FEAT-04X-*.md`.
