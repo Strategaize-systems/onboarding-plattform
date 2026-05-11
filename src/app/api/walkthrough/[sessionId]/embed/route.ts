@@ -24,6 +24,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
  */
 
 const RANGE_PATTERN = /^bytes=(\d+)-(\d*)$/;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function GET(
   request: NextRequest,
@@ -31,9 +32,9 @@ export async function GET(
 ) {
   const { sessionId } = await params;
 
-  if (!sessionId) {
+  if (!sessionId || !UUID_RE.test(sessionId)) {
     return NextResponse.json(
-      { error: { code: "BAD_REQUEST", message: "sessionId required" } },
+      { error: { code: "BAD_REQUEST", message: "sessionId muss ein valides UUID sein" } },
       { status: 400 },
     );
   }

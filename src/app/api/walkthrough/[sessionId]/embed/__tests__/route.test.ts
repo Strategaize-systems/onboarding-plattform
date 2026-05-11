@@ -66,6 +66,21 @@ describe("GET /api/walkthrough/[sessionId]/embed", () => {
     expect(res.status).toBe(400);
   });
 
+  it("400 wenn sessionId kein valides UUID-Format hat (ISSUE-046)", async () => {
+    // Vor Hotfix: 500 INTERNAL_ERROR (RPC-Postgres-Cast-Exception).
+    // Nach Hotfix: 400 BAD_REQUEST vor jedem Auth-/RPC-Aufruf.
+    const res = await GET(makeRequest() as never, {
+      params: Promise.resolve({ sessionId: "not-a-uuid" }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error.code).toBe("BAD_REQUEST");
+    // getUser() darf gar nicht erst aufgerufen werden — der Pre-Validate-Guard
+    // bricht vor jedem Supabase-Call ab.
+    expect(getUserMock).not.toHaveBeenCalled();
+    expect(rpcMock).not.toHaveBeenCalled();
+  });
+
   it("401 wenn nicht authentifiziert", async () => {
     getUserMock.mockResolvedValue({ data: { user: null } });
     const res = await GET(makeRequest() as never, {
