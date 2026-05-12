@@ -885,9 +885,9 @@
       "title": "FEAT-044 Partner-Branding minimal + CSS-Custom-Properties Setup (SLC-104)",
       "type": "feature",
       "priority": "high",
-      "status": "open",
+      "status": "in_progress",
       "version": "V6",
-      "description": "V6. partner_branding_config-Tabelle (Logo + Primary-Color + Pflicht-Footer Strategaize) + Storage-Bucket partner-branding-assets (signed URLs) + CSS-Custom-Properties Setup erstmals in der Plattform (--brand-primary, --brand-accent) + Branding-Resolver Server-Side + Branding-UI /partner/dashboard/branding mit Live-Preview. Scope strikt minimal — Whitelabel niemals (MULTIPLIER_MODEL T5). Vorgaenger: FEAT-041, FEAT-042. Detail: /features/FEAT-044-partner-branding-css-custom-properties.md.",
+      "description": "V6. partner_branding_config-Tabelle (Logo + Primary-Color + Pflicht-Footer Strategaize) + Storage-Bucket partner-branding-assets (signed URLs) + CSS-Custom-Properties Setup erstmals in der Plattform (--brand-primary, --brand-accent) + Branding-Resolver Server-Side + Branding-UI /partner/dashboard/branding mit Live-Preview. Scope strikt minimal — Whitelabel niemals (MULTIPLIER_MODEL T5). Vorgaenger: FEAT-041, FEAT-042. Detail: /features/FEAT-044-partner-branding-css-custom-properties.md. **Status 2026-05-12**: MT-1..MT-3 done (RPT-223). Migration 091 LIVE auf Hetzner (partner_branding_config Tabelle + 4 RLS-Policies + RPC rpc_get_branding_for_tenant SECURITY DEFINER + 3 Storage-Policies + Bucket partner-branding-assets + CHECK-Erweiterungen validation_layer.reviewer_role und block_checkpoint.checkpoint_type + Backfill 0/0 Partner-Tenants). Branding-Resolver `resolveBrandingForTenant` + Types + 11/11 Vitest gruen. tsc + ESLint 0/0. Naechste MTs MT-4..MT-13.",
       "createdAt": "2026-05-11"
     },
     {
