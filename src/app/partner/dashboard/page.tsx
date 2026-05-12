@@ -11,17 +11,20 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Users } from "lucide-react";
+import { Plus, Users } from "lucide-react";
 import { captureException } from "@/lib/logger";
 
 /**
  * V6 SLC-102 MT-4 — Partner-Admin-Dashboard.
+ * V6 SLC-103 MT-6 — Echte Mandanten-Liste-Card (Top 5) + Counter +
+ *                   "Mandant einladen"-Button.
  *
  * Sektionen:
  *   1. Begruessung mit partner_organization.display_name
- *   2. Mandanten-Karte (V6 leer — Mandanten-Einladung kommt mit SLC-103)
+ *   2. Mandanten-Karte mit Top-5 + offene-Einladungen-Counter +
+ *      "Alle ansehen"-Link + "Mandant einladen"-Primary-Action.
  *   3. Stammdaten-Karte (legal_name + display_name + contact_email + country
- *      mit Link zu /partner/dashboard/stammdaten — Edit-Page kommt mit MT-5)
+ *      mit Link zu /partner/dashboard/stammdaten).
  *
  * Auth-Gate: nur partner_admin, durch das partner/layout.tsx schon erzwungen.
  * Hier zusaetzlich Inline-Check (Defense-in-Depth + sauberer Fail-Pfad falls
@@ -68,16 +71,61 @@ export default async function PartnerDashboardPage() {
     });
   }
 
-  // Mandanten-Count fuer "noch keine Mandanten"-State (V6 typisch 0)
+  // Mandanten-Aggregate (Counter + Top-5-Vorschau)
   let acceptedClientCount = 0;
+  let invitedClientCount = 0;
+  type RecentMandant = {
+    mappingId: string;
+    companyName: string;
+    invitationStatus: "invited" | "accepted" | "revoked";
+    invitedAt: string;
+  };
+  let recentMandanten: RecentMandant[] = [];
+
   try {
-    const { count, error: cErr } = await admin
+    const { count: acceptedCount, error: aErr } = await admin
       .from("partner_client_mapping")
       .select("id", { count: "exact", head: true })
       .eq("partner_tenant_id", profile.tenant_id)
       .eq("invitation_status", "accepted");
-    if (cErr) throw cErr;
-    acceptedClientCount = count ?? 0;
+    if (aErr) throw aErr;
+    acceptedClientCount = acceptedCount ?? 0;
+
+    const { count: invitedCount, error: iErr } = await admin
+      .from("partner_client_mapping")
+      .select("id", { count: "exact", head: true })
+      .eq("partner_tenant_id", profile.tenant_id)
+      .eq("invitation_status", "invited");
+    if (iErr) throw iErr;
+    invitedClientCount = invitedCount ?? 0;
+
+    const { data: recentRows, error: rErr } = await admin
+      .from("partner_client_mapping")
+      .select("id, client_tenant_id, invitation_status, invited_at")
+      .eq("partner_tenant_id", profile.tenant_id)
+      .order("invited_at", { ascending: false })
+      .limit(5);
+    if (rErr) throw rErr;
+
+    const clientIds = (recentRows ?? []).map(
+      (r) => r.client_tenant_id as string,
+    );
+    const tenantsById = new Map<string, string>();
+    if (clientIds.length > 0) {
+      const { data: tenants } = await admin
+        .from("tenants")
+        .select("id, name")
+        .in("id", clientIds);
+      for (const t of tenants ?? []) {
+        tenantsById.set(t.id as string, t.name as string);
+      }
+    }
+    recentMandanten = (recentRows ?? []).map((r) => ({
+      mappingId: r.id as string,
+      companyName: tenantsById.get(r.client_tenant_id as string) ?? "—",
+      invitationStatus: r.invitation_status as "invited" | "accepted" | "revoked",
+      invitedAt: r.invited_at as string,
+    }));
   } catch (err) {
     captureException(err, {
       source: "partner/dashboard/countClients",
@@ -108,15 +156,25 @@ export default async function PartnerDashboardPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Meine Mandanten</CardTitle>
-          <CardDescription>
-            {acceptedClientCount === 0
-              ? "Noch keinen Mandanten eingeladen."
-              : `${acceptedClientCount} aktive${acceptedClientCount === 1 ? "r Mandant" : " Mandanten"}.`}
-          </CardDescription>
+          <div className="flex items-start justify-between">
+            <div>
+              <CardTitle>Meine Mandanten</CardTitle>
+              <CardDescription>
+                {acceptedClientCount === 0 && invitedClientCount === 0
+                  ? "Noch keinen Mandanten eingeladen."
+                  : `${acceptedClientCount} aktiv, ${invitedClientCount} offen.`}
+              </CardDescription>
+            </div>
+            <Link href="/partner/dashboard/mandanten/neu">
+              <Button size="sm">
+                <Plus className="mr-2 h-4 w-4" />
+                Mandant einladen
+              </Button>
+            </Link>
+          </div>
         </CardHeader>
         <CardContent>
-          {acceptedClientCount === 0 ? (
+          {recentMandanten.length === 0 ? (
             <div className="flex flex-col items-start gap-4 rounded-lg border border-dashed border-slate-200 bg-slate-50 p-6">
               <div className="flex items-center gap-3">
                 <div className="rounded-full bg-slate-100 p-3">
@@ -127,20 +185,59 @@ export default async function PartnerDashboardPage() {
                     Sie haben noch keinen Mandanten eingeladen.
                   </p>
                   <p className="text-sm text-slate-500">
-                    Mandanten-Einladungen werden mit dem naechsten Update
-                    freigeschaltet.
+                    Sende eine Einladung — der Mandant erhaelt einen Magic-Link
+                    und kann sofort starten.
                   </p>
                 </div>
               </div>
-              <Button disabled title="Verfuegbar nach SLC-103-Deploy">
-                Mandant einladen (verfuegbar nach SLC-103)
-              </Button>
+              <Link href="/partner/dashboard/mandanten/neu">
+                <Button>Erste Einladung versenden</Button>
+              </Link>
             </div>
           ) : (
-            <p className="text-sm text-slate-500">
-              Du hast {acceptedClientCount} aktive{acceptedClientCount === 1 ? "n" : ""} Mandanten. Die
-              Detailansicht folgt mit dem naechsten Update.
-            </p>
+            <div className="space-y-4">
+              <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200">
+                {recentMandanten.map((m) => (
+                  <li
+                    key={m.mappingId}
+                    className="flex items-center justify-between px-4 py-3 text-sm"
+                  >
+                    <div>
+                      <div className="font-medium text-slate-900">
+                        {m.companyName}
+                      </div>
+                      <div className="text-xs text-slate-500">
+                        Eingeladen am{" "}
+                        {new Date(m.invitedAt).toLocaleDateString("de-DE")}
+                      </div>
+                    </div>
+                    <span
+                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                        m.invitationStatus === "accepted"
+                          ? "bg-emerald-100 text-emerald-800 ring-1 ring-inset ring-emerald-300/60"
+                          : m.invitationStatus === "invited"
+                            ? "bg-yellow-100 text-yellow-800 ring-1 ring-inset ring-yellow-300/60"
+                            : "bg-slate-100 text-slate-700 ring-1 ring-inset ring-slate-300/60"
+                      }`}
+                    >
+                      {m.invitationStatus === "accepted"
+                        ? "Aktiv"
+                        : m.invitationStatus === "invited"
+                          ? "Einladung offen"
+                          : "Widerrufen"}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <div className="flex items-center justify-end">
+                <Link
+                  href="/partner/dashboard/mandanten"
+                  className="text-sm font-medium text-brand-primary hover:underline"
+                >
+                  Alle Mandanten ansehen →
+                </Link>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>

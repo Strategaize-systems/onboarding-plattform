@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { loadCockpitMetrics } from "@/lib/cockpit/load-metrics";
 import { getReviewSummary } from "@/lib/handbook/get-review-summary";
 import { getInactiveEmployeesCount } from "@/lib/dashboard/inactive-employees";
@@ -7,6 +8,7 @@ import { getWalkthroughReviewSummary } from "@/lib/walkthrough/get-walkthrough-s
 import { BlockReviewStatusCard } from "@/components/cockpit/BlockReviewStatusCard";
 import { InactiveEmployeesCard } from "@/components/cockpit/InactiveEmployeesCard";
 import { WalkthroughReviewStatusCard } from "@/components/cockpit/WalkthroughReviewStatusCard";
+import { PartnerClientWelcomeBlock } from "@/components/dashboard/PartnerClientWelcomeBlock";
 import { DashboardClient } from "./dashboard-client";
 import { StatusCockpit } from "./StatusCockpit";
 // SLC-047 Wizard-Trigger — eigentlich ueber dashboard/layout.tsx geplant
@@ -42,6 +44,31 @@ export default async function DashboardPage() {
 
   if (profile.role === "strategaize_admin") {
     redirect("/admin");
+  }
+
+  // V6 SLC-103 MT-7 — Mandanten-Tenant-Branch.
+  // Mandanten unter Partner-Steuerberatern (tenant_kind='partner_client') sehen
+  // einen schlanken Welcome + Diagnose-Karten-Block, KEIN V4/V5-Cockpit.
+  // Branch greift ausschliesslich fuer tenant_admin in partner_client-Tenants;
+  // Direkt-Kunden (tenant_kind='direct_client') behalten ihr bestehendes
+  // Cockpit unveraendert (regression-frei).
+  if (profile.role === "tenant_admin" && profile.tenant_id) {
+    const admin = createAdminClient();
+    const { data: tenantRow } = await admin
+      .from("tenants")
+      .select("name, tenant_kind")
+      .eq("id", profile.tenant_id)
+      .single();
+
+    if (tenantRow?.tenant_kind === "partner_client") {
+      return (
+        <div className="mx-auto max-w-3xl px-6 py-12">
+          <PartnerClientWelcomeBlock
+            mandantCompanyName={tenantRow.name as string}
+          />
+        </div>
+      );
+    }
   }
 
   // Cockpit-Metriken (SLC-040). Nur fuer tenant_admin sinnvoll — fuer andere

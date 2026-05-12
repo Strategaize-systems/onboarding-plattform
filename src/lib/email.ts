@@ -300,3 +300,69 @@ export async function sendEmployeeInvitationEmail({
     `,
   });
 }
+
+// ─── Mandanten invitation template (V6 SLC-103) ──────────────────────────────
+
+const MANDANT_INVITE_TEMPLATES = {
+  de: {
+    subject: (partnerName: string) =>
+      `Einladung zur Strategaize-Diagnose von ${partnerName}`,
+    heading: "Einladung zur Strategaize-Diagnose",
+    intro: (partnerName: string, displayName: string | null) =>
+      displayName
+        ? `Hallo ${displayName}, Ihr Steuerberater <strong>${partnerName}</strong> hat Sie eingeladen, die Strategaize-Diagnose zu nutzen.`
+        : `Ihr Steuerberater <strong>${partnerName}</strong> hat Sie eingeladen, die Strategaize-Diagnose zu nutzen.`,
+    what:
+      "In der Diagnose beantworten Sie Fragen zu Ihrem Unternehmen. Strategaize wertet die Antworten aus und erstellt einen Bericht, den Ihr Steuerberater mit Ihnen bespricht.",
+    cta:
+      "Klicken Sie auf den folgenden Link, um Ihren Zugang anzulegen und mit der Diagnose zu starten:",
+    button: "Zugang anlegen",
+    expiry: (date: string) => `Dieser Link ist bis zum <strong>${date}</strong> gueltig.`,
+    fallback: "Falls der Button nicht funktioniert, kopieren Sie diesen Link in Ihren Browser:",
+    closing: "Mit freundlichen Gruessen,<br>Ihr Strategaize-Team",
+  },
+} as const;
+
+interface SendMandantInvitationEmailParams {
+  to: string;
+  partnerDisplayName: string;
+  inviteUrl: string;
+  expiresAt: Date;
+  displayName?: string | null;
+  locale?: string;
+}
+
+export async function sendMandantInvitationEmail({
+  to,
+  partnerDisplayName,
+  inviteUrl,
+  expiresAt,
+  displayName,
+}: SendMandantInvitationEmailParams): Promise<void> {
+  const from = `StrategAIze <${process.env.SMTP_FROM || process.env.SMTP_USER}>`;
+  const t = MANDANT_INVITE_TEMPLATES.de;
+
+  const expiryStr = expiresAt.toLocaleDateString("de-DE", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
+  await transporter.sendMail({
+    from,
+    to,
+    subject: t.subject(partnerDisplayName),
+    html: `
+      <h2>${t.heading}</h2>
+      <p>${t.intro(partnerDisplayName, displayName ?? null)}</p>
+      <p>${t.what}</p>
+      <p>${t.cta}</p>
+      <p><a href="${inviteUrl}" style="display:inline-block;padding:12px 24px;background:#120774;color:#ffffff;text-decoration:none;border-radius:6px;">${t.button}</a></p>
+      <p style="margin-top:16px;font-size:13px;color:#666;">${t.expiry(expiryStr)}</p>
+      <p style="margin-top:16px;font-size:13px;color:#666;">${t.fallback}</p>
+      <p style="font-size:13px;word-break:break-all;">${inviteUrl}</p>
+      <br>
+      <p>${t.closing}</p>
+    `,
+  });
+}

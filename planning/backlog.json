@@ -875,9 +875,9 @@
       "title": "FEAT-043 Partner-Client-Mapping + Mandanten-Einladung (SLC-103)",
       "type": "feature",
       "priority": "high",
-      "status": "open",
+      "status": "done",
       "version": "V6",
-      "description": "V6. partner_client_mapping-Tabelle mit invitation_status (invited/accepted/revoked) + Server Actions inviteMandant/acceptMandantInvitation/revokeMandantInvitation + Mandanten-Dashboard /dashboard mit Begruessungs-Block unter Partner-Branding + Diagnose-Werkzeug-Eingang. Reuse: FEAT-031 Magic-Link, FEAT-022 Verifikations-Token. Vorgaenger: FEAT-041, FEAT-042. Detail: /features/FEAT-043-partner-client-mapping-mandanten-einladung.md.",
+      "description": "V6. partner_client_mapping-Tabelle mit invitation_status (invited/accepted/revoked) + Server Actions inviteMandant/acceptMandantInvitation/revokeMandantInvitation + Mandanten-Dashboard /dashboard mit Begruessungs-Block unter Partner-Branding + Diagnose-Werkzeug-Eingang. Reuse: FEAT-031 Magic-Link, FEAT-022 Verifikations-Token. Vorgaenger: FEAT-041, FEAT-042. Detail: /features/FEAT-043-partner-client-mapping-mandanten-einladung.md. **Status 2026-05-12**: /backend SLC-103 MT-1..MT-9 code-side complete (RPT-221). 3 Server Actions (inviteMandant + revokeMandantInvitation in mandanten/actions.ts, acceptMandantInvitation als tenant_admin-Branch in accept-invitation/[token]/actions.ts) + 4 UI-Files (mandanten/page.tsx Real-Liste, mandanten/MandantenListe.tsx, mandanten/neu/page.tsx + InviteMandantForm.tsx) + /partner/dashboard Top-5 + Counter + /dashboard tenant_kind-aware mit PartnerClientWelcomeBlock. 12 Vitests (5+4+3) + 8 neue partner_client_mapping Pen-Test-Cases. Quality-Gates: tsc EXIT=0, ESLint src EXIT=0, next build 37/37, npm audit 5 pre-existing (unveraendert). Naechster Schritt: /qa SLC-103 (Pen-Test-Run + Vitest gegen Coolify-DB + Browser-Smoke).",
       "createdAt": "2026-05-11"
     },
     {

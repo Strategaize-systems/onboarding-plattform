@@ -1435,6 +1435,224 @@ describe("V6 strategaize_admin Override (sanity)", () => {
 });
 
 // ============================================================================
+// V6 SLC-103 — partner_client_mapping Cross-Partner Write/Read Isolation (8 cases)
+// ============================================================================
+//
+// SLC-103 AC #12 — 4 Operations (SELECT/INSERT/UPDATE/DELETE) × 2 Cross-Partner
+// Vektoren. Pen-Test verifiziert die 5 pcm_*-Policies aus Migration 090.
+// Aktiviert mit SLC-103 (Server Actions inviteMandant/revokeMandantInvitation
+// gehen ueber service_role/admin, aber RLS-Layer ist Defense-in-Depth).
+
+describe("V6 SLC-103 partner_client_mapping Cross-Partner Isolation (8 cases)", () => {
+  // ---------- SELECT (2) ----------
+  it("Case PCM-1: partnerA-admin SELECT partner_client_mapping von partnerB → DENY (0 rows)", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV6Fixture(client);
+      await withJwtContext(client, f.partnerAAdmin, async () => {
+        const r = await client.query(
+          `SELECT id FROM public.partner_client_mapping WHERE id=$1`,
+          [f.mappingB_accepted],
+        );
+        expect(r.rowCount).toBe(0);
+      });
+    });
+  });
+
+  it("Case PCM-2: partnerA-admin SELECT alle mappings → sieht nur eigene (partnerA), nicht partnerB", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV6Fixture(client);
+      await withJwtContext(client, f.partnerAAdmin, async () => {
+        const r = await client.query<{ partner_tenant_id: string }>(
+          `SELECT DISTINCT partner_tenant_id FROM public.partner_client_mapping`,
+        );
+        const seenPartners = r.rows.map((row) => row.partner_tenant_id);
+        expect(seenPartners).toContain(f.partnerA);
+        expect(seenPartners).not.toContain(f.partnerB);
+      });
+    });
+  });
+
+  // ---------- INSERT (2) ----------
+  it("Case PCM-3: partnerA-admin INSERT mapping fuer partnerB → DENY (RLS WITH CHECK)", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV6Fixture(client);
+      // Neuer partner_client unter partnerB
+      const newCli = await client.query<{ id: string }>(
+        `INSERT INTO public.tenants (name, language, tenant_kind, parent_partner_tenant_id)
+         VALUES ('PCM-3 ClientForB', 'de', 'partner_client', $1)
+         RETURNING id`,
+        [f.partnerB],
+      );
+
+      let errMsg: string | null = null;
+      await withJwtContext(client, f.partnerAAdmin, async () => {
+        await client.query("SAVEPOINT try_pcm_insert");
+        try {
+          await client.query(
+            `INSERT INTO public.partner_client_mapping
+               (partner_tenant_id, client_tenant_id, invitation_status)
+             VALUES ($1, $2, 'invited')`,
+            [f.partnerB, newCli.rows[0].id],
+          );
+        } catch (e) {
+          errMsg = (e as Error).message;
+        }
+        await client.query("ROLLBACK TO SAVEPOINT try_pcm_insert");
+      });
+
+      expect(errMsg).toMatch(/permission denied|row-level security/i);
+    });
+  });
+
+  it("Case PCM-4: partnerA-admin INSERT mapping mit korrektem partner_tenant_id=partnerA → ALLOW", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV6Fixture(client);
+      const newCli = await client.query<{ id: string }>(
+        `INSERT INTO public.tenants (name, language, tenant_kind, parent_partner_tenant_id)
+         VALUES ('PCM-4 ClientForA', 'de', 'partner_client', $1)
+         RETURNING id`,
+        [f.partnerA],
+      );
+
+      let insertedId: string | null = null;
+      await withJwtContext(client, f.partnerAAdmin, async () => {
+        const r = await client.query<{ id: string }>(
+          `INSERT INTO public.partner_client_mapping
+             (partner_tenant_id, client_tenant_id, invitation_status)
+           VALUES ($1, $2, 'invited')
+           RETURNING id`,
+          [f.partnerA, newCli.rows[0].id],
+        );
+        insertedId = r.rows[0]?.id ?? null;
+      });
+      expect(insertedId).toBeTruthy();
+    });
+  });
+
+  // ---------- UPDATE (2) ----------
+  it("Case PCM-5: partnerA-admin UPDATE partnerB-mapping → DENY (0 rows, RLS USING)", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV6Fixture(client);
+      let updatedRowCount: number | null = null;
+      await withJwtContext(client, f.partnerAAdmin, async () => {
+        const r = await client.query(
+          `UPDATE public.partner_client_mapping
+              SET invitation_status='revoked', revoked_at=now()
+            WHERE id=$1`,
+          [f.mappingB_accepted],
+        );
+        updatedRowCount = r.rowCount;
+      });
+      expect(updatedRowCount).toBe(0);
+
+      // Side-Check: partnerB-mapping ist unveraendert 'accepted'
+      const check = await client.query<{ invitation_status: string }>(
+        `SELECT invitation_status FROM public.partner_client_mapping WHERE id=$1`,
+        [f.mappingB_accepted],
+      );
+      expect(check.rows[0].invitation_status).toBe("accepted");
+    });
+  });
+
+  it("Case PCM-6: partnerA-admin UPDATE eigenes mapping (partnerA_pending → revoked) → ALLOW (rowCount=1)", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV6Fixture(client);
+      let updatedRowCount: number | null = null;
+      let newStatus: string | null = null;
+      await withJwtContext(client, f.partnerAAdmin, async () => {
+        const r = await client.query<{ invitation_status: string }>(
+          `UPDATE public.partner_client_mapping
+              SET invitation_status='revoked', revoked_at=now()
+            WHERE id=$1
+          RETURNING invitation_status`,
+          [f.mappingA_pending],
+        );
+        updatedRowCount = r.rowCount;
+        newStatus = r.rows[0]?.invitation_status ?? null;
+      });
+      expect(updatedRowCount).toBe(1);
+      expect(newStatus).toBe("revoked");
+    });
+  });
+
+  // ---------- DELETE (2) ----------
+  it("Case PCM-7: partnerA-admin DELETE partnerB-mapping → DENY (0 rows, kein DELETE-Grant)", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV6Fixture(client);
+      let deletedRowCount: number | null = null;
+      let permissionDenied = false;
+      await withJwtContext(client, f.partnerAAdmin, async () => {
+        await client.query("SAVEPOINT try_pcm_delete_b");
+        try {
+          const r = await client.query(
+            `DELETE FROM public.partner_client_mapping WHERE id=$1`,
+            [f.mappingB_accepted],
+          );
+          deletedRowCount = r.rowCount;
+        } catch (e) {
+          permissionDenied = /permission denied|row-level security/i.test(
+            (e as Error).message,
+          );
+        }
+        await client.query("ROLLBACK TO SAVEPOINT try_pcm_delete_b");
+      });
+
+      // DELETE-Grant fuer partner_admin in Migration 090 ist NICHT vergeben
+      // (GRANT SELECT, INSERT, UPDATE — keine DELETE). Daher entweder
+      // permission_denied (Grant-Layer) oder 0 rows (RLS — falls Grant zukuenftig
+      // hinzugefuegt wird ohne Policy). Beide Verhalten gelten als Reject.
+      expect(
+        deletedRowCount === 0 || permissionDenied,
+        `Expected rowCount=0 OR permission_denied, got rowCount=${deletedRowCount} permissionDenied=${permissionDenied}`,
+      ).toBe(true);
+
+      const check = await client.query(
+        `SELECT 1 FROM public.partner_client_mapping WHERE id=$1`,
+        [f.mappingB_accepted],
+      );
+      expect(check.rowCount).toBe(1);
+    });
+  });
+
+  it("Case PCM-8: partnerA-admin DELETE eigenes mapping → DENY (kein DELETE-Grant fuer partner_admin)", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV6Fixture(client);
+      let deletedRowCount: number | null = null;
+      let permissionDenied = false;
+      await withJwtContext(client, f.partnerAAdmin, async () => {
+        await client.query("SAVEPOINT try_pcm_delete_own");
+        try {
+          const r = await client.query(
+            `DELETE FROM public.partner_client_mapping WHERE id=$1`,
+            [f.mappingA_pending],
+          );
+          deletedRowCount = r.rowCount;
+        } catch (e) {
+          permissionDenied = /permission denied|row-level security/i.test(
+            (e as Error).message,
+          );
+        }
+        await client.query("ROLLBACK TO SAVEPOINT try_pcm_delete_own");
+      });
+
+      // partner_admin hat KEIN DELETE-Grant (Migration 090 erlaubt nur
+      // SELECT/INSERT/UPDATE). Mapping-Lebenszyklus laeuft ueber UPDATE
+      // (invited → accepted → revoked), nicht ueber Loeschen.
+      expect(
+        deletedRowCount === 0 || permissionDenied,
+        `Expected rowCount=0 OR permission_denied, got rowCount=${deletedRowCount} permissionDenied=${permissionDenied}`,
+      ).toBe(true);
+
+      const check = await client.query(
+        `SELECT 1 FROM public.partner_client_mapping WHERE id=$1`,
+        [f.mappingA_pending],
+      );
+      expect(check.rowCount).toBe(1);
+    });
+  });
+});
+
+// ============================================================================
 // V4/V5 Regression Hinweis
 // ============================================================================
 // V4 Knowledge-Schema (46 Faelle) und V5.1 Walkthrough-Matrix (48 Faelle) werden

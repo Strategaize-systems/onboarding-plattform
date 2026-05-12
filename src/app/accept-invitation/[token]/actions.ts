@@ -9,11 +9,14 @@ import { createRateLimiter } from "@/lib/rate-limit";
 /**
  * SLC-034 MT-3 — acceptEmployeeInvitation Server-Action.
  * V6 SLC-102 MT-6 — Branch fuer partner_admin via invitation.role_hint.
+ * V6 SLC-103 MT-2 — Branch fuer tenant_admin (Mandant unter Partner) +
+ *                   Post-Accept partner_client_mapping → 'accepted'.
  *
  * DEC-011-Pattern (strikt):
  *   1. Token via service-role client validieren (SELECT inkl. role_hint).
  *   2. acceptedRole abgeleitet aus invitation.role_hint:
- *        - 'partner_admin' → 'partner_admin' (V6)
+ *        - 'partner_admin' → 'partner_admin' (V6 SLC-102)
+ *        - 'tenant_admin'  → 'tenant_admin'  (V6 SLC-103 — Mandant)
  *        - sonst (NULL, anderer Wert) → 'employee' (V4 Default-Pfad)
  *   3. supabase.auth.admin.createUser mit email + password + user_metadata
  *      { role: acceptedRole, tenant_id }. handle_new_user-Trigger legt
@@ -21,9 +24,13 @@ import { createRateLimiter } from "@/lib/rate-limit";
  *   4. rpc_accept_employee_invitation_finalize(invitation_id, new_user_id) via
  *      admin-client. RPC ist role-hint-agnostisch (setzt nur status/accepted_*).
  *   5. Bei Fehler in Schritt 4: supabase.auth.admin.deleteUser(new_user_id) — Rollback.
- *   6. signInWithPassword via server-client -> Session-Cookie gesetzt.
- *   7. redirect:
+ *   6. Wenn role_hint='tenant_admin' UND tenant_kind='partner_client':
+ *      UPDATE partner_client_mapping.invitation_status='accepted' + audit-log.
+ *      Best-effort (Mapping ist Sichtbarkeits-Layer, nicht Auth-Pfad).
+ *   7. signInWithPassword via server-client -> Session-Cookie gesetzt.
+ *   8. redirect:
  *        - partner_admin → "/partner/dashboard"
+ *        - tenant_admin  → "/dashboard"
  *        - employee      → "/employee"
  *
  * Passwort-Mindestlaenge 8 Zeichen (Slice-Risk-Note). Rate-Limiting per IP.
@@ -98,12 +105,17 @@ export async function acceptEmployeeInvitation(
 
   // (2) Auth-User anlegen via Admin-API (DEC-011)
   //
-  // V6 SLC-102 MT-6: role_hint-Branch. Default bleibt 'employee' — V4-
-  // Employee-Flow unveraendert. Nur explizites role_hint='partner_admin'
-  // erzeugt einen partner_admin-User (Migration 090 handle_new_user-Trigger
-  // akzeptiert die Rolle, Tenant-Validation greift weiter).
-  const acceptedRole: "employee" | "partner_admin" =
-    invitation.role_hint === "partner_admin" ? "partner_admin" : "employee";
+  // V6 SLC-102 MT-6: role_hint='partner_admin' fuer Partner-Onboarding.
+  // V6 SLC-103 MT-2: role_hint='tenant_admin' fuer Mandanten unter Partner.
+  // Default bleibt 'employee' — V4-Employee-Flow unveraendert. Migration 090
+  // handle_new_user-Trigger akzeptiert alle drei Rollen, Tenant-Validation
+  // greift weiter.
+  const acceptedRole: "employee" | "partner_admin" | "tenant_admin" =
+    invitation.role_hint === "partner_admin"
+      ? "partner_admin"
+      : invitation.role_hint === "tenant_admin"
+        ? "tenant_admin"
+        : "employee";
 
   const { data: created, error: createErr } = await admin.auth.admin.createUser({
     email: invitation.email,
@@ -173,7 +185,47 @@ export async function acceptEmployeeInvitation(
     return { error: "Einladung konnte nicht abgeschlossen werden. Bitte erneut versuchen." };
   }
 
-  // (5) Auto-Login via server-Client (Session-Cookie)
+  // (5) V6 SLC-103 — Mandanten-Mapping auf 'accepted' setzen, wenn die
+  // Invitation zu einem partner_client-Tenant gehoert. Idempotent: wenn das
+  // Mapping nicht existiert oder bereits accepted ist, bleibt der Zustand
+  // erhalten. Best-effort — Mapping-Update ist Sichtbarkeits-Layer, kein
+  // Auth-Pfad. Bei Fehler wird der User trotzdem eingeloggt (Mapping wird
+  // dann ggf. via Backfill spaeter korrigiert; nicht V6-Scope).
+  if (acceptedRole === "tenant_admin") {
+    const { data: tenant } = await admin
+      .from("tenants")
+      .select("tenant_kind")
+      .eq("id", invitation.tenant_id)
+      .single();
+
+    if (tenant?.tenant_kind === "partner_client") {
+      const { error: updErr } = await admin
+        .from("partner_client_mapping")
+        .update({ invitation_status: "accepted", accepted_at: new Date().toISOString() })
+        .eq("client_tenant_id", invitation.tenant_id)
+        .eq("invitation_status", "invited");
+
+      if (updErr) {
+        const { captureException } = await import("@/lib/logger");
+        captureException(new Error(updErr.message), {
+          source: "accept-invitation/partnerClientMappingAccept",
+          metadata: { invitationId: invitation.id, mandantTenantId: invitation.tenant_id },
+        });
+      } else {
+        const { captureInfo } = await import("@/lib/logger");
+        captureInfo(`Mandant '${invitation.email}' Einladung akzeptiert`, {
+          source: "accept-invitation/partnerClientMappingAccept",
+          metadata: {
+            category: "partner_mandant_accepted",
+            mandant_tenant_id: invitation.tenant_id,
+            invitation_id: invitation.id,
+          },
+        });
+      }
+    }
+  }
+
+  // (6) Auto-Login via server-Client (Session-Cookie)
   const supabase = await createClient();
   const { error: signInErr } = await supabase.auth.signInWithPassword({
     email: invitation.email,
@@ -190,9 +242,12 @@ export async function acceptEmployeeInvitation(
     redirect("/login");
   }
 
-  // (6) Redirect ins rollen-spezifische Dashboard
+  // (7) Redirect ins rollen-spezifische Dashboard
   if (acceptedRole === "partner_admin") {
     redirect("/partner/dashboard");
+  }
+  if (acceptedRole === "tenant_admin") {
+    redirect("/dashboard");
   }
   redirect("/employee");
 }
