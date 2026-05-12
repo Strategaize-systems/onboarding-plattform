@@ -22,6 +22,9 @@
     "title": "StrategAIze Onboarding",
     "description": "Strukturierte Wissenserhebung mit KI-gestützter Verdichtung"
   },
+  "branding": {
+    "poweredByStrategaize": "Aufgesetzt mit Strategaize"
+  },
   "sidebar": {
     "title": "Assessment",
     "subtitle": "Strategische Unternehmensanalyse",
