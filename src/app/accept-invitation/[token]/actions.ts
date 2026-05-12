@@ -8,16 +8,23 @@ import { createRateLimiter } from "@/lib/rate-limit";
 
 /**
  * SLC-034 MT-3 — acceptEmployeeInvitation Server-Action.
+ * V6 SLC-102 MT-6 — Branch fuer partner_admin via invitation.role_hint.
  *
  * DEC-011-Pattern (strikt):
- *   1. Token via service-role client validieren (SELECT).
- *   2. supabase.auth.admin.createUser mit email + password + user_metadata
- *      { role:'employee', tenant_id }. handle_new_user-Trigger legt profile an.
- *   3. rpc_accept_employee_invitation_finalize(invitation_id, new_user_id) via
- *      admin-client (service_role kann die RPC aufrufen).
- *   4. Bei Fehler in Schritt 3: supabase.auth.admin.deleteUser(new_user_id) — Rollback.
- *   5. signInWithPassword via server-client -> Session-Cookie gesetzt.
- *   6. redirect("/employee")
+ *   1. Token via service-role client validieren (SELECT inkl. role_hint).
+ *   2. acceptedRole abgeleitet aus invitation.role_hint:
+ *        - 'partner_admin' → 'partner_admin' (V6)
+ *        - sonst (NULL, anderer Wert) → 'employee' (V4 Default-Pfad)
+ *   3. supabase.auth.admin.createUser mit email + password + user_metadata
+ *      { role: acceptedRole, tenant_id }. handle_new_user-Trigger legt
+ *      profile mit korrekter Rolle an (Migration 090 erlaubt partner_admin).
+ *   4. rpc_accept_employee_invitation_finalize(invitation_id, new_user_id) via
+ *      admin-client. RPC ist role-hint-agnostisch (setzt nur status/accepted_*).
+ *   5. Bei Fehler in Schritt 4: supabase.auth.admin.deleteUser(new_user_id) — Rollback.
+ *   6. signInWithPassword via server-client -> Session-Cookie gesetzt.
+ *   7. redirect:
+ *        - partner_admin → "/partner/dashboard"
+ *        - employee      → "/employee"
  *
  * Passwort-Mindestlaenge 8 Zeichen (Slice-Risk-Note). Rate-Limiting per IP.
  */
@@ -55,10 +62,10 @@ export async function acceptEmployeeInvitation(
 
   const admin = createAdminClient();
 
-  // (1) Token validieren
+  // (1) Token validieren (inkl. role_hint fuer V6 partner_admin-Branch)
   const { data: invitation, error: invErr } = await admin
     .from("employee_invitation")
-    .select("id, tenant_id, email, display_name, status, expires_at")
+    .select("id, tenant_id, email, display_name, role_hint, status, expires_at")
     .eq("invitation_token", token)
     .maybeSingle();
 
@@ -90,12 +97,20 @@ export async function acceptEmployeeInvitation(
   }
 
   // (2) Auth-User anlegen via Admin-API (DEC-011)
+  //
+  // V6 SLC-102 MT-6: role_hint-Branch. Default bleibt 'employee' — V4-
+  // Employee-Flow unveraendert. Nur explizites role_hint='partner_admin'
+  // erzeugt einen partner_admin-User (Migration 090 handle_new_user-Trigger
+  // akzeptiert die Rolle, Tenant-Validation greift weiter).
+  const acceptedRole: "employee" | "partner_admin" =
+    invitation.role_hint === "partner_admin" ? "partner_admin" : "employee";
+
   const { data: created, error: createErr } = await admin.auth.admin.createUser({
     email: invitation.email,
     password,
     email_confirm: true,
     user_metadata: {
-      role: "employee",
+      role: acceptedRole,
       tenant_id: invitation.tenant_id,
     },
   });
@@ -175,6 +190,9 @@ export async function acceptEmployeeInvitation(
     redirect("/login");
   }
 
-  // (6) Redirect ins Mitarbeiter-Dashboard
+  // (6) Redirect ins rollen-spezifische Dashboard
+  if (acceptedRole === "partner_admin") {
+    redirect("/partner/dashboard");
+  }
   redirect("/employee");
 }
