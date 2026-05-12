@@ -22,8 +22,8 @@ function mockClient(result: RpcResult): SupabaseClient {
 }
 
 describe("hexToRgbTriplet", () => {
-  it("converts #2563eb to '37 99 235' (Strategaize-Blau)", () => {
-    expect(hexToRgbTriplet("#2563eb")).toBe("37 99 235");
+  it("converts #4454b8 to '68 84 184' (Strategaize Style Guide V2 Brand-Primary)", () => {
+    expect(hexToRgbTriplet("#4454b8")).toBe("68 84 184");
   });
 
   it("converts #FFFFFF (uppercase) to '255 255 255'", () => {
@@ -92,11 +92,11 @@ describe("resolveBrandingForTenant", () => {
     expect(result.displayName).toBe("Steuerberater XYZ");
   });
 
-  it("Case 4: direct_client → RPC liefert Default-Payload (kein Logo)", async () => {
+  it("Case 4: direct_client → RPC liefert Default-Payload (kein Logo, Style Guide V2 Brand-Primary)", async () => {
     const supabase = mockClient({
       data: {
         logo_url: null,
-        primary_color: "#2563eb",
+        primary_color: "#4454b8",
         secondary_color: null,
         display_name: "Strategaize",
       },
@@ -105,8 +105,8 @@ describe("resolveBrandingForTenant", () => {
 
     const result = await resolveBrandingForTenant(supabase, "direct-client-tenant-id");
 
-    expect(result.primaryColor).toBe("#2563eb");
-    expect(result.primaryColorRgb).toBe("37 99 235");
+    expect(result.primaryColor).toBe("#4454b8");
+    expect(result.primaryColorRgb).toBe("68 84 184");
     expect(result.logoUrl).toBeNull();
     expect(result.displayName).toBe("Strategaize");
   });

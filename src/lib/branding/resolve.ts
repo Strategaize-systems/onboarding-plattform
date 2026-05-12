@@ -13,10 +13,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { BrandingConfig, BrandingRpcPayload } from "./types";
 
+// SLC-104 MT-6 (DEC-NEU): Strategaize-Default ist Style Guide V2 (#4454b8),
+// NICHT Tailwind-Blue-Default (#2563eb). Damit ist der CSS-Var-Fallback in
+// tailwind.config brand.primary identisch mit dem heutigen Style-Guide-Look.
 export const STRATEGAIZE_DEFAULT_BRANDING: BrandingConfig = {
   logoUrl: null,
-  primaryColor: "#2563eb",
-  primaryColorRgb: "37 99 235",
+  primaryColor: "#4454b8",
+  primaryColorRgb: "68 84 184",
   secondaryColor: null,
   displayName: "Strategaize",
 };

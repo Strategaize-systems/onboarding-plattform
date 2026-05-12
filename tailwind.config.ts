@@ -11,10 +11,16 @@ const config: Config = {
   theme: {
   	extend: {
   		colors: {
-  			// StrategAIze Brand Colors (from Style Guide)
+  			// StrategAIze Brand Colors (from Style Guide V2)
+  			// SLC-104 MT-6 (DEC-NEU): brand.primary jetzt CSS-Var-getrieben fuer
+  			// Partner-Branding. Default-Wert via --brand-primary-rgb wird im
+  			// Root-Layout (src/app/layout.tsx) aus Resolver gesetzt — Default ist
+  			// "68 84 184" = #4454b8 (Style Guide V2), identisch zum vorigen
+  			// Hardcoded-Wert. Partner-Branding ueberschreibt die Var pro Mandant.
+  			// brand.primary-dark BLEIBT hardcoded (Gradient-Start, V6 nicht customizable).
   			brand: {
   				'primary-dark': '#120774',
-  				'primary': '#4454b8',
+  				'primary': 'rgb(var(--brand-primary-rgb, 68 84 184) / <alpha-value>)',
   				'success-dark': '#00a84f',
   				'success': '#4dcb8b',
   				'warning-dark': '#f2b705',
