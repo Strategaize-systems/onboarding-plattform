@@ -865,9 +865,9 @@
       "title": "FEAT-042 Partner-Organisation + Onboarding-Flow + Admin-Dashboard (SLC-102)",
       "type": "feature",
       "priority": "high",
-      "status": "in_progress",
+      "status": "done",
       "version": "V6",
-      "description": "V6. partner_organization-Tabelle + Strategaize-Admin-UI /admin/partners zum Anlegen + Owner-User-Einladung via Magic-Link (FEAT-031-Reuse) + Partner-Admin-Dashboard /partner/dashboard mit eigener Mandanten-Liste + Status-Spalten. Tier-Spalte heute mit anlegen (V3+ Nutzung). partner_kind heute mit anlegen (V8+ erweiterbar). Vorgaenger: FEAT-041. Detail: /features/FEAT-042-partner-organization-onboarding-dashboard.md. **Status 2026-05-12**: 7/8 MTs durch — MT-1..MT-7 code-side done + Quality-Gates Full PASS. MT-7 (Quality-Gates Full) live 2026-05-12 (RPT-219): tsc EXIT=0 volltree, eslint EXIT=0 volltree, npm audit 5 pre-existing (0 MT-6-induced), next build Compiled successfully in 10.9s + 35/35 static pages, Vitest Gesamt-Suite gegen Coolify-DB im node:20-Container 871/871 PASS + 14 skipped + 4 todo (889 total) in 3.85s ueber 79 Test-Files inkl. Pen-Test-Regression V6+V5+V4 alle gruen. MT-8 (User-Pflicht-Browser-Smoke nach Coolify-Deploy) + /qa SLC-102 noch offen.",
+      "description": "V6. partner_organization-Tabelle + Strategaize-Admin-UI /admin/partners zum Anlegen + Owner-User-Einladung via Magic-Link (FEAT-031-Reuse) + Partner-Admin-Dashboard /partner/dashboard mit eigener Mandanten-Liste + Status-Spalten. Tier-Spalte heute mit anlegen (V3+ Nutzung). partner_kind heute mit anlegen (V8+ erweiterbar). Vorgaenger: FEAT-041. Detail: /features/FEAT-042-partner-organization-onboarding-dashboard.md. **Status 2026-05-12**: /qa SLC-102 PASS (RPT-220) — alle 10 ACs erfuellt, MT-8 User-Pflicht-Browser-Smoke E2E via Playwright MCP gegen Live (https://onboarding.strategaizetransition.com, HEAD ad7bc2b) komplett durchgezogen. error_log alle 3 Categories verifiziert. Cleanup vollstaendig. 0 Blocker/High/Medium-Findings, 2 Low (akzeptiert: L-1 Accept-Page UI-Text rollen-spezifisch + L-2 emailFailed bei Test-Domain). MT-7 Quality-Gates Full (RPT-219): tsc/eslint EXIT=0 volltree, npm audit 5 pre-existing, next build 35/35, Vitest 871/871 + 14 skipped + 4 todo (889 total) in 3.85s ueber 79 Test-Files inkl. Pen-Test-Regression V6+V5+V4 alle gruen.",
       "createdAt": "2026-05-11"
     },
     {

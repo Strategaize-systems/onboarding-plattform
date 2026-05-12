@@ -366,7 +366,7 @@ V6-Scope (RPT-209 Requirements + RPT-210 Architecture + RPT-211 Slice-Planning).
 | ID | Slice | Feature | Status | Priority | Created |
 |----|-------|---------|--------|----------|---------|
 | SLC-101 | [Partner-Tenant Foundation + RLS + Pen-Test-Suite (Migration 090)](SLC-101-partner-tenant-foundation-rls-pentest.md) | FEAT-041 | done | Blocker | 2026-05-11 |
-| SLC-102 | [Partner-Organisation + Onboarding-Flow + Admin-Dashboard](SLC-102-partner-organization-admin-dashboard.md) | FEAT-042 | in_progress | High | 2026-05-11 |
+| SLC-102 | [Partner-Organisation + Onboarding-Flow + Admin-Dashboard](SLC-102-partner-organization-admin-dashboard.md) | FEAT-042 | done | High | 2026-05-11 |
 | SLC-103 | [Partner-Client-Mapping + Mandanten-Einladung](SLC-103-partner-client-mapping-mandanten-einladung.md) | FEAT-043 | planned | High | 2026-05-11 |
 | SLC-104 | [Partner-Branding + CSS-Custom-Properties + RPC (Migration 091)](SLC-104-partner-branding-css-custom-properties.md) | FEAT-044 | planned | High | 2026-05-11 |
 | SLC-105 | [Diagnose-Werkzeug + Light-Pipeline + Bericht-Renderer (Stop-Gate BL-095)](SLC-105-diagnose-werkzeug-light-pipeline-renderer.md) | FEAT-045 | planned | High | 2026-05-11 |
