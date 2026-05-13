@@ -98,6 +98,6 @@ Re-scoped 2026-05-06 per DEC-079 (Strategaize-Dev-System) nach USP-Stress-Test.
 | FEAT-041 | Partner-Tenant Foundation + RLS Erweiterung | done | [Spec](FEAT-041-partner-tenant-foundation-rls.md) | 2026-05-11 |
 | FEAT-042 | Partner-Organisation + Onboarding-Flow + Admin-Dashboard | done | [Spec](FEAT-042-partner-organization-onboarding-dashboard.md) | 2026-05-11 |
 | FEAT-043 | Partner-Client-Mapping + Mandanten-Einladung | done | [Spec](FEAT-043-partner-client-mapping-mandanten-einladung.md) | 2026-05-11 |
-| FEAT-044 | Partner-Branding minimal + CSS-Custom-Properties Setup | in_progress | [Spec](FEAT-044-partner-branding-css-custom-properties.md) | 2026-05-11 |
+| FEAT-044 | Partner-Branding minimal + CSS-Custom-Properties Setup | done | [Spec](FEAT-044-partner-branding-css-custom-properties.md) | 2026-05-11 |
 | FEAT-045 | Diagnose-Werkzeug Template + Light-Condensation-Pipeline + Bericht-Renderer | planned | [Spec](FEAT-045-diagnose-werkzeug-template-pipeline-renderer.md) | 2026-05-11 |
 | FEAT-046 | Lead-Push opt-in + Outbound Webhook + DSGVO-Audit | planned | [Spec](FEAT-046-lead-push-opt-in-webhook-dsgvo.md) | 2026-05-11 |
