@@ -913,30 +913,30 @@
     {
       "id": "BL-094",
       "title": "V6-PREP-AVV: DSGVO-Auftragsverarbeitungsvertrag Standard-Template DE + NL",
-      "type": "improvement",
+      "type": "later",
       "priority": "high",
       "status": "open",
-      "version": "V6",
+      "version": null,
       "description": "V6 Pflicht-Vorbereitung — KEIN Code, aber V6-Live-Block (kein erster Live-Pilot-Steuerberater ohne AVV). User-Verantwortung. Standard-AVV-Template fuer DE (Steuerberater als Auftragsverarbeiter, Strategaize als Verantwortlicher fuer Diagnose-Funnel) + NL-Variante. Parallel zum V6-Bau bearbeitbar. Verweis: STRATEGY_NOTES_2026-05.md Abschnitt 7 Pflichten vor erstem Live-Partner.",
       "createdAt": "2026-05-11"
     },
     {
       "id": "BL-095",
       "title": "V6-PREP-INHALT: Inhalts-Workshop Diagnose-Werkzeug (Stop-Gate fuer SLC-105)",
-      "type": "improvement",
+      "type": "later",
       "priority": "high",
       "status": "open",
-      "version": "V6",
+      "version": null,
       "description": "V6 Pflicht-Vorbereitung — Stop-Gate fuer /backend SLC-105 (nicht V6 insgesamt). User-Verantwortung. Workshop liefert: 15-25 konkrete Mandanten-Fragen entlang der 6 Bausteine aus MULTIPLIER_MODEL.md Inhaltliche Skizze (Strukturelle KI-Reife, Entscheidungs-Qualitaet, Schriftlich festgehaltene Entscheidungen, SOPs, Unternehmerhandbuch, Workaround-Dunkelziffer) + deterministische Score-Logik pro Frage (Antwort-Wert auf 0-100 Score-Mapping) + finale Pflicht-Output-Aussage in Markdown. Ohne dieses Workshop-Output kann SLC-105 nicht starten und Auto-Finalize-Mechanik DGN-A nicht implementiert werden. Andere V6-Slices (SLC-101..104, SLC-106) unabhaengig — koennen vor Workshop-Abschluss starten.",
       "createdAt": "2026-05-11"
     },
     {
       "id": "BL-096",
       "title": "V6-GTM-AKQUISE: Achse 9 Multiplikator-Akquise-Pitch ausarbeiten",
-      "type": "improvement",
+      "type": "later",
       "priority": "medium",
       "status": "open",
-      "version": "V6",
+      "version": null,
       "description": "V6 Pflicht-Vorbereitung — KEIN Skill-Block, KEIN V6-Live-Block (User entscheidet zeitlich). GTM-Frage: Wie kommt User an die ersten 5-8 NRW-Steuerberater? Vorhandener Kandidaten-Korridor (LinkedIn-Cold-Outreach an Mittelstands-spezialisierte Kanzleien, Fachverband-Veranstaltungen Steuerberaterkammer NRW + Mittelstands-Tagungen, Empfehlung ueber bestehendes B2B-Netzwerk, Content-Pull, Branchen-Magazin-Artikel). Output: konkrete Target-Liste + Kanal-Entscheidung + Erstkontakt-Pitch (1 Seite, klar, ohne Sales-Ueberladung). Verweis: MULTIPLIER_MODEL.md Achse 9. NL-Pilot ist warmer Kontakt (Steuerberater des Users) — separater Akquise-Pfad noetig.",
       "createdAt": "2026-05-11"
     },
