@@ -15,21 +15,30 @@ import { withJwtContext } from "@/test/auth-context";
 //   - Schema-Smoke (V6-Migration korrekt appliziert)
 //   - partner_client_mapping Trigger (tenant_kind-Konsistenz)
 //   - partner_admin Read-Own (happy path)
-//   - partner_admin Cross-Partner-Read-Isolation  (16 Faelle, 3 als it.todo placeholder)
+//   - partner_admin Cross-Partner-Read-Isolation  (16 Faelle, CP-15 SLC-104-aktiviert, CP-16 it.todo SLC-106)
 //   - partner_admin Cross-Client-Read-Isolation   (8 Faelle)
-//   - partner_admin Write-Block                   (12 Faelle, 2 als it.todo)
+//   - partner_admin Write-Block                   (12 Faelle, WB-11 SLC-104-aktiviert, WB-12 it.todo SLC-106)
 //   - tenant_admin (Mandant) Cross-Mandant-Isolation (8 Faelle)
 //   - tenant_admin (Mandant) Sicht auf Partner-Daten (4 Faelle)
 //   - partner_admin vs. Direkt-Kunden             (4 Faelle)
 //   - partner_admin per-Operation × per-Tabelle Read-Matrix (zusaetzliche Coverage)
 //
+// SLC-104 MT-11 — partner_branding_config Pen-Test (≥14 zusaetzliche Faelle):
+//   - Schema-Smoke (3 Faelle: RLS+Policies+Hex-CHECK)
+//   - Cross-Partner-Isolation extended (4 Faelle)
+//   - Self-Read Happy-Path (3 Faelle)
+//   - Cross-Partner-Write-Block extended (3 Faelle)
+//   - Self-Write Happy-Path (2 Faelle)
+//   - Hex-CHECK-Constraint-Violation (3 Faelle)
+//   - Anon-RPC Smoke (1 Fall)
+// = 19 neue partner_branding_config-Faelle + CP-15 + WB-11 = 21 neue PASS-Faelle in MT-11.
+//
 // Regression V4 (46 Faelle) + V5.1 (48 Faelle) laufen in den bestehenden
 // Test-Files admin-rls.test.ts / rls-isolation.test.ts / v5-walkthrough-rls.test.ts /
 // walkthrough-embed-rls.test.ts — werden hier nicht dupliziert.
 //
-// partner_branding_config (SLC-104) und lead_push_consent/audit (SLC-106) sind
-// als `it.todo(...)` markiert mit Slice-Referenz — werden aktiviert wenn die
-// jeweiligen Migrations (091, 092) appliziert sind.
+// lead_push_consent/audit (SLC-106) sind als `it.todo(...)` markiert mit Slice-
+// Referenz — werden aktiviert wenn Migration 092 appliziert ist.
 
 interface V6Fixture {
   // Tenants
@@ -56,6 +65,12 @@ interface V6Fixture {
   mappingA_accepted: string;
   mappingB_accepted: string;
   mappingA_pending: string;
+
+  // partner_branding_config Rows (SLC-104 MT-11)
+  brandingConfigA: string;
+  brandingConfigB: string;
+  brandingColorA: string;
+  brandingColorB: string;
 
   // Capture-Chain pro Mandant + Direkt-Kunde
   templateId: string;
@@ -300,6 +315,37 @@ async function seedV6Fixture(client: Client): Promise<V6Fixture> {
   const validationClientA = await mkValidation(clientA, knowledgeClientA, clientAAdmin);
   const validationClientB = await mkValidation(clientB, knowledgeClientB, clientBAdmin);
 
+  // --- partner_branding_config (SLC-104 MT-11) ---
+  // Frisch erzeugte partner-Tenants haben keine Branding-Row (Backfill aus Migration 091
+  // lief nur einmalig bei Migration-Apply). INSERT mit ON CONFLICT idempotent fuer den
+  // Fall, dass die Migration-Apply den Tenant trotzdem schon erfasst hatte (Test laeuft in
+  // BEGIN/ROLLBACK — sollte nicht passieren, defensive Coverage).
+  const brandingColorA = "#aa0000"; // eindeutig != Strategaize-Default #4454b8 nach MIG-091a
+  const brandingColorB = "#00aa00";
+  const bcA = await client.query<{ id: string }>(
+    `INSERT INTO public.partner_branding_config
+       (partner_tenant_id, primary_color, display_name)
+     VALUES ($1, $2, 'V6 KanzleiA Branding')
+     ON CONFLICT (partner_tenant_id) DO UPDATE
+       SET primary_color = EXCLUDED.primary_color,
+           display_name  = EXCLUDED.display_name
+     RETURNING id`,
+    [partnerA, brandingColorA],
+  );
+  const brandingConfigA = bcA.rows[0].id;
+
+  const bcB = await client.query<{ id: string }>(
+    `INSERT INTO public.partner_branding_config
+       (partner_tenant_id, primary_color, display_name)
+     VALUES ($1, $2, 'V6 KanzleiB Branding')
+     ON CONFLICT (partner_tenant_id) DO UPDATE
+       SET primary_color = EXCLUDED.primary_color,
+           display_name  = EXCLUDED.display_name
+     RETURNING id`,
+    [partnerB, brandingColorB],
+  );
+  const brandingConfigB = bcB.rows[0].id;
+
   return {
     partnerA,
     partnerB,
@@ -318,6 +364,10 @@ async function seedV6Fixture(client: Client): Promise<V6Fixture> {
     mappingA_accepted,
     mappingB_accepted,
     mappingA_pending,
+    brandingConfigA,
+    brandingConfigB,
+    brandingColorA,
+    brandingColorB,
     templateId,
     templateVersion,
     captureClientA,
@@ -862,8 +912,21 @@ describe("V6 partner_admin Cross-Partner-Read-Isolation (16 cases)", () => {
     });
   });
 
-  // Placeholder fuer SLC-104 + SLC-106:
-  it.todo("Case CP-15: partnerA-admin SELECT partner_branding_config von partnerB → DENY (SLC-104 Migration 091)");
+  // Activated in SLC-104 MT-11:
+  it("Case CP-15: partnerA-admin SELECT partner_branding_config von partnerB → DENY (0 rows, SLC-104)", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV6Fixture(client);
+      await withJwtContext(client, f.partnerAAdmin, async () => {
+        const r = await client.query(
+          `SELECT id, primary_color FROM public.partner_branding_config WHERE partner_tenant_id=$1`,
+          [f.partnerB]
+        );
+        expect(r.rowCount).toBe(0);
+      });
+    });
+  });
+
+  // Placeholder fuer SLC-106 (Migration 092 noch nicht live):
   it.todo("Case CP-16: partnerA-admin SELECT lead_push_consent/audit von partnerB → DENY (SLC-106 Migration 092)");
 });
 
@@ -1140,8 +1203,28 @@ describe("V6 partner_admin Write-Block (12 cases)", () => {
     });
   });
 
-  // Placeholder fuer V6.SLC-104 + SLC-106:
-  it.todo("Case WB-11: partnerA-admin INSERT partner_branding_config fuer partnerB → DENY (SLC-104)");
+  // Activated in SLC-104 MT-11:
+  it("Case WB-11: partnerA-admin INSERT partner_branding_config fuer partnerB → DENY (SLC-104)", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV6Fixture(client);
+      await withJwtContext(client, f.partnerAAdmin, async () => {
+        // DELETE der existierenden Branding-Row von partnerB ist nicht moeglich (kein DELETE-GRANT
+        // fuer authenticated, kein Policy-Match) — deshalb teste INSERT mit "fakeTenantId=partnerB",
+        // was per WITH CHECK in pbc_insert_own_partner_admin scheitern muss. partnerB hat bereits
+        // eine Row aus seedV6Fixture, also wuerde der INSERT auch am UNIQUE-Constraint scheitern.
+        // Beide Ablehnungswege sind valide (RLS / UNIQUE / permission denied).
+        const err = await tryDml(
+          client,
+          `INSERT INTO public.partner_branding_config (partner_tenant_id, primary_color)
+           VALUES ($1, '#ff0000')`,
+          [f.partnerB]
+        );
+        expect(err).toMatch(/permission denied|row-level security|unique|duplicate/i);
+      });
+    });
+  });
+
+  // Placeholder fuer SLC-106 (Migration 092 noch nicht live):
   it.todo("Case WB-12: partnerA-admin UPDATE lead_push_consent von partnerB → DENY (SLC-106)");
 });
 
@@ -1648,6 +1731,403 @@ describe("V6 SLC-103 partner_client_mapping Cross-Partner Isolation (8 cases)", 
         [f.mappingA_pending],
       );
       expect(check.rowCount).toBe(1);
+    });
+  });
+});
+
+// ============================================================================
+// V6 SLC-104 — partner_branding_config Pen-Test (≥14 Faelle, MT-11)
+// ============================================================================
+// Aktiviert die in SLC-101 angelegten Placeholder-Faelle (CP-15, WB-11) plus
+// zusaetzliche Cross-Partner-Isolation, Self-Access-Happy-Paths, Hex-CHECK-
+// Constraint-Verifikation und anon-RPC-Smoke gegen Migration 091.
+//
+// Policies unter Test (alle aus Migration 091):
+//   - pbc_select_own_partner_admin (partner_admin liest eigene Branding-Row)
+//   - pbc_update_own_partner_admin (partner_admin updated eigene Row)
+//   - pbc_insert_own_partner_admin (partner_admin INSERT eigene Row)
+//   - pbc_all_strategaize_admin    (strategaize_admin Full-Access)
+//
+// CHECK-Constraints unter Test:
+//   - partner_branding_config_primary_color_check
+//   - partner_branding_config_secondary_color_check
+//
+// RPC unter Test:
+//   - rpc_get_branding_for_tenant (SECURITY DEFINER, anon EXECUTE per DEC-109)
+
+describe("V6 SLC-104 — partner_branding_config Schema-Smoke (3 cases)", () => {
+  it("partner_branding_config-Tabelle existiert mit RLS enabled", async () => {
+    await withTestDb(async (client) => {
+      const t = await client.query(
+        `SELECT relrowsecurity FROM pg_class
+          WHERE relnamespace = 'public'::regnamespace
+            AND relname = 'partner_branding_config'`
+      );
+      expect(t.rowCount).toBe(1);
+      expect(t.rows[0].relrowsecurity).toBe(true);
+    });
+  });
+
+  it("partner_branding_config hat 4 Policies (pbc_*)", async () => {
+    await withTestDb(async (client) => {
+      const r = await client.query<{ polname: string }>(
+        `SELECT polname FROM pg_policy
+           WHERE polrelid = 'public.partner_branding_config'::regclass
+         ORDER BY polname`
+      );
+      const names = r.rows.map((x) => x.polname);
+      expect(names).toEqual([
+        "pbc_all_strategaize_admin",
+        "pbc_insert_own_partner_admin",
+        "pbc_select_own_partner_admin",
+        "pbc_update_own_partner_admin",
+      ]);
+    });
+  });
+
+  it("partner_branding_config hat Hex-CHECK-Constraints fuer primary_color + secondary_color", async () => {
+    await withTestDb(async (client) => {
+      const r = await client.query<{ conname: string }>(
+        `SELECT conname FROM pg_constraint
+           WHERE conrelid = 'public.partner_branding_config'::regclass
+             AND contype = 'c'
+         ORDER BY conname`
+      );
+      const names = r.rows.map((x) => x.conname);
+      expect(names).toContain("partner_branding_config_primary_color_check");
+      expect(names).toContain("partner_branding_config_secondary_color_check");
+    });
+  });
+});
+
+describe("V6 SLC-104 — partner_branding_config Cross-Partner-Isolation extended (4 cases)", () => {
+  it("Case BC-CP-1: partnerB-admin SELECT partner_branding_config von partnerA → DENY (0 rows)", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV6Fixture(client);
+      await withJwtContext(client, f.partnerBAdmin, async () => {
+        const r = await client.query(
+          `SELECT id FROM public.partner_branding_config WHERE partner_tenant_id=$1`,
+          [f.partnerA]
+        );
+        expect(r.rowCount).toBe(0);
+      });
+    });
+  });
+
+  it("Case BC-CP-2: tenant_admin (clientA) SELECT partner_branding_config von partnerA → DENY (kein tenant_admin-Policy)", async () => {
+    // Pflicht-Gate: parent-Partner-Branding ist fuer Mandanten NICHT direkt lesbar.
+    // Resolution laeuft ueber RPC (DEC-099 SECURITY DEFINER) — direkt-SELECT ist
+    // ausschliesslich partner_admin + strategaize_admin vorbehalten.
+    await withTestDb(async (client) => {
+      const f = await seedV6Fixture(client);
+      await withJwtContext(client, f.clientAAdmin, async () => {
+        const r = await client.query(
+          `SELECT id FROM public.partner_branding_config WHERE partner_tenant_id=$1`,
+          [f.partnerA]
+        );
+        expect(r.rowCount).toBe(0);
+      });
+    });
+  });
+
+  it("Case BC-CP-3: tenant_admin (clientA) SELECT partner_branding_config von partnerB → DENY (kein Policy)", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV6Fixture(client);
+      await withJwtContext(client, f.clientAAdmin, async () => {
+        const r = await client.query(
+          `SELECT id FROM public.partner_branding_config WHERE partner_tenant_id=$1`,
+          [f.partnerB]
+        );
+        expect(r.rowCount).toBe(0);
+      });
+    });
+  });
+
+  it("Case BC-CP-4: direct_client tenant_admin SELECT partner_branding_config (any) → DENY (0 rows)", async () => {
+    // Direkt-Kunden sind Partner-Land-fremd und sollen keine Branding-Daten sehen.
+    await withTestDb(async (client) => {
+      const f = await seedV6Fixture(client);
+      await withJwtContext(client, f.directAdmin, async () => {
+        const r = await client.query(
+          `SELECT id FROM public.partner_branding_config`
+        );
+        expect(r.rowCount).toBe(0);
+      });
+    });
+  });
+});
+
+describe("V6 SLC-104 — partner_branding_config Self-Read Happy-Path (3 cases)", () => {
+  it("Case BC-SR-1: partnerA-admin SELECT partner_branding_config von eigenem Partner → ALLOW (1 row)", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV6Fixture(client);
+      await withJwtContext(client, f.partnerAAdmin, async () => {
+        const r = await client.query<{ id: string; primary_color: string }>(
+          `SELECT id, primary_color FROM public.partner_branding_config WHERE partner_tenant_id=$1`,
+          [f.partnerA]
+        );
+        expect(r.rowCount).toBe(1);
+        expect(r.rows[0].id).toBe(f.brandingConfigA);
+        expect(r.rows[0].primary_color).toBe(f.brandingColorA);
+      });
+    });
+  });
+
+  it("Case BC-SR-2: partnerB-admin SELECT partner_branding_config von eigenem Partner → ALLOW (1 row)", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV6Fixture(client);
+      await withJwtContext(client, f.partnerBAdmin, async () => {
+        const r = await client.query<{ primary_color: string }>(
+          `SELECT primary_color FROM public.partner_branding_config WHERE partner_tenant_id=$1`,
+          [f.partnerB]
+        );
+        expect(r.rowCount).toBe(1);
+        expect(r.rows[0].primary_color).toBe(f.brandingColorB);
+      });
+    });
+  });
+
+  it("Case BC-SR-3: strategaize_admin SELECT alle partner_branding_config-Rows → ALLOW (≥2 rows)", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV6Fixture(client);
+      await withJwtContext(client, f.strategaizeAdmin, async () => {
+        const r = await client.query<{ partner_tenant_id: string }>(
+          `SELECT partner_tenant_id FROM public.partner_branding_config
+            WHERE partner_tenant_id IN ($1, $2)`,
+          [f.partnerA, f.partnerB]
+        );
+        expect(r.rowCount).toBe(2);
+        const ids = r.rows.map((x) => x.partner_tenant_id).sort();
+        expect(ids).toEqual([f.partnerA, f.partnerB].sort());
+      });
+    });
+  });
+});
+
+describe("V6 SLC-104 — partner_branding_config Cross-Partner-Write-Block extended (3 cases)", () => {
+  it("Case BC-WB-1: partnerA-admin UPDATE partner_branding_config von partnerB → DENY (0 rows)", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV6Fixture(client);
+      await withJwtContext(client, f.partnerAAdmin, async () => {
+        const r = await client.query(
+          `UPDATE public.partner_branding_config
+              SET primary_color='#ff00ff'
+            WHERE partner_tenant_id=$1`,
+          [f.partnerB]
+        );
+        expect(r.rowCount).toBe(0);
+      });
+
+      // Verifikation: partnerB-Row unveraendert
+      const check = await client.query<{ primary_color: string }>(
+        `SELECT primary_color FROM public.partner_branding_config WHERE partner_tenant_id=$1`,
+        [f.partnerB]
+      );
+      expect(check.rows[0].primary_color).toBe(f.brandingColorB);
+    });
+  });
+
+  it("Case BC-WB-2: partnerA-admin DELETE partner_branding_config von partnerB → DENY (0 rows oder permission_denied)", async () => {
+    // partner_admin hat GRANT SELECT/INSERT/UPDATE, KEIN DELETE (Migration 091).
+    // Erwartung: rowCount=0 (kein Policy-Match) ODER permission denied (kein GRANT).
+    await withTestDb(async (client) => {
+      const f = await seedV6Fixture(client);
+      let deletedRowCount: number | null = null;
+      let permissionDenied = false;
+      await withJwtContext(client, f.partnerAAdmin, async () => {
+        await client.query("SAVEPOINT try_pbc_delete_cross");
+        try {
+          const r = await client.query(
+            `DELETE FROM public.partner_branding_config WHERE partner_tenant_id=$1`,
+            [f.partnerB]
+          );
+          deletedRowCount = r.rowCount;
+        } catch (e) {
+          permissionDenied = /permission denied|row-level security/i.test(
+            (e as Error).message,
+          );
+        }
+        await client.query("ROLLBACK TO SAVEPOINT try_pbc_delete_cross");
+      });
+
+      expect(
+        deletedRowCount === 0 || permissionDenied,
+        `Expected rowCount=0 OR permission_denied, got rowCount=${deletedRowCount} permissionDenied=${permissionDenied}`
+      ).toBe(true);
+
+      const check = await client.query(
+        `SELECT 1 FROM public.partner_branding_config WHERE partner_tenant_id=$1`,
+        [f.partnerB]
+      );
+      expect(check.rowCount).toBe(1);
+    });
+  });
+
+  it("Case BC-WB-3: tenant_admin (clientA) INSERT partner_branding_config fuer partnerA → DENY", async () => {
+    // Mandant darf keine Branding-Config fuer seinen Partner anlegen — auch nicht
+    // wenn er den partner_tenant_id korrekt benennen wuerde. Test gegen partnerA
+    // (existiert in Fixture mit eigener Branding-Row) UND gegen frisch angelegten
+    // Partner-Tenant ohne Branding-Row, um beide Pfade abzudecken.
+    await withTestDb(async (client) => {
+      const f = await seedV6Fixture(client);
+      // Frischen Partner-Tenant als Superuser anlegen — tenant_admin hat KEIN
+      // INSERT-Recht auf public.tenants, deshalb darf das nicht innerhalb des
+      // withJwtContext passieren (sonst aborted die Transaction vor dem
+      // eigentlichen Pen-Test).
+      const newPartner = await client.query<{ id: string }>(
+        `INSERT INTO public.tenants (name, language, tenant_kind)
+           VALUES ('V6 NewPartner', 'de', 'partner_organization')
+           RETURNING id`
+      );
+      const newPartnerId = newPartner.rows[0].id;
+
+      await withJwtContext(client, f.clientAAdmin, async () => {
+        const err = await tryDml(
+          client,
+          `INSERT INTO public.partner_branding_config (partner_tenant_id, primary_color)
+           VALUES ($1, '#abcdef')`,
+          [newPartnerId]
+        );
+        expect(err).toMatch(/permission denied|row-level security/i);
+      });
+
+      // Sicherstellen, dass keine Branding-Row fuer den neuen Partner durchsickerte.
+      const check = await client.query(
+        `SELECT 1 FROM public.partner_branding_config WHERE partner_tenant_id=$1`,
+        [newPartnerId]
+      );
+      expect(check.rowCount).toBe(0);
+    });
+  });
+});
+
+describe("V6 SLC-104 — partner_branding_config Self-Write Happy-Path (2 cases)", () => {
+  it("Case BC-SW-1: partnerA-admin UPDATE primary_color der eigenen Branding-Row → ALLOW", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV6Fixture(client);
+      await withJwtContext(client, f.partnerAAdmin, async () => {
+        const r = await client.query(
+          `UPDATE public.partner_branding_config
+              SET primary_color='#123abc'
+            WHERE partner_tenant_id=$1`,
+          [f.partnerA]
+        );
+        expect(r.rowCount).toBe(1);
+
+        const check = await client.query<{ primary_color: string }>(
+          `SELECT primary_color FROM public.partner_branding_config WHERE partner_tenant_id=$1`,
+          [f.partnerA]
+        );
+        expect(check.rows[0].primary_color).toBe("#123abc");
+      });
+    });
+  });
+
+  it("Case BC-SW-2: strategaize_admin INSERT partner_branding_config fuer neuen Partner → ALLOW", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV6Fixture(client);
+      await withJwtContext(client, f.strategaizeAdmin, async () => {
+        const newPartner = await client.query<{ id: string }>(
+          `INSERT INTO public.tenants (name, language, tenant_kind)
+             VALUES ('V6 SA-NewPartner', 'de', 'partner_organization')
+             RETURNING id`
+        );
+        const r = await client.query<{ id: string }>(
+          `INSERT INTO public.partner_branding_config (partner_tenant_id, primary_color, display_name)
+             VALUES ($1, '#456789', 'SA-Erstellt')
+             RETURNING id`,
+          [newPartner.rows[0].id]
+        );
+        expect(r.rowCount).toBe(1);
+        expect(r.rows[0].id).toBeTruthy();
+      });
+    });
+  });
+});
+
+describe("V6 SLC-104 — partner_branding_config Hex-CHECK-Constraints (3 cases)", () => {
+  it("Case BC-HX-1: INSERT primary_color ohne # → CHECK-Violation", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV6Fixture(client);
+      await withJwtContext(client, f.strategaizeAdmin, async () => {
+        const newPartner = await client.query<{ id: string }>(
+          `INSERT INTO public.tenants (name, language, tenant_kind)
+             VALUES ('V6 HexTest1', 'de', 'partner_organization')
+             RETURNING id`
+        );
+        const err = await tryDml(
+          client,
+          `INSERT INTO public.partner_branding_config (partner_tenant_id, primary_color)
+           VALUES ($1, '123456')`,
+          [newPartner.rows[0].id]
+        );
+        expect(err).toMatch(/partner_branding_config_primary_color_check|check constraint/i);
+      });
+    });
+  });
+
+  it("Case BC-HX-2: INSERT primary_color mit falscher Laenge → CHECK-Violation", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV6Fixture(client);
+      await withJwtContext(client, f.strategaizeAdmin, async () => {
+        const newPartner = await client.query<{ id: string }>(
+          `INSERT INTO public.tenants (name, language, tenant_kind)
+             VALUES ('V6 HexTest2', 'de', 'partner_organization')
+             RETURNING id`
+        );
+        const err = await tryDml(
+          client,
+          `INSERT INTO public.partner_branding_config (partner_tenant_id, primary_color)
+           VALUES ($1, '#abcde')`,
+          [newPartner.rows[0].id]
+        );
+        expect(err).toMatch(/partner_branding_config_primary_color_check|check constraint/i);
+      });
+    });
+  });
+
+  it("Case BC-HX-3: INSERT secondary_color mit ungueltigem Hex → CHECK-Violation (NULL bleibt erlaubt)", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV6Fixture(client);
+      await withJwtContext(client, f.strategaizeAdmin, async () => {
+        const newPartner = await client.query<{ id: string }>(
+          `INSERT INTO public.tenants (name, language, tenant_kind)
+             VALUES ('V6 HexTest3', 'de', 'partner_organization')
+             RETURNING id`
+        );
+        const err = await tryDml(
+          client,
+          `INSERT INTO public.partner_branding_config (partner_tenant_id, primary_color, secondary_color)
+           VALUES ($1, '#ffffff', 'rot')`,
+          [newPartner.rows[0].id]
+        );
+        expect(err).toMatch(/partner_branding_config_secondary_color_check|check constraint/i);
+      });
+    });
+  });
+});
+
+describe("V6 SLC-104 — RPC rpc_get_branding_for_tenant via anon (1 case)", () => {
+  it("Case BC-RPC-1: anon-Rolle ruft RPC fuer partnerA → erhaelt custom branding (DEC-109 best-effort lesbar)", async () => {
+    // DEC-109-Tradeoff: RPC ist SECURITY DEFINER mit GRANT EXECUTE TO anon. Login-Page
+    // muss Branding lesen koennen, BEVOR der User authentifiziert ist. UUID-v4 mitigiert
+    // Enumeration-Risiko. Dieser Test verifiziert das anon-Pfad-Verhalten direkt aus dem
+    // Pen-Test-File (zusaetzlich zu MT-10 rpc-branding.test.ts).
+    await withTestDb(async (client) => {
+      const f = await seedV6Fixture(client);
+      await client.query(`SET LOCAL "request.jwt.claims" = '{}'`);
+      await client.query(`SET LOCAL ROLE anon`);
+      try {
+        const r = await client.query<{ branding: { primary_color: string; display_name: string | null } }>(
+          `SELECT public.rpc_get_branding_for_tenant($1::uuid) AS branding`,
+          [f.partnerA]
+        );
+        expect(r.rows[0].branding.primary_color).toBe(f.brandingColorA);
+        expect(r.rows[0].branding.display_name).toBe("V6 KanzleiA Branding");
+      } finally {
+        await client.query(`RESET ROLE`);
+        await client.query(`RESET "request.jwt.claims"`);
+      }
     });
   });
 });
