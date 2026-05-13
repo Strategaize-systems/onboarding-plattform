@@ -9,6 +9,7 @@ import { BlockReviewStatusCard } from "@/components/cockpit/BlockReviewStatusCar
 import { InactiveEmployeesCard } from "@/components/cockpit/InactiveEmployeesCard";
 import { WalkthroughReviewStatusCard } from "@/components/cockpit/WalkthroughReviewStatusCard";
 import { PartnerClientWelcomeBlock } from "@/components/dashboard/PartnerClientWelcomeBlock";
+import { resolveBrandingForTenant } from "@/lib/branding/resolve";
 import { DashboardClient } from "./dashboard-client";
 import { StatusCockpit } from "./StatusCockpit";
 // SLC-047 Wizard-Trigger — eigentlich ueber dashboard/layout.tsx geplant
@@ -56,15 +57,43 @@ export default async function DashboardPage() {
     const admin = createAdminClient();
     const { data: tenantRow } = await admin
       .from("tenants")
-      .select("name, tenant_kind")
+      .select("name, tenant_kind, parent_partner_tenant_id")
       .eq("id", profile.tenant_id)
       .single();
 
     if (tenantRow?.tenant_kind === "partner_client") {
+      // V6 SLC-104 MT-9 — Partner-Branding fuer Welcome-Block.
+      // resolveBrandingForTenant ruft die SECURITY-DEFINER RPC mit der
+      // Mandanten-tenant_id; die RPC traversiert intern zum parent
+      // partner_organization (vgl. SLC-104 Section A.2). Damit kommt
+      // displayName + Logo-Proxy-URL aus partner_branding_config.
+      // R-104-1: Resolver-Try/Catch garantiert Default-Werte bei RPC-Fehler.
+      const branding = await resolveBrandingForTenant(
+        supabase,
+        profile.tenant_id,
+      );
+
+      // Fallback fuer displayName: partner_branding_config.display_name ist
+      // optional (NULL by default). partner_organization.display_name ist
+      // NOT NULL und damit verlaessliche Sekundaerquelle. Lookup via Admin-
+      // Client, weil Mandant keinen direkten SELECT auf partner_organization
+      // hat (RLS-Boundary). Nur wenn Branding selbst keinen Namen liefert.
+      let partnerDisplayName: string | null = branding.displayName;
+      if (!partnerDisplayName && tenantRow.parent_partner_tenant_id) {
+        const { data: partnerOrg } = await admin
+          .from("partner_organization")
+          .select("display_name")
+          .eq("tenant_id", tenantRow.parent_partner_tenant_id)
+          .single();
+        partnerDisplayName = partnerOrg?.display_name ?? null;
+      }
+
       return (
         <div className="mx-auto max-w-3xl px-6 py-12">
           <PartnerClientWelcomeBlock
             mandantCompanyName={tenantRow.name as string}
+            partnerDisplayName={partnerDisplayName}
+            partnerLogoUrl={branding.logoUrl}
           />
         </div>
       );

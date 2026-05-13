@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Image from "next/image";
 import {
   Card,
   CardContent,
@@ -10,30 +10,75 @@ import { Button } from "@/components/ui/button";
 import { Sparkles } from "lucide-react";
 
 /**
- * V6 SLC-103 MT-7 — Welcome-Block fuer Mandanten unter Partner-Steuerberatern.
+ * V6 SLC-103 MT-7 / SLC-104 MT-9 — Welcome-Block fuer Mandanten unter
+ * Partner-Steuerberatern.
  *
- * Stateless Server-Component. SLC-103 zeigt einen generischen Hinweis
- * ("Empfohlen von Ihrem Steuerberater"). Partner-Display-Name + Branding
- * (Logo, Akzentfarbe) folgen in SLC-104 (cross-tenant Read via SECURITY DEFINER
- * RPC).
+ * Stateless Server-Component. SLC-104 MT-9 erweitert um
+ *   - `partnerDisplayName`: Anzeigename des Partner-Steuerberaters
+ *     (`partner_branding_config.display_name` mit Fallback auf
+ *     `partner_organization.display_name`, beides via Server-Resolver in
+ *     dashboard/page.tsx).
+ *   - `partnerLogoUrl`: Server-Proxy-URL `/api/partner-branding/<id>/logo`
+ *     oder null, wenn Partner kein Logo hochgeladen hat.
+ *
+ * Beides ist optional — fehlt der Wert, fallen die Textbloecke auf den
+ * generischen Hinweis aus SLC-103 zurueck ("Ihrem Steuerberater"). Damit
+ * bleibt der Block resilient gegen Branding-Resolver-Fehler (R-104-1).
  *
  * Diagnose-Karte ist Placeholder fuer SLC-105 — Klick zeigt Coming-Soon-Modal
  * (in V6 als simpler `disabled` Button mit Hinweis-Text dargestellt).
  */
 
+interface PartnerClientWelcomeBlockProps {
+  mandantCompanyName: string;
+  partnerDisplayName?: string | null;
+  partnerLogoUrl?: string | null;
+}
+
 export function PartnerClientWelcomeBlock({
   mandantCompanyName,
-}: {
-  mandantCompanyName: string;
-}) {
+  partnerDisplayName,
+  partnerLogoUrl,
+}: PartnerClientWelcomeBlockProps) {
+  const partnerLabel = partnerDisplayName?.trim() || "Ihrem Steuerberater";
+
   return (
     <div className="space-y-6">
+      {(partnerLogoUrl || partnerDisplayName) && (
+        <div className="flex items-center gap-3">
+          {partnerLogoUrl ? (
+            <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-white">
+              <Image
+                src={partnerLogoUrl}
+                alt={
+                  partnerDisplayName
+                    ? `${partnerDisplayName} Logo`
+                    : "Partner-Logo"
+                }
+                width={48}
+                height={48}
+                unoptimized
+                className="h-full w-full object-contain"
+              />
+            </div>
+          ) : null}
+          {partnerDisplayName ? (
+            <span className="text-sm text-slate-500">
+              Ihr Steuerberater:{" "}
+              <span className="font-medium text-slate-700">
+                {partnerDisplayName}
+              </span>
+            </span>
+          ) : null}
+        </div>
+      )}
+
       <div>
         <h1 className="text-3xl font-bold text-slate-900">
           Willkommen{mandantCompanyName ? `, ${mandantCompanyName}` : ""}
         </h1>
         <p className="mt-2 text-sm text-slate-500">
-          Empfohlen von Ihrem Steuerberater. Strategaize unterstuetzt Sie dabei,
+          Empfohlen von {partnerLabel}. Strategaize unterstuetzt Sie dabei,
           die wichtigsten Themen Ihres Unternehmens zu strukturieren.
         </p>
       </div>
@@ -67,8 +112,6 @@ export function PartnerClientWelcomeBlock({
           </p>
         </CardContent>
       </Card>
-
-      <p className="text-xs text-slate-400">Powered by Strategaize</p>
     </div>
   );
 }
