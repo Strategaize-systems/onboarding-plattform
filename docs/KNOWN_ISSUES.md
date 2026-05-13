@@ -1,5 +1,18 @@
 # Known Issues
 
+### ISSUE-047 — Logo-Upload Size-Limit-Inkonsistenz MAX_LOGO_BYTES=524288 (=512 KiB) vs UI-Text "500 KB"
+- Status: open
+- Severity: Low
+- Area: V6 / SLC-104 MT-8 / File-Upload-Validation / Branding-UI
+- Summary: `src/app/partner/dashboard/branding/actions.ts:32` deklariert `const MAX_LOGO_BYTES = 524288; // 500 KiB`. 524288 Byte ist jedoch `512 KiB` (2^19), NICHT 500 KiB. UI-Text in `BrandingEditor.tsx` Error-Banner und Slice-Spec sagen "Maximal 500 KB". Browser-Smoke (RPT-234) hat empirisch bestaetigt: 510 KiB-Datei (522240 Byte) wird vom Server akzeptiert (`?updated=1`), 600 KiB-Datei (614400 Byte) wird vom client-side BrandingEditor.tsx-Validation geblockt.
+- Impact: 12 KiB-Toleranzfenster zwischen dokumentiertem Limit und tatsaechlicher Schwelle. User koennen Files bis ~512 KiB hochladen obwohl UI 500 KB verspricht. Kein Production-Risk (Storage-Bucket-Limit aus Migration 091 ist parallel auf 524288 Byte konfiguriert — Storage-Layer waere konsistent zur Constant, nur die UI-Message ist falsch).
+- Workaround: Keiner noetig — Funktion ist intakt, nur die kommunizierte Grenze ist 12 KiB ungenauer als versprochen.
+- Next Action: Eine von zwei Korrekturen in MT-12 Quality-Gates oder Gesamt-/qa SLC-104:
+  - Option A (UI/Spec-Anpassung): UI-Text + Slice-Spec auf "Maximal 512 KiB" angleichen.
+  - Option B (Constant-Anpassung): `const MAX_LOGO_BYTES = 500 * 1024;` (= 512000 Byte, das ist exakt 500 KiB) — Comment ebenfalls `// 500 KiB = 500 * 1024 bytes`. Storage-Bucket-Limit in Migration 091a aktualisieren auf 512000.
+  - Empfehlung: Option B (Constant-Pflicht-Truth, UI bleibt vertraut "500 KB"). Reuse-Pattern fuer alle zukuenftigen File-Upload-Slices.
+- Related: Dev-System IMP-486 dokumentiert das systemische Pre-Implement-Check-Pattern.
+
 ### ISSUE-046 — Embed-Route gibt 500 statt 400 bei invalidem UUID-Format
 - Status: resolved
 - Severity: Medium
