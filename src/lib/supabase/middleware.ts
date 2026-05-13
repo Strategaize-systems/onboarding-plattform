@@ -44,9 +44,12 @@ export async function updateSession(request: NextRequest) {
   // und muessen die Session-Middleware umgehen.
   const isApiCron = pathname.startsWith("/api/cron/");
   const isApiUnsubscribe = pathname.startsWith("/api/unsubscribe/");
+  // SLC-104 MT-7: Partner-Branding-Logo wird auch fuer anonyme Login-Page geladen
+  // (Branding ab erstem Pixel, vor Login). Route hat eigenen UUID-Guard + RPC-Check.
+  const isApiPartnerBranding = pathname.startsWith("/api/partner-branding/");
 
   // Not logged in → redirect to login (unless on public path)
-  if (!user && !isPublicPath && !isApiHealth && !isApiCron && !isApiUnsubscribe) {
+  if (!user && !isPublicPath && !isApiHealth && !isApiCron && !isApiUnsubscribe && !isApiPartnerBranding) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
