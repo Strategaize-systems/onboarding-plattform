@@ -1,5 +1,34 @@
 # Known Issues
 
+### ISSUE-049 — Branding-Resolver wird 2× pro Mandanten-Page-Load aufgerufen (Root-Layout + dashboard/page partner_client-Branch)
+- Status: open
+- Severity: Low
+- Area: V6 / SLC-104 MT-9 / Performance / Branding-Resolver
+- Summary: Pro `/dashboard`-Request bei Mandanten ruft `src/app/layout.tsx:21` `resolveBrandingForCurrentRequest()` (→ `resolveBrandingForTenant`) auf, und `src/app/dashboard/page.tsx:71-74` ruft `resolveBrandingForTenant` erneut mit derselben tenant_id auf. Ergebnis: 2 identische RPC-Calls + 2 `rpc_get_branding_for_tenant`-Auswertungen pro Page-Load.
+- Impact: Performance-Overhead von ~5-10ms pro Request. Bei Skalierung (~10-100 Mandanten/Partner, ~3-10 Page-Loads/Tag/Mandant) tragbar, aber unnoetig. RPC + Postgres im selben Docker-Netzwerk, kein User-sichtbarer Verzoegerungs-Effekt.
+- Workaround: Keiner noetig — Funktion ist korrekt, nur doppelt evaluiert.
+- Next Action: React `cache()`-Wrapper um `resolveBrandingForTenant` in `src/lib/branding/resolve.ts`. Deduplikation auf Request-Scope, kein cross-Request-Cache (Branding-Aenderungen muessen beim naechsten Request sichtbar sein). Slice-Spec Section B nennt `cache()`-Pattern bereits als `ggf.` Optional — V6.1+-Backlog, nicht V6-Pflicht.
+- Related: SLC-104 Slice Section B Caching-Note, RPT-236 Finding L-7.
+
+### ISSUE-048 — Branding-Resolver-Default-DisplayName "Strategaize" leakt im RPC-Fehler-Edge-Case in den Mandanten-Welcome-Block
+- Status: open
+- Severity: Low
+- Area: V6 / SLC-104 MT-9 / Branding-Resolver-Consumer
+- Summary: `src/app/dashboard/page.tsx:81` `let partnerDisplayName: string | null = branding.displayName` prueft nicht, ob `branding.displayName` der Strategaize-Resolver-Default ("Strategaize") ist. Im RPC-Fehler-Edge-Case greift R-104-1 Try/Catch in `src/lib/branding/resolve.ts:69-71` und liefert `STRATEGAIZE_DEFAULT_BRANDING` mit `displayName: "Strategaize"` zurueck. Die `if (!partnerDisplayName ...)`-Fallback-Bedingung triggert nicht (truthy String), das Fallback auf `partner_organization.display_name` wird uebersprungen, und der Mandanten-Welcome-Block zeigt "Ihr Steuerberater: Strategaize" statt korrekter Fallback-Logik "Ihrem Steuerberater".
+- Impact: Sehr selten triggered (RPC + Postgres im selben Docker-Netzwerk, nur bei Container-Crash oder DB-Outage). Mandant sieht im Fehlerfall "Strategaize" als angeblichen Steuerberater-Namen — verwirrend, aber nicht falsch im funktionalen Sinn (Plattform-Branding faellt durch, kein Datenverlust).
+- Workaround: Keiner noetig — RPC-Failure-Rate in Production sehr niedrig (~0.01%).
+- Next Action: In MT-12 Quality-Gates oder Gesamt-/qa SLC-104. Fix ist ~4 Zeilen in `dashboard/page.tsx`:
+  ```typescript
+  import { resolveBrandingForTenant, STRATEGAIZE_DEFAULT_BRANDING } from "@/lib/branding/resolve";
+  // ...
+  let partnerDisplayName: string | null =
+    branding.displayName && branding.displayName !== STRATEGAIZE_DEFAULT_BRANDING.displayName
+      ? branding.displayName
+      : null;
+  ```
+  Plus 1 zusaetzlicher Vitest-Case fuer "Default-DisplayName wird ignoriert wenn Fallback aktiv".
+- Related: Dev-System IMP-489 dokumentiert das systemische Consumer-Pattern, RPT-236 Finding L-6.
+
 ### ISSUE-047 — Logo-Upload Size-Limit-Inkonsistenz MAX_LOGO_BYTES=524288 (=512 KiB) vs UI-Text "500 KB"
 - Status: open
 - Severity: Low
