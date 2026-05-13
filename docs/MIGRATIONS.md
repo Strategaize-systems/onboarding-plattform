@@ -875,3 +875,14 @@ Der uebernommene Blueprint-Stand ist noch nicht auf einer Onboarding-Plattform-I
                         'lead_push_retry'));
   ```
   (Vollstaendige SQL-Files werden in /backend SLC-101 (Migration 090), /backend SLC-104 (Migration 091) und /backend SLC-106 (Migration 092) erstellt — diese Skizze ist Architektur-Vorgabe, kein Live-Code.)
+
+### MIG-035 — SLC-104 MT-12 ISSUE-047 Storage-Bucket file_size_limit auf 500 KiB angeglichen (Migration 091b, live)
+- Date: 2026-05-13
+- Scope:
+  - `sql/migrations/091b_align_partner_branding_assets_size_limit_to_500kib.sql` — `UPDATE storage.buckets SET file_size_limit = 512000 WHERE id = 'partner-branding-assets'` (vorher 524288 = 512 KiB, nachher 512000 = 500 KiB exakt). DO-Block verifiziert Post-State.
+  - Parallel-Code-Aenderung (kein DDL): `src/app/partner/dashboard/branding/actions.ts` und `src/app/partner/dashboard/branding/BrandingEditor.tsx` MAX_LOGO_BYTES auf `500 * 1024 = 512000 Byte`.
+- Reason: ISSUE-047 (Logo-Upload Size-Limit-Inkonsistenz). 524288 Byte ist `512 KiB`, NICHT 500 KiB, UI-Text + Slice-Spec versprechen aber "Maximal 500 KB". Option B aus ISSUE-047 (Constant-Pflicht-Truth, UI bleibt vertraut "500 KB") gewaehlt — Server-Action, Client-Validation, Storage-Bucket-Limit sind jetzt alle drei konsistent bei 512000 Byte.
+- Affected Areas: Storage-Bucket `partner-branding-assets.file_size_limit` (524288 -> 512000), Server-Action `uploadLogo` MAX_LOGO_BYTES-Constant, Client-Component `BrandingEditor` MAX_LOGO_BYTES-Constant. Keine Tabellen-Schemata, keine Daten-Migration noetig.
+- Risk: Nahe Null. Bucket existiert seit Migration 091, war im Bestand leer (Production hat noch keine Partner-Tenants — Backfill 0/0 per MIG-034). Bestehende Logo-Files (es gibt keine) bleiben unangetastet — Limit gilt nur fuer NEUE Uploads. Idempotenz: Re-Apply ist Pure-UPDATE auf gleichen Zielwert (=No-Op via `updated_at`-Refresh).
+- Rollback Notes: Manuell: `UPDATE storage.buckets SET file_size_limit = 524288 WHERE id = 'partner-branding-assets';`. Plus Code-Revert auf 524288 in beiden TypeScript-Files. Kein automatisches Reverse-Script bereitgestellt — ISSUE-047 ist final closed.
+- Live-Deploy: **LIVE auf Hetzner 2026-05-13 14:44 UTC** im Coolify-Postgres-Container `supabase-db-bwkg80w04wgccos48gcws8cs-073209612941` per sql-migration-hetzner.md Pattern (base64 + psql -U postgres). Pre-State `SELECT file_size_limit FROM storage.buckets WHERE id='partner-branding-assets'` = 524288, Apply `BEGIN -> UPDATE 1 -> DO -> NOTICE 'MIG-091b: ... aligned to 512000 (=500 KiB)' -> COMMIT`, Post-State = 512000, `updated_at = 2026-05-13 14:44:31.92316+00`. Quality-Gates nach Migration: tsc EXIT=0, eslint Branding-Module EXIT=0, vitest Full-Regression 963 passed + 14 skipped + 2 todo identisch zu MT-11, npm audit production-only keine NEUEN Vulns (5 pre-existing, alle in V5.1-Backlog).
