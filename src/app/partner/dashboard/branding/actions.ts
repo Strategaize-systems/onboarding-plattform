@@ -34,7 +34,7 @@ type ActionResult =
   | { ok: false; error: string };
 
 const HEX_REGEX = /^#[0-9a-fA-F]{6}$/;
-const MAX_LOGO_BYTES = 524288; // 500 KiB, identisch Storage-Bucket-Limit aus Migration 091
+const MAX_LOGO_BYTES = 500 * 1024; // 500 KiB = 512000 Byte, identisch Storage-Bucket-Limit aus Migration 091b
 const ALLOWED_MIMES = ["image/png", "image/svg+xml", "image/jpeg"] as const;
 type AllowedMime = (typeof ALLOWED_MIMES)[number];
 

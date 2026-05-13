@@ -21,7 +21,7 @@ import { uploadLogo, updateBranding } from "./actions";
  */
 
 const HEX_REGEX = /^#[0-9a-fA-F]{6}$/;
-const MAX_LOGO_BYTES = 524288;
+const MAX_LOGO_BYTES = 500 * 1024;
 const ALLOWED_MIMES = ["image/png", "image/svg+xml", "image/jpeg"];
 
 const ERROR_MESSAGES: Record<string, string> = {
