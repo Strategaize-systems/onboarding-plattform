@@ -1,13 +1,14 @@
 # Known Issues
 
 ### ISSUE-050 — Doppel-Footer auf Partner-Routes: hardcoded "Powered by Strategaize" in partner-shell.tsx zusaetzlich zum globalen StrategaizePoweredFooter
-- Status: open
+- Status: resolved
+- Resolved: 2026-05-13
 - Severity: Low
 - Area: V6 / SLC-104 MT-13 / DEC-108 / UI-Konsistenz
 - Summary: `src/app/partner/partner-shell.tsx` rendert eine hardcoded `<footer>...Powered by Strategaize...</footer>` als Stub-Variante (markiert im Komment "minimaler Stub fuer SLC-104, Server-Component-Variante mit i18n-Lookup wird dort eingefuegt"). MT-4/5 von SLC-104 hat den globalen `StrategaizePoweredFooter` mit i18n-Lookup ins Root-Layout eingefuegt (`src/app/layout.tsx` Zeile 41), den partner-shell.tsx-Stub aber nicht entfernt. Folge: Auf Partner-Routes (`/partner/dashboard*`) erscheinen zwei Footer untereinander — englischer hardcoded Text "Powered by Strategaize" plus deutscher i18n-Text "Aufgesetzt mit Strategaize". Mandanten-Routes betreffen nicht.
 - Impact: UX-only auf Partner-Routes — zwei aufeinanderfolgende Footer wirken redundant. Verstoesst gegen DEC-108-Code-Audit-Anforderung "Code-Audit verifiziert, dass keine andere Component 'Powered by Strategaize' rendert (kein Doppel-Footer, kein Default-Override-Risiko)". KEINE funktionale/sicherheitsrelevante Auswirkung — Pflicht-Footer ist ueberall mindestens einmal sichtbar (DEC-108-Hauptintent erfuellt).
 - Workaround: Keiner noetig — kosmetisch.
-- Next Action: Hardcoded Footer-Block + zugehoerigen Komment-Block in `src/app/partner/partner-shell.tsx` entfernen (~5 Zeilen). Browser-Verify auf `/partner/dashboard` + `/partner/dashboard/branding` dass nur noch der globale "Aufgesetzt mit Strategaize"-Footer rendert. Aufwand ~5 Minuten Edit. Empfehlung: V6.1-Polish oder Quick-Fix-Slice — nicht Slice-Acceptance-Blocker fuer SLC-104.
+- Resolution: Hardcoded `<footer>Powered by Strategaize</footer>` + Komment-Block + `flex min-h-full flex-col`-Wrapper aus `src/app/partner/partner-shell.tsx` entfernt. PartnerShell rendert jetzt nur noch Sidebar + scrollbaren `<main>` mit Children — der globale `StrategaizePoweredFooter` aus `src/app/layout.tsx` ist der einzige Footer auf Partner-Routes. tsc EXIT=0 volltree, eslint EXIT=0. Restliche "Powered by Strategaize"-Vorkommen verifiziert: nur `en.json` (i18n-Wert fuer globalen Footer) + `BrandingPreview.tsx` (Komment-Hint im Mandanten-Mockup, korrekt). DEC-108-Code-Audit-Anforderung wieder erfuellt.
 - Related: SLC-104 MT-13 Browser-Smoke (RPT-240), DEC-108 Pflicht-Footer-Spec.
 
 ### ISSUE-049 — Branding-Resolver wird 2× pro Mandanten-Page-Load aufgerufen (Root-Layout + dashboard/page partner_client-Branch)
