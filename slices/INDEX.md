@@ -361,7 +361,7 @@ Reihenfolge: **SLC-061 → SLC-062**
 
 ## V6 Slices (Multiplikator-Foundation — Steuerberater-Partner-Erweiterung)
 
-V6-Scope (RPT-209 Requirements + RPT-210 Architecture + RPT-211 Slice-Planning). 6 Features (FEAT-041..046) in 6 Slices (SLC-101..106) zerlegt. Slice-Numbering V6 = SLC-1XX-Block (V5 = SLC-07X, V5.1 = SLC-09X, V5.0.X-Hotfix-Reservierung = SLC-08X frei). Reuse-Quote ~60% — Capture-Mode-Architektur FEAT-025, RLS-Defense-in-Depth-Pattern V4/V5 inkl. SAVEPOINT, next-intl + lokalisierte Bedrock-Prompts, Tenant-Onboarding-Wizard FEAT-031, Lead-Intake-API Business-System mit First-Touch-Lock+UTM, DEC-091 Privacy-Checkbox-Pattern, DEC-099 RPC-SECURITY-DEFINER-Pattern, Walkthrough-Storage-Proxy-Pattern (SLC-091). Migration MIG-034 in 3 sequenziellen Migration-Files (090+091+092) ueber 3 Slices verteilt.
+V6-Effektiv-Scope (RPT-209 Requirements + RPT-210 Architecture + RPT-211 Slice-Planning, korrigiert 2026-05-14): **5 Slices (SLC-101..104 + SLC-106) — SLC-105 nach V6.1 verschoben** weil BL-095 Inhalts-Workshop fehlt. Urspruenglich waren 6 Features (FEAT-041..046) in 6 Slices (SLC-101..106) zerlegt. Slice-Numbering V6 = SLC-1XX-Block (V5 = SLC-07X, V5.1 = SLC-09X, V5.0.X-Hotfix-Reservierung = SLC-08X frei). Reuse-Quote ~60% — Capture-Mode-Architektur FEAT-025, RLS-Defense-in-Depth-Pattern V4/V5 inkl. SAVEPOINT, next-intl + lokalisierte Bedrock-Prompts, Tenant-Onboarding-Wizard FEAT-031, Lead-Intake-API Business-System mit First-Touch-Lock+UTM, DEC-091 Privacy-Checkbox-Pattern, DEC-099 RPC-SECURITY-DEFINER-Pattern, Walkthrough-Storage-Proxy-Pattern (SLC-091). Migration MIG-034 in 3 sequenziellen Migration-Files (090+091+092) ueber 3 Slices verteilt.
 
 | ID | Slice | Feature | Status | Priority | Created |
 |----|-------|---------|--------|----------|---------|
@@ -369,12 +369,19 @@ V6-Scope (RPT-209 Requirements + RPT-210 Architecture + RPT-211 Slice-Planning).
 | SLC-102 | [Partner-Organisation + Onboarding-Flow + Admin-Dashboard](SLC-102-partner-organization-admin-dashboard.md) | FEAT-042 | done | High | 2026-05-11 |
 | SLC-103 | [Partner-Client-Mapping + Mandanten-Einladung](SLC-103-partner-client-mapping-mandanten-einladung.md) | FEAT-043 | done | High | 2026-05-11 |
 | SLC-104 | [Partner-Branding + CSS-Custom-Properties + RPC (Migration 091)](SLC-104-partner-branding-css-custom-properties.md) | FEAT-044 | done | High | 2026-05-11 |
-| SLC-105 | [Diagnose-Werkzeug + Light-Pipeline + Bericht-Renderer (Stop-Gate BL-095)](SLC-105-diagnose-werkzeug-light-pipeline-renderer.md) | FEAT-045 | planned | High | 2026-05-11 |
 | SLC-106 | [Lead-Push opt-in + Outbound Webhook + DSGVO-Audit (Migration 092)](SLC-106-lead-push-opt-in-outbound-webhook.md) | FEAT-046 | done | High | 2026-05-11 |
+
+## V6.1 Slices (Diagnose-Werkzeug + NL-Variante + V6-Pilot-Polish)
+
+V6.1-Scope: Diagnose-Werkzeug (verschoben aus V6 weil BL-095 Inhalts-Workshop fehlt) + NL-Sprach-Variante + Polish-Items aus V6-Pilot-Feedback.
+
+| ID | Slice | Feature | Status | Priority | Created |
+|----|-------|---------|--------|----------|---------|
+| SLC-105 | [Diagnose-Werkzeug + Light-Pipeline + Bericht-Renderer (Stop-Gate BL-095)](SLC-105-diagnose-werkzeug-light-pipeline-renderer.md) | FEAT-045 | planned | High | 2026-05-11 |
 
 ### V6 Execution Order
 
-Strikt sequentielle Pflicht-Reihenfolge fuer SLC-101 → SLC-102 → SLC-103 → SLC-104 → SLC-105 → SLC-106.
+Strikt sequentielle Pflicht-Reihenfolge fuer SLC-101 → SLC-102 → SLC-103 → SLC-104 → SLC-106 (V6-Effektiv-Scope). SLC-105 ist V6.1-Slice und nicht Teil der V6-Execution-Order.
 
 - **SLC-101 (Foundation + Pen-Test, Pflicht-Vorgaenger fuer ALLE):** Migration 090 + neue Rolle `partner_admin` + `partner_organization` + `partner_client_mapping` Schema + RLS-Policy-Updates auf bestehenden Tabellen + **Pen-Test-Suite mit mind. 96 V6 + 94 Regression = 190 Faelle** (DEC-110). Pflicht-Gate: SLC-102..106 duerfen erst nach Pen-Test PASS starten.
 - **SLC-102 (Partner-Org + Admin-Dashboard):** Strategaize-Admin-UI `/admin/partners` + Partner-Admin-Dashboard-Strukturen `/partner/dashboard` + Auth-Routing-Erweiterung fuer `partner_admin` + Server Actions (`createPartnerOrganization`, `invitePartnerAdmin`, `updatePartnerStammdaten`, `acceptPartnerAdminInvitation`). Reuse: FEAT-031 Magic-Link-Pattern.

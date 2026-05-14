@@ -896,7 +896,7 @@
       "type": "feature",
       "priority": "high",
       "status": "open",
-      "version": "V6",
+      "version": "V6.1",
       "description": "V6 Kern-USP. Neue Template-Variante partner_diagnostic (15-25 Fragen + deterministische Score-Logik aus Inhalts-Workshop) + Light-Condensation-Pipeline mit Auto-Finalize Option DGN-A (KU direkt accepted, validation_layer.reviewer_role=system_auto) + Diagnose-Bericht-Renderer (Score-Visual + KI-Verdichtung + Pflicht-Output-Aussage) + Mandanten-Run-Flow /dashboard/diagnose. Stop-Gate: Inhalts-Workshop muss vor /backend SLC-105 Score-Logik liefern (BL-095). Vorgaenger: FEAT-041, FEAT-043, soft FEAT-044. Detail: /features/FEAT-045-diagnose-werkzeug-template-pipeline-renderer.md.",
       "createdAt": "2026-05-11"
     },
