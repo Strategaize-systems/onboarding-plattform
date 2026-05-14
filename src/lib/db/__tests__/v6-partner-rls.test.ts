@@ -15,9 +15,9 @@ import { withJwtContext } from "@/test/auth-context";
 //   - Schema-Smoke (V6-Migration korrekt appliziert)
 //   - partner_client_mapping Trigger (tenant_kind-Konsistenz)
 //   - partner_admin Read-Own (happy path)
-//   - partner_admin Cross-Partner-Read-Isolation  (16 Faelle, CP-15 SLC-104-aktiviert, CP-16 it.todo SLC-106)
+//   - partner_admin Cross-Partner-Read-Isolation  (16 Faelle, CP-15 SLC-104-aktiviert, CP-16 SLC-106-aktiviert)
 //   - partner_admin Cross-Client-Read-Isolation   (8 Faelle)
-//   - partner_admin Write-Block                   (12 Faelle, WB-11 SLC-104-aktiviert, WB-12 it.todo SLC-106)
+//   - partner_admin Write-Block                   (12 Faelle, WB-11 SLC-104-aktiviert, WB-12 SLC-106-aktiviert)
 //   - tenant_admin (Mandant) Cross-Mandant-Isolation (8 Faelle)
 //   - tenant_admin (Mandant) Sicht auf Partner-Daten (4 Faelle)
 //   - partner_admin vs. Direkt-Kunden             (4 Faelle)
@@ -37,8 +37,10 @@ import { withJwtContext } from "@/test/auth-context";
 // Test-Files admin-rls.test.ts / rls-isolation.test.ts / v5-walkthrough-rls.test.ts /
 // walkthrough-embed-rls.test.ts — werden hier nicht dupliziert.
 //
-// lead_push_consent/audit (SLC-106) sind als `it.todo(...)` markiert mit Slice-
-// Referenz — werden aktiviert wenn Migration 092 appliziert ist.
+// SLC-106 MT-9 — lead_push_consent + lead_push_audit + ai_jobs Pen-Test
+// (12 PASS-Faelle: 2 in den partner_admin-Bloecken aktiviert + 10 in neuem
+// Block "lead_push_* RLS + ai_jobs CHECK" am Ende der Datei). Section G der
+// Slice-Spec definiert die 4-Rollen × 3-Tabellen-Matrix.
 
 interface V6Fixture {
   // Tenants
@@ -71,6 +73,14 @@ interface V6Fixture {
   brandingConfigB: string;
   brandingColorA: string;
   brandingColorB: string;
+
+  // lead_push_consent + lead_push_audit Rows (SLC-106 MT-9)
+  // Pro Mandant je 1 Consent (status implizit pending in Audit) — Status-Variante
+  // 'success' wird in einzelnen Test-Faellen via UPDATE gesetzt, wenn benoetigt.
+  consentClientA: string;
+  consentClientB: string;
+  auditClientA: string;
+  auditClientB: string;
 
   // Capture-Chain pro Mandant + Direkt-Kunde
   templateId: string;
@@ -346,6 +356,55 @@ async function seedV6Fixture(client: Client): Promise<V6Fixture> {
   );
   const brandingConfigB = bcB.rows[0].id;
 
+  // --- lead_push_consent + lead_push_audit (SLC-106 MT-9) ---
+  // Pro Mandant je 1 Consent (RLS-Boundary mandant_user_id=auth.uid() bzw.
+  // partner_tenant_id-Filter pro Policy). 1 Audit-Zeile pro Consent mit
+  // status='pending' — Migration 092 setzt NOT NULL DEFAULT 'pending'. Tests
+  // duerfen den Status bei Bedarf via UPDATE manipulieren (innerhalb withTestDb,
+  // also auto-rollback).
+  async function mkConsent(
+    captureSessionId: string,
+    mandantUserId: string,
+    mandantTenantId: string,
+    partnerTenantId: string,
+  ): Promise<string> {
+    const r = await client.query<{ id: string }>(
+      `INSERT INTO public.lead_push_consent
+         (capture_session_id, mandant_user_id, mandant_tenant_id, partner_tenant_id, consent_text_version)
+       VALUES ($1, $2, $3, $4, 'v6-pen-test')
+       RETURNING id`,
+      [captureSessionId, mandantUserId, mandantTenantId, partnerTenantId],
+    );
+    return r.rows[0].id;
+  }
+  async function mkAudit(
+    consentId: string,
+    partnerTenantId: string,
+  ): Promise<string> {
+    const r = await client.query<{ id: string }>(
+      `INSERT INTO public.lead_push_audit
+         (consent_id, attempt_number, status, attribution_utm_source, attribution_utm_campaign, attribution_utm_medium)
+       VALUES ($1, 1, 'pending', $2, 'partner_diagnostic_v1', 'referral')
+       RETURNING id`,
+      [consentId, `partner_${partnerTenantId}`],
+    );
+    return r.rows[0].id;
+  }
+  const consentClientA = await mkConsent(
+    captureClientA,
+    clientAAdmin,
+    clientA,
+    partnerA,
+  );
+  const consentClientB = await mkConsent(
+    captureClientB,
+    clientBAdmin,
+    clientB,
+    partnerB,
+  );
+  const auditClientA = await mkAudit(consentClientA, partnerA);
+  const auditClientB = await mkAudit(consentClientB, partnerB);
+
   return {
     partnerA,
     partnerB,
@@ -368,6 +427,10 @@ async function seedV6Fixture(client: Client): Promise<V6Fixture> {
     brandingConfigB,
     brandingColorA,
     brandingColorB,
+    consentClientA,
+    consentClientB,
+    auditClientA,
+    auditClientB,
     templateId,
     templateVersion,
     captureClientA,
@@ -926,8 +989,19 @@ describe("V6 partner_admin Cross-Partner-Read-Isolation (16 cases)", () => {
     });
   });
 
-  // Placeholder fuer SLC-106 (Migration 092 noch nicht live):
-  it.todo("Case CP-16: partnerA-admin SELECT lead_push_consent/audit von partnerB → DENY (SLC-106 Migration 092)");
+  // Activated in SLC-106 MT-9:
+  it("Case CP-16: partnerA-admin SELECT lead_push_consent von partnerB → DENY (0 rows, SLC-106)", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV6Fixture(client);
+      await withJwtContext(client, f.partnerAAdmin, async () => {
+        const r = await client.query(
+          `SELECT id FROM public.lead_push_consent WHERE partner_tenant_id=$1`,
+          [f.partnerB],
+        );
+        expect(r.rowCount).toBe(0);
+      });
+    });
+  });
 });
 
 // ============================================================================
@@ -1224,8 +1298,46 @@ describe("V6 partner_admin Write-Block (12 cases)", () => {
     });
   });
 
-  // Placeholder fuer SLC-106 (Migration 092 noch nicht live):
-  it.todo("Case WB-12: partnerA-admin UPDATE lead_push_consent von partnerB → DENY (SLC-106)");
+  // Activated in SLC-106 MT-9:
+  it("Case WB-12: partnerA-admin UPDATE lead_push_consent von partnerB → DENY (0 rows, SLC-106)", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV6Fixture(client);
+      await withJwtContext(client, f.partnerAAdmin, async () => {
+        // Es gibt KEINE UPDATE-Policy fuer lead_push_consent ausserhalb
+        // strategaize_admin (Migration 092 grants nur SELECT + INSERT an
+        // authenticated). Erwartung: rowCount=0 oder permission_denied.
+        let updatedRowCount: number | null = null;
+        let permissionDenied = false;
+        await client.query("SAVEPOINT try_lpc_update_cross");
+        try {
+          const r = await client.query(
+            `UPDATE public.lead_push_consent
+                SET consent_text_version='hijack'
+              WHERE partner_tenant_id=$1`,
+            [f.partnerB],
+          );
+          updatedRowCount = r.rowCount;
+        } catch (e) {
+          permissionDenied = /permission denied|row-level security/i.test(
+            (e as Error).message,
+          );
+        }
+        await client.query("ROLLBACK TO SAVEPOINT try_lpc_update_cross");
+
+        expect(
+          updatedRowCount === 0 || permissionDenied,
+          `Expected rowCount=0 OR permission_denied, got rowCount=${updatedRowCount} permissionDenied=${permissionDenied}`,
+        ).toBe(true);
+      });
+
+      // Defense-in-Depth: partnerB-consent unveraendert (Outside JWT-Context).
+      const check = await client.query<{ consent_text_version: string }>(
+        `SELECT consent_text_version FROM public.lead_push_consent WHERE id=$1`,
+        [f.consentClientB],
+      );
+      expect(check.rows[0].consent_text_version).toBe("v6-pen-test");
+    });
+  });
 });
 
 // ============================================================================
@@ -2128,6 +2240,190 @@ describe("V6 SLC-104 — RPC rpc_get_branding_for_tenant via anon (1 case)", () 
         await client.query(`RESET ROLE`);
         await client.query(`RESET "request.jwt.claims"`);
       }
+    });
+  });
+});
+
+// ============================================================================
+// V6 SLC-106 — lead_push_consent + lead_push_audit + ai_jobs CHECK Pen-Test
+// ============================================================================
+// MT-9 aktiviert die in SLC-101 angelegten Placeholder-Faelle (CP-16, WB-12)
+// plus 10 zusaetzliche Cases zur Abdeckung des 4-Rollen × 3-Tabellen-Schemas
+// aus Slice-Spec Section G. Insgesamt: 12 neue PASS-Faelle gegen Migration 092.
+//
+// Policies unter Test (alle aus Migration 092):
+//   lead_push_consent:
+//     - lpc_select_own_mandant       (Mandant liest eigene Consent-Eintraege)
+//     - lpc_select_partner_admin     (partner_admin liest eigene Mandanten)
+//     - lpc_all_strategaize_admin    (Full-Access)
+//     - lpc_insert_own_mandant       (Mandant INSERT eigenen Consent)
+//   lead_push_audit:
+//     - lpa_select_own_mandant       (Mandant liest eigene Audit-Eintraege)
+//     - lpa_select_partner_admin     (partner_admin liest eigene Mandanten)
+//     - lpa_all_strategaize_admin    (Full-Access)
+//     - lpa_insert_own_mandant       (Mandant INSERT eigenen Audit)
+//   ai_jobs:
+//     - ai_jobs.job_type_check       (CHECK-Constraint inkl. 'lead_push_retry')
+//
+// Mirror-Logik: Bei jedem Cross-Partner-Fall pruefen wir die "umgekehrte"
+// Richtung (BC-CP-1 Vorbild aus SLC-104), damit Symmetrie verifiziert ist.
+
+describe("V6 SLC-106 — lead_push_* RLS + ai_jobs CHECK (10 cases)", () => {
+  // --- Cross-Partner Read-Isolation (3 cases) ---
+
+  it("Case LP-CP-1: partnerB-admin SELECT lead_push_consent von partnerA → DENY (0 rows, mirror of CP-16)", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV6Fixture(client);
+      await withJwtContext(client, f.partnerBAdmin, async () => {
+        const r = await client.query(
+          `SELECT id FROM public.lead_push_consent WHERE partner_tenant_id=$1`,
+          [f.partnerA],
+        );
+        expect(r.rowCount).toBe(0);
+      });
+    });
+  });
+
+  it("Case LP-CP-2: partnerA-admin SELECT lead_push_audit von partnerB (via Join) → DENY", async () => {
+    // Audit-Policy `lpa_select_partner_admin` joined ueber consent.partner_tenant_id.
+    // partnerA-admin darf nur Audit-Zeilen seiner Mandanten sehen — partnerB-Audit
+    // muss daher 0 Rows liefern.
+    await withTestDb(async (client) => {
+      const f = await seedV6Fixture(client);
+      await withJwtContext(client, f.partnerAAdmin, async () => {
+        const r = await client.query(
+          `SELECT id FROM public.lead_push_audit WHERE id=$1`,
+          [f.auditClientB],
+        );
+        expect(r.rowCount).toBe(0);
+      });
+    });
+  });
+
+  it("Case LP-CP-3: partnerB-admin SELECT lead_push_audit von partnerA (via Join) → DENY (mirror)", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV6Fixture(client);
+      await withJwtContext(client, f.partnerBAdmin, async () => {
+        const r = await client.query(
+          `SELECT id FROM public.lead_push_audit WHERE id=$1`,
+          [f.auditClientA],
+        );
+        expect(r.rowCount).toBe(0);
+      });
+    });
+  });
+
+  // --- Cross-Mandant Read-Isolation (2 cases) ---
+
+  it("Case LP-CM-1: clientA-admin (Mandant) SELECT lead_push_consent von clientB → DENY", async () => {
+    // lpc_select_own_mandant: mandant_user_id = auth.uid(). clientB-consent hat
+    // mandant_user_id=clientBAdmin, daher 0 Rows fuer clientA.
+    await withTestDb(async (client) => {
+      const f = await seedV6Fixture(client);
+      await withJwtContext(client, f.clientAAdmin, async () => {
+        const r = await client.query(
+          `SELECT id FROM public.lead_push_consent WHERE id=$1`,
+          [f.consentClientB],
+        );
+        expect(r.rowCount).toBe(0);
+      });
+    });
+  });
+
+  it("Case LP-CM-2: clientA-admin (Mandant) SELECT lead_push_audit von clientB → DENY", async () => {
+    // lpa_select_own_mandant joined ueber consent.mandant_user_id. clientB-audit
+    // sollte fuer clientA unsichtbar bleiben.
+    await withTestDb(async (client) => {
+      const f = await seedV6Fixture(client);
+      await withJwtContext(client, f.clientAAdmin, async () => {
+        const r = await client.query(
+          `SELECT id FROM public.lead_push_audit WHERE id=$1`,
+          [f.auditClientB],
+        );
+        expect(r.rowCount).toBe(0);
+      });
+    });
+  });
+
+  // --- Self-Access Happy-Path (3 cases) ---
+
+  it("Case LP-SR-1: clientA-admin SELECT eigene lead_push_consent → ALLOW (1 row)", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV6Fixture(client);
+      await withJwtContext(client, f.clientAAdmin, async () => {
+        const r = await client.query<{ id: string; consent_text_version: string }>(
+          `SELECT id, consent_text_version FROM public.lead_push_consent WHERE mandant_user_id=$1`,
+          [f.clientAAdmin],
+        );
+        expect(r.rowCount).toBe(1);
+        expect(r.rows[0].id).toBe(f.consentClientA);
+        expect(r.rows[0].consent_text_version).toBe("v6-pen-test");
+      });
+    });
+  });
+
+  it("Case LP-SR-2: clientA-admin SELECT eigene lead_push_audit (via Join) → ALLOW (1 row)", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV6Fixture(client);
+      await withJwtContext(client, f.clientAAdmin, async () => {
+        const r = await client.query<{ id: string; status: string }>(
+          `SELECT id, status FROM public.lead_push_audit WHERE id=$1`,
+          [f.auditClientA],
+        );
+        expect(r.rowCount).toBe(1);
+        expect(r.rows[0].status).toBe("pending");
+      });
+    });
+  });
+
+  it("Case LP-SR-3: partnerA-admin SELECT lead_push_consent seines Mandanten clientA → ALLOW (1 row)", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV6Fixture(client);
+      await withJwtContext(client, f.partnerAAdmin, async () => {
+        const r = await client.query<{ id: string }>(
+          `SELECT id FROM public.lead_push_consent WHERE partner_tenant_id=$1`,
+          [f.partnerA],
+        );
+        expect(r.rowCount).toBe(1);
+        expect(r.rows[0].id).toBe(f.consentClientA);
+      });
+    });
+  });
+
+  // --- ai_jobs job_type CHECK-Constraint (2 cases) ---
+
+  it("Case LP-AI-1: ai_jobs INSERT mit valid 'lead_push_retry' (strategaize_admin) → ALLOW", async () => {
+    // Verifiziert, dass Migration 092 den neuen job_type 'lead_push_retry' in die
+    // CHECK-Liste aufgenommen hat. strategaize_admin nutzt ai_jobs_admin_full
+    // Policy (FOR ALL).
+    await withTestDb(async (client) => {
+      const f = await seedV6Fixture(client);
+      await withJwtContext(client, f.strategaizeAdmin, async () => {
+        const err = await tryDml(
+          client,
+          `INSERT INTO public.ai_jobs (tenant_id, job_type, payload)
+           VALUES ($1, 'lead_push_retry', $2::jsonb)`,
+          [f.clientA, JSON.stringify({ audit_id: f.auditClientA, attempt: 2 })],
+        );
+        expect(err).toBeNull();
+      });
+    });
+  });
+
+  it("Case LP-AI-2: ai_jobs INSERT mit bogus job_type → CHECK-Constraint-Violation", async () => {
+    // Vor Migration 092 war job_type ohne CHECK. Nach Apply muessen unbekannte
+    // Werte vom ai_jobs_job_type_check abgelehnt werden.
+    await withTestDb(async (client) => {
+      const f = await seedV6Fixture(client);
+      await withJwtContext(client, f.strategaizeAdmin, async () => {
+        const err = await tryDml(
+          client,
+          `INSERT INTO public.ai_jobs (tenant_id, job_type, payload)
+           VALUES ($1, 'totally_bogus_job_type', '{}'::jsonb)`,
+          [f.clientA],
+        );
+        expect(err).toMatch(/ai_jobs_job_type_check|check constraint/i);
+      });
     });
   });
 });
