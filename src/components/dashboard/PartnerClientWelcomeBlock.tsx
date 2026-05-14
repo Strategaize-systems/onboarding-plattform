@@ -9,6 +9,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Sparkles } from "lucide-react";
 import { IchWillMehrCard } from "@/components/diagnose/IchWillMehrCard";
+import {
+  IchWillMehrStatusCard,
+  type IchWillMehrAuditStatus,
+} from "@/components/diagnose/IchWillMehrStatusCard";
 
 /**
  * V6 SLC-103 MT-7 / SLC-104 MT-9 — Welcome-Block fuer Mandanten unter
@@ -29,11 +33,17 @@ import { IchWillMehrCard } from "@/components/diagnose/IchWillMehrCard";
  * Diagnose-Karte ist Placeholder fuer SLC-105 — Klick zeigt Coming-Soon-Modal
  * (in V6 als simpler `disabled` Button mit Hinweis-Text dargestellt).
  *
- * SLC-106 MT-7: zusaetzlicher Slot fuer "Ich will mehr"-Card. Nur sichtbar,
- * wenn eine finalized capture_session existiert UND noch kein
- * lead_push_consent gespeichert ist. Da SLC-105 (Bericht-Page) BL-095-blockiert
- * ist, sitzt der Einstiegspunkt vorlaeufig hier; MT-8 transformiert die Card
- * spaeter in eine 3-State-Status-Card.
+ * SLC-106 MT-7/MT-8: Lead-Push-Slot — drei moegliche Render-States, gesteuert
+ * durch zwei separate Server-Props:
+ *   - `ichWillMehrCaptureSessionId` gesetzt: Mandant hat finalized Diagnose
+ *     OHNE bisherigen Consent → Trigger-Card (IchWillMehrCard) → Modal-Submit
+ *     fuehrt zu requestLeadPush.
+ *   - `ichWillMehrAuditStatus` gesetzt: Consent existiert + Audit-Status
+ *     bekannt → 3-State-Status-Card (IchWillMehrStatusCard, MT-8).
+ *   - beide null/undefined: kein Lead-Push-Slot (z.B. noch keine finalized
+ *     capture_session oder noch kein Audit-Insert).
+ * Server-Side berechnet die zwei Props in dashboard/page.tsx exklusiv —
+ * niemals beide gleichzeitig (Consent-Existenz schaltet Trigger ab, MT-8).
  */
 
 interface PartnerClientWelcomeBlockProps {
@@ -41,6 +51,10 @@ interface PartnerClientWelcomeBlockProps {
   partnerDisplayName?: string | null;
   partnerLogoUrl?: string | null;
   ichWillMehrCaptureSessionId?: string | null;
+  ichWillMehrAuditStatus?: {
+    status: IchWillMehrAuditStatus;
+    updatedAt: string;
+  } | null;
 }
 
 export function PartnerClientWelcomeBlock({
@@ -48,6 +62,7 @@ export function PartnerClientWelcomeBlock({
   partnerDisplayName,
   partnerLogoUrl,
   ichWillMehrCaptureSessionId,
+  ichWillMehrAuditStatus,
 }: PartnerClientWelcomeBlockProps) {
   const partnerLabel = partnerDisplayName?.trim() || "Ihrem Steuerberater";
 
@@ -122,7 +137,12 @@ export function PartnerClientWelcomeBlock({
         </CardContent>
       </Card>
 
-      {ichWillMehrCaptureSessionId ? (
+      {ichWillMehrAuditStatus ? (
+        <IchWillMehrStatusCard
+          status={ichWillMehrAuditStatus.status}
+          updatedAt={ichWillMehrAuditStatus.updatedAt}
+        />
+      ) : ichWillMehrCaptureSessionId ? (
         <IchWillMehrCard captureSessionId={ichWillMehrCaptureSessionId} />
       ) : null}
     </div>

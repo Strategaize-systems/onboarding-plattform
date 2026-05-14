@@ -88,14 +88,21 @@ export default async function DashboardPage() {
         partnerDisplayName = partnerOrg?.display_name ?? null;
       }
 
-      // V6 SLC-106 MT-7 — "Ich will mehr"-Einstiegspunkt.
-      // Vorlaeufig im Welcome-Block, weil SLC-105 Bericht-Page noch
-      // BL-095-blockiert ist (MT-8 wandelt die Card in eine Status-Card um).
-      // Sichtbarkeit: juengste finalized capture_session des Mandanten OHNE
-      // bereits gespeichertes lead_push_consent. Admin-Client umgeht RLS,
-      // weil Mandant zwar seine eigenen Sessions sehen darf, aber die
-      // Index-Query hier serverseitig deterministisch sein soll.
+      // V6 SLC-106 MT-7/MT-8 — Lead-Push-Slot im Welcome-Block.
+      // Drei moegliche Render-Zustaende, exklusiv berechnet:
+      //   (A) Audit existiert → 3-State-Status-Card (MT-8): zeigt
+      //       "Anfrage gesendet am ..." (success) bzw. "Anfrage wird
+      //       zugestellt..." (pending|failed, Retry-Pfad).
+      //   (B) Finalized Session ohne Consent → Trigger-Card (MT-7).
+      //   (C) Sonst (keine finalized Session oder Edge-Case ohne Audit) →
+      //       kein Lead-Push-Slot.
+      // Admin-Client umgeht RLS bewusst — Mandant darf eigene Zeilen lesen,
+      // aber die serverseitige Index-Query soll deterministisch sein.
       let ichWillMehrCaptureSessionId: string | null = null;
+      let ichWillMehrAuditStatus: {
+        status: "success" | "pending" | "failed";
+        updatedAt: string;
+      } | null = null;
       const { data: finalizedSession } = await admin
         .from("capture_session")
         .select("id")
@@ -110,7 +117,31 @@ export default async function DashboardPage() {
           .select("id")
           .eq("capture_session_id", finalizedSession.id)
           .maybeSingle();
-        if (!existingConsent) {
+        if (existingConsent?.id) {
+          // Consent vorhanden → Audit-Status der juengsten Attempt-Zeile holen.
+          // attempted_at DESC LIMIT 1 deckt sowohl UPDATE-Pattern (Initial
+          // wird ueberschrieben) als auch potentielle Multi-Row-Worker-Inserts
+          // ab. Fehlende Audit-Zeile (theoretisch unmoeglich wegen
+          // Compensating-Delete in requestLeadPush) faellt auf Slot (C) zurueck.
+          const { data: latestAudit } = await admin
+            .from("lead_push_audit")
+            .select("status, attempted_at")
+            .eq("consent_id", existingConsent.id)
+            .order("attempted_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (
+            latestAudit?.status &&
+            (latestAudit.status === "success" ||
+              latestAudit.status === "pending" ||
+              latestAudit.status === "failed")
+          ) {
+            ichWillMehrAuditStatus = {
+              status: latestAudit.status,
+              updatedAt: latestAudit.attempted_at as string,
+            };
+          }
+        } else {
           ichWillMehrCaptureSessionId = finalizedSession.id as string;
         }
       }
@@ -122,6 +153,7 @@ export default async function DashboardPage() {
             partnerDisplayName={partnerDisplayName}
             partnerLogoUrl={branding.logoUrl}
             ichWillMehrCaptureSessionId={ichWillMehrCaptureSessionId}
+            ichWillMehrAuditStatus={ichWillMehrAuditStatus}
           />
         </div>
       );
