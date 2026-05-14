@@ -93,11 +93,18 @@ Re-scoped 2026-05-06 per DEC-079 (Strategaize-Dev-System) nach USP-Stress-Test.
 
 ## V6 Features (Multiplikator-Foundation — Steuerberater-Partner-Erweiterung)
 
+V6-Effektiv-Scope (korrigiert 2026-05-14): 5 Features (FEAT-041..044 + FEAT-046). FEAT-045 (Diagnose-Werkzeug) wurde nach V6.1 verschoben weil BL-095 Inhalts-Workshop fehlt.
+
 | ID | Feature | Status | Spec | Created |
 |----|---------|--------|------|---------|
 | FEAT-041 | Partner-Tenant Foundation + RLS Erweiterung | done | [Spec](FEAT-041-partner-tenant-foundation-rls.md) | 2026-05-11 |
 | FEAT-042 | Partner-Organisation + Onboarding-Flow + Admin-Dashboard | done | [Spec](FEAT-042-partner-organization-onboarding-dashboard.md) | 2026-05-11 |
 | FEAT-043 | Partner-Client-Mapping + Mandanten-Einladung | done | [Spec](FEAT-043-partner-client-mapping-mandanten-einladung.md) | 2026-05-11 |
 | FEAT-044 | Partner-Branding minimal + CSS-Custom-Properties Setup | done | [Spec](FEAT-044-partner-branding-css-custom-properties.md) | 2026-05-11 |
-| FEAT-045 | Diagnose-Werkzeug Template + Light-Condensation-Pipeline + Bericht-Renderer | planned | [Spec](FEAT-045-diagnose-werkzeug-template-pipeline-renderer.md) | 2026-05-11 |
 | FEAT-046 | Lead-Push opt-in + Outbound Webhook + DSGVO-Audit | done | [Spec](FEAT-046-lead-push-opt-in-webhook-dsgvo.md) | 2026-05-11 |
+
+## V6.1 Features (Diagnose-Werkzeug + NL-Variante + Polish)
+
+| ID | Feature | Status | Spec | Created |
+|----|---------|--------|------|---------|
+| FEAT-045 | Diagnose-Werkzeug Template + Light-Condensation-Pipeline + Bericht-Renderer | planned | [Spec](FEAT-045-diagnose-werkzeug-template-pipeline-renderer.md) | 2026-05-11 |
