@@ -876,6 +876,18 @@ Der uebernommene Blueprint-Stand ist noch nicht auf einer Onboarding-Plattform-I
   ```
   (Vollstaendige SQL-Files werden in /backend SLC-101 (Migration 090), /backend SLC-104 (Migration 091) und /backend SLC-106 (Migration 092) erstellt — diese Skizze ist Architektur-Vorgabe, kein Live-Code.)
 
+### MIG-036 — SLC-106 MT-6 Worker-Claim respektiert payload.scheduled_at (Migration 092a, live)
+- Date: 2026-05-14
+- Scope:
+  - `sql/migrations/092a_ai_jobs_claim_scheduled_at_filter.sql` — `CREATE OR REPLACE FUNCTION public.rpc_claim_next_ai_job_for_type(p_job_type text)` erweitert um `AND (payload->>'scheduled_at' IS NULL OR (payload->>'scheduled_at')::timestamptz <= now())`. Idempotent (CREATE OR REPLACE), backwards-kompatibel (NULL/fehlend → wie bisher claimbar).
+  - `DROP FUNCTION IF EXISTS storage.rpc_claim_next_ai_job_for_type(text)` — Aufraeum-Statement nach search-path-Fail im ersten Apply-Versuch (siehe IMP-498). Idempotent fuer alle zukuenftigen Re-Applies (kein-op wenn die storage-Variante nicht existiert).
+  - GRANT EXECUTE auf `public.rpc_claim_next_ai_job_for_type(text)` an `service_role` (durch CREATE OR REPLACE bereits preserved; explizit nachgereicht fuer Idempotenz).
+- Reason: SLC-106 MT-5 enqueued bei Initial-Push-Fail einen ai_jobs `lead_push_retry` mit `payload.scheduled_at=now()+5min`, damit der Worker den Retry-Backoff (DEC-112: 5min nach Attempt 1, 30min nach Attempt 2) respektiert. Die bestehende Claim-RPC (Migration 035) filterte aber nur auf `status='pending'` ohne Faelligkeitspruefung — Retry-Jobs waeren sofort gezogen worden. P-1 aus RPT-244 als Pflicht-Note dokumentiert. Schema-Aenderung ist eine SCALPEL-AENDERUNG der Claim-Logik mit Null-Risiko fuer die 14 bestehenden Job-Types (keiner setzt `scheduled_at` im Payload).
+- Affected Areas: `public.rpc_claim_next_ai_job_for_type(text)` Function-Body (Filter-Kondition ergaenzt). Kein Schema-Aenderung an `public.ai_jobs`-Tabelle. Worker-Code in `src/workers/lead-push/handle-job.ts` setzt `payload.scheduled_at` beim Enqueue.
+- Risk: Sehr gering. Backwards-Kompatibilitaet via NULL-Handling: Jobs ohne `payload.scheduled_at` (alle bestehenden 14 Job-Types) verhalten sich wie bisher. SECURITY DEFINER + search_path=public bleibt unveraendert. Concurrency-Semantik (FOR UPDATE SKIP LOCKED) unveraendert.
+- Rollback Notes: Re-Apply Migration 035 `rpc_claim_next_ai_job_for_type` (ohne scheduled_at-Filter). Konsequenz: `lead_push_retry`-Jobs werden sofort gezogen statt nach Backoff — Worker macht einen unnoetigen sofortigen 2. Push-Versuch, dann blockiert er sich in einem CHECK-Loop bis Attempt 3. UX-only-Degradation, kein Datenverlust.
+- Live-Deploy: **LIVE auf Hetzner 2026-05-14** im Coolify-Postgres-Container `supabase-db-bwkg80w04wgccos48gcws8cs-151532171639` per sql-migration-hetzner.md Pattern (base64 + psql -U postgres). Pre-Apply-Backup: `/opt/onboarding-plattform-backups/pre-mig-092a_*.sql` (schema-only via pg_dump). Apply (zweiter Pass nach IMP-498-Fix): `CREATE FUNCTION` + `DROP FUNCTION` (cleanup der versehentlichen `storage.rpc_claim_next_ai_job_for_type` aus Pass 1) + `GRANT`. Post-State verifiziert per `pg_get_functiondef('public.rpc_claim_next_ai_job_for_type(text)'::regprocedure)` zeigt die scheduled_at-Branch. Live-Smoke (BEGIN+ROLLBACK): zukunftiger `scheduled_at` → RPC liefert NULL, vergangener → RPC liefert den Job, NULL/fehlender (classic job-type) → RPC liefert den Job. Drei Verhalten korrekt.
+
 ### MIG-035 — SLC-104 MT-12 ISSUE-047 Storage-Bucket file_size_limit auf 500 KiB angeglichen (Migration 091b, live)
 - Date: 2026-05-13
 - Scope:
