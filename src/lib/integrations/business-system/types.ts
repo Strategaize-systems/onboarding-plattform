@@ -27,3 +27,14 @@ export type LeadIntakeResponse =
       ok: false;
       error: string;
     };
+
+// Schmaler DTO, den buildNotesFromDiagnose konsumiert. Bewusst minimal:
+// nur die drei Felder, die im Strukturtext sichtbar werden — keine
+// Knowledge-Units, keine Roh-Antworten, keine PII jenseits Partner-Name.
+// Loaded-Pfad (MT-5 requestLeadPush) aggregiert aus block_diagnosis + tenant
+// + partner_org Tabellen in genau diese Shape.
+export interface DiagnoseReportSummary {
+  partner_org_name: string;
+  average_score: number | null;
+  weakest_block_title: string | null;
+}
