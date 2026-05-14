@@ -1,5 +1,15 @@
 # Known Issues
 
+### ISSUE-051 — profiles fehlen first_name/last_name fuer Lead-Push-Payload (V6.1 polish)
+- Status: open
+- Severity: Low
+- Area: V6 / SLC-106 MT-5 / profiles-Schema / Lead-Payload-Qualitaet
+- Summary: `public.profiles` hat in V6 nur Spalten `(id, tenant_id, email, role)`. Slice-Spec SLC-106 MT-5 verlangt aber `first_name` + `last_name` als Pflichtfelder im LeadIntakePayload an das Business-System. Implementation in `lead-push-actions.ts` faellt daher auf `auth.users.user_metadata` (Reihenfolge: first_name/last_name → given_name/family_name → full_name/name) und schliesslich auf den Email-Lokalteil als first_name zurueck. Wenn Mandant ohne user_metadata-Namen registriert ist, landet `first_name=<email-lokalteil>, last_name=""` als Lead-Name im Business-System.
+- Impact: Funktional intakt (Lead-Push klappt, Business-System First-Touch-Lock greift via utm_source). Aber Lead-Reporting im Business-System sieht "max.mustermann" statt "Max Mustermann" als Name → weniger praktisch fuer CRM-Sicht. Kein Compliance/Security-Risiko.
+- Workaround: Mandant kann beim Accept-Invitation-Flow first_name/last_name in user_metadata setzen lassen — passiert in V6 nicht automatisch.
+- Next Action: V6.1-Polish. Schema-Migration `profiles.first_name text NULL` + `last_name text NULL`. Accept-Invitation-Flow (`src/app/accept-invitation/[token]/actions.ts`) erweitert die Profile-Anlage um die beiden Felder, lead-push-actions.ts liest `profileRow.first_name` direkt. Schaetzung ~3-4h fuer Migration + Action-Erweiterung + Test-Update + Backfill aus user_metadata. Schlecht-Case: Bestands-Mandanten muessen einmalig "Name vervollstaendigen" prompted bekommen (Banner im /dashboard nach Login).
+- Related: SLC-106 MT-5 RPT-244 Problem P-2, FEAT-046 Lead-Intake-Vertrag.
+
 ### ISSUE-050 — Doppel-Footer auf Partner-Routes: hardcoded "Powered by Strategaize" in partner-shell.tsx zusaetzlich zum globalen StrategaizePoweredFooter
 - Status: resolved
 - Resolved: 2026-05-13
