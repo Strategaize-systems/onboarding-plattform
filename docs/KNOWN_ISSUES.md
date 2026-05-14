@@ -1,5 +1,23 @@
 # Known Issues
 
+### ISSUE-053 — Worker-ENV-Validation deckt BUSINESS_SYSTEM_INTAKE_* nicht ab (silent-Fail-Risk bei Lead-Push-Retry)
+- Status: open
+- Severity: High
+- Area: V6 / SLC-106 / Worker / ENV-Hardening
+- Summary: `src/workers/condensation/run.ts:validateEnv()` prueft eine `REQUIRED_ENV`-Liste (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, AWS_REGION, LLM_MODEL etc.) — aber `BUSINESS_SYSTEM_INTAKE_URL` und `BUSINESS_SYSTEM_INTAKE_API_KEY` fehlen in dieser Liste. SLC-106-Spec Section H Zeile 268 forderte explizit "ENV-Validierung beim Worker-Start: Warn-Log wenn ENVs fehlen". Aktueller Stand: Worker startet ohne diese ENVs silent durch, Handler-Slot-15 registriert sich, claim-loop pollt — erst beim ersten lead_push_retry-Job wirft der Adapter `BUSINESS_SYSTEM_INTAKE_URL or BUSINESS_SYSTEM_INTAKE_API_KEY not configured`-Error. handle-job.ts marked das Audit als failed + enqueued naechsten Retry → Retry-Loop bis attempt=3-Cap ohne menschliche Sichtbarkeit. F-V6-H2 aus RPT-253.
+- Impact: Silent-Fail-Risiko bei Misconfiguration. In MT-11 nicht aufgetreten weil ENVs sauber gesetzt waren, aber bei Coolify-Resource-Recreation oder ENV-Drift unbemerkt bis User auf ai_jobs-failed-Liste schaut.
+- Workaround: Keiner — Misconfiguration ist nicht detektierbar.
+- Next Action: Vor /go-live fixen (~5 min): `BUSINESS_SYSTEM_INTAKE_URL` + `BUSINESS_SYSTEM_INTAKE_API_KEY` in `REQUIRED_ENV`-Array ergaenzen (oder neue RECOMMENDED_ENV-Stufe mit Warn-Log statt Fatal). 1 Vitest "validateEnv loggt Warning oder wirft wenn Lead-Push-ENV fehlt" dazu.
+
+### ISSUE-052 — Stale TODO in createPartnerOrganization: partner_branding_config-Default-Row wird nicht angelegt
+- Status: open
+- Severity: High
+- Area: V6 / SLC-102 / SLC-104 / Partner-Onboarding-Flow
+- Summary: `src/app/admin/partners/actions.ts:166` enthaelt stale TODO `// TODO SLC-104 — INSERT partner_branding_config wenn Tabelle existiert (Default-Strategaize-Blau #2563eb, logo_url=NULL).` SLC-104 ist done, Tabelle existiert seit Migration 091. Aber das geplante Default-Insert beim createPartnerOrganization-Server-Action ist nie nachgezogen worden. Konsequenz live verifiziert in MT-12 (RPT-252): Test-Mandant unter neu angelegtem Partner sah "Empfohlen von Strategaize" statt "Empfohlen von MT12 KanzleiTest", weil partner_branding_config keine Row hatte und Resolver auf STRATEGAIZE_DEFAULT_BRANDING.displayName='Strategaize' zurueckfiel. F-V6-H1 aus RPT-253.
+- Impact: Jeder neu angelegte Partner-Tenant zeigt seinen Mandanten bis zum ersten manuellen Branding-Speichern "Empfohlen von Strategaize" statt "Empfohlen von <Partner>". UX-Drift gegen Slice-Spec-Intent. Erster Live-Partner triggert das.
+- Workaround: Partner-Admin kann manuell ueber `/partner/dashboard/branding` einen Default speichern. Aber das ist eine zusaetzliche Handlung.
+- Next Action: Vor /go-live fixen (~10 min): `INSERT INTO public.partner_branding_config (partner_tenant_id) VALUES ($1) ON CONFLICT DO NOTHING` nach RAISE-NOTICE-Block in createPartnerOrganization-Action. 1 Vitest "neuer Partner-Tenant hat partner_branding_config-Row mit NULL primary_color" dazu. Schliesst gleichzeitig den Workaround-Pfad fuer ISSUE-048 (Default-DisplayName-Leak).
+
 ### ISSUE-051 — profiles fehlen first_name/last_name fuer Lead-Push-Payload (V6.1 polish)
 - Status: open
 - Severity: Low
