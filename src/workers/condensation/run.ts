@@ -18,6 +18,7 @@ import { handleWalkthroughTranscribeJob } from "../walkthrough/handle-transcribe
 import { handleRedactPiiJob } from "../walkthrough/handle-redact-pii-job";
 import { handleExtractStepsJob } from "../walkthrough/handle-extract-steps-job";
 import { handleMapSubtopicsJob } from "../walkthrough/handle-map-subtopics-job";
+import { handleLeadPushRetryJob } from "../lead-push/handle-job";
 
 // Validate required environment variables
 const REQUIRED_ENV = [
@@ -76,6 +77,7 @@ async function main(): Promise<void> {
   console.log("[worker] walkthrough_redact_pii handler registered");
   console.log("[worker] walkthrough_extract_steps handler registered");
   console.log("[worker] walkthrough_map_subtopics handler registered");
+  console.log("[worker] lead_push_retry handler registered");
   validateEnv();
   setupShutdown();
 
@@ -94,7 +96,8 @@ async function main(): Promise<void> {
     handleWalkthroughTranscribeJob,
     handleRedactPiiJob,
     handleExtractStepsJob,
-    handleMapSubtopicsJob
+    handleMapSubtopicsJob,
+    handleLeadPushRetryJob
   );
 }
 
