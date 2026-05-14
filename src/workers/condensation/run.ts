@@ -29,6 +29,20 @@ const REQUIRED_ENV = [
   "AWS_SECRET_ACCESS_KEY",
 ];
 
+// Optional ENVs — Worker startet auch ohne, aber bestimmte Job-Handler
+// schlagen dann beim ersten Pickup fehl. Warn-Log macht Misconfiguration
+// sichtbar (ISSUE-053 Fix, Slice-Spec SLC-106 Section H Z.268).
+const RECOMMENDED_ENV: Array<{ key: string; usedBy: string }> = [
+  {
+    key: "BUSINESS_SYSTEM_INTAKE_URL",
+    usedBy: "lead_push_retry handler (SLC-106)",
+  },
+  {
+    key: "BUSINESS_SYSTEM_INTAKE_API_KEY",
+    usedBy: "lead_push_retry handler (SLC-106)",
+  },
+];
+
 function validateEnv(): void {
   const missing = REQUIRED_ENV.filter((key) => !process.env[key]);
   if (missing.length > 0) {
@@ -36,6 +50,15 @@ function validateEnv(): void {
       `[worker] Missing required environment variables: ${missing.join(", ")}`
     );
     process.exit(1);
+  }
+
+  // Recommended-ENV-Check: silent OK, sonst Warn-Log mit usedBy-Hinweis.
+  for (const { key, usedBy } of RECOMMENDED_ENV) {
+    if (!process.env[key]) {
+      console.warn(
+        `[worker] Recommended ENV '${key}' is not set — ${usedBy} will fail at job pickup.`,
+      );
+    }
   }
 
   // Default Bedrock model if not set

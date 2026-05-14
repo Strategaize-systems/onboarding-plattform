@@ -163,8 +163,26 @@ export async function createPartnerOrganization(
     },
   });
 
-  // TODO SLC-104 — INSERT partner_branding_config wenn Tabelle existiert
-  // (Default-Strategaize-Blau #2563eb, logo_url=NULL).
+  // Phase 4 — partner_branding_config Default-Row anlegen (ISSUE-052 Fix).
+  // primary_color faellt auf DB-Default `#4454b8` (MIG-091a Style-Guide-V2)
+  // zurueck, display_name=NULL bleibt — Resolver liest dann
+  // partner_organization.display_name als Fallback. Mit upsert idempotent.
+  // Best-effort: bei Fehler weiter, Partner-Tenant ist trotzdem nutzbar
+  // (Partner-Admin kann ueber /partner/dashboard/branding nachholen).
+  const { error: brandingErr } = await admin
+    .from("partner_branding_config")
+    .upsert(
+      { partner_tenant_id: tenantRow.id },
+      { onConflict: "partner_tenant_id", ignoreDuplicates: true },
+    );
+  if (brandingErr) {
+    captureException(new Error(brandingErr.message), {
+      source:
+        "admin/partners/createPartnerOrganization/partner_branding_config_default",
+      userId: adminUserId,
+      metadata: { tenant_id: tenantRow.id, legalName },
+    });
+  }
 
   revalidatePath("/admin/partners");
   return { ok: true, partnerTenantId: tenantRow.id };
