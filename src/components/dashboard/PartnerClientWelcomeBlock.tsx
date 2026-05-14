@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Sparkles } from "lucide-react";
+import { IchWillMehrCard } from "@/components/diagnose/IchWillMehrCard";
 
 /**
  * V6 SLC-103 MT-7 / SLC-104 MT-9 — Welcome-Block fuer Mandanten unter
@@ -27,18 +28,26 @@ import { Sparkles } from "lucide-react";
  *
  * Diagnose-Karte ist Placeholder fuer SLC-105 — Klick zeigt Coming-Soon-Modal
  * (in V6 als simpler `disabled` Button mit Hinweis-Text dargestellt).
+ *
+ * SLC-106 MT-7: zusaetzlicher Slot fuer "Ich will mehr"-Card. Nur sichtbar,
+ * wenn eine finalized capture_session existiert UND noch kein
+ * lead_push_consent gespeichert ist. Da SLC-105 (Bericht-Page) BL-095-blockiert
+ * ist, sitzt der Einstiegspunkt vorlaeufig hier; MT-8 transformiert die Card
+ * spaeter in eine 3-State-Status-Card.
  */
 
 interface PartnerClientWelcomeBlockProps {
   mandantCompanyName: string;
   partnerDisplayName?: string | null;
   partnerLogoUrl?: string | null;
+  ichWillMehrCaptureSessionId?: string | null;
 }
 
 export function PartnerClientWelcomeBlock({
   mandantCompanyName,
   partnerDisplayName,
   partnerLogoUrl,
+  ichWillMehrCaptureSessionId,
 }: PartnerClientWelcomeBlockProps) {
   const partnerLabel = partnerDisplayName?.trim() || "Ihrem Steuerberater";
 
@@ -112,6 +121,10 @@ export function PartnerClientWelcomeBlock({
           </p>
         </CardContent>
       </Card>
+
+      {ichWillMehrCaptureSessionId ? (
+        <IchWillMehrCard captureSessionId={ichWillMehrCaptureSessionId} />
+      ) : null}
     </div>
   );
 }

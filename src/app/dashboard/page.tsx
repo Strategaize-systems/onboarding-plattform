@@ -88,12 +88,40 @@ export default async function DashboardPage() {
         partnerDisplayName = partnerOrg?.display_name ?? null;
       }
 
+      // V6 SLC-106 MT-7 — "Ich will mehr"-Einstiegspunkt.
+      // Vorlaeufig im Welcome-Block, weil SLC-105 Bericht-Page noch
+      // BL-095-blockiert ist (MT-8 wandelt die Card in eine Status-Card um).
+      // Sichtbarkeit: juengste finalized capture_session des Mandanten OHNE
+      // bereits gespeichertes lead_push_consent. Admin-Client umgeht RLS,
+      // weil Mandant zwar seine eigenen Sessions sehen darf, aber die
+      // Index-Query hier serverseitig deterministisch sein soll.
+      let ichWillMehrCaptureSessionId: string | null = null;
+      const { data: finalizedSession } = await admin
+        .from("capture_session")
+        .select("id")
+        .eq("tenant_id", profile.tenant_id)
+        .eq("status", "finalized")
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (finalizedSession?.id) {
+        const { data: existingConsent } = await admin
+          .from("lead_push_consent")
+          .select("id")
+          .eq("capture_session_id", finalizedSession.id)
+          .maybeSingle();
+        if (!existingConsent) {
+          ichWillMehrCaptureSessionId = finalizedSession.id as string;
+        }
+      }
+
       return (
         <div className="mx-auto max-w-3xl px-6 py-12">
           <PartnerClientWelcomeBlock
             mandantCompanyName={tenantRow.name as string}
             partnerDisplayName={partnerDisplayName}
             partnerLogoUrl={branding.logoUrl}
+            ichWillMehrCaptureSessionId={ichWillMehrCaptureSessionId}
           />
         </div>
       );
