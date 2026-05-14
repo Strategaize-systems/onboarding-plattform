@@ -370,7 +370,7 @@ V6-Scope (RPT-209 Requirements + RPT-210 Architecture + RPT-211 Slice-Planning).
 | SLC-103 | [Partner-Client-Mapping + Mandanten-Einladung](SLC-103-partner-client-mapping-mandanten-einladung.md) | FEAT-043 | done | High | 2026-05-11 |
 | SLC-104 | [Partner-Branding + CSS-Custom-Properties + RPC (Migration 091)](SLC-104-partner-branding-css-custom-properties.md) | FEAT-044 | done | High | 2026-05-11 |
 | SLC-105 | [Diagnose-Werkzeug + Light-Pipeline + Bericht-Renderer (Stop-Gate BL-095)](SLC-105-diagnose-werkzeug-light-pipeline-renderer.md) | FEAT-045 | planned | High | 2026-05-11 |
-| SLC-106 | [Lead-Push opt-in + Outbound Webhook + DSGVO-Audit (Migration 092)](SLC-106-lead-push-opt-in-outbound-webhook.md) | FEAT-046 | in_progress | High | 2026-05-11 |
+| SLC-106 | [Lead-Push opt-in + Outbound Webhook + DSGVO-Audit (Migration 092)](SLC-106-lead-push-opt-in-outbound-webhook.md) | FEAT-046 | done | High | 2026-05-11 |
 
 ### V6 Execution Order
 

@@ -905,7 +905,7 @@
       "title": "FEAT-046 Lead-Push opt-in + Outbound Webhook + DSGVO-Audit (SLC-106)",
       "type": "feature",
       "priority": "high",
-      "status": "in_progress",
+      "status": "done",
       "version": "V6",
       "description": "V6. lead_push_consent + lead_push_audit Tabellen + Server Action requestLeadPush mit Pflicht-DSGVO-Checkbox (DEC-091-Reuse) + outbound HTTP-Adapter src/lib/integrations/business-system/lead-intake.ts + Bearer-Auth via ENV BUSINESS_SYSTEM_INTAKE_URL + BUSINESS_SYSTEM_INTAKE_API_KEY + UTM-Attribution utm_source=partner_<tenant_id> + Worker-Job-Handler lead_push_retry mit 3x exponential Backoff. Reuse: V5 SLC-079 Pflicht-Privacy-Checkbox-Pattern + bestehende ai_jobs-Queue. Vorgaenger: FEAT-041, FEAT-043, FEAT-045. Erster outbound HTTP-Call der Plattform. Detail: /features/FEAT-046-lead-push-opt-in-webhook-dsgvo.md.",
       "createdAt": "2026-05-11"
