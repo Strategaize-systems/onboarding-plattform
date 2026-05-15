@@ -1,8 +1,8 @@
 # Known Issues
 
 ### ISSUE-072 — V6 External-HTTPS-Routing zur App-Resource haengt (TLS klappt, Backend-Routing 504/Connection-Hang) — Multi-Network-Falle
-- Status: open (Workaround applied 2026-05-15 ~07:05 UTC — Permanent-Fix als V6.1-Compose-Edit ausstehend)
-- Severity: High (war Blocker, durch User-Coolify-Redeploy auf Workaround-Status gesenkt — latent bleibt die Falle)
+- Status: open (SLC-110 MT-1 Code-Side Fix gepushed 2026-05-15 commit `2d5b488` — Live-Wirksamkeit pending MT-5 Coolify-Reload-Compose+Redeploy + MT-6 /post-launch Light-Smoke)
+- Severity: High (war Blocker, durch User-Coolify-Redeploy auf Workaround-Status gesenkt — latent bleibt die Falle bis Compose-Reload)
 - Area: V6 / Coolify-Traefik / Reverse-Proxy / Multi-Network
 - Summary: 2026-05-15 ~06:30 UTC im /post-launch V6 entdeckt: Externer Aufruf `https://onboarding.strategaizetransition.com/login` antwortet HTTP 000 (Connection-Hang nach erfolgreichem TLS-Handshake) bzw. HTTP 504 nach 30s Browser-Timeout. TLS-Handshake klappt vollstaendig (RSASSA-PSS, ALPN h2 angenommen, 40-80ms). Vergleichs-Domain `meet-onboarding.strategaizetransition.com` (Jitsi auf gleichem Server) antwortet HTTP 200 in 37ms — Coolify-Proxy als solcher funktioniert. Diagnose: App-Container (`app-bwkg80w04wgccos48gcws8cs-145850957466`) ist auf 2 Networks (`bwkg80w04wgccos48gcws8cs` IP=10.0.3.18 + `bwkg80w04wgccos48gcws8cs_strategaize-net` IP=10.0.4.17). Coolify-Proxy ist nur auf `bwkg80w04wgccos48gcws8cs` + `coolify`. App-Labels enthalten KEIN `traefik.docker.network=bwkg80w04wgccos48gcws8cs`-Label und KEIN explicit `traefik.http.services.X.loadbalancer.server.port=3000`. → Traefik waehlt das falsche Interface (`10.0.4.17` strategaize-net, das er nicht erreichen kann) → Backend-Connect haengt → 504/Hang. **Verifiziert via direkter IP-Test vom coolify-proxy: `wget http://10.0.3.18:3000/login` → HTTP 200, `wget http://10.0.4.17:3000/login` → Hang.** Pattern aus memory `feedback_coolify_multi_network_traefik.md` + rule `jitsi-jibri-deployment.md` Punkt 3. Onset-Window: zwischen RPT-256 V6-Deploy 2026-05-14 ~14:58 UTC (88ms TTFB OK) und 2026-05-15 ~06:30 UTC (Hang). Container restart timestamps: app=15:00:25 / coolify-proxy=15:01:02 (V6-Redeploy). Coolify-Sentinel restart 23:30 UTC am 14.05. — moeglicher Trigger fuer Network-Reload mit geaenderter Reihenfolge.
 - Impact: **V6-App vollstaendig extern unerreichbar.** Keine User koennen einloggen, kein Mandant kann Diagnose-Modal nutzen, keine Cross-System-Lead-Push moeglich (User-seitig). Internal-Test-Mode-Outage ~7-15h. Container intern ALLE healthy + 0 V6-induced Errors in DB-error_log + 0 ai_jobs lead_push_retry created → Code-Side ist NICHT die Ursache. Pure Coolify/Traefik-Konfigurations-Falle.
@@ -50,7 +50,7 @@
 - Related: SLC-104 MT-13 Browser-Smoke (RPT-240), DEC-108 Pflicht-Footer-Spec.
 
 ### ISSUE-049 — Branding-Resolver wird 2× pro Mandanten-Page-Load aufgerufen (Root-Layout + dashboard/page partner_client-Branch)
-- Status: open
+- Status: open (SLC-110 MT-3 Code-Side Fix gepushed 2026-05-15 commit `dae24ff` — React `cache()`-Wrap aktiv, Dedupe-Vitest Case 8 PASS, Live-Wirksamkeit pending MT-5 Redeploy)
 - Severity: Low
 - Area: V6 / SLC-104 MT-9 / Performance / Branding-Resolver
 - Summary: Pro `/dashboard`-Request bei Mandanten ruft `src/app/layout.tsx:21` `resolveBrandingForCurrentRequest()` (→ `resolveBrandingForTenant`) auf, und `src/app/dashboard/page.tsx:71-74` ruft `resolveBrandingForTenant` erneut mit derselben tenant_id auf. Ergebnis: 2 identische RPC-Calls + 2 `rpc_get_branding_for_tenant`-Auswertungen pro Page-Load.
@@ -60,7 +60,7 @@
 - Related: SLC-104 Slice Section B Caching-Note, RPT-236 Finding L-7.
 
 ### ISSUE-048 — Branding-Resolver-Default-DisplayName "Strategaize" leakt im RPC-Fehler-Edge-Case in den Mandanten-Welcome-Block
-- Status: open
+- Status: open (SLC-110 MT-2 Code-Side Fix gepushed 2026-05-15 commit `db04665` — Fallback-Predicate erweitert um STRATEGAIZE_DEFAULT_BRANDING.displayName-Vergleich + 5 neue Vitest PASS, Live-Wirksamkeit pending MT-5 Redeploy)
 - Severity: Low
 - Area: V6 / SLC-104 MT-9 / Branding-Resolver-Consumer
 - Summary: `src/app/dashboard/page.tsx:81` `let partnerDisplayName: string | null = branding.displayName` prueft nicht, ob `branding.displayName` der Strategaize-Resolver-Default ("Strategaize") ist. Im RPC-Fehler-Edge-Case greift R-104-1 Try/Catch in `src/lib/branding/resolve.ts:69-71` und liefert `STRATEGAIZE_DEFAULT_BRANDING` mit `displayName: "Strategaize"` zurueck. Die `if (!partnerDisplayName ...)`-Fallback-Bedingung triggert nicht (truthy String), das Fallback auf `partner_organization.display_name` wird uebersprungen, und der Mandanten-Welcome-Block zeigt "Ihr Steuerberater: Strategaize" statt korrekter Fallback-Logik "Ihrem Steuerberater".

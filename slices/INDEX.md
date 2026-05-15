@@ -377,7 +377,7 @@ V6.1-Scope: Diagnose-Werkzeug (verschoben aus V6 weil BL-095 Inhalts-Workshop fe
 
 | ID | Slice | Feature | Status | Priority | Created |
 |----|-------|---------|--------|----------|---------|
-| SLC-110 | [V6.1 Permanent-Fix Polish-Tripel (Multi-Network + Branding-Default-Leak + React-cache)](SLC-110-v61-permanent-fix-polish-tripel.md) | FEAT-047 | planned | High | 2026-05-15 |
+| SLC-110 | [V6.1 Permanent-Fix Polish-Tripel (Multi-Network + Branding-Default-Leak + React-cache)](SLC-110-v61-permanent-fix-polish-tripel.md) | FEAT-047 | done | High | 2026-05-15 |
 | SLC-105 | [Diagnose-Werkzeug + Light-Pipeline + Bericht-Renderer (Stop-Gate BL-095)](SLC-105-diagnose-werkzeug-light-pipeline-renderer.md) | FEAT-045 | planned | High | 2026-05-11 |
 
 ### V6 Execution Order

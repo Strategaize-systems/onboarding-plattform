@@ -965,7 +965,7 @@
       "title": "ISSUE-072 docker-compose Multi-Network-Label-Fix (V6.1 Permanent-Fix)",
       "type": "fix",
       "priority": "high",
-      "status": "open",
+      "status": "done",
       "version": "V6.1",
       "description": "docker-compose.yml App-Service-Section um traefik.docker.network=bwkg80w04wgccos48gcws8cs + traefik.http.services.app-svc.loadbalancer.server.port=3000 + Router .service=app-svc Wiring erweitern. Behebt Multi-Network-Falle (App auf 2 Networks ohne explicit Service-Definition fuehrt zu sporadischem 504-Outage nach Coolify-Sentinel-Restart). Pattern aus jitsi-jibri-deployment.md Punkt 1+3 + memory feedback_coolify_multi_network_traefik.md. SLC-110 MT-1.",
       "createdAt": "2026-05-15"
@@ -975,7 +975,7 @@
       "title": "ISSUE-048 Default-DisplayName-Leak Fix in dashboard/page.tsx (V6.1 Polish)",
       "type": "fix",
       "priority": "medium",
-      "status": "open",
+      "status": "done",
       "version": "V6.1",
       "description": "src/app/dashboard/page.tsx Fallback-Bedingung um STRATEGAIZE_DEFAULT_BRANDING.displayName-Vergleich erweitern. Verhindert Anzeige Ihr Steuerberater Strategaize im RPC-Failure-Edge-Case. ~4 LoC + Vitest. SLC-110 MT-2.",
       "createdAt": "2026-05-15"
@@ -985,7 +985,7 @@
       "title": "ISSUE-049 React cache() Wrapper fuer resolveBrandingForTenant (V6.1 Polish)",
       "type": "improvement",
       "priority": "low",
-      "status": "open",
+      "status": "done",
       "version": "V6.1",
       "description": "src/lib/branding/resolve.ts resolveBrandingForTenant mit React cache() wrappen. Deduplikation auf Request-Scope (Layout + Page-Branch rufen Resolver 2x), kein cross-Request-Cache. ~2 LoC + Vitest dedupe-Test. DEC-115. SLC-110 MT-3.",
       "createdAt": "2026-05-15"
