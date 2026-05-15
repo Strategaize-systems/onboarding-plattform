@@ -1,9 +1,41 @@
 // V6 SLC-104 — Resolver Vitest (FEAT-044, MT-3)
 //
 // 4 Pflicht-Faelle + 2 Hex-Konversions-Faelle + 1 Fehler-Pfad = 7 Faelle.
+//
+// SLC-110 MT-3 (ISSUE-049) — Erweiterung um cache()-Dedupe-Test.
 
 import { describe, it, expect, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
+
+// Ausserhalb eines React-Server-Components-Render-Contexts ist React's `cache()`
+// ein Passthrough. Damit der Dedupe-Test echte Memoization beobachten kann,
+// ersetzen wir cache() durch einen Stand-in, der Object.is-basierte Args-
+// Kombination memoized — semantisch wie React, aber render-context-frei.
+// Bestehende Tests bleiben unbeeinflusst, weil jeder Test eine neue
+// supabase-Mock-Instanz baut → Cache-Miss bei Object.is auf erstes Arg.
+vi.mock("react", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("react")>();
+  return {
+    ...actual,
+    cache: <T extends (...args: unknown[]) => unknown>(fn: T): T => {
+      const entries: Array<{ args: unknown[]; result: unknown }> = [];
+      return ((...args: unknown[]) => {
+        for (const entry of entries) {
+          if (
+            entry.args.length === args.length &&
+            entry.args.every((v, i) => Object.is(v, args[i]))
+          ) {
+            return entry.result;
+          }
+        }
+        const result = fn(...args);
+        entries.push({ args, result });
+        return result;
+      }) as unknown as T;
+    },
+  };
+});
+
 import {
   resolveBrandingForTenant,
   hexToRgbTriplet,
@@ -147,5 +179,28 @@ describe("resolveBrandingForTenant", () => {
     const result = await resolveBrandingForTenant(supabase, tenantWithSpace);
 
     expect(result.logoUrl).toBe("/api/partner-branding/tenant%20with%20space/logo");
+  });
+
+  // SLC-110 MT-3 (DEC-115 / ISSUE-049) — cache()-Dedupe.
+  // Layout + Mandanten-Dashboard rufen den Resolver pro Request 2x mit
+  // identischer (supabase, tenant_id)-Kombination. React's cache() soll den
+  // zweiten Aufruf aus dem Request-Scope-Memo bedienen, RPC nur 1x treffen.
+  it("Case 8: dedupliziert zwei Aufrufe mit identischer (supabase, tenantId)-Kombination", async () => {
+    const supabase = mockClient({
+      data: {
+        logo_url: "partner-a/logo.png",
+        primary_color: "#00aaff",
+        secondary_color: null,
+        display_name: "Kanzlei Mueller",
+      },
+      error: null,
+    });
+
+    const r1 = await resolveBrandingForTenant(supabase, "dedupe-tenant-id");
+    const r2 = await resolveBrandingForTenant(supabase, "dedupe-tenant-id");
+
+    expect(supabase.rpc).toHaveBeenCalledTimes(1);
+    expect(r1).toEqual(r2);
+    expect(r1.displayName).toBe("Kanzlei Mueller");
   });
 });

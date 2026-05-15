@@ -10,6 +10,7 @@
 //   - Tenant unbekannt im RPC     -> RPC liefert selbst Strategaize-Default
 //   - Hex-Parse-Fehler bei rgb()  -> Strategaize-Default-RGB
 
+import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { BrandingConfig, BrandingRpcPayload } from "./types";
 
@@ -36,10 +37,18 @@ export function hexToRgbTriplet(hex: string): string {
   return `${r} ${g} ${b}`;
 }
 
-export async function resolveBrandingForTenant(
+// SLC-110 MT-3 (DEC-115) — React cache() Request-Scope-Memoization.
+// Layout (resolveBrandingForCurrentRequest) UND Mandanten-Dashboard rufen
+// resolveBrandingForTenant pro Request mit identischer tenant_id auf
+// (ISSUE-049). cache() deduplicated Aufrufe innerhalb derselben Render-Phase
+// per Object.is auf den Args. Cross-Request bleibt jeder Aufruf separat —
+// Branding-Aenderungen werden beim naechsten Request sofort sichtbar.
+// Praktischer Cache-Hit setzt voraus, dass Caller dieselbe SupabaseClient-
+// Instanz uebergeben (createClient() einmal pro Request, dann durchreichen).
+export const resolveBrandingForTenant = cache(async (
   supabase: SupabaseClient,
   tenantId: string | null
-): Promise<BrandingConfig> {
+): Promise<BrandingConfig> => {
   if (tenantId === null) {
     return STRATEGAIZE_DEFAULT_BRANDING;
   }
@@ -69,4 +78,4 @@ export async function resolveBrandingForTenant(
   } catch {
     return STRATEGAIZE_DEFAULT_BRANDING;
   }
-}
+});
