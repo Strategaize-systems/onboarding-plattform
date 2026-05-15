@@ -42,10 +42,12 @@ Standard-Auftragsverarbeitungsvertrag-Vorlage zum Versand an Partner-Kanzleien. 
 - Texte sind Standardvorlage. Konkrete Bezeichnung von Strategaize Transition BV (Adresse, KvK, Vertretungsberechtigter) wird in der Vorlage als Platzhalter `[Verantwortlicher: ...]` referenziert — Befuellen erfolgt manuell pro Partner-Vertrag.
 - Per `data-residency.md` muessen alle Subunternehmer EU-gehostet sein — TOMs/Subunternehmer-Liste muss diesen Stand widerspiegeln.
 
-## Open Questions (zur Klaerung in /architecture)
+## Architecture Decisions (entschieden in /architecture V6.2, RPT-266)
 
-1. **Rollen-Zuordnung Verantwortlicher vs. Auftragsverarbeiter**: Wenn Partner-Kanzlei seine Mandanten in die Plattform bringt, ist die Kanzlei Verantwortlicher (DSGVO Art. 4 Nr. 7) und Strategaize Auftragsverarbeiter (Art. 4 Nr. 8). ODER ist Strategaize selbst Verantwortlicher fuer den Diagnose-Funnel mit eigener Rechtsgrundlage (Vertrag mit Mandant via Self-Signup)? Klaert Anwalts-Review final, V6.2-Vorlage muss beide Konstellationen unterstuetzen oder eine waehlen.
-2. **AVV-Distribution-Mechanik**: nur `docs/legal/`-Files oder zusaetzlich Admin-Route `/admin/legal/avv` fuer Strategaize-Sales-Anzeige? Letzteres ware ~1-2h zusaetzlich.
+- **DEC-120** — AVV-Distribution nur ueber `docs/legal/`-Dateien + manuellen Mail-/Cloud-Link-Versand. KEIN Admin-UI in V6.2. V7+ Backlog falls Partner-Volume >10/Monat erreicht.
+- **Rollen-Zuordnung Verantwortlicher vs. Auftragsverarbeiter**: V6.2-Vorlage enthaelt Platzhalter `[Verantwortlicher: ...]` + `[Auftragsverarbeiter: ...]`. Anwalts-Review (BL-104) klaert finale Konstellation (Partner-Kanzlei-Verantwortlicher mit Strategaize-Auftragsverarbeiter ODER Strategaize-Direkt-Verantwortlicher via Diagnose-Funnel-Vertrag mit Mandant).
+- **TOMs/Subunternehmer-Referenz**: AVV verweist auf `docs/COMPLIANCE.md` (FEAT-050) statt Doppelung. Subunternehmer-Liste: AWS Bedrock eu-central-1, Azure Whisper EU, IONOS SMTP, Hetzner Frankfurt.
+- **AVV-PDF-Konvertierung**: out-of-scope V6.2 (siehe PRD-V6.2). Markdown reicht; PDF-Generierung manuell per Pandoc/Word-Save-As durch User pro Partner-Onboarding.
 
 ## Success Criteria
 

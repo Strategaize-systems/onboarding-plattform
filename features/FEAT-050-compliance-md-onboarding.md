@@ -41,9 +41,12 @@ Strukturierte DSGVO-Compliance-Dokumentation der Onboarding-Plattform als techni
 - Konsistent zu `docs/DECISIONS.md` (V6-DECs 100-113 + V6.1-DECs 114+115 referenzieren wo relevant).
 - Konsistent zu `data-residency.md`-Rule.
 
-## Open Questions (zur Klaerung in /architecture)
+## Architecture Decisions (entschieden in /architecture V6.2, RPT-266)
 
-- Keine Open Questions — Inhalts-Item, lebt komplett in `docs/`.
+- **DEC-121** — Keine DPO-Bestellung fuer Strategaize Transition BV in V6.2. Begruendung explizit in `docs/COMPLIANCE.md` Sektion 9 deklarieren: keine umfangreiche Verarbeitung Art. 37(1)(b), keine besonderen Kategorien Art. 9, keine systematische Verhaltensbeobachtung, kleine Org-Groesse. Anwalts-Review (BL-104) prueft Einschaetzung final.
+- **Sektion-Struktur**: 8 Standardsektionen analog Business-System V5.2-Pattern + 1 V6.2-spezifische DPO-Bewertungs-Sektion (Sektion 9, neu vs. BS V5.2).
+- **Cross-Links zu DECISIONS.md**: COMPLIANCE.md verweist auf konkrete V6-DECs (DEC-100..113), V6.1-DECs (DEC-114, DEC-115), V6.2-DECs (DEC-116..121), wo relevant. Konsistent zu `data-residency.md`-Rule.
+- **TOMs-Sektion** dient als kanonische Quelle fuer die TOMs-Referenz in den AVV-Vorlagen (FEAT-049) — keine Doppelung der Subunternehmer-Liste in AVV-Files.
 
 ## Success Criteria
 

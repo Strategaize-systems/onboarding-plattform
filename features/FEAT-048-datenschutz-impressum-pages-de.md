@@ -34,12 +34,12 @@ Oeffentliche, DSGVO-konforme Datenschutzerklaerung + gesetzliches Impressum auf 
 - next-intl ist aktiv (DE+EN+NL Locales), aber V6.2 nutzt nur DE — kein Locale-Prefix in der V6.2-Route. Routes `/datenschutz` und `/impressum` ohne `/de`-Prefix. Sprach-Switch-Vorbereitung fuer V6.3 in /architecture klaeren.
 - Texte mit Disclaimer "keine Rechtsberatung — Anwalts-Review pending".
 
-## Open Questions (zur Klaerung in /architecture)
+## Architecture Decisions (entschieden in /architecture V6.2, RPT-266)
 
-1. **Markdown-Render-Pattern**: Reuse aus Handbuch-Reader (V4.1) oder neuer Approach (`react-markdown`, `@next/mdx`, statisches Markup)?
-2. **ENV-Var-Layout fuer Impressum**: monolithischer HTML-Block oder granular (Company, Street, ZIP, City, Country, KvK, VAT, Director)?
-3. **Footer-Link-Scope**: nur Datenschutz+Impressum oder zusaetzlich AVV-Download/mailto-Kontakt?
-4. **Sprach-Switch-Vorbereitung**: /datenschutz V6.2 ohne Locale-Prefix, dann /[locale]/datenschutz fuer V6.3? Oder direkt mit next-intl-konformer Locale-Konfiguration?
+- **DEC-116** — Impressum-Stammdaten granular ueber 9 ENV-Variablen (`IMPRESSUM_COMPANY`, `_STREET`, `_ZIP`, `_CITY`, `_COUNTRY`, `_KVK`, `_VAT`, `_DIRECTOR`, `_EMAIL`). Server-Component wirft Error bei fehlender Pflicht-ENV. Default-Land = Niederlande.
+- **DEC-117** — Markdown-Render-Pattern: Reuse aus HandbookReader (DEC-049). `src/content/legal/datenschutz.de.md` wird per `react-markdown + remark-gfm + rehype-slug + rehype-autolink-headings` gerendert (Subset des HandbookReader-Stacks, ohne `rehype-raw`/Highlight). Prose-Styling via `prose prose-slate max-w-none`.
+- **DEC-118** — Footer-Link-Scope nur Datenschutz + Impressum (`[Datenschutz] · [Impressum] · [Powered by Strategaize ↗]`). Keine AVV-Download-/mailto-/Cookie-Link-Erweiterung.
+- **DEC-119** — Routes `/datenschutz` und `/impressum` OHNE Locale-Prefix in V6.2 (DE-Only-Scope). V6.3 verschiebt nach `/[locale]/datenschutz` mit 301-Redirect.
 
 ## Success Criteria
 

@@ -5485,3 +5485,150 @@ Apply-Reihenfolge: 090 → 091 → 092 (mit Pre-Apply-Backup vor jedem Step, sql
 6. **SLC-106** FEAT-046 Lead-Push opt-in + outbound Webhook (Migration 092)
 
 V6-Pflicht-Vorbereitung parallel zum Code (KEIN Code-Block): BL-094 AVV-Standard-Template DE+NL, BL-095 Inhalts-Workshop Diagnose-Werkzeug, BL-096 GTM-Akquise-Pitch (Achse 9).
+
+---
+
+## V6.2 Architektur — Compliance-Sprint (Pre-Production-Compliance-Gate)
+
+Status: Architektur entschieden 2026-05-15 (RPT-266). Implementation startet mit /slice-planning V6.2.
+
+### V6.2 Architektur-Summary
+
+V6.2 ist ein **rein code-leichter Compliance-Sprint** ohne neue Backend-Komponenten, ohne neue DB-Tabellen, ohne neue Migrations und ohne neue Worker-Logik. Drei Liefergegenstaende: (1) zwei oeffentliche DE-Pages `/datenschutz` + `/impressum`, (2) zwei Vertragsvorlagen `docs/legal/AVV-DE.md` + `docs/legal/AVV-NL.md`, (3) eine technische Compliance-Dokumentation `docs/COMPLIANCE.md`.
+
+Die einzige nicht-triviale Code-Aenderung ist die Erweiterung des existierenden `StrategaizePoweredFooter` um zwei Next-Link-Verweise. Die Pages selbst sind reine Server-Components, die Markdown-Files aus `src/content/legal/` per `react-markdown` rendern (Pattern-Reuse aus HandbookReader / DEC-049). Impressum-Stammdaten kommen ueber 9 granulare ENV-Variablen (DEC-116) — keine PII im Code-Repo.
+
+V6.2 etabliert KEINE neue Architektur-Schicht. Es macht die bestehende V6+V6.1-Architektur release-fest fuer den ersten echten Live-Pilot-Steuerberater, vorbehaltlich Anwalts-Review-Pass (BL-104 = User-Pflicht).
+
+### V6.2 Main Components
+
+| Component | Status | Aenderung |
+|-----------|--------|-----------|
+| Next.js App | bestehend | 3 neue Public-Routes (`/datenschutz`, `/impressum`), Footer-Erweiterung |
+| Worker | bestehend | unangetastet |
+| Supabase DB | bestehend | unangetastet (0 Migrations) |
+| Bedrock | bestehend | unangetastet |
+| Coolify-Secrets | bestehend | 9 neue ENV-Variablen (Impressum-Stammdaten) |
+| `src/content/legal/` | NEU | 1 Markdown-File `datenschutz.de.md` (V6.2-Scope DE) |
+| `docs/legal/` | NEU | 2 Markdown-Files `AVV-DE.md` + `AVV-NL.md` |
+| `docs/COMPLIANCE.md` | NEU | 8-Sektionen-Doku analog Business-System V5.2 |
+
+### V6.2 Public-Routes
+
+#### `/datenschutz` (Server Component, public, pre-auth)
+- Liest `src/content/legal/datenschutz.de.md` zur Build-Zeit (`fs.readFileSync` via `path.join(process.cwd(), ...)`)
+- Rendert ueber `react-markdown` mit Plugins `remark-gfm + rehype-slug + rehype-autolink-headings` (DEC-117, Subset des HandbookReader-Stacks)
+- Prose-Styling via `prose prose-slate max-w-none` (Tailwind-Typography)
+- Default-Locale DE, kein Locale-Prefix in V6.2 (DEC-119). V6.3 verschiebt nach `/[locale]/datenschutz` mit 301-Redirect.
+
+#### `/impressum` (Server Component, public, pre-auth)
+- Liest 9 ENV-Variablen (Impressum-Stammdaten, DEC-116):
+  - `IMPRESSUM_COMPANY` — "Strategaize Transition BV"
+  - `IMPRESSUM_STREET` — Strasse + Hausnummer
+  - `IMPRESSUM_ZIP` — Postleitzahl
+  - `IMPRESSUM_CITY` — Stadt
+  - `IMPRESSUM_COUNTRY` — Default "Niederlande"
+  - `IMPRESSUM_KVK` — NL-KvK-Nummer
+  - `IMPRESSUM_VAT` — USt-IdNr (VAT)
+  - `IMPRESSUM_DIRECTOR` — Vertretungsberechtigter
+  - `IMPRESSUM_EMAIL` — Kontakt-E-Mail
+- Server-Component wirft `throw new Error()` mit klarem Hinweis wenn Pflicht-ENV fehlt (kein silent default-Wert)
+- Setzt die Werte in eine i18n-Template-Struktur (DE), gestyltet ueber `prose prose-slate max-w-none`
+
+#### Footer (`StrategaizePoweredFooter.tsx`, bestehend, erweitert)
+- 2 neue Next-Link-Komponenten zu `/datenschutz` und `/impressum`, gerendert links neben dem bestehenden "Powered by Strategaize"-Link
+- Layout: `[Datenschutz] · [Impressum] · [Powered by Strategaize ↗]`
+- i18n-Keys `footer.privacyPolicy` + `footer.imprint` in `src/messages/de.json` (DE-Only in V6.2)
+- Footer-Component bleibt Server-Component (`getTranslations` statt `useTranslations`)
+- Sichtbar auf allen Routes (auth + non-auth) ueber bestehende Layout-Einbindung
+
+### V6.2 AVV-Vorlagen (`docs/legal/`)
+
+Reine Markdown-Vertragsvorlagen, NICHT als Code-Route gerendert (DEC-120):
+
+- `docs/legal/AVV-DE.md` — Standard-Auftragsverarbeitungsvertrag nach DSGVO Art. 28 (11 Klausel-Bausteine: Praeambel, Gegenstand, Art+Zweck, Daten-Kategorien, Weisungsrecht, TOMs, Subunternehmer, Unterstuetzungspflichten, Meldepflichten, Audit, Rueckgabe+Loeschung, Haftung+Vertragsdauer, Unterschriftsfelder)
+- `docs/legal/AVV-NL.md` — analoge NL-Variante (Verwerkersovereenkomst nach AVG Art. 28)
+- Beide Files enthalten Disclaimer "keine Rechtsberatung — Anwalts-Review pending" prominent oben
+- Beide Files enthalten Platzhalter `[Verantwortlicher: ...]` und `[Auftragsverarbeiter: ...]` — Anwalts-Review klaert finale Rollen-Zuordnung (Strategaize-Diagnose-Funnel-Direkt-Mandant vs. Partner-Kanzlei-vermittelter-Mandant)
+- TOMs/Subunternehmer-Sektion referenziert `docs/COMPLIANCE.md` (FEAT-050) statt Doppelung
+- Distribution: manueller Mail/Cloud-Link-Versand durch Strategaize-Inhaberin (kein Admin-UI in V6.2 — DEC-120, V7+ Backlog falls Volume waechst)
+
+### V6.2 Compliance-Dokumentation (`docs/COMPLIANCE.md`)
+
+Strukturierte technische Compliance-Doku analog Business-System V5.2-Pattern. 8 Standardsektionen + 1 V6.2-spezifische DPO-Klausel:
+
+1. **Erhobene personenbezogene Daten** — pro Tenant-Klasse (`direct_client` V1-V4-Pfad, `partner_organization` V6, `partner_client` V6); Cross-Cutting (Auth-User, Walkthrough-Aufzeichnungen, AI-Job-Audit)
+2. **Datenfluesse pro Quelle** — Self-Signup (V7+), Magic-Link-Invite (V4.2), Capture-Session-Submit, Walkthrough-Upload-Pipeline (V5), Lead-Push opt-in (V6 FEAT-046), Onboarding-Tenant-Reminder-Cron (V4.2)
+3. **Speicherorte + Regionen** — alles EU per `data-residency.md` Rule (Hetzner Frankfurt 159.69.207.29 + AWS Bedrock eu-central-1 + Azure Whisper EU + IONOS SMTP)
+4. **Retention-Policies** — Walkthrough 30-Tage-Cleanup-Cron (V5), capture_session tenant-lifecycle, ai_jobs Standard-Retention, lead_push_audit unbegrenzt
+5. **Drittanbieter-Liste mit DPA-Status** — AWS, Azure, IONOS, Hetzner, ggf. Cal.com (V4.1)
+6. **Auftragsverarbeitungsvertraege (DPA-Status)** — Strategaize↔Drittanbieter (Standard-DPAs), Strategaize↔Partner-Kanzleien (FEAT-049 Template)
+7. **Loeschkonzept** — Tenant-Delete-Kaskade ueber FK-CASCADE (`tenants` → `capture_session` → `block_session` etc.), RLS-isoliert, Walkthrough-Storage-Cleanup parallel
+8. **Datenschutzkonforme Defaults** — RLS by Default (Defense-in-Depth), keine PII in Logs, SECURITY DEFINER mit explicit search_path (IMP-507), Privacy-Pflicht-Checkbox (DEC-091)
+9. **DPO-Bewertung (V6.2-Klausel, DEC-121)** — Strategaize Transition BV bestellt aktuell keinen DPO. Begruendung: keine umfangreiche Verarbeitung i.S.v. Art. 37(1)(b), keine besonderen Kategorien Art. 9, keine systematische Verhaltensbeobachtung. Anwalts-Review prueft Einschaetzung final.
+
+### V6.2 Data Flow — End-to-End
+
+V6.2 hat KEINE neuen Data Flows. Nur Public-Page-Render:
+
+```
+Browser → GET /datenschutz
+   → Next.js Server-Component liest src/content/legal/datenschutz.de.md (fs.readFileSync zur Build-Zeit)
+   → react-markdown rendert mit remark-gfm + rehype-slug + rehype-autolink-headings
+   → HTML-Response
+
+Browser → GET /impressum
+   → Next.js Server-Component liest 9 ENV-Variablen (IMPRESSUM_*)
+   → Werft Error wenn Pflicht-ENV fehlt
+   → Rendert i18n-Template-Struktur mit ENV-Werten
+   → HTML-Response
+
+Browser → Footer auf jeder Route
+   → StrategaizePoweredFooter Server-Component
+   → 3 Links: /datenschutz, /impressum, https://strategaize.com (extern)
+```
+
+### V6.2 Constraints und Tradeoffs
+
+- **Granulare ENVs statt monolithischer HTML-Block (DEC-116).** 9 ENVs sind mehr Setup-Aufwand als 1 ENV, dafuer ohne Layout-Risiko aenderbar und V6.3-NL-vorbereitet.
+- **`react-markdown`-Reuse statt MDX oder statisches JSX (DEC-117).** Pattern-Reuse aus HandbookReader. Anwalts-freundliches Edit-Format.
+- **Footer-Minimal-Scope (DEC-118).** Footer bleibt clean, AVV gehoert nicht in den Mandanten-Footer. Cookie-Hinweis wird NICHT gebraucht, weil kein non-essentielles Tracking aktiv.
+- **Keine Locale-Prefix-Routen in V6.2 (DEC-119).** Pragmatischer DE-Scope. V6.3-Refactor mit 301-Redirect ist ~30-60 Min, nicht V6.2-blockierend.
+- **AVV ohne Admin-UI (DEC-120).** Manueller Versand fuer <5 Partner-Onboardings pragmatisch. V7+ Backlog falls Volume waechst.
+- **Keine DPO-Bestellung (DEC-121).** Begruendung klar dokumentiert, Anwalts-Review klaert final.
+- **Anwalts-Review als User-Pflicht-Stop-Gate.** V6.2-Release-Marker wird "ready pending legal review". Erster echter Live-Partner blockiert auf Review-Pass.
+
+### V6.2 Open Technical Questions — alle in DECs entschieden
+
+Die 6 Open Questions aus RPT-265 sind in DEC-116..121 entschieden:
+
+- Q1 ENV-Var-Layout fuer Impressum → DEC-116 granular (9 ENVs)
+- Q2 Markdown-Render-Pattern → DEC-117 react-markdown-Reuse aus HandbookReader
+- Q3 Footer-Link-Scope → DEC-118 nur Datenschutz + Impressum
+- Q4 Sprach-Switch-Vorbereitung → DEC-119 ohne Locale-Prefix in V6.2, V6.3-Refactor deferred
+- Q5 AVV-Distribution-Mechanik → DEC-120 nur `docs/legal/`, kein Admin-UI in V6.2
+- Q6 DPO-Pflicht-Check → DEC-121 keine DPO, Klausel deklariert + Anwalts-Review-Pflicht
+
+Keine offenen Architektur-Fragen blockieren `/slice-planning V6.2`.
+
+### V6.2 Migrations: KEINE
+
+V6.2 hat 0 DB-Migrations. Keine neuen Tabellen, keine RLS-Aenderungen, keine RPC-Aenderungen. Nur Frontend + Doku.
+
+### V6.2 Risks / Open Points
+
+- **User-Lieferung Impressum-Stammdaten verspaetet** — KvK, Adresse, Vertretungsberechtigter fuer Strategaize Transition BV werden vom User waehrend /backend nachgeliefert. Implementation kann mit `.env.example`-Platzhaltern starten; ENVs werden vor /deploy in Coolify-Secrets gesetzt.
+- **AVV-Rollen-Zuordnung pending Anwalts-Review** — Strategaize-als-Verantwortlicher vs. Partner-Kanzlei-als-Verantwortlicher ist DSGVO-Art-4-7-Frage. V6.2-Vorlage enthaelt Platzhalter, Anwalts-Review setzt finale Variante.
+- **NL-AVV-Anwalts-Verfuegbarkeit** — fuer NL-Pilot Q4 2026 muss ein NL-Datenschutzbeauftragter den NL-AVV reviewen. Falls nicht verfuegbar: NL-Pilot verschiebt sich, DE-Pilot bleibt unbeeinflusst.
+
+### V6.2 Naechster Schritt
+
+`/slice-planning V6.2` — die 3 V6.2-Features (FEAT-048 Pages, FEAT-049 AVV-Templates, FEAT-050 COMPLIANCE.md) in finale Slices zerlegen. Erwartete Slice-Struktur:
+
+1. **SLC-120** FEAT-048 Datenschutz + Impressum Pages DE (Frontend-only, 5-7 MTs: Markdown-File anlegen, Pages-Routes, Footer-Erweiterung, ENV-Setup, i18n-Keys, Build-Smoke)
+2. **SLC-121** FEAT-049 AVV-Templates DE + NL (reine Markdown-Files, 2-3 MTs: AVV-DE, AVV-NL, Cross-Link zu COMPLIANCE.md)
+3. **SLC-122** FEAT-050 docs/COMPLIANCE.md Onboarding-Plattform (Pattern-Reuse aus BS V5.2, 1-2 MTs: Struktur portieren + Inhalt neu)
+
+Slice-Reihenfolge: SLC-122 (COMPLIANCE.md) zuerst, weil FEAT-049 AVV-Templates auf COMPLIANCE.md-TOMs verweisen. Dann SLC-121 (AVV). SLC-120 (Pages) parallel-faehig zu beiden.
+
+V6.2-Pflicht-Vorbereitung parallel zum Code: BL-104 Anwalts-Review-Vorbereitung (User-Pflicht — Anwalt suchen, Texte versenden, Review einholen). Anwalts-Review erfolgt NACH /deploy V6.2 als "ready pending legal review".
