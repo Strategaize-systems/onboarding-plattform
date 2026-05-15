@@ -1005,7 +1005,7 @@
       "title": "V6.2 docs/COMPLIANCE.md Onboarding-Plattform (8-Sektionen-Standardvorlage) — FEAT-050",
       "type": "feature",
       "priority": "high",
-      "status": "open",
+      "status": "done",
       "version": "V6.2",
       "description": "Pattern-Reuse aus Business-System V5.2 docs/COMPLIANCE.md (8-Sektionen-Standardstruktur). Inhalt komplett neu fuer Multi-Tenant-SaaS-Realitaet: (1) Erhobene Daten pro Tenant-Klasse (direct_client / partner_organization / partner_client / Mitarbeiter), (2) Datenfluesse pro Quelle (Capture-Sessions, Walkthrough-Videos, Lead-Push, Magic-Link-Auth), (3) Speicherorte + Regionen (alles EU per data-residency.md), (4) Retention-Policies (Walkthrough 30-Tage-Cleanup-Cron, capture_session tenant-lifecycle, lead_push_audit-Trail), (5) Drittanbieter-Liste (AWS Bedrock, Azure Whisper, IONOS SMTP, Hetzner-Hosting), (6) DPA-Status (welche AVV existieren, welche pending), (7) Loeschkonzept (Tenant-Delete-Kaskade, RLS-isoliert), (8) Datenschutzkonforme Defaults. Disclaimer 'keine Rechtsberatung' prominent. FEAT-050, ~0.5-1 Tag Pattern-Portierung + Onboarding-Spezifika.",
       "createdAt": "2026-05-15"

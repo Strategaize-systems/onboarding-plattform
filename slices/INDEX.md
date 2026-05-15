@@ -488,7 +488,85 @@ Falls Workshop-Output nicht tragbar fuer DGN-A (zu offene Fragen, KI-Ermessen zu
 
 ### V6 Pflicht-Vorbereitungs-Backlog (parallel zum Code-Bau, kein Skill-Block)
 
-- **BL-094 V6-PREP-AVV**: AVV-Standard-Template DE+NL fuer Steuerberater-Pilots (Pflicht vor erstem Live-Partner).
+- **BL-094 V6-PREP-AVV**: AVV-Standard-Template DE+NL fuer Steuerberater-Pilots (Pflicht vor erstem Live-Partner). **V6.2-Realisierung als SLC-121.**
 - **BL-095 V6-PREP-INHALT**: Inhalts-Workshop Diagnose-Werkzeug (Stop-Gate fuer SLC-105).
 - **BL-096 V6-GTM-AKQUISE**: Achse 9 GTM-Akquise-Pitch (kein V6-Block, parallel).
 - **BL-097 Tenant-spezifische Restore-Faehigkeit (V7+, deferred)**: durch DEC-103 eingebracht — V6 akzeptiert Voll-Restore-Limit, Slice waere V7+.
+
+## V6.2 Slices (Compliance-Sprint — Pre-Production-Compliance-Gate)
+
+V6.2-Scope: 3 Slices als Pre-Production-Compliance-Gate-Sprint zwischen V6.1 (released) und V7 (planned). Macht die 4 deferred Compliance-Items aus der V6/V6.1 Internal-Test-Mode-Release-Klausel release-fest fuer ersten echten Live-Pilot-Partner (vorbehaltlich Anwalts-Review-Pass). Verantwortlicher = Strategaize Transition BV (NL-Operativ). 0 DB-Migrations. Geschaetzt ~4-6h Code-Side + Anwalts-Review-Phase (User-Pflicht BL-104). Architektur: RPT-266 (`/architecture` done 2026-05-15), DEC-116..121.
+
+| ID | Slice | Feature | Status | Priority | Created |
+|----|-------|---------|--------|----------|---------|
+| SLC-122 | [docs/COMPLIANCE.md Onboarding-Plattform (8+1 Sektionen)](SLC-122-compliance-md-onboarding.md) | FEAT-050 | done | High | 2026-05-15 |
+| SLC-121 | [AVV-Templates DE + NL (Markdown, kein Admin-UI)](SLC-121-avv-templates-de-nl.md) | FEAT-049 | planned | High | 2026-05-15 |
+| SLC-120 | [Datenschutz + Impressum Pages DE (Footer + ENV-Stammdaten)](SLC-120-datenschutz-impressum-pages-de.md) | FEAT-048 | planned | High | 2026-05-15 |
+
+### V6.2 Execution Order
+
+**Empfohlene Reihenfolge: SLC-122 → SLC-121 → SLC-120**. SLC-121 verweist per Cross-Link auf `docs/COMPLIANCE.md` Sektionen 1+7+8 (TOMs, Daten-Kategorien, Loeschkonzept), daher SLC-122 zuerst. SLC-120 ist code-side parallel-faehig zu SLC-121, weil keine harte Cross-Dependency auf AVV-Inhalt — Datenschutz-Text zitiert COMPLIANCE.md, nicht AVV.
+
+- **SLC-122 (COMPLIANCE.md, 2 MTs):** Strukturierte 8-Sektionen-Doku (Erhobene Daten, Datenfluesse, Speicherorte, Retention, Drittanbieter, DPAs, Loeschkonzept, Datenschutzkonforme Defaults) + 1 V6.2-spezifische DPO-Bewertungs-Sektion (DEC-121). Pattern-Reuse aus Business-System V5.2-Struktur, Inhalt komplett neu auf Multi-Tenant-SaaS-Reality. Kanonische Quelle fuer TOMs und Subunternehmer.
+- **SLC-121 (AVV-Templates, 2 MTs):** `docs/legal/AVV-DE.md` + `docs/legal/AVV-NL.md` mit 13 Klausel-Bausteinen (Praeambel + 11 DSGVO-Art-28-Klauseln + Unterschriftsfelder). Cross-Refs auf COMPLIANCE.md Sektionen 1, 7, 8 statt Eigen-Auflistung. Platzhalter `[Verantwortlicher: ...]` + `[Auftragsverarbeiter: ...]` — Anwalts-Review klaert finale Rollen-Zuordnung. Manueller Versand pro Partner (DEC-120), kein Admin-UI.
+- **SLC-120 (Pages, 7 MTs):** `src/content/legal/datenschutz.de.md` (DSGVO-konformer Text) + `src/app/datenschutz/page.tsx` (react-markdown-Render aus HandbookReader-Stack, DEC-117) + `src/app/impressum/page.tsx` (9 ENV-Variablen-Read mit Error-Wurf bei fehlender Pflicht-ENV, DEC-116) + Footer-Erweiterung (DEC-118) + i18n-Keys + `.env.example` + Quality-Gates Browser-Smoke. Frontend-only, kein Backend-Touch.
+
+### V6.2 Pflicht-Gates
+
+- **SC-V6.2-1 `/datenschutz` HTTP 200 mit DSGVO-Pflichtsektionen (SLC-120 + MT-1+MT-2)**.
+- **SC-V6.2-2 `/impressum` HTTP 200 mit allen 9 ENV-Werten gerendert + Error-Wurf bei fehlender Pflicht-ENV (SLC-120 MT-3)**.
+- **SC-V6.2-3 Footer-Links sichtbar auf allen Routes (auth + non-auth) (SLC-120 MT-4)**.
+- **SC-V6.2-4 `docs/legal/AVV-DE.md` + `docs/legal/AVV-NL.md` existieren mit allen 13 DSGVO-Art-28-Klauseln + Cross-Refs zu COMPLIANCE.md funktional (SLC-121)**.
+- **SC-V6.2-5 `docs/COMPLIANCE.md` deckt alle 8 Standardsektionen + V6.2-DPO-Klausel ab (SLC-122)**.
+- **SC-V6.2-6 Quality-Gates clean: ESLint + tsc + Vitest + Build PASS (alle Slices)**.
+- **SC-V6.2-7 V6.2 als REL-017 mit Disclaimer "ready pending legal review" in RELEASES.md (nach /deploy)**.
+- **SC-V6.2-8 User-Pflicht-Lieferung Impressum-Stammdaten (KvK + Adresse + Vertretungsberechtigter) als Coolify-Secrets gesetzt vor /deploy**.
+- **SC-V6.2-9 Anwalts-Review BL-104 nach /deploy V6.2 (User-Pflicht, kein Code-Block)**.
+
+**Code-Quality-Gates pro Slice:**
+- `npm run lint` 0/0 auf neuen + geaenderten Files.
+- `npm run build` PASS mit Dummy-Impressum-ENVs.
+- `npm run test` Vitest-Suite gruen (keine Regression auf bestehenden V4..V6.1-Tests).
+- `npm audit --omit=dev` 0 neue Vulns (V6.2 fuegt keine npm-Deps hinzu — `react-markdown ^10.1.0` und `remark-gfm ^4.0.1` bereits installiert).
+- Pflicht-`/qa` nach jedem `/frontend` (mandatory-completion-report.md Sektion 9).
+
+### V6.2 Out-of-Scope (deferred V6.3 / V7+)
+
+- **NL/EN-Datenschutz+Impressum-Pages** → NL-Variante V6.3 vor NL-Pilot (DEC-119 `/[locale]/`-Refactor mit 301-Redirect von alter Route). EN bei Bedarf spaeter.
+- **AVV-EN-Variante** → V6.3+ falls EN-Partner konkret.
+- **AVV-PDF-Generierung** → V6.2 Markdown reicht. PDF manuell per Pandoc/Word-Save-As durch User pro Partner-Onboarding (DEC-120).
+- **AVV-Admin-Route `/admin/legal/avv`** → V7+ Backlog falls Partner-Volume >10/Monat erreicht (DEC-120).
+- **Cookie-Consent-Banner** → kein non-essentielles Tracking aktiv, kein Banner-Bedarf.
+- **Anwalts-Review-Ausfuehrung** → User-Pflicht BL-104, nicht Teil der Slices.
+- **`/settings/compliance`-Admin-Editor** → V7+, V6.2 ist Strategaize-zentral verwaltet.
+
+### V6.2 Pre-Conditions
+
+- V6.1 deployed + STABLE (REL-016, 2026-05-15). Kein Code-Konflikt mit V6.2 erwartet.
+- `react-markdown ^10.1.0` + `remark-gfm ^4.0.1` + `rehype-slug` + `rehype-autolink-headings` bereits in `package.json` installiert (verifiziert).
+- HandbookReader-Pattern als Render-Vorlage verfuegbar (`src/components/handbook/HandbookReader.tsx`).
+- `StrategaizePoweredFooter.tsx` als Footer-Erweiterungsbasis verfuegbar.
+
+### V6.2 Stop-Gate fuer /deploy: User-Pflicht Coolify-Secrets
+
+**`/deploy V6.2` darf nicht starten** bevor folgendes erfuellt ist:
+- Alle 9 Impressum-ENVs (`IMPRESSUM_COMPANY/STREET/ZIP/CITY/COUNTRY/KVK/VAT/DIRECTOR/EMAIL`) als Coolify-Secrets gesetzt auf Onboarding-Plattform-Resource. Bei fehlender Pflicht-ENV wirft `/impressum`-Server-Component Error → 500 fuer alle Mandanten.
+- KvK-Nummer + Adresse + Vertretungsberechtigter Strategaize Transition BV vom User geliefert (kann waehrend /backend SLC-120 nachgereicht werden).
+
+Code-Side-Implementation kann mit `.env.example`-Platzhaltern starten — Stop-Gate greift erst zum Deploy-Zeitpunkt.
+
+### V6.2 Slice-Aufwand-Schaetzung
+
+| Slice | MTs | geschaetzte Dauer (Solo-Founder 2-3h/Tag) |
+|---|---|---|
+| SLC-122 | 2 | ~30-45 Min reines Schreiben |
+| SLC-121 | 2 | ~60-90 Min Schreiben (DE + NL) |
+| SLC-120 | 7 | ~3-4h Code-Side (inkl. Browser-Smoke) |
+| **Total** | **11** | **~4-6h** Code-Side + **30-45min** User-Pflicht-Coolify-Secrets + Anwalts-Review-Phase (User-Pflicht BL-104, separat) |
+
+### V6.2 Pflicht-Vorbereitungs-Backlog (parallel zum Code-Bau, kein Skill-Block)
+
+- **BL-094 V6-PREP-AVV / V6.2-AVV-Realisierung**: technische AVV-Vorlagen werden in SLC-121 erzeugt. Anwalts-Review der Vorlagen ist BL-104 (User-Pflicht).
+- **BL-102 V6.2-PAGES**: Datenschutz + Impressum Pages — Code-Realisierung in SLC-120.
+- **BL-103 V6.2-COMPLIANCE-MD**: Compliance-Doku — Code-Realisierung in SLC-122.
+- **BL-104 V6.2-ANWALTS-REVIEW (User-Pflicht)**: Anwalts-Review der 5 Texte (Datenschutz + Impressum + AVV-DE + AVV-NL + COMPLIANCE.md) nach /deploy V6.2. NICHT Teil der Code-Slices. **Stop-Gate fuer ersten echten Live-Pilot-Partner** — V6.2-Release-Marker wird "ready pending legal review", erster Live-Partner blockiert auf Review-Pass.
