@@ -46,6 +46,17 @@ services:
     restart: unless-stopped
     expose:
       - "3000"
+    # SLC-110 MT-1 (DEC-114) — Multi-Network-Label-Pattern.
+    # App-Container haengt an strategaize-net + Coolify-Project-Network. Ohne
+    # explicit traefik.docker.network kann coolify-proxy die falsche Backend-IP
+    # waehlen und liefert sporadische 504 nach Coolify-Sentinel-Restarts
+    # (ISSUE-072). Pattern aus jitsi-web (Z.391) + jitsi-jibri-deployment.md.
+    # service=app-svc Wiring verhindert Auto-Service-Generation-Ambiguitaet.
+    labels:
+      - "traefik.docker.network=bwkg80w04wgccos48gcws8cs"
+      - "traefik.http.services.app-svc.loadbalancer.server.port=3000"
+      - "traefik.http.routers.http-0-bwkg80w04wgccos48gcws8cs-app.service=app-svc"
+      - "traefik.http.routers.https-0-bwkg80w04wgccos48gcws8cs-app.service=app-svc"
     environment:
       NODE_ENV: production
       # Internal URL for server-side Supabase calls (middleware, server actions)
