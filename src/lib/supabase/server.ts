@@ -1,7 +1,15 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { cache } from "react";
 
-export async function createClient() {
+// SLC-110 F-110-H1 (ISSUE-049) — React cache() Request-Scope-Memoization.
+// Layout (resolveBrandingForCurrentRequest) UND Mandanten-Dashboard rufen
+// createClient() pro Request separat auf. Ohne cache() entstehen zwei
+// SupabaseClient-Instanzen, was die Object.is-Args-Memoization in
+// resolveBrandingForTenant entwertet (Cache-Miss -> 2x RPC). Mit cache()
+// liefert createClient() pro Render-Phase dieselbe Instanz, womit
+// resolveBrandingForTenant korrekt deduplicated.
+export const createClient = cache(async () => {
   const cookieStore = await cookies();
 
   return createServerClient(
@@ -24,4 +32,4 @@ export async function createClient() {
       },
     }
   );
-}
+});
