@@ -373,10 +373,11 @@ V6-Effektiv-Scope (RPT-209 Requirements + RPT-210 Architecture + RPT-211 Slice-P
 
 ## V6.1 Slices (Diagnose-Werkzeug + NL-Variante + V6-Pilot-Polish)
 
-V6.1-Scope: Diagnose-Werkzeug (verschoben aus V6 weil BL-095 Inhalts-Workshop fehlt) + NL-Sprach-Variante + Polish-Items aus V6-Pilot-Feedback.
+V6.1-Scope: Diagnose-Werkzeug (verschoben aus V6 weil BL-095 Inhalts-Workshop fehlt) + NL-Sprach-Variante + V6.1-Permanent-Fix-Polish-Tripel (ISSUE-072 + ISSUE-048 + ISSUE-049, geplant 2026-05-15 nach V6 /post-launch RPT-257+258).
 
 | ID | Slice | Feature | Status | Priority | Created |
 |----|-------|---------|--------|----------|---------|
+| SLC-110 | [V6.1 Permanent-Fix Polish-Tripel (Multi-Network + Branding-Default-Leak + React-cache)](SLC-110-v61-permanent-fix-polish-tripel.md) | FEAT-047 | planned | High | 2026-05-15 |
 | SLC-105 | [Diagnose-Werkzeug + Light-Pipeline + Bericht-Renderer (Stop-Gate BL-095)](SLC-105-diagnose-werkzeug-light-pipeline-renderer.md) | FEAT-045 | planned | High | 2026-05-11 |
 
 ### V6 Execution Order

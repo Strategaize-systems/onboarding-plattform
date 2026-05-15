@@ -103,8 +103,9 @@ V6-Effektiv-Scope (korrigiert 2026-05-14): 5 Features (FEAT-041..044 + FEAT-046)
 | FEAT-044 | Partner-Branding minimal + CSS-Custom-Properties Setup | done | [Spec](FEAT-044-partner-branding-css-custom-properties.md) | 2026-05-11 |
 | FEAT-046 | Lead-Push opt-in + Outbound Webhook + DSGVO-Audit | done | [Spec](FEAT-046-lead-push-opt-in-webhook-dsgvo.md) | 2026-05-11 |
 
-## V6.1 Features (Diagnose-Werkzeug + NL-Variante + Polish)
+## V6.1 Features (Diagnose-Werkzeug + NL-Variante + Operational-Polish)
 
 | ID | Feature | Status | Spec | Created |
 |----|---------|--------|------|---------|
+| FEAT-047 | V6.1 Operational-Polish (Multi-Network + Branding-Polish) | planned | [Spec](FEAT-047-v61-operational-polish.md) | 2026-05-15 |
 | FEAT-045 | Diagnose-Werkzeug Template + Light-Condensation-Pipeline + Bericht-Renderer | planned | [Spec](FEAT-045-diagnose-werkzeug-template-pipeline-renderer.md) | 2026-05-11 |

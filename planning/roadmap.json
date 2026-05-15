@@ -94,8 +94,8 @@
     {
       "id": "v6-1",
       "name": "V6.1",
-      "status": "planned",
-      "summary": "**Primaer-Item (verschoben aus V6): SLC-105 Diagnose-Werkzeug Template + Light-Condensation-Pipeline + Bericht-Renderer (FEAT-045 / BL-092).** Erfordert BL-095 Inhalts-Workshop als Stop-Gate (15-25 Mandanten-Fragen + Score-Logik aus 6 Bausteinen MULTIPLIER_MODEL.md). Plus: NL-Sprach-Variante Diagnose-Werkzeug + Polish nach erstem NRW-Pilot-Feedback. Architektonisch quasi kostenlos (next-intl + lokalisierte Bedrock-Prompts existieren seit V1.1), Aufwand primaer Inhalt: nl-Diagnose-Template + nl-Translations UI + nl-Bedrock-Prompt-Variante. Erforderlich fuer MULTIPLIER_MODEL Achse 7 V1-Ziel '1-2 NL-Pilots Q4 2026 als Investor-Substanz'. Plus erwartete Polish-Items aus V6-Pilot-Feedback (z.B. sekundaere Akzentfarbe in Branding, zusaetzliche Sub-Karten im Mandanten-Dashboard, Cron-Tuning fuer Lead-Push-Retry).",
+      "status": "active",
+      "summary": "**Effektiv-Scope 2026-05-15:** 2 Tracks. Track A (planned, sofort baubar): SLC-110 V6.1 Permanent-Fix Polish-Tripel (FEAT-047) — ISSUE-072 docker-compose Multi-Network-Label-Fix (BLOCKER fuer ersten echten Live-Partner) + ISSUE-048 Default-DisplayName-Leak Fix + ISSUE-049 React-cache fuer resolveBrandingForTenant. ~2-2.5h Code-Side + 10-15min User-Pflicht (Coolify-Reload-Compose). 2 neue DECs (DEC-114 Multi-Network-Label-Pattern + DEC-115 React-cache fuer Server-Side-Resolver). 0 Migrations, 0 neue Container, 0 neue ENVs, 0 neue Cron-Jobs. Track B (planned, BL-095-blockiert): SLC-105 Diagnose-Werkzeug Template + Light-Condensation-Pipeline + Bericht-Renderer (FEAT-045 / BL-092) — erfordert BL-095 Inhalts-Workshop als Stop-Gate (15-25 Mandanten-Fragen + Score-Logik aus 6 Bausteinen MULTIPLIER_MODEL.md). Plus NL-Sprach-Variante als SLC-105-Folgearbeit. Track A geht sofort, Track B nach Workshop. Erforderlich fuer MULTIPLIER_MODEL Achse 7 V1-Ziel '1-2 NL-Pilots Q4 2026 als Investor-Substanz'.",
       "order": 14
     },
     {
