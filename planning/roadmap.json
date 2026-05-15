@@ -92,6 +92,13 @@
       "order": 13
     },
     {
+      "id": "v6-2",
+      "name": "V6.2",
+      "status": "active",
+      "summary": "**Requirements done 2026-05-15 (RPT-265) — Compliance-Sprint vor erstem echten Live-Partner.** 3 Features (FEAT-048 + FEAT-049 + FEAT-050) als Pre-Production-Compliance-Gate aus V6/V6.1-deferred-Klausel `feedback_compliance_gate_later`. FEAT-048 Datenschutz + Impressum DE-Pages unter `/datenschutz` + `/impressum` als statisches Markdown-Render im bestehenden Layout (Strategaize-Default-Branding pre-auth, keine Partner-Branding-Variante). FEAT-049 AVV-Template DE + NL als `docs/legal/AVV-DE.md` + `AVV-NL.md` (Standard-Vorlage zum Versand an Partner-Kanzleien, kein UI). FEAT-050 docs/COMPLIANCE.md fuer Onboarding-Plattform mit Pattern-Reuse aus Business-System V5.2-COMPLIANCE.md (8-Sektionen-Standardstruktur, Inhalt komplett neu fuer Multi-Tenant-SaaS-Realitaet). Verantwortlicher = Strategaize Transition BV (NL-Operativ, KvK + Adresse + Vertretungsberechtigter via ENV-Vars). Anwalts-Review explizit aufgeschoben als User-Pflicht nach V6.2-Code-Side-Release (Release-Marker dann `ready-pending-legal-review`). Out of Scope V6.2: NL/EN-Pages (NL als V6.3, EN bei Bedarf spaeter), Cookie-Consent-Banner (kein non-essentielles Tracking aktiv, einziger Cookie `sidebar:state` ist functional/legitimate-interest), AVV-PDF-Generierung (Markdown reicht, PDF manuell per Pandoc/Word), `/settings/compliance`-Admin-Editor (Onboarding ist Strategaize-zentral verwaltet). Geschaetzter Aufwand: ~2-3 Tage Code-Side + Doku, plus separate Anwalts-Review-Phase als User-Pflicht. 6 Open Questions fuer /architecture (ENV-Var-Layout, Markdown-Render-Pattern-Reuse, Footer-Link-Scope, Sprach-Switch-Vorbereitung, AVV-Distribution-Mechanik, DPO-Pflicht-Check).",
+      "order": 15
+    },
+    {
       "id": "v6-1",
       "name": "V6.1",
       "status": "released",
@@ -102,22 +109,22 @@
       "id": "v7",
       "name": "V7",
       "status": "planned",
-      "summary": "Multiplikator-Folgearbeit nach Vertrauensaufbau (3-6 Monate Modus-A-Erfahrung). **Hauptkandidat (eingebracht 2026-05-14 nach V6-Live-Smoke-Erfolg, BL-098): Mandanten-Self-Signup-Backend** — Pull-Model statt V6-Push-Model. **WICHTIG zur Repo-Aufteilung (klargestellt 2026-05-15):** Die Partner-Landing-Page-UI selbst (intelligence.strategaize.com/p/<slug>, Pitch-Content, Co-Branding-Komponente, ~2-3 Tage UI-Arbeit) lebt im **Intelligence-Plattform-Repo (strategaize-intelligence-studio)** — siehe IS-Backlog-Spiegel-Item. Im Onboarding-Plattform-V7 wird **nur die Backend-Aufnahme-Mechanik** gebaut (~3-5 Tage): Public-API-Endpoint fuer Mandanten-Signup mit Service-Key-Auth (IS als Caller), Partner-Slug-Tabelle + Slug-Generierung beim Partner-Anlegen, Public-Endpoint resolve-partner-by-slug fuer Landing-Page-Render, Email-Verify-Token-Mechanik, Auto-Provisioning des partner_client-Tenants + tenant_admin-User nach Email-Verify, Anti-Abuse (Rate-Limit + Captcha-Trigger), Pen-Test-Erweiterung fuer Public-API. Mandant landet nach Self-Signup automatisch als partner_client-Tenant im Onboarding-Bereich. Cross-System-Lead-Push ans Business-System bleibt nachgelagert via FEAT-046 (V6, bereits live). **Reihenfolge-Klausel:** Backend-Aufnahme darf NICHT vor SLC-105-Done live gehen (sonst leerer Funnel — Mandant landet ohne Diagnose-Werkzeug-Flow). SLC-105 ist BL-095-blockiert (Inhalts-Workshop). Plus weitere V7-Kandidaten (alle reine Onboarding-Plattform-Scope): Modus-B Webinar-Tooling fuer MULTIPLIER_MODEL Achse 5 (Pseudonym-Layer + RSVP-Tracking + Mandanten-Initiative-Pfad), erweiterte Branding-Optionen (sekundaere Akzentfarbe, optional Hintergrundbild), Berater-Personal-Mandanten-Zuordnung innerhalb Partner-Tenant (partner_employee-Rolle mit eingeschraenkter Mandanten-Sicht), Tenant-spezifische Backup/Restore-Faehigkeit, Domain-Mapping pro Partner (steuerberater-x.partner.strategaize.de), Email-Template-Branding (Partner-Logo in Magic-Link-Mail).",
-      "order": 15
+      "summary": "Multiplikator-Folgearbeit nach Vertrauensaufbau (3-6 Monate Modus-A-Erfahrung) und nach V6.2-Compliance-Sprint-Release. **Hauptkandidat (eingebracht 2026-05-14 nach V6-Live-Smoke-Erfolg, BL-098): Mandanten-Self-Signup-Backend** — Pull-Model statt V6-Push-Model. **WICHTIG zur Repo-Aufteilung (klargestellt 2026-05-15):** Die Partner-Landing-Page-UI selbst (intelligence.strategaize.com/p/<slug>, Pitch-Content, Co-Branding-Komponente, ~2-3 Tage UI-Arbeit) lebt im **Intelligence-Plattform-Repo (strategaize-intelligence-studio)** — siehe IS-Backlog-Spiegel-Item. Im Onboarding-Plattform-V7 wird **nur die Backend-Aufnahme-Mechanik** gebaut (~3-5 Tage): Public-API-Endpoint fuer Mandanten-Signup mit Service-Key-Auth (IS als Caller), Partner-Slug-Tabelle + Slug-Generierung beim Partner-Anlegen, Public-Endpoint resolve-partner-by-slug fuer Landing-Page-Render, Email-Verify-Token-Mechanik, Auto-Provisioning des partner_client-Tenants + tenant_admin-User nach Email-Verify, Anti-Abuse (Rate-Limit + Captcha-Trigger), Pen-Test-Erweiterung fuer Public-API. Mandant landet nach Self-Signup automatisch als partner_client-Tenant im Onboarding-Bereich. Cross-System-Lead-Push ans Business-System bleibt nachgelagert via FEAT-046 (V6, bereits live). **Reihenfolge-Klausel:** Backend-Aufnahme darf NICHT vor SLC-105-Done live gehen (sonst leerer Funnel — Mandant landet ohne Diagnose-Werkzeug-Flow). SLC-105 ist BL-095-blockiert (Inhalts-Workshop). Plus weitere V7-Kandidaten (alle reine Onboarding-Plattform-Scope): Modus-B Webinar-Tooling fuer MULTIPLIER_MODEL Achse 5 (Pseudonym-Layer + RSVP-Tracking + Mandanten-Initiative-Pfad), erweiterte Branding-Optionen (sekundaere Akzentfarbe, optional Hintergrundbild), Berater-Personal-Mandanten-Zuordnung innerhalb Partner-Tenant (partner_employee-Rolle mit eingeschraenkter Mandanten-Sicht), Tenant-spezifische Backup/Restore-Faehigkeit, Domain-Mapping pro Partner (steuerberater-x.partner.strategaize.de), Email-Template-Branding (Partner-Logo in Magic-Link-Mail).",
+      "order": 16
     },
     {
       "id": "v8",
       "name": "V8",
       "status": "planned",
       "summary": "Diary-Mode als zusaetzlicher Capture-Modus (zeitlich verteilte In-Situ-Aufnahmen, Mobile/PWA). Architektur-Hooks wurden in V4 vorbereitet (FEAT-025 Capture-Mode-Extension). Versionsnummer ehemals V5 (vor 2026-04-23 Re-Numerierung), dann V6, jetzt V8 nach Multiplikator-Layer-Priorisierung (NL-Investor-Substanz Q4 2026). Diary-Mode adressiert das Erfassen von seltenem, situativem Wissen (z.B. nur monatlich auftretende Ausnahmen), das in Questionnaire/Walkthrough/Dialogue-Modi nicht praktikabel ist.",
-      "order": 16
+      "order": 17
     },
     {
       "id": "v9",
       "name": "V9+",
       "status": "planned",
       "summary": "Queroptionen: Process-Mining-Connector, kollaborative Annotation, Anomalie-Flagging, Prozess-Simulation. Versionsnummer ehemals V6+ (vor 2026-04-23 Re-Numerierung), dann V7+, jetzt V9+ nach Multiplikator-Layer-Priorisierung. Falls kunden-getrieben gewollt: Browser-Extension fuer strukturierte Klick-Erfassung + DOM-Snapshots (V5+ baut nur Web-only Capture, Klick-Tracking ist V9+).",
-      "order": 17
+      "order": 18
     }
   ]
 }

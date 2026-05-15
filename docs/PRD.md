@@ -1380,6 +1380,78 @@ V5 Option 2 muss deployed sein, weil V5.1 die approved mapped SOPs aus walkthrou
 1. V5 Option 2 → Release als REL-013 → Post-Launch
 2. V5.1 → Release als REL-014
 
+## V6.2 — Compliance-Sprint (Pre-Production-Compliance-Gate)
+
+Requirements done 2026-05-15 (RPT-265). Strategische Vorgabe: 4 deferred Compliance-Gate-Items aus V6+V6.1 Internal-Test-Mode-Release-Klausel (`feedback_compliance_gate_later`) muessen vor erstem echten Live-Partner abgeschlossen sein. V6.2 macht die Onboarding-Plattform-Anteile davon released-fest. Anwalts-Review ist explizit User-Pflicht und wird im finalen Schritt eingeholt.
+
+### Problem
+Die Onboarding-Plattform laeuft seit V5.1 im Internal-Test-Mode mit aufgeschobenem Compliance-Gate. Mit V6 ist die Plattform multi-tenant und multi-partner — der naechste Schritt ist erster echter Live-Partner-Steuerberater + Mandant-Diagnose, das geht aber nicht ohne (a) AVV-Vertrag zwischen Strategaize und Partner-Kanzlei, (b) DSGVO-konforme Datenschutzerklaerung auf der Plattform-Domain, (c) gesetzliches Impressum, (d) Anwalts-Review der existierenden Consent-Text-Version v1-2026-05 fuer Modal-Pflicht-Checkbox + Lead-Push.
+
+### Goal V6.2
+Die Plattform `onboarding.strategaizetransition.com` und das Strategaize-Sales-Toolkit fuer erste Partner sind nach V6.2 release-fest fuer ersten echten Live-Pilot-Steuerberater (vorbehaltlich Anwalts-Review-Pass).
+
+### V6.2 In Scope (3 Features, 3-4 Slices)
+
+- **FEAT-048 Datenschutz + Impressum Pages (DE)**: Oeffentliche Pages unter `/datenschutz` und `/impressum`, statisches Markdown-Render im bestehenden Layout. Strategaize-Default-Branding (kein Partner-Branding, da pre-auth/public). Footer-Links im globalen `StrategaizePoweredFooter` ergaenzen. Verantwortlicher: **Strategaize Transition BV** (NL-Operativ, KvK + Adresse + Vertretungsberechtigter werden vom User als ENV-Vars oder direkt im Page-Content geliefert).
+- **FEAT-049 AVV-Template DE + NL (Markdown)**: Standard-Auftragsverarbeitungsvertrag-Vorlage unter `docs/legal/AVV-DE.md` + `docs/legal/AVV-NL.md`. Strategaize als Verantwortlicher fuer Diagnose-Funnel, Partner-Kanzlei als Auftragsverarbeiter (oder umgekehrt — Anwalts-Review klaert finale Rollen-Zuordnung). NICHT als ausfuehrbare Page, sondern Vertragsvorlage zum Versand an Partner-Kanzleien als PDF (PDF-Generierung kommt nach V6.2 falls noetig, V6.2 liefert das Markdown-Template).
+- **FEAT-050 `docs/COMPLIANCE.md` Onboarding-Plattform**: Pattern-Reuse aus Business-System V5.2 `docs/COMPLIANCE.md` (8-Sektionen-Standardvorlage). Inhalt komplett neu fuer Multi-Tenant-SaaS-Realitaet: Erhobene personenbezogene Daten pro Tenant-Klasse (direct_client / partner_organization / partner_client / Mitarbeiter), Datenfluesse, Speicherorte (Hetzner Frankfurt + AWS Bedrock eu-central-1 + Azure Whisper EU), Retention-Policies (Walkthrough 30-Tage-Cleanup, Capture-Sessions tenant-lifecycle, lead_push_audit-Trail), Drittanbieter-Liste, DPA-Status, Loeschkonzept, datenschutzkonforme Defaults. Disclaimer "keine Rechtsberatung" prominent.
+
+### V6.2 Out of Scope (explizit)
+- **Datenschutz/Impressum in NL/EN**: NL als V6.3-Folge-Slice vor erstem NL-Pilot. EN bei Bedarf spaeter (kein konkretes Q3-Ziel).
+- **Cookie-Consent-Banner**: Es existiert KEIN nicht-essentielles Tracking (kein gtag/posthog/plausible/sentry). Der einzige Cookie (`sidebar:state`) ist functional/legitimate-interest. Banner waere uebersteigert und wuerde DSGVO-Performativitaet ohne Substanz erzeugen. Datenschutzerklaerung erklaert den Cookie textuell.
+- **AVV-PDF-Generierung**: V6.2 liefert Markdown-Vorlage. PDF-Konvertierung erfolgt fuer V6.2 manuell (Pandoc, Word-Save-As, o.ae.) durch den User pro Partner-Onboarding.
+- **AVV in EN**: NL deckt Q4-2026-Pilot-Bedarf, DE deckt DE-Pilot-Bedarf. EN-AVV folgt wenn EN-Partner konkret.
+- **Anwalts-Review-Ausfuehrung selbst**: V6.2 bereitet Texte vor. Review durch qualifizierte/n Datenschutzbeauftragte/n ist User-Pflicht und kann V6.2-Release auf "ready-pending-legal-review"-Status blockieren.
+- **Partner-Tier-Compliance-Featurization**: Pro-Partner-konfigurierbare Datenschutz-Texte (etwa wenn Partner-Kanzlei eigene DPO hat) kommt frueheste V7.
+- **`/settings/compliance`-Admin-Editor** (analog Business-System): Onboarding-Plattform-Compliance ist Strategaize-zentral verwaltet, kein Editor-UI noetig.
+
+### Core Features V6.2
+
+| ID | Feature | Aufwand grob |
+|---|---|---|
+| FEAT-048 | Datenschutz + Impressum DE Pages | ~0.5-1 Tag (Routes + Layout-Integration + Footer-Links + DE-Text-Draft) |
+| FEAT-049 | AVV-Template DE + NL Markdown | ~0.5-1 Tag (Standard-AVV-Klauseln + Plattform-Spezifika-Anpassung) |
+| FEAT-050 | docs/COMPLIANCE.md Onboarding | ~0.5-1 Tag (BS-Pattern-Portierung + Onboarding-Spezifika) |
+
+### Constraints V6.2
+
+- **Verantwortlicher = Strategaize Transition BV** (NL-Rechtspersoenlichkeit). KvK-Nummer + Adresse + Vertretungsberechtigter werden vom User als `STRATEGAIZE_LEGAL_*` ENV-Vars konfiguriert ODER direkt im Page-Source als TBD-Platzhalter eingetragen — Klaerung in /architecture.
+- **Datenresidenz**: Per `data-residency.md`-Rule und V6-DEC-100 alle Datenverarbeitung in EU (Hetzner Frankfurt + AWS Bedrock eu-central-1 + Azure Whisper EU). Datenschutzerklaerung muss das transparent ausweisen.
+- **Texte als pragmatische Standardvorlage**: V6.2 liefert robuste Standardtexte mit Disclaimer "keine Rechtsberatung". Anwalts-Review macht Texte release-fest.
+- **Plattform-Domain ist `onboarding.strategaizetransition.com`**: Impressum-Verantwortlicher entspricht Domain-Inhaber (Strategaize Transition BV) — saubere Linie.
+
+### Risks / Assumptions V6.2
+
+- **Anwalts-Review-Outcome unbekannt**: Anwalt kann substanzielle Aenderungen verlangen, die V6.2-Release verschieben. Risiko-Mitigation: V6.2-Release-Marker setzen wir auf "ready-pending-legal-review", echter erster Live-Partner blockiert auf Review-Pass.
+- **Annahme: NL-Anwalt fuer NL-AVV verfuegbar**: User-Pflicht, fuer NL-Pilot Q4 2026 muss ein NL-Datenschutzbeauftragter den NL-AVV reviewen. Falls nicht verfuegbar: NL-Pilot verschiebt sich, V6.2-Release fuer DE-Pilot bleibt unbeeinflusst.
+- **Risiko: User-Lieferung Impressums-Daten verspaetet**: KvK-Nummer + Adresse + Vertretungsberechtigter werden ENV-Vars. /architecture klaert die Mechanik. V6.2-Implementation kann mit Platzhaltern starten, ENVs werden vor /deploy gesetzt.
+- **Annahme: Pattern-Reuse aus Business-System docs/COMPLIANCE.md spart 60-70% Schreibarbeit**, Restzeit fuer Multi-Tenant-Spezifika.
+
+### Success Criteria V6.2
+
+- `/datenschutz` und `/impressum` extern erreichbar (HTTP 200, korrektes DE-Markup, im Footer verlinkt)
+- `docs/legal/AVV-DE.md` + `docs/legal/AVV-NL.md` existieren als reviewbare Standard-AVV-Vorlagen
+- `docs/COMPLIANCE.md` deckt alle 8 Standardsektionen ab (analog BS V5.2)
+- ESLint + TypeScript + Vitest Quality-Gates clean
+- /qa + /final-check + /go-live + /deploy als Release-Markers durch
+- V6.2 als REL-017 in `RELEASES.md` mit Disclaimer "ready pending legal review"
+- User kann nach V6.2 mit dem fertigen Material zum Anwalt gehen
+
+### Open Questions V6.2 (zur Klaerung in /architecture)
+
+1. **ENV-Var-Layout fuer Impressums-Daten**: 1 monolithische `STRATEGAIZE_LEGAL_BLOCK_HTML` oder mehrere granulare ENVs (`STRATEGAIZE_LEGAL_COMPANY`, `STRATEGAIZE_LEGAL_ADDRESS`, `STRATEGAIZE_LEGAL_KVK`, `STRATEGAIZE_LEGAL_VAT`, `STRATEGAIZE_LEGAL_DIRECTOR`)?
+2. **Markdown-Render-Pattern**: Reuse aus Handbuch-Reader (V4.1, mdx-Pattern) oder neu mit `react-markdown`/`@next/mdx`? Reuse bevorzugt per `strategaize-pattern-reuse.md`.
+3. **Footer-Links**: Nur "Datenschutz" + "Impressum" oder zusaetzlich "AVV-Download" (PDF-Stub) + "Kontakt" (mailto)?
+4. **Sprach-Switch fuer /datenschutz und /impressum**: bei nur-DE in V6.2: routes ueber `/datenschutz` (kein `/de/datenschutz`)? Oder direkt next-intl-konform mit Locale-Prefix vorbereiten fuer V6.3-NL-Erweiterung?
+5. **AVV-Distribution-Mechanik**: Wo werden die Markdown-Files dem User zugaenglich? Nur `docs/legal/`-Repo-Files? Oder zusaetzlich Admin-Route `/admin/legal/avv-de` fuer Strategaize-Sales mit Inhalt-Anzeige?
+6. **DPO-Pflicht-Check**: Strategaize Transition BV — gibt es DSGVO-Pflicht zur Bestellung eines DPO (>20 Mitarbeiter, regelmaessige+systematische Beobachtung, etc.)? Vermutlich nein bei aktueller Org-Groesse, aber Datenschutzerklaerung muss das deklarieren.
+
+### Delivery Mode V6.2
+
+**SaaS**. Multi-Tenant. Vollabdeckung der V6-Multi-Tenant-Realitaet noetig (Partner-Mandant-Beziehung in `docs/COMPLIANCE.md` ausweisen). Pages sind Public-Routes pre-auth ohne Partner-Branding.
+
+---
+
 ## V6 — Multiplikator-Foundation (Steuerberater-Partner-Erweiterung)
 
 Requirements done 2026-05-11 (RPT-209). Strategische Vorgabe verbindlich: [/docs/MULTIPLIER_MODEL.md](../../strategaize-dev-system/docs/MULTIPLIER_MODEL.md) im Strategaize-Dev-System (Konzept entschieden 2026-05-07) + STRATEGY_NOTES_2026-05.md Abschnitt 7 + PLATFORM.md.

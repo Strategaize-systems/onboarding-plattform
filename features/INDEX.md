@@ -109,3 +109,13 @@ V6-Effektiv-Scope (korrigiert 2026-05-14): 5 Features (FEAT-041..044 + FEAT-046)
 |----|---------|--------|------|---------|
 | FEAT-047 | V6.1 Operational-Polish (Multi-Network + Branding-Polish) | deployed | [Spec](FEAT-047-v61-operational-polish.md) | 2026-05-15 |
 | FEAT-045 | Diagnose-Werkzeug Template + Light-Condensation-Pipeline + Bericht-Renderer | planned | [Spec](FEAT-045-diagnose-werkzeug-template-pipeline-renderer.md) | 2026-05-11 |
+
+## V6.2 Features (Compliance-Sprint — Pre-Production-Compliance-Gate)
+
+V6.2-Scope (2026-05-15, RPT-265): 3 Features als Pre-Production-Compliance-Gate aus V6/V6.1-deferred-Klausel `feedback_compliance_gate_later`. Verantwortlicher = Strategaize Transition BV. Anwalts-Review explizit User-Pflicht nach Code-Side-Release.
+
+| ID | Feature | Status | Spec | Created |
+|----|---------|--------|------|---------|
+| FEAT-048 | Datenschutz + Impressum Pages DE | planned | [Spec](FEAT-048-datenschutz-impressum-pages-de.md) | 2026-05-15 |
+| FEAT-049 | AVV-Template DE + NL (Markdown) | planned | [Spec](FEAT-049-avv-template-de-nl.md) | 2026-05-15 |
+| FEAT-050 | docs/COMPLIANCE.md Onboarding-Plattform | planned | [Spec](FEAT-050-compliance-md-onboarding.md) | 2026-05-15 |

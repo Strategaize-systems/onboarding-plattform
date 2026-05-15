@@ -912,12 +912,12 @@
     },
     {
       "id": "BL-094",
-      "title": "V6-PREP-AVV: DSGVO-Auftragsverarbeitungsvertrag Standard-Template DE + NL",
-      "type": "later",
+      "title": "V6.2 AVV-Template DE + NL (Markdown) — FEAT-049",
+      "type": "feature",
       "priority": "high",
-      "status": "open",
-      "version": null,
-      "description": "V6 Pflicht-Vorbereitung — KEIN Code, aber V6-Live-Block (kein erster Live-Pilot-Steuerberater ohne AVV). User-Verantwortung. Standard-AVV-Template fuer DE (Steuerberater als Auftragsverarbeiter, Strategaize als Verantwortlicher fuer Diagnose-Funnel) + NL-Variante. Parallel zum V6-Bau bearbeitbar. Verweis: STRATEGY_NOTES_2026-05.md Abschnitt 7 Pflichten vor erstem Live-Partner.",
+      "status": "in_progress",
+      "version": "V6.2",
+      "description": "V6.2-Compliance-Sprint Pflicht-Item (Pre-Production-Compliance-Gate). Standard-Auftragsverarbeitungsvertrag-Vorlage unter docs/legal/AVV-DE.md + docs/legal/AVV-NL.md (Markdown). Strategaize Transition BV als Verantwortlicher fuer Diagnose-Funnel, Partner-Kanzlei als Auftragsverarbeiter (oder umgekehrt — finale Rollen-Zuordnung durch Anwalts-Review). Pragmatische Standardvorlage mit Klauseln-Bausteinen (TOMs, Subunternehmer-Konstellation, Rueckgabe/Loeschung, Audit-Rechte), Disclaimer 'keine Rechtsberatung'. NICHT als UI/Page, sondern als Markdown-Vertragsvorlage zum Versand an Partner-Kanzleien (PDF-Konvertierung manuell pro Partner-Onboarding). FEAT-049, ~0.5-1 Tag Schreibarbeit + Anwalts-Review-Phase als separate User-Pflicht. Verweis: STRATEGY_NOTES_2026-05.md Abschnitt 7 Pflichten vor erstem Live-Partner.",
       "createdAt": "2026-05-11"
     },
     {
@@ -988,6 +988,36 @@
       "status": "done",
       "version": "V6.1",
       "description": "src/lib/branding/resolve.ts resolveBrandingForTenant mit React cache() wrappen. Deduplikation auf Request-Scope (Layout + Page-Branch rufen Resolver 2x), kein cross-Request-Cache. ~2 LoC + Vitest dedupe-Test. DEC-115. SLC-110 MT-3.",
+      "createdAt": "2026-05-15"
+    },
+    {
+      "id": "BL-102",
+      "title": "V6.2 Datenschutz + Impressum Pages DE (oeffentlich, pre-auth) — FEAT-048",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V6.2",
+      "description": "Oeffentliche Pages unter /datenschutz und /impressum auf onboarding.strategaizetransition.com. Statisches Markdown-Render im bestehenden Layout (Strategaize-Default-Branding, kein Partner-Branding da pre-auth/public). Verantwortlicher = Strategaize Transition BV (NL-Operativ), Impressum-Daten via ENV-Vars (Layout in /architecture geklaert: STRATEGAIZE_LEGAL_*). Datenschutz-Text deckt: erhobene Daten, Rechtsgrundlagen Art. 6 DSGVO, Empfaenger/Drittanbieter (Hetzner Frankfurt + AWS Bedrock eu-central-1 + Azure Whisper EU), Speicherdauer/Retention, Betroffenenrechte, Beschwerderecht, einziger functional-Cookie (sidebar:state). Impressum DE-rechtssicher (TMG §5, MDStV §55 falls relevant). Footer-Links (Datenschutz + Impressum) im StrategaizePoweredFooter ergaenzen. Pragmatische Standardtexte mit Disclaimer 'keine Rechtsberatung'. ~0.5-1 Tag Code + Text-Draft.",
+      "createdAt": "2026-05-15"
+    },
+    {
+      "id": "BL-103",
+      "title": "V6.2 docs/COMPLIANCE.md Onboarding-Plattform (8-Sektionen-Standardvorlage) — FEAT-050",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V6.2",
+      "description": "Pattern-Reuse aus Business-System V5.2 docs/COMPLIANCE.md (8-Sektionen-Standardstruktur). Inhalt komplett neu fuer Multi-Tenant-SaaS-Realitaet: (1) Erhobene Daten pro Tenant-Klasse (direct_client / partner_organization / partner_client / Mitarbeiter), (2) Datenfluesse pro Quelle (Capture-Sessions, Walkthrough-Videos, Lead-Push, Magic-Link-Auth), (3) Speicherorte + Regionen (alles EU per data-residency.md), (4) Retention-Policies (Walkthrough 30-Tage-Cleanup-Cron, capture_session tenant-lifecycle, lead_push_audit-Trail), (5) Drittanbieter-Liste (AWS Bedrock, Azure Whisper, IONOS SMTP, Hetzner-Hosting), (6) DPA-Status (welche AVV existieren, welche pending), (7) Loeschkonzept (Tenant-Delete-Kaskade, RLS-isoliert), (8) Datenschutzkonforme Defaults. Disclaimer 'keine Rechtsberatung' prominent. FEAT-050, ~0.5-1 Tag Pattern-Portierung + Onboarding-Spezifika.",
+      "createdAt": "2026-05-15"
+    },
+    {
+      "id": "BL-104",
+      "title": "V6.2 Anwalts-Review der Compliance-Texte (Datenschutz + Impressum + AVV DE + AVV NL + Consent v1-2026-05) — User-Pflicht",
+      "type": "later",
+      "priority": "high",
+      "status": "open",
+      "version": "V6.2",
+      "description": "Nach V6.2-Code-Side-Release: Anwalts-/Datenschutzbeauftragten-Pruefung der 4 Compliance-Texte (1) Datenschutzerklaerung (FEAT-048), (2) Impressum (FEAT-048), (3) AVV DE (FEAT-049), (4) AVV NL (FEAT-049), plus 5. Re-Review des bestehenden V6-Modal-Consent-Text v1-2026-05. Outcome: V6.2-Release-Status wechselt von 'ready pending legal review' auf 'released, legal-cleared' und erlaubt ersten echten Live-Partner-Onboarding. Falls Anwalts-Review substanzielle Aenderungen verlangt: V6.3-Compliance-Iteration-Slice oder Hotfix-Patch je nach Scope. User-Pflicht, ich kann nicht uebernehmen. Verweis: feedback_compliance_gate_later.",
       "createdAt": "2026-05-15"
     }
   ]
