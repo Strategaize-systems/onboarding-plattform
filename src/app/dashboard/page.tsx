@@ -9,7 +9,7 @@ import { BlockReviewStatusCard } from "@/components/cockpit/BlockReviewStatusCar
 import { InactiveEmployeesCard } from "@/components/cockpit/InactiveEmployeesCard";
 import { WalkthroughReviewStatusCard } from "@/components/cockpit/WalkthroughReviewStatusCard";
 import { PartnerClientWelcomeBlock } from "@/components/dashboard/PartnerClientWelcomeBlock";
-import { resolveBrandingForTenant } from "@/lib/branding/resolve";
+import { resolveBrandingForTenant, STRATEGAIZE_DEFAULT_BRANDING } from "@/lib/branding/resolve";
 import { DashboardClient } from "./dashboard-client";
 import { StatusCockpit } from "./StatusCockpit";
 // SLC-047 Wizard-Trigger — eigentlich ueber dashboard/layout.tsx geplant
@@ -78,8 +78,18 @@ export default async function DashboardPage() {
       // NOT NULL und damit verlaessliche Sekundaerquelle. Lookup via Admin-
       // Client, weil Mandant keinen direkten SELECT auf partner_organization
       // hat (RLS-Boundary). Nur wenn Branding selbst keinen Namen liefert.
+      //
+      // SLC-110 MT-2 (ISSUE-048) — Default-DisplayName-Leak Fix.
+      // Wenn der RPC-Resolver den Strategaize-Default zurueckgibt (z.B. RPC-
+      // Error oder unkonfiguriertes Branding), zeigt die UI sonst "Ihr
+      // Steuerberater: Strategaize" statt des echten Partner-Namens. Default-
+      // Vergleich greift dann den Sekundaer-Lookup an.
       let partnerDisplayName: string | null = branding.displayName;
-      if (!partnerDisplayName && tenantRow.parent_partner_tenant_id) {
+      if (
+        (!partnerDisplayName ||
+          partnerDisplayName === STRATEGAIZE_DEFAULT_BRANDING.displayName) &&
+        tenantRow.parent_partner_tenant_id
+      ) {
         const { data: partnerOrg } = await admin
           .from("partner_organization")
           .select("display_name")
