@@ -50,8 +50,8 @@
 - Related: SLC-104 MT-13 Browser-Smoke (RPT-240), DEC-108 Pflicht-Footer-Spec.
 
 ### ISSUE-049 — Branding-Resolver wird 2× pro Mandanten-Page-Load aufgerufen (Root-Layout + dashboard/page partner_client-Branch)
-- Status: open (SLC-110 MT-3 Code-Side Fix gepushed 2026-05-15 commit `dae24ff` — React `cache()`-Wrap aktiv, Dedupe-Vitest Case 8 PASS, Live-Wirksamkeit pending MT-5 Redeploy)
-- Severity: Low
+- Status: open (SLC-110 MT-3 Code-Side Fix gepushed 2026-05-15 commit `dae24ff` — React `cache()`-Wrap auf resolveBrandingForTenant aktiv, Dedupe-Vitest Case 8 PASS isoliert. **/qa SLC-110 RPT-261 Finding F-110-H1 entdeckt: Wirkung in Production = 0**, weil Layout (resolve-server.ts) und Page (dashboard/page.tsx) je eine eigene SupabaseClient-Instanz via `createClient()` instantiieren — React cache() vergleicht Args per `Object.is`, verschiedene supabase-Refs → Cache-MISS → RPC weiterhin 2x pro Request. Production-Verhalten unveraendert zur Pre-SLC-110-Baseline. **Quick-Fix Option A** (~2 LoC): `createClient()` in `src/lib/supabase/server.ts` mit `cache()` wrappen → Layout+Page teilen Instanz → Cache-Hit greift. Empfohlen vor MT-5.)
+- Severity: Low (Original-Performance-Impact ~5-10ms ohne User-Effekt; F-110-H1 erhoeht das Implementation-Wahrheits-Defizit, nicht den User-Impact)
 - Area: V6 / SLC-104 MT-9 / Performance / Branding-Resolver
 - Summary: Pro `/dashboard`-Request bei Mandanten ruft `src/app/layout.tsx:21` `resolveBrandingForCurrentRequest()` (→ `resolveBrandingForTenant`) auf, und `src/app/dashboard/page.tsx:71-74` ruft `resolveBrandingForTenant` erneut mit derselben tenant_id auf. Ergebnis: 2 identische RPC-Calls + 2 `rpc_get_branding_for_tenant`-Auswertungen pro Page-Load.
 - Impact: Performance-Overhead von ~5-10ms pro Request. Bei Skalierung (~10-100 Mandanten/Partner, ~3-10 Page-Loads/Tag/Mandant) tragbar, aber unnoetig. RPC + Postgres im selben Docker-Netzwerk, kein User-sichtbarer Verzoegerungs-Effekt.
