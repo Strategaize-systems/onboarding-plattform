@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import {
   Card,
   CardContent,
@@ -124,15 +125,12 @@ export function PartnerClientWelcomeBlock({
           </div>
         </CardHeader>
         <CardContent>
-          <Button
-            disabled
-            title="Verfuegbar mit dem naechsten Update (SLC-105)"
-          >
-            Diagnose starten (folgt in Kuerze)
+          <Button asChild>
+            <Link href="/dashboard/diagnose/start">Diagnose starten</Link>
           </Button>
           <p className="mt-3 text-xs text-slate-400">
-            Wir bereiten die Diagnose-Pipeline gerade fuer den Live-Betrieb vor.
-            Sie erhalten eine Benachrichtigung, sobald die Diagnose freigeschaltet ist.
+            24 Fragen, ca. 8-12 Minuten. Sie koennen jederzeit unterbrechen —
+            der Stand bleibt gespeichert.
           </p>
         </CardContent>
       </Card>
