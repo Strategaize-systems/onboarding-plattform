@@ -995,7 +995,7 @@
       "title": "V6.2 Datenschutz + Impressum Pages DE (oeffentlich, pre-auth) — FEAT-048",
       "type": "feature",
       "priority": "high",
-      "status": "open",
+      "status": "done",
       "version": "V6.2",
       "description": "Oeffentliche Pages unter /datenschutz und /impressum auf onboarding.strategaizetransition.com. Statisches Markdown-Render im bestehenden Layout (Strategaize-Default-Branding, kein Partner-Branding da pre-auth/public). Verantwortlicher = Strategaize Transition BV (NL-Operativ), Impressum-Daten via ENV-Vars (Layout in /architecture geklaert: STRATEGAIZE_LEGAL_*). Datenschutz-Text deckt: erhobene Daten, Rechtsgrundlagen Art. 6 DSGVO, Empfaenger/Drittanbieter (Hetzner Frankfurt + AWS Bedrock eu-central-1 + Azure Whisper EU), Speicherdauer/Retention, Betroffenenrechte, Beschwerderecht, einziger functional-Cookie (sidebar:state). Impressum DE-rechtssicher (TMG §5, MDStV §55 falls relevant). Footer-Links (Datenschutz + Impressum) im StrategaizePoweredFooter ergaenzen. Pragmatische Standardtexte mit Disclaimer 'keine Rechtsberatung'. ~0.5-1 Tag Code + Text-Draft.",
       "createdAt": "2026-05-15"

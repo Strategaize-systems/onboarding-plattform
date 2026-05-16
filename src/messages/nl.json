@@ -25,6 +25,10 @@
   "branding": {
     "poweredByStrategaize": "Aangedreven door Strategaize"
   },
+  "footer": {
+    "privacyPolicy": "Privacybeleid",
+    "imprint": "Colofon"
+  },
   "sidebar": {
     "title": "Assessment",
     "subtitle": "Strategische Bedrijfsanalyse",

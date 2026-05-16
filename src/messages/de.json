@@ -25,6 +25,10 @@
   "branding": {
     "poweredByStrategaize": "Aufgesetzt mit Strategaize"
   },
+  "footer": {
+    "privacyPolicy": "Datenschutz",
+    "imprint": "Impressum"
+  },
   "sidebar": {
     "title": "Assessment",
     "subtitle": "Strategische Unternehmensanalyse",

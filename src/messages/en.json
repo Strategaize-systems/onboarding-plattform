@@ -25,6 +25,10 @@
   "branding": {
     "poweredByStrategaize": "Powered by Strategaize"
   },
+  "footer": {
+    "privacyPolicy": "Privacy Policy",
+    "imprint": "Imprint"
+  },
   "sidebar": {
     "title": "Assessment",
     "subtitle": "Strategic Business Assessment",

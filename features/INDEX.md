@@ -116,6 +116,6 @@ V6.2-Scope (2026-05-15, RPT-265): 3 Features als Pre-Production-Compliance-Gate 
 
 | ID | Feature | Status | Spec | Created |
 |----|---------|--------|------|---------|
-| FEAT-048 | Datenschutz + Impressum Pages DE | planned | [Spec](FEAT-048-datenschutz-impressum-pages-de.md) | 2026-05-15 |
+| FEAT-048 | Datenschutz + Impressum Pages DE | done | [Spec](FEAT-048-datenschutz-impressum-pages-de.md) | 2026-05-15 |
 | FEAT-049 | AVV-Template DE + NL (Markdown) | done | [Spec](FEAT-049-avv-template-de-nl.md) | 2026-05-15 |
 | FEAT-050 | docs/COMPLIANCE.md Onboarding-Plattform | done | [Spec](FEAT-050-compliance-md-onboarding.md) | 2026-05-15 |

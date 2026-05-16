@@ -501,7 +501,7 @@ V6.2-Scope: 3 Slices als Pre-Production-Compliance-Gate-Sprint zwischen V6.1 (re
 |----|-------|---------|--------|----------|---------|
 | SLC-122 | [docs/COMPLIANCE.md Onboarding-Plattform (8+1 Sektionen)](SLC-122-compliance-md-onboarding.md) | FEAT-050 | done | High | 2026-05-15 |
 | SLC-121 | [AVV-Templates DE + NL (Markdown, kein Admin-UI)](SLC-121-avv-templates-de-nl.md) | FEAT-049 | done | High | 2026-05-15 |
-| SLC-120 | [Datenschutz + Impressum Pages DE (Footer + ENV-Stammdaten)](SLC-120-datenschutz-impressum-pages-de.md) | FEAT-048 | planned | High | 2026-05-15 |
+| SLC-120 | [Datenschutz + Impressum Pages DE (Footer + ENV-Stammdaten)](SLC-120-datenschutz-impressum-pages-de.md) | FEAT-048 | done | High | 2026-05-15 |
 
 ### V6.2 Execution Order
 
