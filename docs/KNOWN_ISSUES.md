@@ -1,5 +1,15 @@
 # Known Issues
 
+### ISSUE-073 — IMPRESSUM_VAT Real-Wert pending — Platzhalter "BTW-Nr. wird nachgereicht" im Einsatz
+- Status: open
+- Severity: Low
+- Area: V6.2 / FEAT-048 / Compliance / Impressum
+- Summary: Die NL-BTW-Nummer der Strategaize Transition BV ist beim V6.2-Deploy noch nicht beschafft. Bewusste Entscheidung 2026-05-16: Coolify-ENV `IMPRESSUM_VAT="BTW-Nr. wird nachgereicht"` als Platzhalter setzen, statt Code-Optionalitaet einzubauen oder /deploy zu verschieben. `/impressum` rendert sauber mit "Umsatzsteuer-Identifikationsnummer (BTW): BTW-Nr. wird nachgereicht" — fuer Internal-Test-Mode TMG/DDG-konform.
+- Impact: Externe Besucher von `/impressum` sehen den Platzhalter statt der echten BTW-Nummer. Funktional kein Bug. Vor erstem echten Live-Pilot-Partner (BL-104 Anwalts-Review-Gate) muss der echte Wert gesetzt sein — sonst Compliance-Risiko.
+- Workaround: Platzhalter ist live (kein Crash). Coolify-ENV-Setup-Anweisung dokumentiert diesen Wert als ueberbrueckend.
+- Next Action: Sobald die NL-BTW-Nummer der Strategaize Transition BV beschafft ist, User-Aktion: Coolify-UI → bwkg80w04wgccos48gcws8cs-app-Resource → Environment Variables → `IMPRESSUM_VAT` auf echten Wert setzen → Container-Reload. Geschaetzt ~2 Min. Kein Code-Touch, kein Re-Build, kein Re-Test noetig. Danach diese ISSUE auf resolved setzen + KNOWN_ISSUES-Eintrag updaten.
+- Related: RPT-273 L-3, RPT-274 L-4, RPT-275 L-1, BL-104 (Anwalts-Review)
+
 ### ISSUE-072 — V6 External-HTTPS-Routing zur App-Resource haengt (TLS klappt, Backend-Routing 504/Connection-Hang) — Multi-Network-Falle
 - Status: resolved (SLC-110 MT-1 commit `2d5b488` Compose-Labels + MT-5 Coolify-Reload+Redeploy durch 2026-05-15. Live-Verifikation per /post-launch RPT-263: `docker inspect app-...092232049513` zeigt `traefik.docker.network=bwkg80w04wgccos48gcws8cs` + `traefik.http.services.app-svc.loadbalancer.server.port=3000` aktiv. App auf 2 Networks weiterhin (bwkg + strategaize-net), aber Traefik kennt jetzt explicit das richtige Routing-Interface. Extern `/login` HTTP 200 TTFB 178ms — Falle eliminiert. Image-Tag `62dddaffe6...` (HEAD-commit) live, 16/16 Container Up healthy.)
 - Severity: High (war Blocker, Permanent-Fix durch SLC-110 MT-1+MT-5)
