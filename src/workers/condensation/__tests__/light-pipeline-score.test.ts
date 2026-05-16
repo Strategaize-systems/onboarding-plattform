@@ -1,4 +1,14 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
+
+// MT-4 hat light-pipeline.ts um einen Import von ../../lib/logger erweitert.
+// Der Logger erzeugt am Modul-Load einen Supabase-Client — ohne SUPABASE_URL
+// crasht der Modul-Import. Pure-Function-Tests brauchen den Logger nicht;
+// daher mocken wir ihn als No-Op.
+vi.mock("../../../lib/logger", () => ({
+  captureException: vi.fn(),
+  captureInfo: vi.fn(),
+}));
+
 import {
   computeBlockScores,
   type TemplateBlock,

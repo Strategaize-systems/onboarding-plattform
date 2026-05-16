@@ -14,6 +14,11 @@ import type { ClaimedJob } from "./claim-loop";
 import { runIterationLoop } from "./iteration-loop";
 import { embedKnowledgeUnits } from "./embed-knowledge-units";
 import { runOrchestratorAssessment } from "./orchestrator";
+import {
+  runLightPipeline,
+  type LightPipelineSession,
+  type LightPipelineTemplate,
+} from "./light-pipeline";
 import type {
   BlockAnswer,
   BlockDefinition,
@@ -29,6 +34,27 @@ export async function handleCondensationJob(job: ClaimedJob): Promise<void> {
   const startTime = Date.now();
 
   console.log(`[handle-job] Processing job ${job.id} for tenant ${job.tenant_id}`);
+
+  // V6.3 NEU — Branch fuer Light-Pipeline (DGN-A) wenn Job auf capture_session_id zeigt
+  // und Template.metadata.usage_kind=self_service_partner_diagnostic. Sonst Standard-Pipeline.
+  const captureSessionId = job.payload.capture_session_id as string | undefined;
+  if (captureSessionId) {
+    const handled = await tryDispatchLightPipeline(adminClient, job, captureSessionId);
+    if (handled) {
+      const duration = Date.now() - startTime;
+      console.log(
+        `[handle-job] Light-Pipeline finalized session ${captureSessionId} in ${duration}ms`,
+      );
+      const { error: completeError } = await adminClient.rpc(
+        "rpc_complete_ai_job",
+        { p_job_id: job.id },
+      );
+      if (completeError) {
+        throw new Error(`Failed to complete job: ${completeError.message}`);
+      }
+      return;
+    }
+  }
 
   // 1. Load block checkpoint
   const checkpointId = job.payload.block_checkpoint_id as string;
@@ -249,6 +275,87 @@ export async function handleCondensationJob(job: ClaimedJob): Promise<void> {
       `${result.debrief_items.length} KUs, ` +
       `$${result.total_cost.usd_cost.toFixed(4)})`
   );
+}
+
+/**
+ * V6.3 Light-Pipeline Dispatch (SLC-105 / FEAT-045).
+ *
+ * Versucht den Job ueber `runLightPipeline` zu finalisieren, wenn
+ * `template.metadata.usage_kind === "self_service_partner_diagnostic"`.
+ *
+ * @returns true wenn Light-Pipeline gerufen wurde (Caller markiert Job als completed).
+ *          false wenn keine Light-Pipeline-Auspraegung — Caller faellt auf Standard-Pipeline zurueck.
+ */
+async function tryDispatchLightPipeline(
+  adminClient: ReturnType<typeof createAdminClient>,
+  job: ClaimedJob,
+  captureSessionId: string,
+): Promise<boolean> {
+  const { data: session, error: sessError } = await adminClient
+    .from("capture_session")
+    .select("id, tenant_id, template_id, template_version, owner_user_id, answers")
+    .eq("id", captureSessionId)
+    .single();
+  if (sessError || !session) {
+    throw new Error(
+      `Failed to load capture_session ${captureSessionId}: ${sessError?.message}`,
+    );
+  }
+
+  const sessionRow = session as {
+    id: string;
+    tenant_id: string;
+    template_id: string;
+    template_version: string;
+    owner_user_id: string;
+    answers: Record<string, string> | null;
+  };
+
+  const { data: template, error: tmplError } = await adminClient
+    .from("template")
+    .select("id, version, blocks, metadata")
+    .eq("id", sessionRow.template_id)
+    .single();
+  if (tmplError || !template) {
+    throw new Error(
+      `Failed to load template ${sessionRow.template_id}: ${tmplError?.message}`,
+    );
+  }
+
+  const templateRow = template as {
+    id: string;
+    version: string;
+    blocks: unknown;
+    metadata: Record<string, unknown> | null;
+  };
+
+  const usageKind =
+    (templateRow.metadata as { usage_kind?: string } | null)?.usage_kind ?? null;
+  if (usageKind !== "self_service_partner_diagnostic") {
+    return false;
+  }
+
+  const lightSession: LightPipelineSession = {
+    id: sessionRow.id,
+    tenant_id: sessionRow.tenant_id,
+    template_id: sessionRow.template_id,
+    owner_user_id: sessionRow.owner_user_id,
+    answers: sessionRow.answers ?? {},
+  };
+  const lightTemplate: LightPipelineTemplate = {
+    id: templateRow.id,
+    version: templateRow.version,
+    blocks: templateRow.blocks as LightPipelineTemplate["blocks"],
+    metadata: templateRow.metadata as LightPipelineTemplate["metadata"],
+  };
+
+  await runLightPipeline({
+    session: lightSession,
+    template: lightTemplate,
+    adminClient,
+    jobId: job.id,
+  });
+  return true;
 }
 
 /**
