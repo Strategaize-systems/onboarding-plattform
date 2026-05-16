@@ -475,7 +475,7 @@ Kontakt: siehe `[IMPRESSUM_EMAIL]` (Strategaize-Inhaberin direkt).
 - [docs/legal/AVV-DE.md](legal/AVV-DE.md) — Standard-AVV-Template (SLC-121)
 - [docs/legal/AVV-NL.md](legal/AVV-NL.md) — NL-AVV-Template (SLC-121)
 - [Strategaize-Dev-System `data-residency.md`-Rule](../../strategaize-dev-system/.claude/rules/data-residency.md) — EU-Hosting-Pflicht
-- [IMP-507](../docs/SKILL_IMPROVEMENTS.md) — SECURITY DEFINER + explicit search_path
+- [IMP-507](../../strategaize-dev-system/docs/SKILL_IMPROVEMENTS.md) — SECURITY DEFINER + explicit search_path
 
 ---
 
