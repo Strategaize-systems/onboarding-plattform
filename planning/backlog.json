@@ -915,7 +915,7 @@
       "title": "V6.2 AVV-Template DE + NL (Markdown) — FEAT-049",
       "type": "feature",
       "priority": "high",
-      "status": "in_progress",
+      "status": "done",
       "version": "V6.2",
       "description": "V6.2-Compliance-Sprint Pflicht-Item (Pre-Production-Compliance-Gate). Standard-Auftragsverarbeitungsvertrag-Vorlage unter docs/legal/AVV-DE.md + docs/legal/AVV-NL.md (Markdown). Strategaize Transition BV als Verantwortlicher fuer Diagnose-Funnel, Partner-Kanzlei als Auftragsverarbeiter (oder umgekehrt — finale Rollen-Zuordnung durch Anwalts-Review). Pragmatische Standardvorlage mit Klauseln-Bausteinen (TOMs, Subunternehmer-Konstellation, Rueckgabe/Loeschung, Audit-Rechte), Disclaimer 'keine Rechtsberatung'. NICHT als UI/Page, sondern als Markdown-Vertragsvorlage zum Versand an Partner-Kanzleien (PDF-Konvertierung manuell pro Partner-Onboarding). FEAT-049, ~0.5-1 Tag Schreibarbeit + Anwalts-Review-Phase als separate User-Pflicht. Verweis: STRATEGY_NOTES_2026-05.md Abschnitt 7 Pflichten vor erstem Live-Partner.",
       "createdAt": "2026-05-11"
