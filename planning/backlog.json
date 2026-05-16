@@ -925,9 +925,9 @@
       "title": "V6-PREP-INHALT: Inhalts-Workshop Diagnose-Werkzeug (Stop-Gate fuer SLC-105)",
       "type": "later",
       "priority": "high",
-      "status": "open",
+      "status": "done",
       "version": null,
-      "description": "V6 Pflicht-Vorbereitung — Stop-Gate fuer /backend SLC-105 (nicht V6 insgesamt). User-Verantwortung. Workshop liefert: 15-25 konkrete Mandanten-Fragen entlang der 6 Bausteine aus MULTIPLIER_MODEL.md Inhaltliche Skizze (Strukturelle KI-Reife, Entscheidungs-Qualitaet, Schriftlich festgehaltene Entscheidungen, SOPs, Unternehmerhandbuch, Workaround-Dunkelziffer) + deterministische Score-Logik pro Frage (Antwort-Wert auf 0-100 Score-Mapping) + finale Pflicht-Output-Aussage in Markdown. Ohne dieses Workshop-Output kann SLC-105 nicht starten und Auto-Finalize-Mechanik DGN-A nicht implementiert werden. Andere V6-Slices (SLC-101..104, SLC-106) unabhaengig — koennen vor Workshop-Abschluss starten.",
+      "description": "V6 Pflicht-Vorbereitung — Stop-Gate fuer /backend SLC-105. RESOLVED 2026-05-16: User hat ChatGPT-gestuetzten Inhalts-Workshop auf Basis docs/DIAGNOSE_WERKZEUG_BRIEFING.md durchgefuehrt. Output liegt unter docs/DIAGNOSE_WERKZEUG_INHALT.md (24 Fragen entlang 6 Bausteine + deterministische Score-Mappings 0-100 mit 3 Antwort-Typen multiple_choice/likert_5/numeric_bucket + 18 Bericht-Kommentar-Templates 6×3-Score-Bereiche + Pflicht-Output-Aussage einheitlich). Sanity-Check gegen Briefing-Schema PASS. SLC-105 (Diagnose-Werkzeug Template + Light-Condensation-Pipeline + Bericht-Renderer) ist jetzt baubereit fuer naechsten Versions-Slot (V6.3 oder V7-Bestandteil, User-Entscheidung).",
       "createdAt": "2026-05-11"
     },
     {
