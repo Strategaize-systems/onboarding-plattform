@@ -896,8 +896,8 @@
       "type": "feature",
       "priority": "high",
       "status": "open",
-      "version": "V6.1",
-      "description": "V6 Kern-USP. Neue Template-Variante partner_diagnostic (15-25 Fragen + deterministische Score-Logik aus Inhalts-Workshop) + Light-Condensation-Pipeline mit Auto-Finalize Option DGN-A (KU direkt accepted, validation_layer.reviewer_role=system_auto) + Diagnose-Bericht-Renderer (Score-Visual + KI-Verdichtung + Pflicht-Output-Aussage) + Mandanten-Run-Flow /dashboard/diagnose. Stop-Gate: Inhalts-Workshop muss vor /backend SLC-105 Score-Logik liefern (BL-095). Vorgaenger: FEAT-041, FEAT-043, soft FEAT-044. Detail: /features/FEAT-045-diagnose-werkzeug-template-pipeline-renderer.md.",
+      "version": null,
+      "description": "V6 Kern-USP. Neue Template-Variante partner_diagnostic (15-25 Fragen + deterministische Score-Logik aus Inhalts-Workshop) + Light-Condensation-Pipeline mit Auto-Finalize Option DGN-A (KU direkt accepted, validation_layer.reviewer_role=system_auto) + Diagnose-Bericht-Renderer (Score-Visual + KI-Verdichtung + Pflicht-Output-Aussage) + Mandanten-Run-Flow /dashboard/diagnose. Stop-Gate: Inhalts-Workshop muss vor /backend SLC-105 Score-Logik liefern (BL-095). Vorgaenger: FEAT-041, FEAT-043, soft FEAT-044. Detail: /features/FEAT-045-diagnose-werkzeug-template-pipeline-renderer.md. Version-Re-Assignment 2026-05-16: war urspruenglich V6, dann V6.1, jetzt unassigned weil BL-095-blockiert (Inhalts-Workshop pending). V6.1 wurde als reiner Permanent-Fix-Sprint released, ohne BL-092. Sobald BL-095 Workshop durch ist, wird BL-092 einer zukuenftigen Version (V6.4 oder V7) zugeordnet.",
       "createdAt": "2026-05-11"
     },
     {
@@ -1012,12 +1012,12 @@
     },
     {
       "id": "BL-104",
-      "title": "V6.2 Anwalts-Review der Compliance-Texte (Datenschutz + Impressum + AVV DE + AVV NL + Consent v1-2026-05) — User-Pflicht",
+      "title": "Pre-Production-Compliance-Gate: Anwalts-Review der V6.2-Compliance-Texte (Datenschutz + Impressum + AVV DE + AVV NL + Consent v1-2026-05) — User-Pflicht",
       "type": "later",
       "priority": "high",
       "status": "open",
-      "version": "V6.2",
-      "description": "Nach V6.2-Code-Side-Release: Anwalts-/Datenschutzbeauftragten-Pruefung der 4 Compliance-Texte (1) Datenschutzerklaerung (FEAT-048), (2) Impressum (FEAT-048), (3) AVV DE (FEAT-049), (4) AVV NL (FEAT-049), plus 5. Re-Review des bestehenden V6-Modal-Consent-Text v1-2026-05. Outcome: V6.2-Release-Status wechselt von 'ready pending legal review' auf 'released, legal-cleared' und erlaubt ersten echten Live-Partner-Onboarding. Falls Anwalts-Review substanzielle Aenderungen verlangt: V6.3-Compliance-Iteration-Slice oder Hotfix-Patch je nach Scope. User-Pflicht, ich kann nicht uebernehmen. Verweis: feedback_compliance_gate_later.",
+      "version": null,
+      "description": "Pre-Production-Compliance-Gate-Item — NICHT Teil eines Code-Sprints, laeuft parallel zu Code-Side-Releases. Nach V6.2-Code-Side-Release: Anwalts-/Datenschutzbeauftragten-Pruefung der 4 Compliance-Texte (1) Datenschutzerklaerung (FEAT-048), (2) Impressum (FEAT-048), (3) AVV DE (FEAT-049), (4) AVV NL (FEAT-049), plus 5. Re-Review des bestehenden V6-Modal-Consent-Text v1-2026-05. Outcome: V6.2-Release-Status wechselt von 'ready pending legal review' auf 'released, legal-cleared' und erlaubt ersten echten Live-Partner-Onboarding. Falls Anwalts-Review substanzielle Aenderungen verlangt: V6.3-Compliance-Iteration-Slice oder Hotfix-Patch je nach Scope. User-Pflicht, ich kann nicht uebernehmen. Verweis: feedback_compliance_gate_later. Version-Re-Assignment 2026-05-16: war urspruenglich V6.2, jetzt unassigned weil externes Pre-Production-Compliance-Gate-Item (analog BL-095 Inhalts-Workshop). Sonst wuerde Cockpit V6.2 selbst nach /deploy bei 75% statt 100% bleiben.",
       "createdAt": "2026-05-15"
     }
   ]
