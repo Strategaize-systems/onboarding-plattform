@@ -5632,3 +5632,382 @@ V6.2 hat 0 DB-Migrations. Keine neuen Tabellen, keine RLS-Aenderungen, keine RPC
 Slice-Reihenfolge: SLC-122 (COMPLIANCE.md) zuerst, weil FEAT-049 AVV-Templates auf COMPLIANCE.md-TOMs verweisen. Dann SLC-121 (AVV). SLC-120 (Pages) parallel-faehig zu beiden.
 
 V6.2-Pflicht-Vorbereitung parallel zum Code: BL-104 Anwalts-Review-Vorbereitung (User-Pflicht — Anwalt suchen, Texte versenden, Review einholen). Anwalts-Review erfolgt NACH /deploy V6.2 als "ready pending legal review".
+
+---
+
+## V6.3 — Diagnose-Werkzeug Live-Schaltung (SLC-105 / FEAT-045)
+
+### V6.3 Architecture Summary
+
+V6.3 schaltet das **Strategaize-Diagnose-Werkzeug** als Mandanten-Self-Service-Erlebnis live: 24 Fragen entlang 6 MULTIPLIER_MODEL-Bausteine, deterministischer Score 0-100 pro Baustein, KI-kommentierende Verdichtung pro Block, Pflicht-Output-Aussage. Keine Berater-Review (Auto-Finalize DGN-A, DEC-100). 0 neue Tabellen — Reuse `template` / `capture_session` / `knowledge_unit` / `validation_layer` / `block_checkpoint`. 1 neue Migration (093) mit 2 neuen JSONB-Spalten + idempotentem Template-Seed.
+
+V6.3 ist single-Slice: SLC-105 implementiert Migration + Worker-Branch + Mandanten-Run-Flow + Bericht-Renderer in einem Slice. Stop-Gate BL-095 (Inhalts-Workshop) ist resolved — `docs/DIAGNOSE_WERKZEUG_INHALT.md` liefert 24 Fragen + 3 Antwort-Typen + diskrete Score-Mappings + 18 Stil-Anker-Templates + Pflicht-Output-Aussage.
+
+### V6.3 Main Components
+
+1. **Migration 093** — `template.metadata JSONB` + `knowledge_unit.metadata JSONB` Spalten + idempotenter `partner_diagnostic_v1` Template-Seed (24 Fragen aus `DIAGNOSE_WERKZEUG_INHALT.md`).
+2. **Worker-Branch in `knowledge_unit_condensation`-Handler** — `runLightPipeline` (NEU `src/workers/condensation/light-pipeline.ts`) wird dispatched wenn `template.metadata.usage_kind = 'self_service_partner_diagnostic'`. KEIN neuer `job_type`. Re-bestaetigt DEC-105.
+3. **Pure-Function `computeBlockScores`** — Deterministische Score-Berechnung pro Block per Lookup auf `score_mapping`-Array, Vitest-tauglich, kein Bedrock-Call.
+4. **Bedrock-Verdichtungs-Loop** — Pro Block 1 Bedrock-Sonnet-Call mit Block-Score + Antworten + Stil-Anker-Template als Prompt. Promise.all-Parallelisierung. Output landet in `knowledge_unit.metadata.comment`.
+5. **Mandanten-Run-Flow** — `/dashboard/diagnose/start` + `/run/[capture_session_id]` + `/bericht-pending/[id]` + `/bericht/[id]`. Auth-Gate `tenant_admin` + `tenant_kind='partner_client'` (Direkt-Kunden-Hinweis-Page).
+6. **Bericht-Renderer** — Server-Component-Familie mit `ScoreVisual` (6 horizontale Tailwind-Bars), `BlockSection` (Title + Score + KI-Kommentar), Pflicht-Output-Aussage-Footer, Partner-Branding-Resolver (FEAT-044 Reuse). Sub-Karte "Ich will mehr" als Stub (echter Lead-Push lebt in SLC-106 V6).
+
+### V6.3 Data Model (no new tables)
+
+#### template — 1 neue Spalte
+
+```sql
+ALTER TABLE template ADD COLUMN IF NOT EXISTS metadata jsonb NOT NULL DEFAULT '{}'::jsonb;
+```
+
+`template.metadata` haelt:
+- `usage_kind: 'self_service_partner_diagnostic'` (DGN-A-Branch-Trigger im Worker)
+- `required_closing_statement: text` (Markdown-Footer-Snippet aus Workshop-Output)
+
+Existierende Templates (exit_readiness, demo) erhalten `'{}'` Default und laufen weiter durch Standard-Pipeline.
+
+#### template.blocks JSONB — Schema-Erweiterung pro Question
+
+```json
+{
+  "key": "ki_reife",
+  "title": "Strukturelle KI-Reife",
+  "intro": "Dieser Baustein misst, ob Ihre Firma...",
+  "order": 1,
+  "questions": [
+    {
+      "key": "ki_reife.q1",
+      "text": "Wie viele zentrale Systeme...",
+      "question_type": "multiple_choice",
+      "scale_direction": "negative",
+      "score_mapping": [
+        {"label": "Mehr als 10 Systeme...", "score": 0},
+        {"label": "6-10 Systeme...", "score": 25},
+        {"label": "4-5 zentrale Systeme...", "score": 50},
+        {"label": "2-3 zentrale Systeme...", "score": 75},
+        {"label": "1 klares Hauptsystem...", "score": 100}
+      ]
+    }
+  ],
+  "comment_anchors": {
+    "low": "Ihre strukturelle Basis ist aktuell nicht KI-tauglich...",
+    "mid": "Es gibt erste Strukturen...",
+    "high": "Die Firma hat eine brauchbare strukturelle Grundlage..."
+  }
+}
+```
+
+Drei `question_type`-Werte: `multiple_choice` | `likert_5` | `numeric_bucket`. Kein DB-CHECK-Constraint auf einer JSONB-Property — Forward-Compat fuer kuenftige Frage-Typen (DEC-123). Runtime-Validation in `computeBlockScores` wirft auf unbekanntem `question_type`.
+
+#### knowledge_unit — 1 neue Spalte
+
+```sql
+ALTER TABLE knowledge_unit ADD COLUMN IF NOT EXISTS metadata jsonb NOT NULL DEFAULT '{}'::jsonb;
+```
+
+`knowledge_unit.metadata` haelt pro Diagnose-Block (DEC-124):
+- `score: number` (0-100, deterministisch berechnet)
+- `comment: string` (Bedrock-Verdichtungs-Output, 2-3 Saetze)
+- `score_rule_version: string` (Template-Version-Identifier `partner_diagnostic_v1`)
+- `block_intro: string` (kopiert aus Template fuer Renderer-Stabilitaet)
+
+Standard-Pipeline-KUs (questionnaire/walkthrough/meeting) bekommen `metadata='{}'` Default und sind nicht betroffen.
+
+#### capture_session.answers (existing JSONB)
+
+Antworten landen als Objekt `{ "ki_reife.q1": "<gewaehlte Option (text)>", "ki_reife.q2": "...", ... }`. Pro Question ein Key. `computeBlockScores` matched die Option-Texte gegen `score_mapping[].label` und liefert den Score. **String-Match exakt** — Reihenfolge der Optionen im Schema ist sicher gegen Drift (Workshop-Output ist eingefroren mit Template-Version `v1`).
+
+#### Keine CHECK-Erweiterungen in Migration 093
+
+Migration 091 hat bereits gesetzt:
+- `validation_layer.reviewer_role` akzeptiert `'system_auto'` (DGN-A-Audit-Trail)
+- `block_checkpoint.checkpoint_type` akzeptiert `'auto_final'` (Auto-Finalize-Marker)
+
+`ai_jobs.job_type` enthaelt schon `'knowledge_unit_condensation'`. Worker-Branch nutzt diesen Wert — kein neuer Job-Typ noetig (DEC-105 / DEC-126).
+
+### V6.3 Data Flow — End-to-End
+
+```
+1. Mandant → /dashboard/diagnose/start (Server-Component)
+   → Auth-Gate: tenant_admin + tenant_kind='partner_client'
+   → falls direct_client: Hinweis-Page "Diagnose nur ueber Partner verfuegbar"
+   → Server-Action startDiagnoseRun:
+        INSERT capture_session (template_id=partner_diagnostic_v1, status='open',
+                                capture_mode='questionnaire', owner_user_id, tenant_id)
+   → Redirect /dashboard/diagnose/run/[capture_session_id]
+
+2. Mandant → /run/[id] (Client-Component QuestionFlow)
+   → Sequenzieller Frage-Flow ueber 6 Bloecke × 4 Fragen = 24 Fragen
+   → Save-Draft (UPDATE capture_session.answers JSONB) optional
+   → Submit-Button am Run-Ende → submitDiagnoseRun:
+        UPDATE capture_session SET status='submitted', answers=<full JSON>
+        INSERT ai_jobs (job_type='knowledge_unit_condensation',
+                        payload={ capture_session_id, source_kind: 'diagnose' })
+   → Redirect /dashboard/diagnose/[id]/bericht-pending
+
+3. Worker (existing claim-loop, 5s poll)
+   → claim job (rpc_claim_next_ai_job_for_type), dispatch via handle-job
+   → loadCaptureSession + loadTemplate
+   → if template.metadata.usage_kind === 'self_service_partner_diagnostic':
+        runLightPipeline()
+      else:
+        runStandardPipeline()  // proposed→review-loop, unchanged
+
+4. runLightPipeline (NEU src/workers/condensation/light-pipeline.ts)
+   a. scores = computeBlockScores(template.blocks, session.answers)
+        // Pure Function, deterministisch, Vitest-tauglich
+   b. comments = await Promise.all(template.blocks.map(block =>
+        bedrock.complete({
+          prompt: buildLightPipelinePrompt({ block, answers, score: scores[block.key] }),
+          model: 'claude-sonnet-4-6 (eu-central-1)',
+          maxTokens: 200
+        })
+      ))
+        // 6 parallele Bedrock-Calls, ~5-10s pro Block, ~15s total
+        // Cost-Ledger pro Call (ai_cost_ledger)
+   c. BEGIN TRANSACTION:
+        FOR EACH block IN template.blocks:
+          INSERT block_checkpoint (capture_session_id, block_key, checkpoint_type='auto_final',
+                                   content=<answers-snapshot>, content_hash=<sha256>,
+                                   created_by=system_user_id)
+          INSERT knowledge_unit (capture_session_id, block_checkpoint_id, block_key,
+                                 unit_type='finding', source='questionnaire',
+                                 title=block.title, body=<comment>, confidence='medium',
+                                 status='accepted',
+                                 metadata={ score, comment, score_rule_version: 'partner_diagnostic_v1',
+                                            block_intro: block.intro })
+          INSERT validation_layer (knowledge_unit_id, reviewer_role='system_auto',
+                                   action='accept', note='Auto-Finalize per DGN-A')
+        UPDATE capture_session SET status='finalized'
+      COMMIT
+   d. INSERT error_log (category='partner_diagnostic_finalized',
+                        metadata={ session_id, block_count: 6,
+                                   total_score_avg, duration_ms, cost_usd })
+
+5. Bericht-pending Page polls capture_session.status every 3s
+   → status='finalized' → redirect /dashboard/diagnose/[id]/bericht
+
+6. Bericht-Page (Server-Component)
+   → Auth-Gate: tenant_member-Selbstzugriff ODER partner_admin via parent_partner_tenant_id
+                ODER strategaize_admin
+   → SELECT knowledge_unit + validation_layer + block_checkpoint
+            WHERE capture_session_id=... ORDER BY block_checkpoint.created_at
+   → Branding-Resolver (SLC-104 rpc_get_branding_for_tenant)
+   → Render:
+        Header: Strategaize-Logo + Partner-DisplayName + Datum + Mandant-Tenant-Name
+        ScoreVisual: 6 horizontale Tailwind-Bars (DEC-128), je Block-Score 0-100
+        Pro Block: BlockSection (Title + Score-Bar + ku.metadata.comment 2-3 Saetze)
+        Footer: required_closing_statement (react-markdown)
+        Sub-Karte: "Ich will mehr von Strategaize" als Stub (Coming-Soon-Disabled, SLC-106)
+        Print-Button: window.print() mit print-friendly CSS
+```
+
+### V6.3 Worker-Branch — Dispatch-Detail
+
+```typescript
+// src/workers/condensation/run.ts (vorhandener Eintrag, erweitert)
+import { runLightPipeline } from "./light-pipeline";
+
+async function handleKnowledgeUnitCondensation(job: AiJob) {
+  const { capture_session_id } = job.payload;
+  const session = await loadCaptureSession(capture_session_id);
+  const template = await loadTemplate(session.template_id);
+
+  // V6.3 NEU: Worker-Branch ueber template.metadata.usage_kind
+  if (template.metadata?.usage_kind === "self_service_partner_diagnostic") {
+    await runLightPipeline({ session, template, adminClient, bedrock, costLedger });
+    return;
+  }
+
+  // Standard-Pipeline unveraendert (proposed → review-loop)
+  await runStandardPipeline({ session, template, adminClient, bedrock, costLedger });
+}
+```
+
+Standard-Pipeline-Regression-Risk: Branch greift NUR wenn das neue Flag im Template gesetzt ist. Bestehende Templates (exit_readiness, demo, walkthrough) haben `metadata='{}'` und laufen unveraendert weiter. Pflicht-Vitest in MT-5 (`run-branch.test.ts`) validiert beide Branches.
+
+### V6.3 Score-Berechnung — Pure-Function-Signatur
+
+```typescript
+// src/workers/condensation/light-pipeline.ts
+type QuestionType = "multiple_choice" | "likert_5" | "numeric_bucket";
+
+type ScoreMappingEntry = { label: string; score: number };
+
+type TemplateQuestion = {
+  key: string;
+  text: string;
+  question_type: QuestionType;
+  scale_direction: "positive" | "negative";
+  score_mapping: ScoreMappingEntry[];
+};
+
+type TemplateBlock = {
+  key: string;
+  title: string;
+  intro: string;
+  order: number;
+  questions: TemplateQuestion[];
+  comment_anchors: { low: string; mid: string; high: string };
+};
+
+export function computeBlockScores(
+  blocks: TemplateBlock[],
+  answers: Record<string, string>
+): Record<string, number> {
+  const result: Record<string, number> = {};
+  for (const block of blocks) {
+    const scores: number[] = [];
+    for (const q of block.questions) {
+      const answer = answers[q.key];
+      if (answer === undefined || answer === null || answer === "") {
+        throw new Error(`Missing answer for question ${q.key}`);
+      }
+      const mapping = q.score_mapping.find((m) => m.label === answer);
+      if (!mapping) {
+        throw new Error(
+          `No score mapping for question ${q.key}, answer="${answer.slice(0, 40)}..."`
+        );
+      }
+      scores.push(mapping.score);
+    }
+    // Block-Score = Durchschnitt der Fragen-Scores (4 Fragen pro Block)
+    result[block.key] = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+  }
+  return result;
+}
+```
+
+Pure Function — keine I/O, keine Side-Effects, keine Zufalls-Werte. 12+ Vitest in MT-3 (`light-pipeline-score.test.ts`).
+
+### V6.3 Bedrock-Prompt-Struktur
+
+```
+System: Du bist ein nuechterner Berater, der Diagnose-Antworten zu Strukturreife und KI-Tauglichkeit
+        kommentiert. Antworte in 2-3 Saetzen pro Block, deutsch, prosaisch (keine Bullet-Listen,
+        keine Empfehlungen, keine Aufzaehlungen). Stil: ehrlich, direkt, nicht beratungs-floskelhaft.
+
+User:   Bewerteter Baustein: {block.title}
+        Block-Beschreibung: {block.intro}
+        Berechneter Score: {scores[block.key]} (Skala 0-100, 100 = beste Strukturreife)
+        Stil-Anker fuer Score-Bereich {low|mid|high}: "{comment_anchor}"
+
+        Antworten des Mandanten:
+        - {q1.text}: {answer1}
+        - {q2.text}: {answer2}
+        - {q3.text}: {answer3}
+        - {q4.text}: {answer4}
+
+        Schreibe einen kommentierenden Absatz im Stil des Stil-Ankers, der die konkreten Antworten
+        des Mandanten aufgreift. Erwaehne KEINE Score-Zahlen, KEINE konkreten Fragen-Texte.
+```
+
+Stil-Anker-Pattern stabilisiert Tonalitaet ueber alle Diagnose-Runs (DEC-128 reconfirms feedback_blueprint_look_feel_mandatory-Geist: Konsistenz vor Improvisation).
+
+### V6.3 Bericht-Renderer — Visual-Variante
+
+V6.3 nutzt **6 horizontale Tailwind-Bars** (DEC-128), NICHT Radar-Chart. Begruendung:
+
+- 0 neue npm-Dependencies (Radar-Chart braucht Chart.js / Recharts → ~50KB bundle-impact)
+- Print-friendly (Radar-SVG in `window.print()` zerlaeuft, Tailwind-Bars rendern stabil)
+- Linear lesbar (Score 0-100 ist 1D, Radar-Polygon-Form invertiert intuitiv)
+- Accessibility: Tailwind-Bars sind Text-decodable (ScreenReader liest `aria-valuenow`)
+
+Optisch Hex-Codes aus Style-Guide V2 (#4454b8 primary), Score-Farben:
+- 0-30: red-500 (Strukturluecke)
+- 31-55: amber-500 (Teil-Reife)
+- 56-100: emerald-500 (Tragbar)
+
+### V6.3 External Dependencies — unveraendert
+
+- AWS Bedrock Claude Sonnet eu-central-1 (existing `src/lib/llm.ts`)
+- Supabase Self-hosted Postgres + Storage (existing)
+- next-intl (NUR Deutsch in V6.3 — NL kommt mit V6.4+ wenn NL-Pilot aktiviert wird, DEC-102)
+- Keine neuen Adapter, keine neuen APIs
+
+### V6.3 Security / Privacy
+
+- **Tenant-Isolation:** Mandant von Partner A sieht NICHT Bericht von Mandant von Partner B (RLS-Matrix aus SLC-101 deckt knowledge_unit + validation_layer + block_checkpoint via tenant_id-Filter). Kein neuer Pen-Test-Fall noetig.
+- **Cross-Tenant-Read fuer partner_admin:** existing RLS (parent_partner_tenant_id-Mapping). Bericht-Renderer respektiert.
+- **Strategaize-Admin Cross-Tenant:** existing `strategaize_admin`-Role-Policy.
+- **Mandanten-Antworten in `capture_session.answers`:** keine zusaetzlichen Pflicht-PII-Felder (Antworten sind Selbsteinschaetzung der eigenen Firma — Verarbeitungszweck = berechtigtes Interesse, DSGVO Art. 6(1)(f)).
+- **Bedrock-Region eu-central-1:** unveraendert per data-residency.md (Frankfurt-EU).
+- **ai_cost_ledger:** Light-Pipeline-Cost-Audit pro Block (6 Eintraege pro Diagnose). V6-Erfolgsmessung.
+
+### V6.3 Constraints / Tradeoffs
+
+- **0 neue Tabellen** — JSONB-Erweiterung statt dediziertem `block_response`-Schema. Vorteil: keine RLS-Doppelung, keine Index-Migration. Nachteil: Score-Queries gehen ueber JSON-Path-Op (`metadata->>'score'`). Akzeptabel weil Score-Reads pro Bericht 6 Rows max sind.
+- **Diskrete Score-Mappings statt Formel-Logik** — Workshop-Output ist fest 5-stufige Optionen pro Frage mit explizitem Score (0/25/50/75/100). Vorteil: deterministisch, lesbar, ohne Floating-Point-Risiko. Nachteil: Mandant kann nicht "irgendwo dazwischen" antworten — bewusst (zwingt zur ehrlichen Selbsteinschaetzung).
+- **Bedrock parallel via Promise.all** — Latency-Optimierung von ~60s sequenziell auf ~15s parallel. Risk: Bedrock-Rate-Limit bei 6 parallelen Calls aus einem Job. Mitigation: bestehender `bedrock-client.ts` hat Retry-Backoff; fallback-tauglich.
+- **Worker-Branch statt neuer Job-Type** — re-bestaetigt DEC-105. Kein neuer `ai_jobs.job_type`-CHECK-Eintrag. Vorteil: 1 Code-Change-Punkt (Handler), nicht 3 (CHECK + claim-loop + run.ts).
+- **6 Tailwind-Bars statt Radar-Chart** — Verzicht auf visuelle Komplexitaet zugunsten Print-Stabilitaet + 0-Dependency.
+- **Kein PDF-Export in V6.3** — V6.3 nutzt `window.print()` als Browser-native Variante. Echter PDF-Export ist V6.5+ Backlog falls Mandanten-Feedback es priorisiert.
+- **Stub fuer "Ich will mehr"-Sub-Karte** — Echter Lead-Push lebt in SLC-106 V6 (bereits implementiert, MT-12 RPT-252 live verifiziert). V6.3-Bericht zeigt aktive Sub-Karte mit Klick-Handler auf SLC-106-`/api/lead-push`-Endpoint.
+
+### V6.3 Open Technical Questions — alle entschieden
+
+| # | Frage | Entscheidung |
+|---|-------|-------------|
+| Q1 | `question_type`-Storage: Spalte + CHECK oder JSONB-Property | **JSONB** in `template.blocks[].questions[].question_type`, kein DB-Constraint (DEC-123) |
+| Q2 | Score-Storage: dedizierte Spalte `block_response.score` oder JSONB | **JSONB** `knowledge_unit.metadata.score` (DEC-124) |
+| Q3 | Score-Function: pure TypeScript oder DB-Function | **Pure TS** `computeBlockScores`, Vitest-tauglich (DEC-125) |
+| Q4 | Worker-Branch: neuer Job-Typ oder Branch im Handler | **Branch im `knowledge_unit_condensation`-Handler** (DEC-126, re-bestaetigt DEC-105) |
+| Q5 | Migration-Nummer: 093 oder 091c | **093** — sauberer V6.3-Slot, kein 091-Hotfix (DEC-127) |
+| Q6 | Bericht-Visual: Radar-Chart oder horizontale Bars | **6 horizontale Tailwind-Bars** (DEC-128) |
+| Q7 | `auto_final` + `system_auto` CHECK-Erweiterung | **NICHT NOETIG** — Migration 091 hat beide CHECKs bereits erweitert |
+| Q8 | NL-Sprach-Variante in V6.3 | **NICHT IN SCOPE** — V6.4+ wenn NL-Pilot aktiviert (DEC-102 reconfirms) |
+
+### V6.3 Risks
+
+- **R-V63-1 Bedrock-Rate-Limit bei Promise.all** — 6 parallele Sonnet-Calls aus einem Job-Run. Mitigation: bestehender Bedrock-Client retry-Backoff. Worst-Case: Promise.all faellt auf Sequential, Run-Dauer steigt von ~15s auf ~60s. Mandant sieht "Verdichtung laeuft" Lade-Screen — akzeptabel.
+- **R-V63-2 Antwort-String-Drift** — `score_mapping[].label`-Match gegen `capture_session.answers[questionKey]` ist exakter String-Vergleich. Wenn UI nicht 1:1 die `label`-Texte aus Template uebergibt, fehlt das Score-Mapping. Mitigation: Question-Flow-UI rendert direkt aus `template.blocks` (kein Re-Wording in Component); MT-3 Vitest erzwingt 1:1-Konsistenz; pre-deploy Smoke-Test mit allen 24 Antworten.
+- **R-V63-3 Template-Seed-Drift** — Migration 093 enthaelt 24-Fragen-Seed mit ~5KB JSONB-Payload. Bei spaeterem Workshop-Output-Update (Workshop v2): Template-Seed-Migration 094 erforderlich, Migration 093 NIE editieren post-Apply (Idempotenz-Bruch). Mitigation: `template.version='v1'` markiert Workshop-Output-Version; v2 wuerde `slug='partner_diagnostic'` + `version='v2'` als neue Row anlegen, nicht alte ueberschreiben.
+- **R-V63-4 Cost-Spike** — Erwartete Kosten: 6 Bloecke × ~500 input-tokens × $0.003/1k = ~$0.009 pro Diagnose. Bei 50 Diagnosen/Woche = ~$0.45/Woche. Vernachlaessigbar fuer V6.3-Pilot-Phase. Cost-Ledger-Audit in MT-11 verifiziert.
+- **R-V63-5 Auto-Finalize-Quality-Risk** — Kein Berater-Loop, KI-Kommentar kann inhaltlich daneben liegen. Mitigation: Stil-Anker-Templates aus Workshop-Output (3 pro Block × 6 Bloecke = 18 Anker) stabilisieren Tonalitaet; deterministischer Score traegt Kern-Aussage, KI kommentiert nur drumherum.
+
+### V6.3 Migrations: Migration 093
+
+**Datei:** `sql/migrations/093_v63_partner_diagnostic_seed.sql`
+
+**Inhalt:**
+1. `ALTER TABLE template ADD COLUMN IF NOT EXISTS metadata jsonb NOT NULL DEFAULT '{}'::jsonb;`
+2. `ALTER TABLE knowledge_unit ADD COLUMN IF NOT EXISTS metadata jsonb NOT NULL DEFAULT '{}'::jsonb;`
+3. `INSERT INTO template (slug, version, name, description, blocks, metadata, sop_prompt, owner_fields, diagnosis_schema, diagnosis_prompt) VALUES ('partner_diagnostic', 'v1', 'Strategaize-Diagnose-Werkzeug', '24 Fragen ueber 6 MULTIPLIER_MODEL-Bausteine', '<24-Frage-JSON-Payload aus DIAGNOSE_WERKZEUG_INHALT.md>', '{"usage_kind": "self_service_partner_diagnostic", "required_closing_statement": "<Pflicht-Output-Aussage>"}', NULL, NULL, NULL, NULL) ON CONFLICT (slug, version) DO UPDATE SET blocks=EXCLUDED.blocks, metadata=EXCLUDED.metadata, description=EXCLUDED.description, updated_at=now();`
+
+Idempotenz via `ON CONFLICT (slug, version) DO UPDATE` — Migration 093 darf zweimal angewendet werden ohne Schaden. Existierende Templates (exit_readiness, demo, walkthrough) sind nicht betroffen.
+
+**Apply-Pattern** per `sql-migration-hetzner.md`:
+```bash
+base64 -w 0 sql/migrations/093_v63_partner_diagnostic_seed.sql
+ssh root@159.69.207.29 "echo '<BASE64>' | base64 -d > /tmp/093_v63.sql && \
+  docker exec -i <db-container> psql -U postgres -d postgres < /tmp/093_v63.sql"
+```
+
+**Pre-Apply-Backup-Pflicht:** `pg_dump --schema-only --table=template --table=knowledge_unit` als Sicherung.
+
+**Verifikation:**
+```sql
+SELECT column_name FROM information_schema.columns
+  WHERE table_name='template' AND column_name='metadata';
+-- erwartet: 1 Row
+
+SELECT column_name FROM information_schema.columns
+  WHERE table_name='knowledge_unit' AND column_name='metadata';
+-- erwartet: 1 Row
+
+SELECT slug, version, metadata->>'usage_kind',
+       jsonb_array_length(blocks) AS block_count,
+       (SELECT COUNT(*) FROM jsonb_array_elements(blocks) b,
+                              jsonb_array_elements(b->'questions') q)
+         AS question_count
+  FROM template WHERE slug='partner_diagnostic';
+-- erwartet: 1 Row, usage_kind='self_service_partner_diagnostic',
+--           block_count=6, question_count=24
+```
+
+### V6.3 Implementation Direction — naechster Schritt
+
+`/backend SLC-105` mit MT-Reihenfolge aus dem bestehenden Slice-File (MT-1 Migration 093 anlegen → MT-2 Migration LIVE auf Hetzner → MT-3 computeBlockScores + Vitest → MT-4 runLightPipeline + Worker-Tests → MT-5 Worker-Branch + run-branch-Tests). Danach `/frontend SLC-105` (MT-6..MT-8 Run-Flow + Bericht-Renderer). MT-9..MT-12 sind QA + Browser-Smoke.
+
+V6.3-Reihenfolge: SLC-105 ist Single-Slice — kein paralleler V6.3-Slice anderswo. Stop-Gate BL-095 ist resolved, Implementation kann starten.
+
