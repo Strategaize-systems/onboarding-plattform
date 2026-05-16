@@ -103,12 +103,13 @@ V6-Effektiv-Scope (korrigiert 2026-05-14): 5 Features (FEAT-041..044 + FEAT-046)
 | FEAT-044 | Partner-Branding minimal + CSS-Custom-Properties Setup | done | [Spec](FEAT-044-partner-branding-css-custom-properties.md) | 2026-05-11 |
 | FEAT-046 | Lead-Push opt-in + Outbound Webhook + DSGVO-Audit | done | [Spec](FEAT-046-lead-push-opt-in-webhook-dsgvo.md) | 2026-05-11 |
 
-## V6.1 Features (Diagnose-Werkzeug + NL-Variante + Operational-Polish)
+## V6.1 Features (Operational-Polish)
+
+V6.1 wurde als reiner Permanent-Fix-Sprint released (RPT-264 / REL-016 2026-05-15). FEAT-045 (Diagnose-Werkzeug) wurde nach V6.3 verschoben weil BL-095 Inhalts-Workshop erst 2026-05-16 fertig wurde.
 
 | ID | Feature | Status | Spec | Created |
 |----|---------|--------|------|---------|
 | FEAT-047 | V6.1 Operational-Polish (Multi-Network + Branding-Polish) | deployed | [Spec](FEAT-047-v61-operational-polish.md) | 2026-05-15 |
-| FEAT-045 | Diagnose-Werkzeug Template + Light-Condensation-Pipeline + Bericht-Renderer | planned | [Spec](FEAT-045-diagnose-werkzeug-template-pipeline-renderer.md) | 2026-05-11 |
 
 ## V6.2 Features (Compliance-Sprint — Pre-Production-Compliance-Gate)
 
@@ -119,3 +120,11 @@ V6.2-Scope (2026-05-15, RPT-265): 3 Features als Pre-Production-Compliance-Gate 
 | FEAT-048 | Datenschutz + Impressum Pages DE | deployed | [Spec](FEAT-048-datenschutz-impressum-pages-de.md) | 2026-05-15 |
 | FEAT-049 | AVV-Template DE + NL (Markdown) | deployed | [Spec](FEAT-049-avv-template-de-nl.md) | 2026-05-15 |
 | FEAT-050 | docs/COMPLIANCE.md Onboarding-Plattform | deployed | [Spec](FEAT-050-compliance-md-onboarding.md) | 2026-05-15 |
+
+## V6.3 Features (Diagnose-Werkzeug Live-Schaltung)
+
+V6.3-Scope (User-Entscheidung 2026-05-16, nach BL-095 RESOLVED via RPT-278): Single-Feature-Release — Diagnose-Werkzeug als Multiplikator-Funktions-Kern. Workflow per User-Entscheidung: Skip /requirements + /slice-planning (FEAT-045 + SLC-105-Slice-File schon detailliert), direkt /architecture Quick-Pass -> /backend SLC-105 -> /qa -> /frontend SLC-105 -> /qa Live-Smoke -> /final-check -> /go-live -> /deploy.
+
+| ID | Feature | Status | Spec | Created |
+|----|---------|--------|------|---------|
+| FEAT-045 | Diagnose-Werkzeug Template + Light-Condensation-Pipeline + Bericht-Renderer | in_progress | [Spec](FEAT-045-diagnose-werkzeug-template-pipeline-renderer.md) | 2026-05-11 |

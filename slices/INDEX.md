@@ -371,14 +371,21 @@ V6-Effektiv-Scope (RPT-209 Requirements + RPT-210 Architecture + RPT-211 Slice-P
 | SLC-104 | [Partner-Branding + CSS-Custom-Properties + RPC (Migration 091)](SLC-104-partner-branding-css-custom-properties.md) | FEAT-044 | done | High | 2026-05-11 |
 | SLC-106 | [Lead-Push opt-in + Outbound Webhook + DSGVO-Audit (Migration 092)](SLC-106-lead-push-opt-in-outbound-webhook.md) | FEAT-046 | done | High | 2026-05-11 |
 
-## V6.1 Slices (Diagnose-Werkzeug + NL-Variante + V6-Pilot-Polish)
+## V6.1 Slices (Operational-Polish)
 
-V6.1-Scope: Diagnose-Werkzeug (verschoben aus V6 weil BL-095 Inhalts-Workshop fehlt) + NL-Sprach-Variante + V6.1-Permanent-Fix-Polish-Tripel (ISSUE-072 + ISSUE-048 + ISSUE-049, geplant 2026-05-15 nach V6 /post-launch RPT-257+258).
+V6.1 wurde als reiner Permanent-Fix-Sprint released (RPT-264 / REL-016 2026-05-15). SLC-105 (Diagnose-Werkzeug) wurde nach V6.3 verschoben weil BL-095 Inhalts-Workshop erst 2026-05-16 fertig wurde.
 
 | ID | Slice | Feature | Status | Priority | Created |
 |----|-------|---------|--------|----------|---------|
 | SLC-110 | [V6.1 Permanent-Fix Polish-Tripel (Multi-Network + Branding-Default-Leak + React-cache)](SLC-110-v61-permanent-fix-polish-tripel.md) | FEAT-047 | done | High | 2026-05-15 |
-| SLC-105 | [Diagnose-Werkzeug + Light-Pipeline + Bericht-Renderer (Stop-Gate BL-095)](SLC-105-diagnose-werkzeug-light-pipeline-renderer.md) | FEAT-045 | planned | High | 2026-05-11 |
+
+## V6.3 Slices (Diagnose-Werkzeug Live-Schaltung)
+
+V6.3-Scope (User-Entscheidung 2026-05-16, nach BL-095 RESOLVED via RPT-278): Single-Slice-Release — SLC-105 Diagnose-Werkzeug als Multiplikator-Funktions-Kern. Slice-File `SLC-105-*.md` schon 273 Zeilen detailliert (urspruenglich V6-geplant). Workshop-Output `docs/DIAGNOSE_WERKZEUG_INHALT.md` liefert 24 Fragen / Score-Mappings / Kommentar-Templates fuer Template-Seed. Workflow per User-Entscheidung: Skip /requirements + /slice-planning, direkt /architecture Quick-Pass auf Score-Logik-Schema-Implications -> /backend SLC-105 -> /qa -> /frontend SLC-105 -> /qa Live-Smoke (User-Selbsttest Diagnose) -> /final-check -> /go-live -> /deploy. Realistisch ~3-5 Sessions.
+
+| ID | Slice | Feature | Status | Priority | Created |
+|----|-------|---------|--------|----------|---------|
+| SLC-105 | [Diagnose-Werkzeug + Light-Pipeline + Bericht-Renderer](SLC-105-diagnose-werkzeug-light-pipeline-renderer.md) | FEAT-045 | in_progress | High | 2026-05-11 |
 
 ### V6 Execution Order
 
