@@ -577,3 +577,58 @@ Code-Side-Implementation kann mit `.env.example`-Platzhaltern starten — Stop-G
 - **BL-102 V6.2-PAGES**: Datenschutz + Impressum Pages — Code-Realisierung in SLC-120.
 - **BL-103 V6.2-COMPLIANCE-MD**: Compliance-Doku — Code-Realisierung in SLC-122.
 - **BL-104 V6.2-ANWALTS-REVIEW (User-Pflicht)**: Anwalts-Review der 5 Texte (Datenschutz + Impressum + AVV-DE + AVV-NL + COMPLIANCE.md) nach /deploy V6.2. NICHT Teil der Code-Slices. **Stop-Gate fuer ersten echten Live-Pilot-Partner** — V6.2-Release-Marker wird "ready pending legal review", erster Live-Partner blockiert auf Review-Pass.
+
+## V6.4 Slices (Template-Versionierung Polish)
+
+V6.4 ist ein kompakter Polish-Slice (~3h Backend + ~30min Live-Smoke) nach V6.3 Diagnose-Werkzeug Live-Schaltung. Pure Architektur-Investition gegen spaetere Daten-Inkonsistenz vor V7 Self-Signup-Funnel (BL-098). Kein neuer Funktionsumfang fuer Endnutzer.
+
+| ID | Slice | Feature | Status | Priority | Created |
+|----|-------|---------|--------|----------|---------|
+| SLC-130 | [Echte Template-Versionierung UNIQUE(slug, version) (Migration 096)](SLC-130-template-versionierung-unique-slug-version.md) | FEAT-045 | in_progress | Medium | 2026-05-17 |
+
+### V6.4 Execution Order
+
+Single-Slice-Release: SLC-130 mit 5 strikt sequenziellen MTs.
+
+- **MT-1:** Migration 096 — `ALTER TABLE template DROP CONSTRAINT template_slug_key` + `CREATE UNIQUE INDEX template_slug_version_unique ON template(slug, version)` + Live-Apply auf Hetzner per `sql-migration-hetzner.md`.
+- **MT-2:** Template-Lookup-Code-Path-Umstellung — `src/app/dashboard/diagnose/start/page.tsx` Z. 79-85 + `src/app/dashboard/diagnose/actions.ts` Z. 27-28 + Z. 117-126 auf `WHERE slug=... ORDER BY created_at DESC LIMIT 1`. `bericht/page.tsx` UNVERAENDERT (laedt ueber `session.template_id`).
+- **MT-3:** Vitest Cross-Version-Read — `__tests__/template-versioning.test.ts` mit 3 Tests gegen Coolify-DB im node:20-Container per `coolify-test-setup.md`-Pattern.
+- **MT-4:** docs/DIAGNOSE_TEMPLATE_EDITING.md — V6.4-Polish-Slice-Sektion als LIVE markieren, Migration-Pattern auf `ON CONFLICT(slug, version) DO UPDATE` umstellen.
+- **MT-5:** Quality-Gates + Cockpit-Records — slices/INDEX.md, planning/backlog.json BL-105 → done, planning/roadmap.json V6.4 bleibt active bis /deploy, docs/STATE.md + docs/MIGRATIONS.md (MIG-040).
+
+### V6.4 Pflicht-Gates
+
+- **SC-V6.4-1:** Migration 096 idempotent (zweiter Apply No-Op).
+- **SC-V6.4-2:** `\d public.template` zeigt KEINEN `template_slug_key` mehr aber `template_slug_version_unique` Index live.
+- **SC-V6.4-3:** Vitest 3/3 PASS + 0 Regression auf existierende SLC-105-Tests.
+- **SC-V6.4-4:** Quality-Gates ESLint 0/0 + tsc 0 + Build PASS lokal.
+- **SC-V6.4-5:** Live-Smoke nach Coolify-Redeploy — bestehende V6.3-Test-Session-Berichte oeffnen weiter (lookup via session.template_id auf v1-Row), neue Sessions starten weiter (lookup via newest-version-pro-slug greift v1).
+
+### V6.4 Out-of-Scope
+
+- **v2-Template-Seed** — keine inhaltliche Aenderung des `partner_diagnostic`-Templates. Nur Architektur-Polish, keine Daten-Aenderung.
+- **Multi-Version-Lookup-UI** ("Welche Version moechtest du fuer den Bericht?") — V8+.
+- **NL-Variante des Templates** — V7+ wenn NL-Pilot-Aktivierung kommt.
+- **Cross-Tenant Template-Customization** — V8+. Heute strategaize-zentral verwaltet.
+- **Migration 094 (`rpc_finalize_partner_diagnostic`) anpassen** — nutzt `template.id` via Session-Lookup, kein Slug-Lookup. Funktioniert ohne Touch.
+
+### V6.4 Pre-Conditions
+
+- V6.3 LIVE deployed (erfuellt — REL-018 Coolify-Tag `c3e9539`).
+- 0 V6.3-Errors in error_log seit Hotfix Migration 095 (erfuellt per RPT-287).
+- Coolify-Postgres-Container erreichbar via `docker ps --format '{{.Names}}' | grep ^supabase-db`.
+- Pre-Apply-Backup-Dir existiert: `/opt/onboarding-plattform-backups/`.
+- TEST_DATABASE_URL fuer Vitest auf Coolify-DB konfigurierbar.
+
+### V6.4 Slice-Aufwand-Schaetzung
+
+| MT | Aufwand |
+|---|---|
+| MT-1 Migration 096 | ~45min |
+| MT-2 Code-Path-Umstellung | ~30min |
+| MT-3 Vitest Cross-Version | ~60min |
+| MT-4 Doku-Update | ~30min |
+| MT-5 Quality-Gates + Records | ~30min |
+| **Total Slice** | **~3h** |
+
+Plus **~30min Live-Smoke** nach Coolify-Redeploy (User-Pflicht-Aktion).
