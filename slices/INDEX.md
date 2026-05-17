@@ -385,7 +385,7 @@ V6.3-Scope (User-Entscheidung 2026-05-16, nach BL-095 RESOLVED via RPT-278): Sin
 
 | ID | Slice | Feature | Status | Priority | Created |
 |----|-------|---------|--------|----------|---------|
-| SLC-105 | [Diagnose-Werkzeug + Light-Pipeline + Bericht-Renderer](SLC-105-diagnose-werkzeug-light-pipeline-renderer.md) | FEAT-045 | in_progress | High | 2026-05-11 |
+| SLC-105 | [Diagnose-Werkzeug + Light-Pipeline + Bericht-Renderer](SLC-105-diagnose-werkzeug-light-pipeline-renderer.md) | FEAT-045 | done | High | 2026-05-11 |
 
 ### V6 Execution Order
 

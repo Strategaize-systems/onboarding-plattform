@@ -895,7 +895,7 @@
       "title": "FEAT-045 Diagnose-Werkzeug Template + Light-Condensation-Pipeline + Bericht-Renderer (SLC-105)",
       "type": "feature",
       "priority": "high",
-      "status": "in_progress",
+      "status": "done",
       "version": "V6.3",
       "description": "V6.3 Single-Slice-Release — Multiplikator-Funktions-Kern. Neue Template-Variante partner_diagnostic (24 Fragen entlang 6 Bausteinen aus docs/DIAGNOSE_WERKZEUG_INHALT.md + deterministische Score-Logik aus Workshop-Output 2026-05-16) + Light-Condensation-Pipeline mit Auto-Finalize Option DGN-A (KU direkt accepted, validation_layer.reviewer_role=system_auto, block_checkpoint.checkpoint_type=auto_final) + Diagnose-Bericht-Renderer (Score-Visual + KI-Verdichtungs-Kommentar pro Block + Pflicht-Output-Aussage + 'Ich will mehr'-Sub-Karte fuer FEAT-046-Integration) + Mandanten-Run-Flow /dashboard/diagnose/start + /dashboard/diagnose/[id]. BL-095 Stop-Gate 2026-05-16 RESOLVED (RPT-278). Vorgaenger: FEAT-041, FEAT-043, soft FEAT-044. Detail: /features/FEAT-045-diagnose-werkzeug-template-pipeline-renderer.md + /slices/SLC-105-diagnose-werkzeug-light-pipeline-renderer.md (273 Zeilen). Version-Historie: urspruenglich V6 → V6.1 (deferred wegen BL-095) → 2026-05-16 V6.3 (eigener Diagnose-Werkzeug-Release, User-Entscheidung). Workflow per User-Entscheidung 2026-05-16: Skip /requirements + /slice-planning, direkt /architecture Quick-Pass -> /backend SLC-105 -> /qa -> /frontend SLC-105 -> /qa Live-Smoke -> /final-check -> /go-live -> /deploy.",
       "createdAt": "2026-05-11"

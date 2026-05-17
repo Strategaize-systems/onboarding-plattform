@@ -1,5 +1,15 @@
 # Known Issues
 
+### ISSUE-076 — V6.3 SLC-105 ai_cost_ledger Silent INSERT-Fail (role='light_pipeline_block' nicht in CHECK-Constraint)
+- Status: resolved
+- Resolved: 2026-05-17
+- Severity: High
+- Area: V6.3 / SLC-105 / Light-Pipeline / Cost-Ledger
+- Summary: `src/workers/condensation/light-pipeline.ts:342` schreibt `role: "light_pipeline_block"` in ai_cost_ledger nach jedem Bedrock-Block-Call. CHECK-Constraint `ai_cost_ledger_role_check` (Migration 030) erlaubt diesen Wert nicht — INSERT failt mit Constraint-Violation. `captureException` schluckt den Fehler (Cost-Logging ist intentional non-fatal), Pipeline laeuft weiter, Bericht wird korrekt finalized. **Aber: AC-14 ("Bedrock-Kosten pro Run werden in ai_cost_ledger protokolliert") ist silent broken.** Im /qa-Live-Smoke 2026-05-17 entdeckt: 6/6 INSERTs in Worker-Log mit `violates check constraint`, ai_cost_ledger leer fuer Test-Tenant. Vitest-Suite konnte das nicht erkennen weil Tests gegen In-Memory-Mock-DB liefen (RPT-282 hatte L-2 korrekt auf MT-11 Live-Verify deferred).
+- Impact: V6.3-Cost-Tracking war von Code-Side broken — keine Diagnose-Run-Kosten in ai_cost_ledger sichtbar. Bei Production-Lauf haetten wir 0 Cost-Insights gehabt obwohl Bedrock real Tokens verbraucht. Keine User-sichtbaren Effekte, kein UX-Bug. Audit-Trail-Luecke.
+- Resolution: Migration 095 (`sql/migrations/095_v63_cost_ledger_light_pipeline_role.sql`) drop + re-create der CHECK-Constraint mit `'light_pipeline_block'` als zusaetzlich erlaubtem Wert. Live applied 2026-05-17 ~08:59 UTC via sql-migration-hetzner.md (base64 + psql -U postgres). Verifikation: `pg_get_constraintdef` zeigt erweitertes Enum, Re-Smoke produziert 6/6 ai_cost_ledger-Eintraege mit $0.022080 total — AC-14 jetzt voll erfuellt. RPT-284 dokumentiert vollstaendigen Fix-Pfad.
+- Related: RPT-282 L-2 (Defer-Notiz), RPT-284 (Resolution-Pfad), MIG-039, AC-14 in SLC-105.
+
 ### ISSUE-073 — IMPRESSUM_VAT Real-Wert pending — Platzhalter "BTW-Nr. wird nachgereicht" im Einsatz
 - Status: open
 - Severity: Low
