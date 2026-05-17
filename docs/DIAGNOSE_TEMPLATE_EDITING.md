@@ -4,7 +4,11 @@
 
 **Geltungs-Bereich:** Nur das `partner_diagnostic`-Template. Die Standard-Templates (`exit_readiness`, `mitarbeiter_wissenserhebung`) folgen anderen Pattern (3-Agenten-Loop statt Light-Pipeline) und sind NICHT durch diesen Guide gedeckt.
 
-**Erstellt:** 2026-05-17 — Aufgabe Strategaize Onboarding-Plattform V6.3.
+**Stand:** 2026-05-17 (V6.4-Release — SLC-130 LIVE).
+
+**Aktualisierungs-Historie:**
+- 2026-05-17 V6.3 — Initial-Version, `UNIQUE(slug)` als Constraint.
+- 2026-05-17 V6.4 — Echte Versionierung LIVE via Migration 096 (SLC-130). `UNIQUE(slug, version)`, Lookup auf "newest version pro slug" in start/page.tsx + actions.ts.
 
 ---
 
@@ -23,29 +27,29 @@
 
 ---
 
-## Architektur-Stand 2026-05-17 (was heute realistisch geht)
+## Architektur-Stand 2026-05-17 V6.4 (echte Versionierung LIVE)
 
-**Heutige Constraint:** Die DB-Tabelle `template` hat `UNIQUE(slug)`, NICHT `UNIQUE(slug, version)`. Das bedeutet:
-- Es kann zu einem Zeitpunkt **genau eine** aktive Version pro Slug geben.
-- `ON CONFLICT (slug) DO UPDATE` ueberschreibt die existierende Row.
-- Bestehende `capture_session`-Rows (= alte Diagnose-Runs) zeigen ueber `template_id` auf die ueberschriebene Row.
+**Aktuelle Constraint (seit Migration 096 / SLC-130):** Die DB-Tabelle `template` hat `UNIQUE(slug, version)`, NICHT mehr `UNIQUE(slug)`. Das bedeutet:
+- Es koennen **mehrere Versions pro Slug** koexistieren (z.B. `partner_diagnostic v1` + `partner_diagnostic v2`).
+- `ON CONFLICT (slug, version) DO UPDATE` ueberschreibt nur eine bestimmte Version (Update-Pfad fuer Tippfehler-Korrekturen einer bestehenden Version).
+- Neue `capture_session`-Rows (= neue Diagnose-Runs) referenzieren ueber `template_id` immer die juengste Version (Lookup `ORDER BY created_at DESC LIMIT 1` in `start/page.tsx` + `actions.ts`).
+- Alte `capture_session`-Rows zeigen ueber ihren persistierten `template_id` auf die Original-Template-Row — auch wenn spaeter eine neue Version dazukommt.
 
 **Auswirkung auf alte Berichte nach einem Update:**
 - `knowledge_unit.body` (= der KI-Kommentar pro Block) bleibt unveraendert — der wurde beim Diagnose-Run gespeichert.
 - `knowledge_unit.metadata.score` bleibt unveraendert — wurde beim Run berechnet.
 - `capture_session.answers` (= die Mandanten-Antworten) bleibt unveraendert.
-- **ABER:** `bericht/page.tsx` rendert Block-Titel + Block-Intro **aus dem aktuellen template.blocks**. Das heisst alte Berichte zeigen nach einem Update die **neuen** Block-Titel und Block-Intro-Texte (nicht die, die zur Zeit ihres Runs galten).
+- **NEU seit V6.4:** `bericht/page.tsx` rendert Block-Titel + Block-Intro **aus dem Template, auf das die Session per `template_id` zeigt** — das ist immer die Original-Version zum Zeitpunkt des Runs. Alte Berichte zeigen damit ihre originalen Texte, nicht die einer spaeteren V2.
 
 **Praktisch heisst das:**
-- Wenn du nur **Fragen-Texte oder Antwort-Optionen** updatest: alte Berichte bleiben funktional korrekt — die Score sind und bleiben mathematisch richtig, die KI-Kommentare bleiben gespeichert. Nur die Frage-Texte sind in alten Berichten nicht sichtbar (`bericht/page.tsx` rendert nur Block-Titel + Intro + KU.body, nicht die Fragen selbst).
-- Wenn du **Block-Titel oder Block-Intro** updatest: alte Berichte zeigen die neuen Texte. Das kann fuer den Mandanten verwirrend sein, ist aber kein Datenverlust.
-- Wenn du **Score-Mappings** updatest: neue Antworten (gleicher Wortlaut) ergeben den neuen Score. Alte Berichte bleiben mit ihrem alten Score, da der bereits in `knowledge_unit.metadata.score` persistiert ist.
+- **Frage-Texte / Antwort-Optionen aendern:** Anlage einer neuen Version V2 — neue Sessions bekommen V2, alte Sessions bleiben auf V1 mit Original-Frage-Texten.
+- **Block-Titel / Block-Intro aendern:** alte Berichte zeigen ihre originalen Titel/Intros (V1), neue Berichte zeigen die neuen (V2). Kein Mandanten-Verwirrungs-Risiko mehr.
+- **Score-Mappings aendern:** neue Antworten der V2 ergeben den V2-Score-Wert. Alte Berichte bleiben mit ihrem V1-Score und V1-Mapping-Logik — vollstaendig reproduzierbar.
 
-**Wann das problematisch wird:**
-- Wenn du nach 6 Monaten echte Pilot-Daten hast und dem Mandanten den Bericht nochmal mit "Originalstand zur Zeit X" zeigen willst.
-- Wenn ein Steuerberater seine alten Mandanten-Berichte zur Beratung wieder oeffnet und die Frage-Logik referenziert.
-
-In diesen Faellen brauchst du echte Versionierung als V6.4-Polish-Slice (siehe unten).
+**Wann das jetzt sauber funktioniert (V6.4-Live-Capability):**
+- Nach 6 Monaten echte Pilot-Daten existieren: Mandanten-Bericht kann mit "Originalstand zur Zeit X" geoeffnet werden — `session.template_id` zeigt auf die zum Zeitpunkt aktive Version.
+- Steuerberater oeffnet alten Mandanten-Bericht zur Beratung — er sieht die originale Frage-Logik, mit der der Mandant damals geantwortet hat.
+- Multi-Version-Audit-Trail moeglich (`SELECT version, created_at FROM template WHERE slug='partner_diagnostic' ORDER BY created_at`).
 
 ---
 
@@ -63,12 +67,30 @@ In diesen Faellen brauchst du echte Versionierung als V6.4-Polish-Slice (siehe u
 #### 1. Neue Migration anlegen
 Pfad: `sql/migrations/NNN_partner_diagnostic_vX.sql` (NNN = naechste freie Nummer, X = neue Inhalts-Version, z.B. `v2`)
 
-Pattern aus Migration 093 uebernehmen:
+Pattern aus Migration 093 uebernehmen (Kopf-Kommentar) + V6.4-Migration-Pattern fuer Body:
 - Kopf-Kommentar mit ZIEL + IDEMPOTENZ + APPLY-PATTERN + PRE-APPLY-BACKUP + VERIFIKATION (analog Migration 093 Zeilen 1-58)
 - `BEGIN; ... COMMIT;` Transaction-Block
-- Einziger DML-Befehl: `INSERT INTO public.template (slug, version, name, blocks, metadata) VALUES (...) ON CONFLICT (slug) DO UPDATE SET version=EXCLUDED.version, blocks=EXCLUDED.blocks, metadata=EXCLUDED.metadata, updated_at=NOW();`
-- `version`-Feld auf `vX` setzen (Sichtbarkeit als Audit-Trail, nicht als Constraint)
+- **NEUE VERSION ANLEGEN** (Standardfall fuer V6.4+ — neue Inhalts-Iteration):
+  ```sql
+  INSERT INTO public.template (slug, version, name, blocks, metadata)
+  VALUES ('partner_diagnostic', 'v2', ..., ..., ...)
+  ON CONFLICT (slug, version) DO UPDATE SET
+    blocks=EXCLUDED.blocks, metadata=EXCLUDED.metadata, updated_at=NOW();
+  ```
+  Alte V1-Row bleibt unveraendert; alte capture_session-Rows referenzieren weiter ihre V1-template_id.
+- **BESTEHENDE VERSION KORRIGIEREN** (Hot-Fix-Fall — Typo in Block-Intro o.ae.):
+  ```sql
+  INSERT INTO public.template (slug, version, name, blocks, metadata)
+  VALUES ('partner_diagnostic', 'v1', ..., ..., ...)
+  ON CONFLICT (slug, version) DO UPDATE SET
+    blocks=EXCLUDED.blocks, metadata=EXCLUDED.metadata, updated_at=NOW();
+  ```
+  Update der V1-Row in place. **Vorsicht:** alle Sessions, die auf V1 zeigen, sehen sofort die neuen Texte. Nur fuer kleine Korrekturen (Typo, Klarstellung) verwenden — fuer inhaltliche Aenderungen lieber neue Version V2 anlegen.
+- `version`-Feld auf `vX` setzen (jetzt teil des UNIQUE-Constraints, nicht mehr nur Audit-Trail)
 - Wenn neue/geaenderte Workshop-Output-Datei existiert, in `metadata.workshop_source` referenzieren (z.B. `"DIAGNOSE_WERKZEUG_INHALT_V2.md"`)
+
+**Anti-Pattern (vor V6.4 erlaubt, jetzt verboten):**
+`ON CONFLICT (slug) DO UPDATE` — der Constraint `template_slug_key` existiert seit Migration 096 nicht mehr. Postgres wirft `ERROR: there is no unique or exclusion constraint matching the ON CONFLICT specification`.
 
 #### 2. Lokal Test-Apply gegen Coolify-Test-Setup
 Pattern aus `.claude/rules/coolify-test-setup.md`:
@@ -129,23 +151,28 @@ Falls Block-Titel oder Block-Intro signifikant geaendert wurden, bestehende Mand
 
 ---
 
-## V6.4-Polish-Slice fuer echte Versionierung (Empfehlung)
+## V6.4 Echte Versionierung — LIVE seit SLC-130 (2026-05-17)
 
-Wenn echte Versionierung gewuenscht wird (alte Berichte rendern mit alter Frage-Logik, neue Sessions nutzen neue Version), ist das ein kleiner Slice (~2-3h):
+Dieser Abschnitt war in V6.3 als Empfehlung dokumentiert und wurde in V6.4 als Slice SLC-130 umgesetzt — der hier beschriebene Architektur-Stand ist seit Migration 096 LIVE in Produktion.
 
-**Schema-Aenderung:**
-- `ALTER TABLE template DROP CONSTRAINT template_slug_key;`
-- `CREATE UNIQUE INDEX template_slug_version_unique ON template(slug, version);`
+**Migration 096 (`sql/migrations/096_v64_template_slug_version_unique.sql`):**
+- `ALTER TABLE public.template DROP CONSTRAINT IF EXISTS template_slug_key;`
+- `CREATE UNIQUE INDEX IF NOT EXISTS template_slug_version_unique ON public.template(slug, version);`
+- Idempotent via DROP/CREATE IF EXISTS/NOT EXISTS. Zweiter Apply ist No-Op.
 
-**Worker- und Start-Action-Logik:**
-- `src/app/dashboard/diagnose/start/page.tsx:83` Template-Lookup auf `WHERE slug='partner_diagnostic' ORDER BY created_at DESC LIMIT 1` (= immer neueste Version fuer neue Sessions)
-- `src/app/dashboard/diagnose/[capture_session_id]/bericht/page.tsx:84` Template-Lookup ueber `session.template_id` direkt (= jede Session referenziert ihre eigene Template-Version)
+**Lookup-Logik (LIVE in 2 Files):**
+- `src/app/dashboard/diagnose/start/page.tsx:79-86` — `WHERE slug='partner_diagnostic' ORDER BY created_at DESC LIMIT 1` (immer neueste Version fuer neue Sessions).
+- `src/app/dashboard/diagnose/actions.ts:117-130` — analog, Server-Action `startDiagnoseRun`.
+- `src/app/dashboard/diagnose/[capture_session_id]/bericht/page.tsx:85-88` — UNVERAENDERT (`.eq("id", session.template_id)`, war schon korrekt). Jede Session referenziert ihre eigene Template-Version per FK.
 
-**Migration:**
-- `INSERT ... ON CONFLICT (slug, version) DO UPDATE` statt `ON CONFLICT (slug) DO UPDATE`
-- V1-Row bleibt erhalten, V2 wird als neue Row angelegt
+**Migrations-Pattern fuer kuenftige Updates:**
+- `INSERT ... ON CONFLICT (slug, version) DO UPDATE` (siehe Schritt 1 oben).
+- V1-Row bleibt erhalten; neue V2-Insert legt eine eigene Row an.
 
-**Backlog:** als V6.4-Kandidat einplanen wenn der erste echte Workshop-Output-V2 ansteht. Aufwand ~2-3h Backend + ~1h Vitest + ~30min Live-Smoke gegen alte+neue Sessions.
+**Vitest-Coverage:**
+- `src/app/dashboard/diagnose/__tests__/template-versioning.test.ts` mit 3 Tests gegen Coolify-DB (Cross-Version-Read + UNIQUE-enforced + alter-Constraint-weg).
+
+**Slice-Doku:** [`slices/SLC-130-template-versionierung-unique-slug-version.md`](../slices/SLC-130-template-versionierung-unique-slug-version.md) + [`reports/RPT-288.md`](../reports/RPT-288.md) (Slice-Planning) + RPT-Nummer fuer /backend-Completion siehe nachfolgende Reports.
 
 ---
 

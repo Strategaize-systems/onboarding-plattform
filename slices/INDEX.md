@@ -584,7 +584,7 @@ V6.4 ist ein kompakter Polish-Slice (~3h Backend + ~30min Live-Smoke) nach V6.3 
 
 | ID | Slice | Feature | Status | Priority | Created |
 |----|-------|---------|--------|----------|---------|
-| SLC-130 | [Echte Template-Versionierung UNIQUE(slug, version) (Migration 096)](SLC-130-template-versionierung-unique-slug-version.md) | FEAT-045 | in_progress | Medium | 2026-05-17 |
+| SLC-130 | [Echte Template-Versionierung UNIQUE(slug, version) (Migration 096)](SLC-130-template-versionierung-unique-slug-version.md) | FEAT-045 | done | Medium | 2026-05-17 |
 
 ### V6.4 Execution Order
 

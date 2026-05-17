@@ -77,12 +77,15 @@ export default async function DiagnoseStartPage() {
   }
 
   // Bestehende Diagnose-Session re-using (status-spezifischer Redirect).
+  // V6.4 SLC-130: Lookup auf "newest version pro slug" — Migration 096 erlaubt
+  // mehrere Template-Versions. Neue Sessions verwenden immer die juengste.
   const { data: template } = await admin
     .from("template")
     .select("id")
     .eq("slug", "partner_diagnostic")
-    .eq("version", "v1")
-    .single();
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
   if (template?.id) {
     const { data: existing } = await admin
       .from("capture_session")

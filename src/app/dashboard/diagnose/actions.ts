@@ -25,7 +25,10 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const PARTNER_DIAGNOSTIC_SLUG = "partner_diagnostic";
-const PARTNER_DIAGNOSTIC_VERSION = "v1";
+// V6.4 SLC-130: Template-Lookup auf "newest version pro slug" umgestellt.
+// PARTNER_DIAGNOSTIC_VERSION-Konstante entfernt — Migration 096 fuehrt
+// UNIQUE(slug, version) ein, neue capture_sessions referenzieren immer
+// die neueste Template-Version per template.created_at DESC.
 
 interface AuthorizedMandant {
   userId: string;
@@ -114,16 +117,21 @@ export async function startDiagnoseRun(
 
   const admin = createAdminClient();
 
-  // Template partner_diagnostic_v1 muss live sein (Migration 093).
+  // Template partner_diagnostic muss live sein (Migration 093 seedet v1).
+  // V6.4 SLC-130: Lookup auf "newest version pro slug" — UNIQUE(slug, version)
+  // aus Migration 096 erlaubt mehrere Versions, neue Sessions verwenden immer
+  // die juengste (ORDER BY created_at DESC LIMIT 1). Alte Sessions bleiben an
+  // ihrer originalen template_id-FK (bericht/page.tsx laedt ueber session.template_id).
   const { data: template, error: templateError } = await admin
     .from("template")
     .select("id, version")
     .eq("slug", PARTNER_DIAGNOSTIC_SLUG)
-    .eq("version", PARTNER_DIAGNOSTIC_VERSION)
-    .single();
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
   if (templateError || !template) {
     throw new Error(
-      `Template ${PARTNER_DIAGNOSTIC_SLUG} ${PARTNER_DIAGNOSTIC_VERSION} nicht gefunden`,
+      `Template ${PARTNER_DIAGNOSTIC_SLUG} nicht gefunden (keine Version live)`,
     );
   }
 
