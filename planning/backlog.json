@@ -1019,6 +1019,16 @@
       "version": null,
       "description": "Pre-Production-Compliance-Gate-Item — NICHT Teil eines Code-Sprints, laeuft parallel zu Code-Side-Releases. Nach V6.2-Code-Side-Release: Anwalts-/Datenschutzbeauftragten-Pruefung der 4 Compliance-Texte (1) Datenschutzerklaerung (FEAT-048), (2) Impressum (FEAT-048), (3) AVV DE (FEAT-049), (4) AVV NL (FEAT-049), plus 5. Re-Review des bestehenden V6-Modal-Consent-Text v1-2026-05. Outcome: V6.2-Release-Status wechselt von 'ready pending legal review' auf 'released, legal-cleared' und erlaubt ersten echten Live-Partner-Onboarding. Falls Anwalts-Review substanzielle Aenderungen verlangt: V6.3-Compliance-Iteration-Slice oder Hotfix-Patch je nach Scope. User-Pflicht, ich kann nicht uebernehmen. Verweis: feedback_compliance_gate_later. Version-Re-Assignment 2026-05-16: war urspruenglich V6.2, jetzt unassigned weil externes Pre-Production-Compliance-Gate-Item (analog BL-095 Inhalts-Workshop). Sonst wuerde Cockpit V6.2 selbst nach /deploy bei 75% statt 100% bleiben.",
       "createdAt": "2026-05-15"
+    },
+    {
+      "id": "BL-105",
+      "title": "Echte Template-Versionierung — UNIQUE(slug, version) statt UNIQUE(slug) (V6.4 Polish-Slice)",
+      "type": "improvement",
+      "priority": "medium",
+      "status": "open",
+      "version": "V6.4",
+      "description": "Polish-Slice fuer das Diagnose-Werkzeug-Template-System. Heutige Constraint UNIQUE(slug) erlaubt nur eine aktive Version pro Slug — Update via ON CONFLICT (slug) DO UPDATE ueberschreibt die existierende Row. Konsequenz: alte Diagnose-Berichte zeigen nach einem Template-Update die NEUEN Block-Titel und Block-Intro-Texte, weil bericht/page.tsx aus dem aktuellen template.blocks rendert. KU.body und KU.metadata.score bleiben unveraendert (sind persistiert), aber die umrahmenden Texte aendern sich. Fuer Internal-Test-Mode + Smoke-Tests akzeptabel; vor erstem echten Live-Pilot-Partner (BL-104) noch akzeptabel weil keine echten Mandanten-Berichte existieren; SPAETESTENS vor Self-Signup-Funnel (V7 BL-098) sollte echte Versionierung stehen, damit Steuerberater alten Mandanten-Bericht 6 Monate spaeter mit Original-Texten oeffnen kann (Vertrauens-Asset). Umfang: (1) ALTER TABLE template DROP CONSTRAINT template_slug_key, (2) CREATE UNIQUE INDEX template_slug_version_unique ON template(slug, version), (3) src/app/dashboard/diagnose/start/page.tsx Template-Lookup auf 'WHERE slug=... ORDER BY created_at DESC LIMIT 1' (neueste Version fuer neue Sessions), (4) src/app/dashboard/diagnose/[id]/bericht/page.tsx Template-Lookup ueber session.template_id direkt (jede Session referenziert eigene Version), (5) Migrations-Pattern in docs/DIAGNOSE_TEMPLATE_EDITING.md von ON CONFLICT(slug) auf ON CONFLICT(slug, version) umstellen. Aufwand: ~2-3h Backend + ~1h Vitest + ~30min Live-Smoke gegen alte+neue Sessions. Pre-Condition: keine. Stop-Gate: keine. Verweis: docs/DIAGNOSE_TEMPLATE_EDITING.md Sektion V6.4-Polish-Slice fuer echte Versionierung.",
+      "createdAt": "2026-05-17"
     }
   ]
 }

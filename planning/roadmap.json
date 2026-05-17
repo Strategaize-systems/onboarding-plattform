@@ -113,6 +113,13 @@
       "order": 16
     },
     {
+      "id": "v6-4",
+      "name": "V6.4",
+      "status": "planned",
+      "summary": "**Diagnose-Werkzeug-Template-Versionierung als kleiner Polish-Slice.** BL-105 — Schema-Aenderung von UNIQUE(slug) auf UNIQUE(slug, version) in template-Tabelle, damit alte Diagnose-Berichte ihre originalen Block-Titel und Block-Intros behalten wenn das partner_diagnostic-Template spaeter aktualisiert wird (siehe docs/DIAGNOSE_TEMPLATE_EDITING.md). Heutige Constraint UNIQUE(slug) ueberschreibt bei Updates die existierende Row — funktional fuer Internal-Test-Mode akzeptabel, aber spaetestens vor V7 Self-Signup-Funnel (BL-098) sollte echte Versionierung stehen, damit Steuerberater alten Mandanten-Bericht 6 Monate spaeter mit Original-Texten oeffnen kann. Umfang ca. 2-3h Backend + 1h Vitest + 30min Live-Smoke: (1) ALTER TABLE template DROP CONSTRAINT + CREATE UNIQUE INDEX template_slug_version_unique, (2) src/app/dashboard/diagnose/start/page.tsx Template-Lookup auf 'newest version pro slug', (3) src/app/dashboard/diagnose/[id]/bericht/page.tsx Template-Lookup ueber session.template_id direkt, (4) Migrations-Pattern in docs/DIAGNOSE_TEMPLATE_EDITING.md von ON CONFLICT(slug) auf ON CONFLICT(slug, version) umstellen. Kein neuer Funktionsumfang fuer Endnutzer — pure Architektur-Investition gegen spaetere Daten-Inkonsistenz. Kann parallel zu V7 erledigt werden (kein Scope-Konflikt) oder davor. KEIN Stop-Gate fuer V7 (V7 kann auch ohne BL-105 starten, dann besteht Risiko dass erste Self-Signup-Mandanten-Berichte spaeter durch Template-Updates 'umgeschrieben' werden).",
+      "order": 16.5
+    },
+    {
       "id": "v7",
       "name": "V7",
       "status": "planned",
