@@ -95,14 +95,17 @@ describe("Template Queries — Exit-Readiness Seed", () => {
 
   it("ON CONFLICT: re-running seed does not duplicate", async () => {
     await withTestDb(async (client) => {
+      // V6.4 SLC-130: ON CONFLICT (slug) wurde durch ON CONFLICT (slug, version)
+      // ersetzt, weil Migration 096 den template_slug_key Constraint gedroppt
+      // hat und template_slug_version_unique als neuer Index gilt.
       await client.query(
         `INSERT INTO public.template (slug, name, version, description, blocks)
          VALUES ('exit_readiness', 'Exit-Readiness', '1.0.0', 'test', '[]'::jsonb)
-         ON CONFLICT (slug) DO NOTHING`
+         ON CONFLICT (slug, version) DO NOTHING`
       );
 
       const result = await client.query<{ count: string }>(
-        `SELECT count(*) FROM public.template WHERE slug = 'exit_readiness'`
+        `SELECT count(*) FROM public.template WHERE slug = 'exit_readiness' AND version = '1.0.0'`
       );
       expect(parseInt(result.rows[0].count)).toBe(1);
     });
