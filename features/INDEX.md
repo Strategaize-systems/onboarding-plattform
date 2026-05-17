@@ -127,4 +127,4 @@ V6.3-Scope (User-Entscheidung 2026-05-16, nach BL-095 RESOLVED via RPT-278): Sin
 
 | ID | Feature | Status | Spec | Created |
 |----|---------|--------|------|---------|
-| FEAT-045 | Diagnose-Werkzeug Template + Light-Condensation-Pipeline + Bericht-Renderer | done | [Spec](FEAT-045-diagnose-werkzeug-template-pipeline-renderer.md) | 2026-05-11 |
+| FEAT-045 | Diagnose-Werkzeug Template + Light-Condensation-Pipeline + Bericht-Renderer | deployed | [Spec](FEAT-045-diagnose-werkzeug-template-pipeline-renderer.md) | 2026-05-11 |
