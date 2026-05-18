@@ -137,5 +137,5 @@ V7-Scope (User-Entscheidung 2026-05-18 nach V6.4 STABLE-Bestaetigung RPT-295): B
 |----|---------|--------|------|---------|
 | FEAT-051 | Public-Signup-API + Service-Key-Auth + Rate-Limit | in_progress | [Spec](FEAT-051-public-signup-api-service-key-rate-limit.md) | 2026-05-18 |
 | FEAT-052 | Partner-Slug + Public-Resolve-Endpoint | done | [Spec](FEAT-052-partner-slug-public-resolve.md) | 2026-05-18 |
-| FEAT-053 | Self-Signup Email-Verify + Auto-Tenant-Provisioning | planned | [Spec](FEAT-053-self-signup-email-verify-auto-provisioning.md) | 2026-05-18 |
+| FEAT-053 | Self-Signup Email-Verify + Auto-Tenant-Provisioning | in_progress | [Spec](FEAT-053-self-signup-email-verify-auto-provisioning.md) | 2026-05-18 |
 | FEAT-054 | Pen-Test-Suite-Erweiterung Public-Signup-Caller + Anti-Abuse-Verifikation | planned | [Spec](FEAT-054-pen-test-public-signup-anti-abuse.md) | 2026-05-18 |
