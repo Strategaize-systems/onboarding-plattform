@@ -67,9 +67,9 @@ describe("verifyServiceKey", () => {
     }
 
     const meanEarly =
-      earlyTimings.reduce((acc, n) => acc + n, 0n) / BigInt(ITERATIONS);
+      earlyTimings.reduce((acc, n) => acc + n, BigInt(0)) / BigInt(ITERATIONS);
     const meanLate =
-      lateTimings.reduce((acc, n) => acc + n, 0n) / BigInt(ITERATIONS);
+      lateTimings.reduce((acc, n) => acc + n, BigInt(0)) / BigInt(ITERATIONS);
     const delta = meanEarly > meanLate ? meanEarly - meanLate : meanLate - meanEarly;
 
     // 200ns budget for slow CI containers. Real timingSafeEqual deltas are
