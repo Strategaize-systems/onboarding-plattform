@@ -87,6 +87,16 @@ export const partnerResolveLimiter = createRateLimiter({
   windowMs: 60 * 60 * 1000, // 1 hour
 });
 
+// V7 SLC-132 — Spam-Schutz fuer Public-Signup-Endpoint
+// `POST /api/public/signup`. 3 Signup-Anfragen pro Stunde pro IP.
+// DEC-132: In-Memory akzeptiert (Single-Container), Reset bei Restart.
+// DEC-137 Trigger-Schwelle fuer V7.1-Captcha-Sprint: >50 Pending/24h
+// ohne Verify-Klick.
+export const signupLimiter = createRateLimiter({
+  maxAttempts: 3,
+  windowMs: 60 * 60 * 1000, // 1 hour
+});
+
 /**
  * Extrahiert die Client-IP fuer Rate-Limit-Identification aus dem
  * `x-forwarded-for`-Header. Coolify+Traefik schreibt den Header bei
