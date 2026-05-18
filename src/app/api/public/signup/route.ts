@@ -25,7 +25,6 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { randomBytes } from "node:crypto";
-import nodemailer from "nodemailer";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -41,7 +40,10 @@ import {
   findActivePendingSignup,
 } from "@/lib/signup/pending-signup-repo";
 import { signupBodySchema } from "@/lib/signup/signup-schema";
-import { renderSignupVerifyTemplate } from "@/lib/email";
+import {
+  renderSignupVerifyTemplate,
+  sendMail,
+} from "@/lib/email";
 import { captureException, captureInfo } from "@/lib/logger";
 
 const SOURCE = "api/public/signup";
@@ -65,17 +67,6 @@ function ipHashForAudit(ip: string): string {
 function emailHashForAudit(emailLower: string): string {
   return hashWithSha256(emailLower);
 }
-
-// Reuse the existing email.ts transporter pattern (IONOS DKIM verified V4.2).
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT) || 587,
-  secure: false, // STARTTLS
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
 
 export async function POST(request: NextRequest) {
   // ── Schritt 1 — extractClientIp ────────────────────────────────────────
@@ -415,7 +406,7 @@ export async function POST(request: NextRequest) {
 
   const from = `Strategaize <${process.env.SIGNUP_FROM_EMAIL ?? "onboarding@strategaize.de"}>`;
   try {
-    await transporter.sendMail({
+    await sendMail({
       from,
       to: emailLower,
       replyTo: partnerContactEmail ?? undefined,

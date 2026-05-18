@@ -301,6 +301,36 @@ export async function sendEmployeeInvitationEmail({
   });
 }
 
+// ─── Generic sendMail adapter (V7 SLC-132 MT-6 — testable email-send path) ──
+
+interface SendMailParams {
+  to: string;
+  from: string;
+  /** Optional reply-to header (Public-Signup uses partner_contact_email). */
+  replyTo?: string;
+  subject: string;
+  html: string;
+  text?: string;
+}
+
+/**
+ * Thin wrapper around `transporter.sendMail`. Existiert damit Route-Handler
+ * (z.B. SLC-132 /api/public/signup) eine eindeutige Importgrenze haben, die
+ * im Vitest per `vi.mock('@/lib/email', () => ({ sendMail: vi.fn() }))`
+ * mockbar ist. Bestehende `sendInviteEmail` / `sendMandantInvitationEmail`
+ * / `sendMirrorInviteEmail` etc. bleiben unveraendert (kein Refactor in V7).
+ */
+export async function sendMail(params: SendMailParams): Promise<void> {
+  await transporter.sendMail({
+    from: params.from,
+    to: params.to,
+    replyTo: params.replyTo,
+    subject: params.subject,
+    html: params.html,
+    text: params.text,
+  });
+}
+
 // ─── Public-Signup-Verify template (V7 SLC-132, FEAT-053) ───────────────────
 
 interface RenderSignupVerifyTemplateInput {
