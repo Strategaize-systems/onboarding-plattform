@@ -301,6 +301,120 @@ export async function sendEmployeeInvitationEmail({
   });
 }
 
+// ─── Public-Signup-Verify template (V7 SLC-132, FEAT-053) ───────────────────
+
+interface RenderSignupVerifyTemplateInput {
+  /** Display-Name des Partners (z.B. "Kanzlei Mueller & Partner"). */
+  partner_display_name: string;
+  /** Email-Adresse der Kanzlei. Caller setzt sie als reply-to-Header
+   *  vor sendMail. Hier nur fuer Footer-Hinweis im Mail-Body genutzt. */
+  partner_contact_email: string | null;
+  /** Vollstaendige Verify-URL incl. Klartext-Token-Parameter. */
+  verify_url: string;
+  /** ISO-8601-Timestamp der Token-Expiry. Wird im Body als deutsches Datum
+   *  gerendert (z.B. "19. Mai 2026, 11:30 Uhr"). */
+  expires_at_iso: string;
+  /** Vorname des Mandanten fuer persoenliche Anrede. */
+  recipient_first_name: string;
+}
+
+interface RenderSignupVerifyTemplateOutput {
+  subject: string;
+  html: string;
+  text: string;
+}
+
+/**
+ * Render-Function fuer Self-Signup-Verify-Mail (V7 SLC-132 MT-5).
+ *
+ * Liefert Subject + HTML + Text-Variante deutsch (DEC-134). Keine
+ * Send-Logik — der Caller (`/api/public/signup` Route in MT-6) ruft
+ * `transporter.sendMail({...rendered, from: 'onboarding@strategaize.de',
+ * reply_to: input.partner_contact_email})` auf.
+ *
+ * Plain-Text-Variante existiert fuer Spam-Filter-Score (RFC 8058 / SPF/
+ * DKIM-Empfaengerlandschaft bevorzugt Multipart-Mails mit text+html).
+ */
+export function renderSignupVerifyTemplate(
+  input: RenderSignupVerifyTemplateInput
+): RenderSignupVerifyTemplateOutput {
+  const expiryDate = new Date(input.expires_at_iso);
+  const expiryFormatted = expiryDate.toLocaleString("de-DE", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  const subject = `Bestaetigung der E-Mail-Adresse fuer Ihren Strategaize-Zugang ueber ${input.partner_display_name}`;
+
+  const html = `
+    <div style="font-family:Arial,sans-serif;color:#1f2937;max-width:600px;margin:0 auto;">
+      <div style="background:#120774;padding:24px;text-align:center;">
+        <h1 style="color:#ffffff;margin:0;font-size:20px;">Strategaize</h1>
+      </div>
+      <div style="padding:24px;">
+        <p>Hallo ${input.recipient_first_name},</p>
+        <p>
+          Ihr Berater <strong>${input.partner_display_name}</strong> hat Sie
+          eingeladen, die Strategaize-Diagnose zu nutzen. Um Ihren Zugang
+          einzurichten, bestaetigen Sie bitte Ihre E-Mail-Adresse.
+        </p>
+        <p style="text-align:center;margin:28px 0;">
+          <a href="${input.verify_url}"
+             style="display:inline-block;padding:12px 24px;background:#120774;color:#ffffff;text-decoration:none;border-radius:6px;">
+            E-Mail-Adresse bestaetigen
+          </a>
+        </p>
+        <p style="font-size:13px;color:#6b7280;">
+          Dieser Link ist bis zum <strong>${expiryFormatted}</strong> gueltig
+          (24 Stunden ab Versand). Danach muessen Sie die Signup-Anfrage
+          erneut stellen.
+        </p>
+        <p style="font-size:13px;color:#6b7280;">
+          Falls der Button nicht funktioniert, kopieren Sie diesen Link in
+          Ihren Browser:
+        </p>
+        <p style="font-size:13px;word-break:break-all;color:#374151;">
+          ${input.verify_url}
+        </p>
+        <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;">
+        <p style="font-size:12px;color:#6b7280;">
+          Sie haben diese E-Mail erhalten, weil Sie sich ueber die
+          Landing-Page von <strong>${input.partner_display_name}</strong>
+          fuer einen Strategaize-Zugang registriert haben. Wenn Sie das
+          nicht waren, ignorieren Sie diese E-Mail einfach — Ihr Zugang
+          wird nicht angelegt.
+        </p>
+        <p style="font-size:12px;color:#6b7280;">
+          Datenschutz: <a href="https://onboarding.strategaizetransition.com/datenschutz" style="color:#120774;">Datenschutzerklaerung</a>
+        </p>
+      </div>
+    </div>
+  `;
+
+  const text = `Hallo ${input.recipient_first_name},
+
+Ihr Berater ${input.partner_display_name} hat Sie eingeladen, die
+Strategaize-Diagnose zu nutzen. Um Ihren Zugang einzurichten, bestaetigen
+Sie bitte Ihre E-Mail-Adresse ueber den folgenden Link:
+
+${input.verify_url}
+
+Der Link ist bis zum ${expiryFormatted} gueltig (24 Stunden ab Versand).
+Danach muessen Sie die Signup-Anfrage erneut stellen.
+
+Sie haben diese E-Mail erhalten, weil Sie sich ueber die Landing-Page von
+${input.partner_display_name} fuer einen Strategaize-Zugang registriert
+haben. Wenn Sie das nicht waren, ignorieren Sie diese E-Mail einfach —
+Ihr Zugang wird nicht angelegt.
+
+Datenschutz: https://onboarding.strategaizetransition.com/datenschutz`;
+
+  return { subject, html, text };
+}
+
 // ─── Mandanten invitation template (V6 SLC-103) ──────────────────────────────
 
 const MANDANT_INVITE_TEMPLATES = {
