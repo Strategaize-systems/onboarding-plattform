@@ -6011,3 +6011,420 @@ SELECT slug, version, metadata->>'usage_kind',
 
 V6.3-Reihenfolge: SLC-105 ist Single-Slice — kein paralleler V6.3-Slice anderswo. Stop-Gate BL-095 ist resolved, Implementation kann starten.
 
+## V7 Architektur — Mandanten-Self-Signup-Backend (Pull-Model)
+
+V7 ergaenzt die V6-Multiplikator-Foundation um die Backend-Aufnahme-Mechanik fuer das **Pull-Model**: Mandanten signupen sich selbst via partner-spezifische Landing-Page (gehostet im Intelligence-Plattform-Repo `strategaize-intelligence-studio`, ausserhalb dieses Repos). Onboarding-Plattform-V7 liefert nur die Backend-API + Email-Verify-Mechanik + Auto-Tenant-Provisioning. Landing-Page-UI selbst ist Out-of-Scope dieses Repos.
+
+Die zentrale Entscheidung (DEC-129) ist die **Email-Verify-Token-Mechanik via Custom `pending_signup`-Tabelle**: Token-Hash wird vor `auth.users`-Anlage in eigener Tabelle gehalten, echte `auth.users`/`tenant`/`profile`/`partner_client_mapping`-Rows werden erst nach Verify-Klick transaktional provisioniert. Das vermeidet `auth.users`-Polution bei Spam-Wellen und gibt Strategaize volle Kontrolle ueber TTL + Cleanup + DSGVO-Datensparsamkeit.
+
+### V7 Architecture Summary
+
+- **Pull-Model statt V6-Push-Model**: V6 Admin-Invite-Pattern (`POST /api/admin/tenants/[tenantId]/invite`) bleibt aktiv und unveraendert; V7 ergaenzt einen parallelen Public-Pfad fuer Self-Signup ohne Berater-Initiative.
+- **Cross-System-Auth via Service-Key**: Intelligence-Plattform-API ruft Onboarding-Plattform `POST /api/public/signup` mit `x-strategaize-service-key`-Header auf. Service-Key-Compare timing-safe (analog DEC-107, Caller-Sinn umgedreht).
+- **3 neue Public-Endpoints (anonymer Zugriff)**:
+  - `GET  /api/public/partner/:slug`  — Branding-Resolve fuer Landing-Page, KEIN Service-Key, light Rate-Limit 60/h/IP, Cache-Control 60s.
+  - `POST /api/public/signup`         — Signup-POST mit Service-Key + 3/h/IP Rate-Limit.
+  - `GET  /auth/verify-signup?token=` — Verify-Klick aus Email, Token aus URL, transaktionales Auto-Provisioning.
+- **2 neue Migrations**: 097 fuegt `partner_organization.slug UNIQUE` hinzu + Backfill. 098 legt `pending_signup`-Tabelle an + erweitert `partner_client_mapping` um 3 Spalten (`invitation_source`, `dsgvo_consent_text_version`, `dsgvo_consent_accepted_at`).
+- **1 neuer Cron-Job**: `pending-signup-cleanup-hourly` (`0 * * * *`) markiert expired Pending-Eintraege und loescht > 7 Tage alte expired-Rows (DSGVO-Datensparsamkeit).
+- **0 neue npm-Packages**: rate-limit.ts (V4.2), github-slugger (schon installed fuer Handbook-Anchors), supabase-server-client, IONOS-SMTP-Adapter `src/lib/email.ts` (V4.2 Reminders) — alles Reuse.
+
+### Cross-System-Topologie
+
+```
+                 ┌──────────────────────────────────────────┐
+                 │ Mandant (Browser)                        │
+                 │ Browser-Side, anonym, kein Service-Key   │
+                 └──────────────┬───────────────────────────┘
+                                │ (1) GET intelligence.strategaize.com/p/<slug>
+                                │
+                ┌───────────────▼──────────────────────────────────────────┐
+                │ Intelligence-Plattform (strategaize-intelligence-studio) │
+                │  - Landing-Page-Server-Component                         │
+                │  - Server-Side-API `POST /api/landing/signup`            │
+                │  - haelt Service-Key in IS-eigener ENV                   │
+                └──┬────────────────────────────────────┬──────────────────┘
+                   │ (2) GET                            │ (4) POST signup
+                   │ /api/public/partner/<slug>         │ + x-strategaize-service-key
+                   │ (Browser → onboarding direkt)      │ (Server → onboarding)
+                   ▼                                    ▼
+                ┌────────────────────────────────────────────────────────────┐
+                │ Onboarding-Plattform (strategaize-onboarding-plattform)    │
+                │  V7 Public-Endpoints:                                      │
+                │  - GET  /api/public/partner/:slug   (FEAT-052)             │
+                │  - POST /api/public/signup          (FEAT-051)             │
+                │  - GET  /auth/verify-signup?token=  (FEAT-053)             │
+                │  V7 Cron:                                                  │
+                │  - pending-signup-cleanup-hourly                           │
+                │  V7 Tables:                                                │
+                │  - pending_signup (NEU, Migration 098)                     │
+                │  - partner_organization.slug (NEU, Migration 097)          │
+                │  - partner_client_mapping.invitation_source / dsgvo_*      │
+                └──┬─────────────────────────────────────────────────────────┘
+                   │ (5) SMTP via IONOS DKIM (existing)
+                   │ (6) auth.admin.createUser (Supabase GoTrue)
+                   ▼
+                ┌───────────────────────────────────────┐
+                │ Mandant-Inbox + Coolify-Postgres       │
+                │  - Verify-Mail mit Klartext-Token-URL  │
+                │  - auth.users (erst nach Verify-Klick) │
+                └────────────────────────────────────────┘
+```
+
+Wichtig: Schritt (2) ist Browser-direkt an Onboarding-Plattform (kein Service-Key noetig, Public-Resolve liefert nur Branding-Daten ohne PII). Schritt (4) ist IS-Server-Side an Onboarding-Plattform (Service-Key in IS-Container-ENV, NIE im Browser exposed).
+
+### V7 Main Components
+
+| # | Component | Layer | Files (geplant) | FEAT |
+|---|---|---|---|---|
+| 1 | Public-Resolve-Endpoint | API | `src/app/api/public/partner/[slug]/route.ts` | FEAT-052 |
+| 2 | Partner-Slug-Helper | Lib | `src/lib/partner/slug.ts`, `src/lib/partner/reserved-slugs.ts` | FEAT-052 |
+| 3 | Public-Signup-Endpoint | API | `src/app/api/public/signup/route.ts` | FEAT-051 |
+| 4 | Service-Key-Verifier | Lib | `src/lib/auth/service-key.ts` (timing-safe-equal Helper) | FEAT-051 |
+| 5 | V7-Rate-Limiter-Instances | Lib | Erweiterung in `src/lib/rate-limit.ts` (zwei neue Pre-configured Limiters: `signupLimiter` 3/h, `partnerResolveLimiter` 60/h) | FEAT-051+052 |
+| 6 | Pending-Signup-Storage | DB | Migration 098 + `src/lib/signup/pending-signup-repo.ts` | FEAT-053 |
+| 7 | Email-Verify-Endpoint | API/Page | `src/app/auth/verify-signup/page.tsx` (Server-Component) + `src/app/auth/verify-signup/actions.ts` | FEAT-053 |
+| 8 | Auto-Provisioning | Lib | `src/lib/signup/auto-provision.ts` (transactional createTenant + createUser + insertProfile + insertMapping) | FEAT-053 |
+| 9 | Signup-Verify-Email-Template | Lib | `src/lib/email/templates/signup-verify.ts` (kann auch in `src/lib/email.ts` als render-Helper landen) | FEAT-053 |
+| 10 | Pending-Cleanup-Cron | API/Route | `src/app/api/cron/pending-signup-cleanup/route.ts` (Coolify-Scheduled-Task) | FEAT-053 |
+| 11 | Public-Signup-Pen-Test | Tests | `__tests__/pen-test/public-signup-pen-test.test.ts` | FEAT-054 |
+
+Alle Komponenten folgen Reuse-Pflicht aus `.claude/rules/strategaize-pattern-reuse.md`: Service-Key-Compare aus DEC-107 portiert, Rate-Limit aus V4.2, Accept-Invitation als Auto-Provisioning-Vorlage, IONOS-SMTP wiederverwendet, V6 Pen-Test-Suite-Architektur als Vorlage.
+
+### V7 Data Model — Migration-Plan
+
+#### Migration 097 — `partner_organization.slug` + Backfill (FEAT-052)
+
+```sql
+-- 097_v7_partner_organization_slug.sql
+-- Idempotent (mehrfaches Apply ohne Schaden)
+
+BEGIN;
+
+-- 1. Spalte hinzufuegen (nullable initial fuer Backfill)
+ALTER TABLE public.partner_organization
+  ADD COLUMN IF NOT EXISTS slug text;
+
+-- 2. Backfill via SQL-Function (idempotent)
+DO $$
+DECLARE
+  r record;
+  base_slug text;
+  candidate text;
+  suffix int;
+BEGIN
+  FOR r IN
+    SELECT id, display_name FROM public.partner_organization
+    WHERE slug IS NULL
+    ORDER BY created_at ASC  -- aelteste zuerst gewinnen ohne Suffix
+  LOOP
+    -- Naive ASCII-Transliteration via translate + lower + regex-ersatz.
+    -- Echte Umlaut-Behandlung (ae/oe/ue/ss) macht der TS-Slug-Generator in
+    -- src/lib/partner/slug.ts spaeter beim Neu-Anlegen — Backfill ist
+    -- best-effort und Strategaize-Admin kann manuell korrigieren falls
+    -- noetig. Reserve-Liste-Check macht Application-Layer.
+    base_slug := lower(translate(r.display_name,
+      'äöüÄÖÜßéèêàâîïôûñç ',
+      'aouAOUseeeaaiiouna-'));
+    base_slug := regexp_replace(base_slug, '[^a-z0-9-]+', '-', 'g');
+    base_slug := regexp_replace(base_slug, '-+', '-', 'g');
+    base_slug := regexp_replace(base_slug, '^-+|-+$', '', 'g');
+    base_slug := left(base_slug, 60);
+
+    candidate := base_slug;
+    suffix := 2;
+    WHILE EXISTS (SELECT 1 FROM public.partner_organization WHERE slug = candidate) LOOP
+      candidate := base_slug || '-' || suffix;
+      suffix := suffix + 1;
+    END LOOP;
+
+    UPDATE public.partner_organization SET slug = candidate WHERE id = r.id;
+  END LOOP;
+END$$;
+
+-- 3. NOT NULL + UNIQUE-Index nach Backfill
+ALTER TABLE public.partner_organization ALTER COLUMN slug SET NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS partner_organization_slug_lower_unique
+  ON public.partner_organization (lower(slug));
+
+COMMIT;
+```
+
+Re-Apply ist No-Op: ADD COLUMN IF NOT EXISTS + WHERE slug IS NULL + CREATE UNIQUE INDEX IF NOT EXISTS.
+
+#### Migration 098 — `pending_signup` + `partner_client_mapping`-Erweiterung (FEAT-053)
+
+```sql
+-- 098_v7_pending_signup_and_mapping_source.sql
+-- Idempotent
+
+BEGIN;
+
+-- 1. pending_signup-Tabelle anlegen
+CREATE TABLE IF NOT EXISTS public.pending_signup (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  partner_tenant_id uuid NOT NULL REFERENCES public.tenant(id) ON DELETE CASCADE,
+  email_lower text NOT NULL,
+  first_name text NOT NULL,
+  last_name text NOT NULL,
+  company_name text NULL,
+  dsgvo_consent_text_version text NOT NULL,
+  dsgvo_consent_accepted_at timestamptz NOT NULL DEFAULT now(),
+  verify_token_hash text NOT NULL,
+  expires_at timestamptz NOT NULL,
+  status text NOT NULL DEFAULT 'pending',
+  verified_at timestamptz NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT pending_signup_status_check CHECK (status IN ('pending','verified','expired'))
+);
+
+-- 2. UNIQUE: kein doppeltes Pending pro Email+Partner (Re-Signup nach Expiry erlaubt)
+CREATE UNIQUE INDEX IF NOT EXISTS pending_signup_partner_email_unique_pending
+  ON public.pending_signup (partner_tenant_id, email_lower)
+  WHERE status = 'pending';
+
+-- 3. Lookup-Index fuer Verify-Endpoint (Hash + Status)
+CREATE INDEX IF NOT EXISTS pending_signup_token_hash_lookup
+  ON public.pending_signup (verify_token_hash)
+  WHERE status = 'pending';
+
+-- 4. Lookup-Index fuer Cleanup-Cron
+CREATE INDEX IF NOT EXISTS pending_signup_expires_status
+  ON public.pending_signup (expires_at, status);
+
+-- 5. RLS: Public-Endpoints nutzen Service-Role, daher pending_signup hat KEINE
+--    public-Policies. Nur Service-Role darf SELECT/INSERT/UPDATE/DELETE.
+ALTER TABLE public.pending_signup ENABLE ROW LEVEL SECURITY;
+-- (keine Policies → default deny; service_role bypasses RLS)
+
+-- 6. partner_client_mapping um invitation_source + DSGVO-Consent-Spalten erweitern
+ALTER TABLE public.partner_client_mapping
+  ADD COLUMN IF NOT EXISTS invitation_source text NOT NULL DEFAULT 'partner_invite',
+  ADD COLUMN IF NOT EXISTS dsgvo_consent_text_version text NULL,
+  ADD COLUMN IF NOT EXISTS dsgvo_consent_accepted_at timestamptz NULL;
+
+-- 7. CHECK auf invitation_source (additive)
+ALTER TABLE public.partner_client_mapping
+  DROP CONSTRAINT IF EXISTS partner_client_mapping_invitation_source_check;
+ALTER TABLE public.partner_client_mapping
+  ADD CONSTRAINT partner_client_mapping_invitation_source_check
+    CHECK (invitation_source IN ('partner_invite','self_signup'));
+
+COMMIT;
+```
+
+Existierende V6-Mappings bekommen DEFAULT `'partner_invite'` — keine Daten-Migration noetig. Re-Apply ist No-Op via IF NOT EXISTS + DROP CONSTRAINT IF EXISTS pattern.
+
+### V7 Data Flow
+
+#### Signup-Flow (FEAT-051 + FEAT-052 + FEAT-053-Pending-Anlage)
+
+```
+1. Mandant oeffnet intelligence.strategaize.com/p/<partner-slug>
+                |
+                ▼
+2. IS-Landing-Page-Server-Component fetcht:
+   GET https://onboarding.strategaizetransition.com/api/public/partner/<slug>
+                |
+                ▼
+3. Onboarding-Plattform:
+   - partnerResolveLimiter.check(ip) → 60/h-Window
+   - SELECT display_name, logo_url, accent_color FROM partner_organization
+     WHERE lower(slug) = lower($1)
+   - 404 wenn unknown_partner ODER Reserve-Liste-Treffer (admin/api/p/...)
+   - 200 mit { display_name, logo_url, accent_color, has_active_diagnostic_template }
+                |
+                ▼
+4. IS rendert Landing-Page mit Co-Branding + Formular.
+   Mandant fuellt aus: email, first_name, last_name, [company_name], DSGVO-Consent-Checkbox.
+                |
+                ▼
+5. IS-Server-Side `POST /api/landing/signup`:
+   POST https://onboarding.strategaizetransition.com/api/public/signup
+   Header: x-strategaize-service-key: <key aus IS-ENV>
+   Body:   { partner_slug, email, first_name, last_name, company_name?,
+             dsgvo_consent_accepted: true, dsgvo_consent_text_version: "v1-2026-05" }
+                |
+                ▼
+6. Onboarding-Plattform `/api/public/signup`:
+   a) timing-safe-equal: x-strategaize-service-key === ENV.PUBLIC_SIGNUP_SERVICE_KEY
+      → false: 401 invalid_service_key
+   b) signupLimiter.check(ip = x-forwarded-for[0]) → 3/h-Window
+      → false: 429 rate_limit_exceeded + Retry-After
+   c) zod-Validation Body
+      → fail: 422 validation_failed
+   d) Email-Domain-Block-Check (ENV.PUBLIC_SIGNUP_BLOCKED_EMAIL_DOMAINS)
+      → block: 422 disposable_email_domain
+   e) SELECT id, slug FROM partner_organization WHERE lower(slug) = lower(partner_slug)
+      → null: 404 unknown_partner
+   f) SELECT 1 FROM pending_signup WHERE partner_tenant_id=$1 AND email_lower=$2
+                                     AND status='pending' AND expires_at > now()
+      → row: 409 email_already_signed_up (strikter 409 per DEC-135)
+   g) SELECT 1 FROM partner_client_mapping pcm JOIN profiles p ON ...
+        WHERE pcm.partner_tenant_id=$1 AND p.email=$2
+      → row: 409 email_already_signed_up
+   h) crypto.randomBytes(32).toString('hex') → token (Klartext)
+      sha256(token) → token_hash
+   i) INSERT INTO pending_signup (...) VALUES (..., token_hash, now() + interval '24 hours', ...)
+   j) sendMail({ to: email, from: 'onboarding@strategaize.de',
+                 reply_to: partner_contact_email,
+                 template: 'signup-verify',
+                 data: { partner_display_name, verify_url: https://onboarding...
+                         /auth/verify-signup?token=<token>, expires_at } })
+   k) INSERT INTO error_log (category='public_signup', level='info',
+                              metadata={ partner_slug, email_hash, ip_hash, status=202 })
+   l) Response 202 { status: 'pending_email_verify', expires_at: ISO8601 }
+                |
+                ▼
+7. IS antwortet Browser mit Bestaetigungs-Page "Bitte E-Mail-Postfach pruefen".
+                |
+                ▼
+8. Mandant erhaelt Verify-Mail im Postfach.
+```
+
+#### Verify-Flow + Auto-Provisioning (FEAT-053-Kern)
+
+```
+1. Mandant klickt Verify-Link in Email:
+   GET https://onboarding.strategaizetransition.com/auth/verify-signup?token=<token>
+                |
+                ▼
+2. /auth/verify-signup/page.tsx (Server-Component):
+   a) sha256(req.query.token) → token_hash
+   b) SELECT * FROM pending_signup WHERE verify_token_hash = $1
+      → null: 401 invalid_token (Page: "Link ungueltig / abgelaufen")
+   c) WHERE status='verified' → Idempotent-Branch: redirect /auth/set-password?session=<onetime>
+   d) WHERE status='expired' OR expires_at < now() → 410 (Page: "Bestaetigungslink
+      abgelaufen, bitte Signup wiederholen")
+   e) WHERE status='pending' AND expires_at >= now():
+                |
+                ▼
+3. auto-provision.ts BEGIN TRANSACTION:
+   a) INSERT INTO tenant (kind='partner_client', parent_tenant_id=partner_tenant_id)
+      → new_tenant_id
+   b) auth.admin.createUser({ email, password: crypto.randomBytes(24), email_confirm: true })
+      → new_user_id  (Email-Konflikt cross-Partner → ROLLBACK + 409)
+   c) INSERT INTO profiles (id=new_user_id, tenant_id=new_tenant_id, role='tenant_admin',
+                             first_name=pending.first_name, last_name=pending.last_name)
+   d) INSERT INTO partner_client_mapping (
+        partner_tenant_id=pending.partner_tenant_id,
+        client_tenant_id=new_tenant_id,
+        invitation_status='accepted',
+        invitation_source='self_signup',
+        accepted_at=now(),
+        dsgvo_consent_text_version=pending.dsgvo_consent_text_version,
+        dsgvo_consent_accepted_at=pending.dsgvo_consent_accepted_at)
+   e) UPDATE pending_signup SET status='verified', verified_at=now() WHERE id=pending.id
+   f) INSERT INTO error_log (category='public_signup_verify', level='info',
+                              metadata={ partner_slug, email_hash, new_tenant_id, status=200 })
+   g) COMMIT
+                |
+                ▼
+4. Generate onetime-Login-Session (Magic-Link-Style analog V6 Accept-Invitation):
+   auth.admin.generateLink({ type: 'magiclink', email })
+   Redirect → /auth/set-password?session=<onetime-token>
+                |
+                ▼
+5. Mandant setzt Passwort, lands auf /dashboard.
+6. Mandant kann sofort /dashboard/diagnose/start aufrufen (FEAT-045 V6.3 live).
+```
+
+Transactional Properties:
+- Race-Condition Doppel-Klick: zweiter parallel-Klick sieht status='verified' nach erstem COMMIT → idempotenter Redirect ohne Re-Provisioning.
+- Fail in Schritt 3b (Email-Konflikt): ROLLBACK → pending_signup bleibt `pending` (Re-Try moeglich), Mandant sieht 409 mit Hinweis "Email bereits bei anderem Partner registriert".
+- Fail in Schritt 3d (`partner_client_mapping` UNIQUE-Violation): ROLLBACK + 409.
+- Fail in Schritt 4 (Magic-Link-Generation): COMMIT trotzdem (Verifikation gilt als erfolgreich), Page zeigt Hinweis "Bitte erneut einloggen via Passwort-Vergessen-Link" — Tenant ist bereits erstellt, Magic-Link kann via `/login` getriggert werden.
+
+### V7 ENV-Variables
+
+| Variable | Wert/Beispiel | Setzung | Zweck |
+|---|---|---|---|
+| `PUBLIC_SIGNUP_SERVICE_KEY` | `f47ac10b...` (32-byte hex random) | Coolify-ENV beider Repos (Onboarding + IS) | Cross-System-Auth Service-Key-Compare |
+| `PUBLIC_SIGNUP_BLOCKED_EMAIL_DOMAINS` | `mailinator.com,guerrillamail.com,tempmail.io` | Coolify-ENV nur Onboarding | Static Wegwerf-Domain-Block-Liste |
+| `PUBLIC_APP_URL` | `https://onboarding.strategaizetransition.com` | bereits gesetzt (V6) | Verify-Link-Domain in Signup-Mail (DEC-133) |
+| `IONOS_SMTP_*` | bereits gesetzt (V4.2) | bereits gesetzt | Email-Versand `onboarding@strategaize.de` |
+
+Generierung Service-Key (per `feedback_env_value_not_command` — Wert direkt liefern):
+- Strategaize-Admin laesst sich pro Environment einmalig einen Random-Key generieren (z.B. `openssl rand -hex 32` lokal) und setzt ihn in BEIDEN Coolify-Resources (Onboarding-Plattform-app + Intelligence-Studio-app).
+- Service-Key-Rotation-Policy: alle 6 Monate, koordiniert manuell zwischen beiden Repos (kurzer Zero-Downtime-Window via Dual-Key-Support waere V8+ Erweiterung — V7 akzeptiert kurze Downtime beim Rotate).
+- Service-Key NIE im Browser, NIE in NEXT_PUBLIC_*, NIE in client-bundles.
+
+### V7 Cron-Schedule
+
+| Job | Cron | Container | Endpoint | Zweck |
+|---|---|---|---|---|
+| `pending-signup-cleanup-hourly` | `0 * * * *` | `app` | `GET /api/cron/pending-signup-cleanup` | (1) UPDATE pending_signup SET status='expired' WHERE status='pending' AND expires_at < now(); (2) DELETE FROM pending_signup WHERE status='expired' AND verified_at IS NULL AND created_at < now() - interval '7 days'; |
+
+Setup per `feedback_coolify_cron_node` + `feedback_cron_job_instructions`-Pattern: Coolify-Scheduled-Task im app-Container, Endpoint mit `CRON_SECRET`-Header-Check (existing `verifyCronSecret`-Pattern, DEC-059 Reuse).
+
+### V7 External Dependencies
+
+- **Intelligence-Plattform-Repo** (`strategaize-intelligence-studio`): muss Landing-Page-UI + Server-Side-Caller bauen. V7-Onboarding-Plattform kann unabhaengig deployen — IS-Repo kann nachgelagert bauen, dann ist Self-Signup-Funnel live. User-Koordinations-Punkt.
+- **IONOS-SMTP** (existing V4.2): unveraendert, neuer From-Sender `onboarding@strategaize.de` muss im IONOS-Postfach existieren ODER als Alias auf `noreply@strategaize.de` konfiguriert sein. Reply-To wird pro Email-Send dynamisch gesetzt.
+- **Coolify-Postgres** (existing): Migration 097 + 098 per `sql-migration-hetzner.md`-Pattern (base64 + psql -U postgres) deployen.
+- **Bedrock**: 0 V7-Touch — Signup-Flow nutzt KEIN LLM, Auto-Provisioning ist deterministisch.
+
+### V7 Security / Privacy Considerations
+
+- **DSGVO-Datensparsamkeit**: Audit-Log `error_log` enthaelt NUR `email_hash` (SHA-256) + `ip_hash` (SHA-256), NIE Klartext. Verifiziert via Pen-Test-AC (FEAT-054).
+- **Service-Key**: timing-safe-equal via `crypto.timingSafeEqual` (Node-Built-in), kein `===`-Compare. Pflicht-Test mit 1000-Iter-Statistik (FEAT-054 AC).
+- **Verify-Token**: Klartext NIE in DB oder Logs. Nur SHA-256-Hash. Klartext-Lifetime: nur in Email-Body + URL-Parameter beim Verify-Klick. Bei Token-Replay (status='verified'): 401 + Audit-Log-Eintrag fuer SOC-Detection.
+- **DSGVO-Consent**: Versions-String + Timestamp pro Signup persistiert in `partner_client_mapping.dsgvo_consent_*`. Volle Audit-Tabelle als V8+-Erweiterung. V7-Consent-Versions-String wird Strategaize-zentral definiert (z.B. `v1-2026-05`), Aenderung erfordert neuen Versions-String.
+- **Reserve-Slugs**: System-Slugs (`admin`, `api`, `public`, `p`, `partner`, `strategaize`, `auth`) werden in `src/lib/partner/reserved-slugs.ts` hartcoded geblockt. Bei INSERT in `createPartnerOrganization`-Server-Action sowie bei Migration-097-Backfill-Apply (defensives Re-Check).
+- **IP-Trust**: `x-forwarded-for[0]` von Coolify-Traefik-Proxy als trusted Header (Single-Hop, kein Multi-Proxy-Setup). DEC-138 dokumentiert diese Entscheidung explizit.
+- **Rate-Limit-Reset bei Container-Restart**: In-Memory-Pattern hat als Tradeoff: nach Container-Restart sind alle IP-Windows weg. Akzeptiert fuer V7 Single-Container-Setup. Coolify-Healthcheck-Restart-Frequenz ist niedrig genug, dass Spam-Welle nicht systematisch via Restart-Race umgangen werden kann.
+
+### V7 Constraints and Tradeoffs
+
+- **Single-Container-Constraint fuer In-Memory-Rate-Limit (DEC-132)**: V7 ist 1-Replica-Setup. Multi-Replica wuerde Rate-Limit-Disagreement zwischen Containern erzeugen. DB-Rate-Limit ist V8+-Erweiterung wenn noetig. Falls vor V8 Multi-Replica-Setup gewuenscht: V7 muss vorher auf DB-basierten Limiter umgestellt werden.
+- **Internal-Test-Mode bis Pre-Production-Compliance-Gate**: V7 deployed in Internal-Test-Mode (BL-104 Anwalts-Review extern pending). Erster echter Live-Pilot-Partner wartet auf BL-104-PASS. V7-Code-Arbeit bleibt unblockiert.
+- **NL-Markt Out-of-Scope**: Email-Templates + Landing-Page-Texte nur deutsch. NL-Variante ist V8+-Erweiterung. Bei NL-Pilot vor V8 muesste V7.1 nachgezogen werden.
+- **Kein Captcha**: Akzeptierter Tradeoff (Risk-Register P-2). Trigger-Schwelle fuer V7.1-Captcha-Sprint per DEC-137: > 50 Pending-Signups innerhalb 24h ohne korrespondierende Verify-Klicks → V7.1-Sprint priorisieren.
+- **Auto-Accept ohne Partner-Approve-Workflow**: V7 = jeder Mandant der die richtige Slug-Landing-Page kennt + DSGVO-Consent akzeptiert wird auto-provisioniert. V8+ kann optional Partner-Approve-Modus pro Partner-Tier konfigurierbar machen.
+- **Service-Key-Rotation kurze Downtime**: V7 hat keinen Dual-Key-Support. Rotation erfordert Strategaize-Admin koordinierten ENV-Update in beiden Repos + Coolify-Redeploy. Erwartete Downtime: ~30s (Coolify-Health-Window). V8+ Dual-Key-Support waere Polish-Erweiterung.
+
+### V7 Open Technical Questions — Resolved
+
+| ID | Question | Decision | DEC |
+|---|---|---|---|
+| Q-V7-A | Email-Verify-Mechanik | Custom `pending_signup`-Tabelle (Option A) | DEC-129 |
+| Q-V7-B | Partner-Slug-Backfill | Auto idempotent in Migration 097 | DEC-130 |
+| Q-V7-C | Pending-TTL | 24h + optionale Reminder-Mail nach 4h (V7-Scope) | DEC-131 |
+| Q-V7-D | Rate-Limit-Persistenz | In-Memory (Single-Container-Setup) | DEC-132 |
+| Q-V7-E | Verify-Link-Domain | Strategaize-zentral (`onboarding.strategaizetransition.com`) | DEC-133 |
+| Q-V7-F | Email-Sender | `onboarding@strategaize.de` From + reply-to partner_contact_email | DEC-134 |
+| Q-V7-G | Doppel-Signup-Idempotenz | Strikter 409 mit User-friendly Error | DEC-135 |
+| (neu) | Service-Key-Rotation-Policy | Alle 6 Monate manuell-koordiniert, Single-Key-Support | DEC-136 |
+| (neu) | Captcha-Trigger-Schwelle | > 50 Pending-Signups/24h ohne Verify → V7.1-Sprint | DEC-137 |
+| (neu) | IP-Trust-Pfad | `x-forwarded-for[0]` von Coolify-Traefik, Single-Proxy-Hop | DEC-138 |
+
+### V7 Risks (Architecture-Level)
+
+- **R-V7-1**: Spam-Welle ohne Captcha. Mitigation: 24h TTL + Hourly-Cleanup + Domain-Block-Liste + IP-Rate-Limit + DEC-137 Trigger-Schwelle.
+- **R-V7-2**: Email-Verify-Mail wird als Spam markiert. Mitigation: IONOS-DKIM (V4.2 verifiziert), erste 20 Signups manuell beobachten, ggf. Email-Provider-Wechsel zu SES/Resend V8+.
+- **R-V7-3**: Service-Key-Leakage in IS-Container. Mitigation: timing-safe-equal, Audit-Log aller Calls, 6-Monats-Rotation per DEC-136.
+- **R-V7-4**: `auth.users`-Konflikt cross-Partner (gleiche Email bei Partner-A und Partner-B). Mitigation: Transactional ROLLBACK bei Verify, klare 409-Fehlermeldung. V7 erlaubt 1 Email = 1 globaler `auth.users`-Account. V8+ koennte Email-Aliasing per Partner-Tenant erlauben.
+- **R-V7-5**: Pending-Signup-Tabelle wachst unkontrolliert wenn Cleanup-Cron failt. Mitigation: Cleanup-Cron-Failure-Alerting via error_log + monitoring, > 30 Tage alte pending-Rows manuell drop-bar via Strategaize-Admin-SQL.
+
+### V7 Test-Strategy (Architecture-Level)
+
+- **Pen-Test-Suite-Erweiterung (FEAT-054)**: 18 neue Test-Cases gegen Coolify-DB via `.claude/rules/coolify-test-setup.md`-Pattern (node:20 + SAVEPOINT bei expected HTTP-Errors).
+- **Unit-Vitest pro Endpoint**: Service-Key-Compare-Statistical-Test 1000 Iters, Slug-Generator-Edge-Cases, Rate-Limit-Window-Slide, Token-Hash-Determinism, Pending-Provisioning-Transactional-ROLLBACK-Smoke.
+- **Live-Smoke-Check nach Deploy (SC-V7-5+6)**: Cross-System-Smoke mit Test-Service-Key + Pen-Test-Slug + Test-Email → 202 + Verify-Mail-Eingang + Verify-Klick + neue tenant/auth.users/profiles/mapping-Rows + Lead-Push-Smoke mit korrektem `first_name` (SC-V7-4).
+
+### V7 Implementation Direction — naechster Schritt
+
+`/slice-planning V7` mit 5 Slices wie in PRD-Skizze (informativer Schnitt, finaler Schnitt in /slice-planning):
+
+| Slice | Scope | FEAT | ~Aufwand |
+|---|---|---|---|
+| SLC-131 | Migration 097 + Slug-Generator + reserved-slugs + Public-Resolve-Endpoint | FEAT-052 | ~1d |
+| SLC-132 | Migration 098 + Public-Signup-API + Service-Key-Auth + Rate-Limit + Audit-Log | FEAT-051 | ~1.5d |
+| SLC-133 | Verify-Endpoint + Auto-Tenant-Provisioning + Email-Template + ISSUE-051 Fix + F-1 Fix | FEAT-053 | ~2d |
+| SLC-134 | Pen-Test-Suite-Erweiterung + Coolify-Test-Setup | FEAT-054 | ~1d |
+| SLC-135 | TTL-Cleanup-Cron + Final-Hardening + Live-Smoke | FEAT-053 Operational | ~0.5d |
+
+Reihenfolge: SLC-131 BEFORE SLC-132 (Slug-Lookup ist Signup-Pre-Condition), SLC-132 BEFORE SLC-133 (Pending-Anlage erfolgt im Signup-Endpoint), SLC-133 BEFORE SLC-134 (Pen-Test braucht alle 3 Endpoints), SLC-135 nach Pen-Test-PASS.
+
+Geschaetzt ~5 Code-Side-Tage + Pen-Test-Lauf + Live-Smoke + /post-launch. Architecture-Open-Questions Q-V7-A..G alle entschieden (DEC-129..DEC-138).
+
