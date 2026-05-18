@@ -4,9 +4,18 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmployeeInvitationEmail } from "@/lib/email";
 import { captureException, captureInfo } from "@/lib/logger";
+import { generateUniqueSlug } from "@/lib/partner/slug";
 import { revalidatePath } from "next/cache";
 
 import type { PartnerCountry, UserRole } from "@/types/db";
+
+// V7 SLC-131 MT-4 — Slug-Generator + Retry-Limit fuer Race-Condition mit
+// parallelem Admin-Insert (UNIQUE-Violation auf
+// partner_organization_slug_lower_unique). 3 Versuche reichen — die Wahrschein-
+// lichkeit, dass derselbe display_name in derselben Millisekunde von zwei
+// Admins angelegt wird, ist verschwindend gering. Bei dauerhafter Kollision
+// (mehr als 3 fehlgeschlagene Slug-Versuche) wirft die Action einen Fehler.
+const SLUG_INSERT_MAX_RETRIES = 3;
 
 /**
  * V6 SLC-102 MT-1 — Server Actions fuer Partner-Verwaltung (strategaize_admin).
@@ -117,18 +126,64 @@ export async function createPartnerOrganization(
     return { ok: false, error: "tenant_insert_failed" };
   }
 
-  // Phase 2 — partner_organization INSERT (Compensating Action bei Fehler)
-  const { error: poErr } = await admin.from("partner_organization").insert({
-    tenant_id: tenantRow.id,
-    legal_name: legalName,
-    display_name: displayName,
-    partner_kind: "tax_advisor",
-    tier: null,
-    contact_email: contactEmail,
-    contact_phone: contactPhone,
-    country,
-    created_by_admin_user_id: adminUserId,
-  });
+  // Phase 2 — partner_organization INSERT (Compensating Action bei Fehler).
+  // V7 SLC-131: Slug wird auto-generiert. Bei UNIQUE-Violation gegen den
+  // bestehenden Index `partner_organization_slug_lower_unique` (Race-Condition)
+  // wird die existierende Slug-Liste neu geladen und der Generator
+  // re-aufgerufen — bis zu SLUG_INSERT_MAX_RETRIES.
+  let poErr: { message: string; code?: string } | null = null;
+  for (let attempt = 0; attempt < SLUG_INSERT_MAX_RETRIES; attempt += 1) {
+    const { data: existingRows, error: existingErr } = await admin
+      .from("partner_organization")
+      .select("slug");
+    if (existingErr) {
+      captureException(new Error(existingErr.message), {
+        source: "admin/partners/createPartnerOrganization/loadExistingSlugs",
+        userId: adminUserId,
+        metadata: { tenant_id: tenantRow.id, legalName },
+      });
+      poErr = { message: existingErr.message };
+      break;
+    }
+    const existingSlugs = new Set(
+      (existingRows ?? [])
+        .map((r) => r.slug as string | null)
+        .filter((s): s is string => typeof s === "string" && s.length > 0),
+    );
+    const slug = generateUniqueSlug(displayName, existingSlugs);
+
+    const { error: insertErr } = await admin
+      .from("partner_organization")
+      .insert({
+        tenant_id: tenantRow.id,
+        legal_name: legalName,
+        display_name: displayName,
+        slug,
+        partner_kind: "tax_advisor",
+        tier: null,
+        contact_email: contactEmail,
+        contact_phone: contactPhone,
+        country,
+        created_by_admin_user_id: adminUserId,
+      });
+
+    if (!insertErr) {
+      poErr = null;
+      break;
+    }
+
+    // 23505 = unique_violation in PostgreSQL. Nur dann retry-fähig.
+    if ((insertErr as { code?: string }).code === "23505") {
+      poErr = {
+        message: insertErr.message,
+        code: (insertErr as { code?: string }).code,
+      };
+      continue;
+    }
+
+    poErr = { message: insertErr.message };
+    break;
+  }
 
   if (poErr) {
     // Compensating Action — Orphan-Tenant entfernen (Slice AC #2)

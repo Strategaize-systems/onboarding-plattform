@@ -637,7 +637,7 @@ V7-Scope: 5 Slices als Pull-Model-Foundation fuer Self-Service-Onboarding ueber 
 
 | ID | Slice | Feature | Status | Priority | Created |
 |----|-------|---------|--------|----------|---------|
-| SLC-131 | [Partner-Slug Foundation + Public-Resolve-Endpoint](SLC-131-partner-slug-foundation-public-resolve.md) | FEAT-052 | planned | High | 2026-05-18 |
+| SLC-131 | [Partner-Slug Foundation + Public-Resolve-Endpoint](SLC-131-partner-slug-foundation-public-resolve.md) | FEAT-052 | done | High | 2026-05-18 |
 | SLC-132 | [Public-Signup-API + Service-Key + Pending-Storage](SLC-132-public-signup-api-service-key-pending-storage.md) | FEAT-051 + FEAT-053 | planned | High | 2026-05-18 |
 | SLC-133 | [Verify-Endpoint + Auto-Provisioning + Side-Fixes (ISSUE-051 + F-1)](SLC-133-verify-endpoint-auto-provisioning-side-fixes.md) | FEAT-053 | planned | High | 2026-05-18 |
 | SLC-134 | [Pen-Test-Suite-Erweiterung Public-Signup-Caller](SLC-134-pen-test-suite-public-signup-caller.md) | FEAT-054 | planned | High | 2026-05-18 |
