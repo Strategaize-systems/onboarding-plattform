@@ -1035,7 +1035,7 @@
       "title": "V7 SLC-131 Partner-Slug Foundation + Public-Resolve-Endpoint (FEAT-052)",
       "type": "feature",
       "priority": "high",
-      "status": "in_progress",
+      "status": "done",
       "version": "V7",
       "description": "Fundament fuer V7-Self-Signup-Funnel. Migration 097 (partner_organization.slug NOT NULL UNIQUE + Auto-Backfill DO-Block mit Umlaut-Translit + Suffix-Resolver) + Live-Apply auf Hetzner. Reserve-Slugs-Liste (admin/api/p/etc.). Slug-Generator src/lib/partner/slug.ts (Umlaut-Transliteration ae/oe/ue/ss, max 60 chars, Kollisions-Suffix). createPartnerOrganization-Erweiterung um Auto-Slug. Public-Resolve-Endpoint GET /api/public/partner/[slug]/route.ts (anonymer Browser-fetch, Reserve-Pre-Check + Rate-Limit 60/h + Cache-Header 1min). partnerResolveLimiter + extractClientIp Helper additive in src/lib/rate-limit.ts. 14 Vitest (9 Slug-Gen + 5 Endpoint). 7 MTs ~5h ~1d. Reuse: github-slugger via src/lib/handbook/slugify.ts + V4.2 In-Memory-Limiter. Pre-Condition fuer SLC-132. Sub-Item von BL-098 (V7-Umbrella). SLC-131.",
       "createdAt": "2026-05-18"
