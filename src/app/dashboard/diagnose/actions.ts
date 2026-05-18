@@ -247,8 +247,12 @@ export async function saveDiagnoseDraft(
  * Worker dispatched ueber template.metadata.usage_kind zur Light-Pipeline
  * (siehe handle-job.ts:tryDispatchLightPipeline, MT-5).
  *
- * Setzt ai_jobs.scheduled_at = now() damit der Claim-Loop sofort greift.
- * Setzt status='queued' damit rpc_claim_next_ai_job_for_type greift.
+ * Setzt status='pending' damit rpc_claim_next_ai_job_for_type greift.
+ * scheduled_at bleibt auf DB-DEFAULT now() (siehe Migration 031 ai_jobs),
+ * d.h. der Claim-Loop greift sofort.
+ * (SLC-133 MT-5 / F-1 Side-Fix: Kommentar an reales Verhalten angeglichen,
+ * vorher war eine queued/scheduled_at-Variante dokumentiert, die nicht zum
+ * INSERT-Payload unten passte.)
  */
 export async function submitDiagnoseRun(
   sessionId: string,
