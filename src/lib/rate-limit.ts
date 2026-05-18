@@ -23,6 +23,12 @@ interface RateLimiterConfig {
 interface RateLimitResult {
   allowed: boolean;
   remaining: number;
+  /**
+   * Seconds until the window resets. Only set when allowed=false.
+   * Public endpoints use this directly as the `Retry-After` header and
+   * surface it in the JSON body (SLC-131 MT-6).
+   */
+  retryAfterSeconds?: number;
   error?: string;
 }
 
@@ -49,11 +55,12 @@ export function createRateLimiter(config: RateLimiterConfig) {
       entry.count++;
 
       if (entry.count > config.maxAttempts) {
-        const retryAfterSec = Math.ceil((entry.resetAt - now) / 1000);
+        const retryAfterSeconds = Math.ceil((entry.resetAt - now) / 1000);
         return {
           allowed: false,
           remaining: 0,
-          error: `Zu viele Versuche. Bitte warten Sie ${retryAfterSec} Sekunden.`,
+          retryAfterSeconds,
+          error: `Zu viele Versuche. Bitte warten Sie ${retryAfterSeconds} Sekunden.`,
         };
       }
 
@@ -72,3 +79,28 @@ export const setPasswordLimiter = createRateLimiter({
   maxAttempts: 5,
   windowMs: 15 * 60 * 1000, // 15 minutes
 });
+
+// V7 SLC-131 — Slug-Enumeration-Schutz fuer Public-Resolve-Endpoint
+// `GET /api/public/partner/[slug]`. 60 Requests pro Stunde pro IP.
+export const partnerResolveLimiter = createRateLimiter({
+  maxAttempts: 60,
+  windowMs: 60 * 60 * 1000, // 1 hour
+});
+
+/**
+ * Extrahiert die Client-IP fuer Rate-Limit-Identification aus dem
+ * `x-forwarded-for`-Header. Coolify+Traefik schreibt den Header bei
+ * jedem Request — single-hop trust per DEC-138.
+ *
+ * Bei Multi-Hop `x-forwarded-for: 1.2.3.4, 5.6.7.8` wird der erste
+ * Eintrag (originaler Client) genommen. Fallback `unknown` wenn Header
+ * fehlt (z.B. interner Service-Call ohne Proxy).
+ */
+export function extractClientIp(request: Request): string {
+  const xff = request.headers.get("x-forwarded-for");
+  if (xff && xff.length > 0) {
+    const first = xff.split(",")[0]?.trim();
+    if (first && first.length > 0) return first;
+  }
+  return "unknown";
+}
