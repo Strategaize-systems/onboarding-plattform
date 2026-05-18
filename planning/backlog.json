@@ -1045,7 +1045,7 @@
       "title": "V7 SLC-132 Public-Signup-API + Service-Key-Auth + Rate-Limit + Pending-Storage (FEAT-051 + FEAT-053-Storage)",
       "type": "feature",
       "priority": "high",
-      "status": "open",
+      "status": "in_progress",
       "version": "V7",
       "description": "Kern-Schnittstelle V7-Self-Signup-Flow. Migration 098 (pending_signup-Tabelle 12 Spalten + 3 Indices + RLS default-deny + partner_client_mapping-Extension invitation_source CHECK partner_invite|self_signup + dsgvo_consent_text_version + dsgvo_consent_accepted_at) + Live-Apply auf Hetzner. Service-Key-Verifier src/lib/auth/service-key.ts (timing-safe-equal aus node:crypto + Statistical-Test 1000 Iter). signupLimiter 3/h additive in src/lib/rate-limit.ts. Pending-Signup-Repo (insertPendingSignup + findActivePendingSignup + findPendingByTokenHash). Email-Template renderSignupVerifyTemplate als render-Helper in src/lib/email.ts (per RPT-297 P-1 Empfehlung, kein Subfolder-Refactor). Public-Signup-Endpoint POST /api/public/signup mit 13-Schritt-Pipeline (Service-Key -> Rate-Limit -> zod -> Domain-Block -> Slug-Resolve -> Doppel-Check -> Token-Hash -> Pending-Insert -> Email-Send -> Audit-Log -> 202). 24 Vitest (6 Service-Key + 6 Repo + 12 Endpoint). 8 MTs ~10h ~1.5d. Reuse: DEC-107 Service-Key-Compare + V4.2 SMTP + V6 error_log Audit-Pattern. Sub-Item von BL-098. SLC-132.",
       "createdAt": "2026-05-18"
