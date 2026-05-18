@@ -157,3 +157,39 @@ export async function findPendingByTokenHash(
 
   return (data as PendingSignupRow | null) ?? null;
 }
+
+/**
+ * Lookup-by-Hash OHNE Status-Filter — fuer SLC-133 Verify-Endpoint Branch-
+ * Dispatch. Liefert die Row egal ob `status='pending'`, `'verified'`,
+ * `'expired'`. Caller (verify-signup/page.tsx) entscheidet ueber Branch:
+ *
+ * - `null` → Hash unbekannt → InvalidLinkPage
+ * - `status='verified'` → Doppel-Klick → redirect /login?info=already_verified
+ * - `status='expired'` ODER `expires_at < now()` → ExpiredLinkPage
+ * - `status='pending'` UND nicht expired → Auto-Provisioning-Pfad
+ *
+ * Wird zusaetzlich zu `findPendingByTokenHash` exportiert, weil dieser
+ * Helper Status-Filter trifft (Anti-Replay-Schutz fuer Caller die explizit
+ * nur die active Pending-Row brauchen — Signup-Endpoint MT-6).
+ */
+export async function findByTokenHashAnyStatus(
+  token_hash: string
+): Promise<PendingSignupRow | null> {
+  const admin = createAdminClient();
+
+  const { data, error } = await admin
+    .from("pending_signup")
+    .select(
+      "id, partner_tenant_id, email_lower, first_name, last_name, company_name, " +
+        "dsgvo_consent_text_version, dsgvo_consent_accepted_at, verify_token_hash, " +
+        "expires_at, status, verified_at, created_at"
+    )
+    .eq("verify_token_hash", token_hash)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return (data as PendingSignupRow | null) ?? null;
+}
