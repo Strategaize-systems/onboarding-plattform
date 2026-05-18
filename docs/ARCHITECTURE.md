@@ -6163,7 +6163,7 @@ BEGIN;
 -- 1. pending_signup-Tabelle anlegen
 CREATE TABLE IF NOT EXISTS public.pending_signup (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  partner_tenant_id uuid NOT NULL REFERENCES public.tenant(id) ON DELETE CASCADE,
+  partner_tenant_id uuid NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
   email_lower text NOT NULL,
   first_name text NOT NULL,
   last_name text NOT NULL,
