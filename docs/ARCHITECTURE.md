@@ -6304,8 +6304,10 @@ Existierende V6-Mappings bekommen DEFAULT `'partner_invite'` — keine Daten-Mig
       → new_tenant_id
    b) auth.admin.createUser({ email, password: crypto.randomBytes(24), email_confirm: true })
       → new_user_id  (Email-Konflikt cross-Partner → ROLLBACK + 409)
-   c) INSERT INTO profiles (id=new_user_id, tenant_id=new_tenant_id, role='tenant_admin',
-                             first_name=pending.first_name, last_name=pending.last_name)
+   c) profiles-Row wird automatisch vom handle_new_user-Trigger angelegt
+      (id, tenant_id, email, role aus auth.users + user_metadata). first_name/last_name
+      leben in auth.users.raw_user_meta_data (in Schritt b via user_metadata uebergeben) —
+      siehe ISSUE-051 V7-Sektion. KEIN explizites profile-INSERT.
    d) INSERT INTO partner_client_mapping (
         partner_tenant_id=pending.partner_tenant_id,
         client_tenant_id=new_tenant_id,
