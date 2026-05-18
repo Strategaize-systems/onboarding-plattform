@@ -53,9 +53,13 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  // SLC-133 MT-2: 'magiclink' type ergaenzt fuer V7 Self-Signup-Verify-Endpoint.
+  // V6-Pfade ('invite' nach Partner/Mandant-Invite-Mail, 'email' nach Email-
+  // Aenderung) bleiben unveraendert. GoTrue verifyOtp unterstuetzt alle drei
+  // identisch (token_hash + type -> User-Session-Cookie).
   const { error } = await supabase.auth.verifyOtp({
     token_hash: hashToVerify,
-    type: type as "invite" | "email",
+    type: type as "invite" | "email" | "magiclink",
   });
 
   if (error) {
