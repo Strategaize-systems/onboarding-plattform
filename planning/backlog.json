@@ -1055,7 +1055,7 @@
       "title": "V7 SLC-133 Verify-Endpoint + Auto-Tenant-Provisioning + ISSUE-051 + F-1 Side-Fixes (FEAT-053-Kern)",
       "type": "feature",
       "priority": "high",
-      "status": "open",
+      "status": "in_progress",
       "version": "V7",
       "description": "Funktionaler Abschluss V7-Self-Signup-Flow. Auto-Provision Pure-Function src/lib/signup/auto-provision.ts (5-Schritt-Sequenz: auth.admin.createUser ZUERST fuer Konflikt-Detection, dann PostgreSQL-Tx tenant -> profiles -> partner_client_mapping -> pending_signup UPDATE status=verified). Magic-Link-Session-Helper Reuse V6 Accept-Invitation-Pattern. Verify-Endpoint /auth/verify-signup Server-Component mit 4 Branches (invalid_token / expired / already_verified / pending+valid) + 3 Sub-Components (InvalidLinkPage + ExpiredLinkPage + ErrorPage). Redirect /auth/set-password?session=<onetime>. Side-Fix ISSUE-051 (first_name/last_name in profiles fuer Self-Signup korrekt gesetzt, V6-Bestand unbetroffen, Backfill V7.1 optional) + Side-Fix F-1 (actions.ts:242-243 Kommentar-Korrektur). 14 Vitest (7 auto-provision + 6 endpoint + 1 race-condition). 7 MTs ~7.5h ~2d. Reuse: V6 Accept-Invitation-Pattern + auth.admin.createUser-Pattern. Tradeoff: auth.users-Orphan bei PostgreSQL-Tx-Fail nach createUser-Erfolg (V7-akzeptiert, V8+ Outbox-Pattern). Sub-Item von BL-098. SLC-133.",
       "createdAt": "2026-05-18"
