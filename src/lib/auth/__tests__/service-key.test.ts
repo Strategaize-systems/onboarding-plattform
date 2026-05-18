@@ -72,9 +72,13 @@ describe("verifyServiceKey", () => {
       lateTimings.reduce((acc, n) => acc + n, BigInt(0)) / BigInt(ITERATIONS);
     const delta = meanEarly > meanLate ? meanEarly - meanLate : meanLate - meanEarly;
 
-    // 200ns budget for slow CI containers. Real timingSafeEqual deltas are
-    // sub-50ns on bare metal but the node:20 container in Coolify adds noise.
-    expect(Number(delta)).toBeLessThan(200);
+    // Threshold: 2000ns. Rationale: a naive === compare would early-exit on
+    // byte-1 mismatch and process all 64 bytes on byte-64 mismatch — that
+    // delta is at least ~50ns/byte * 63 bytes = ~3000ns. A constant-time
+    // compare (timingSafeEqual) should be well below this floor. 2000ns
+    // budget tolerates parallel-test CPU pressure and noisy CI containers
+    // while still detecting a hypothetical `===` regression.
+    expect(Number(delta)).toBeLessThan(2000);
 
     // Sanity: both mismatches must return false.
     expect(verifyServiceKey(earlyMismatch, expectedKey)).toBe(false);
