@@ -287,6 +287,72 @@ export async function setupExpiredPendingSignup(
 }
 
 /**
+ * Legt einen vollstaendigen "bereits-verifizierten" Mandanten unter dem
+ * gegebenen Partner an: auth.users + profiles + Client-Tenant (tenant_kind
+ * = 'partner_client') + partner_client_mapping (status='accepted').
+ *
+ * Benoetigt fuer Pen-Test Case 5 (Doppel-Signup nach Verify → 409).
+ * Returnt client_tenant_id + auth_user_id zum spaeteren Cleanup.
+ */
+export async function setupVerifiedClientMandant(
+  partner_tenant_id: string,
+  email_lower: string
+): Promise<{ client_tenant_id: string; auth_user_id: string }> {
+  const suffix = randomBytes(4).toString("hex");
+  const lowered = email_lower.toLowerCase();
+  const client = await openTestDbClient();
+  try {
+    // auth.users INSERT (Superuser bypassed Trigger fuer profiles)
+    const userRes = await client.query<{ id: string }>(
+      `INSERT INTO auth.users (instance_id, id, aud, role, email,
+                                encrypted_password, email_confirmed_at,
+                                raw_app_meta_data, raw_user_meta_data,
+                                created_at, updated_at)
+       VALUES ('00000000-0000-0000-0000-000000000000', gen_random_uuid(),
+               'authenticated', 'authenticated', $1,
+               '$2a$10$verifiedmandantpwhashplaceholder0000000000', NOW(),
+               '{}'::jsonb, '{}'::jsonb, NOW(), NOW())
+       RETURNING id`,
+      [lowered]
+    );
+    const auth_user_id = userRes.rows[0].id;
+
+    const tenantRes = await client.query<{ id: string }>(
+      `INSERT INTO tenants (name, language, tenant_kind, parent_partner_tenant_id)
+       VALUES ($1, 'de', 'partner_client', $2)
+       RETURNING id`,
+      [`Pentest Verified Client ${suffix}`, partner_tenant_id]
+    );
+    const client_tenant_id = tenantRes.rows[0].id;
+
+    // Profile-Row (handle_new_user-Trigger laeuft mglw. nicht im pg-Direct-Insert,
+    // also explizit anlegen — falls schon vorhanden, UPDATE).
+    await client.query(
+      `INSERT INTO profiles (id, tenant_id, email, role)
+       VALUES ($1, $2, $3, 'tenant_admin')
+       ON CONFLICT (id) DO UPDATE
+         SET tenant_id = EXCLUDED.tenant_id,
+             email = EXCLUDED.email,
+             role = EXCLUDED.role`,
+      [auth_user_id, client_tenant_id, lowered]
+    );
+
+    await client.query(
+      `INSERT INTO partner_client_mapping
+         (partner_tenant_id, client_tenant_id, invitation_status,
+          invitation_source, accepted_at, dsgvo_consent_text_version,
+          dsgvo_consent_accepted_at)
+       VALUES ($1, $2, 'accepted', 'self_signup', NOW(), 'v1-2026-05', NOW())`,
+      [partner_tenant_id, client_tenant_id]
+    );
+
+    return { client_tenant_id, auth_user_id };
+  } finally {
+    await client.end();
+  }
+}
+
+/**
  * Markiert eine bestehende Pending-Row als `verified` (Doppel-Klick-Test).
  * Caller hat zuvor `setupTestPendingSignup` aufgerufen und besitzt die
  * pending_id.
