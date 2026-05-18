@@ -302,21 +302,8 @@ export async function setupVerifiedClientMandant(
   const lowered = email_lower.toLowerCase();
   const client = await openTestDbClient();
   try {
-    // auth.users INSERT (Superuser bypassed Trigger fuer profiles)
-    const userRes = await client.query<{ id: string }>(
-      `INSERT INTO auth.users (instance_id, id, aud, role, email,
-                                encrypted_password, email_confirmed_at,
-                                raw_app_meta_data, raw_user_meta_data,
-                                created_at, updated_at)
-       VALUES ('00000000-0000-0000-0000-000000000000', gen_random_uuid(),
-               'authenticated', 'authenticated', $1,
-               '$2a$10$verifiedmandantpwhashplaceholder0000000000', NOW(),
-               '{}'::jsonb, '{}'::jsonb, NOW(), NOW())
-       RETURNING id`,
-      [lowered]
-    );
-    const auth_user_id = userRes.rows[0].id;
-
+    // Schritt 1: Client-Tenant zuerst (handle_new_user-Trigger validiert
+    // tenant_id-Existenz im naechsten Schritt).
     const tenantRes = await client.query<{ id: string }>(
       `INSERT INTO tenants (name, language, tenant_kind, parent_partner_tenant_id)
        VALUES ($1, 'de', 'partner_client', $2)
@@ -325,17 +312,28 @@ export async function setupVerifiedClientMandant(
     );
     const client_tenant_id = tenantRes.rows[0].id;
 
-    // Profile-Row (handle_new_user-Trigger laeuft mglw. nicht im pg-Direct-Insert,
-    // also explizit anlegen — falls schon vorhanden, UPDATE).
-    await client.query(
-      `INSERT INTO profiles (id, tenant_id, email, role)
-       VALUES ($1, $2, $3, 'tenant_admin')
-       ON CONFLICT (id) DO UPDATE
-         SET tenant_id = EXCLUDED.tenant_id,
-             email = EXCLUDED.email,
-             role = EXCLUDED.role`,
-      [auth_user_id, client_tenant_id, lowered]
+    // Schritt 2: auth.users mit tenant_id + role im user_metadata —
+    // handle_new_user-Trigger braucht das, sonst RAISE EXCEPTION P0422.
+    // Trigger erzeugt zugleich die profiles-Row.
+    const metaJson = JSON.stringify({
+      tenant_id: client_tenant_id,
+      role: "tenant_admin",
+      first_name: "Pentest",
+      last_name: "Verified",
+    });
+    const userRes = await client.query<{ id: string }>(
+      `INSERT INTO auth.users (instance_id, id, aud, role, email,
+                                encrypted_password, email_confirmed_at,
+                                raw_app_meta_data, raw_user_meta_data,
+                                created_at, updated_at)
+       VALUES ('00000000-0000-0000-0000-000000000000', gen_random_uuid(),
+               'authenticated', 'authenticated', $1,
+               '$2a$10$verifiedmandantpwhashplaceholder0000000000', NOW(),
+               '{}'::jsonb, $2::jsonb, NOW(), NOW())
+       RETURNING id`,
+      [lowered, metaJson]
     );
+    const auth_user_id = userRes.rows[0].id;
 
     await client.query(
       `INSERT INTO partner_client_mapping

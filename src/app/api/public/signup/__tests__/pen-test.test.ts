@@ -85,14 +85,14 @@ function buildRequest(
   });
 }
 
-/** Default-Body fuer einen gueltigen Signup-Request. */
+/** Default-Body fuer einen gueltigen Signup-Request (Schema-Field-Name = partner_slug). */
 function makeBody(
   partner: TestPartner,
   overrides: Partial<Record<string, unknown>> = {}
 ): Record<string, unknown> {
   const email = `${randomBytes(4).toString("hex")}@example.test`;
   return {
-    slug: partner.slug,
+    partner_slug: partner.slug,
     email,
     first_name: "Test",
     last_name: "Pentest",
@@ -191,7 +191,7 @@ describe("V7 SLC-134 MT-2 — POST /api/public/signup Pen-Test (11 Cases)", () =
   // ── Case 4 — Unbekannter Slug → 404 ─────────────────────────────────────
   it("Case 4: validKey + unbekannter Slug → 404 unknown_partner", async () => {
     const req = buildRequest(
-      makeBody(partner, { slug: `nonexistent-${randomBytes(4).toString("hex")}` }),
+      makeBody(partner, { partner_slug: `nonexistent-${randomBytes(4).toString("hex")}` }),
       { serviceKey: keyHandle.key, xff: uniqueIp() }
     );
     const res = await POST(req);

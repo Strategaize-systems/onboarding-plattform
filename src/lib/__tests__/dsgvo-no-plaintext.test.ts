@@ -46,7 +46,7 @@ import {
 
 function makeBody(slug: string, email: string): Record<string, unknown> {
   return {
-    slug,
+    partner_slug: slug,
     email,
     first_name: "Test",
     last_name: "DSGVO",
