@@ -128,3 +128,14 @@ V6.3-Scope (User-Entscheidung 2026-05-16, nach BL-095 RESOLVED via RPT-278): Sin
 | ID | Feature | Status | Spec | Created |
 |----|---------|--------|------|---------|
 | FEAT-045 | Diagnose-Werkzeug Template + Light-Condensation-Pipeline + Bericht-Renderer | deployed | [Spec](FEAT-045-diagnose-werkzeug-template-pipeline-renderer.md) | 2026-05-11 |
+
+## V7 Features (Mandanten-Self-Signup-Backend — Multiplikator-Skalierungs-Hebel)
+
+V7-Scope (User-Entscheidung 2026-05-18 nach V6.4 STABLE-Bestaetigung RPT-295): Backend-Aufnahme-Mechanik fuer Mandanten-Self-Signup via partner-spezifische Landing-Page (gehostet im Intelligence-Plattform-Repo). Pull-Model statt V6-Push-Model. 4 Features umfassen Public-API mit Service-Key-Auth, Slug-Mechanik, Email-Verify mit Auto-Tenant-Provisioning, Pen-Test-Suite-Erweiterung. ISSUE-051 + F-1 als Side-Fixes in FEAT-053 mitgenommen.
+
+| ID | Feature | Status | Spec | Created |
+|----|---------|--------|------|---------|
+| FEAT-051 | Public-Signup-API + Service-Key-Auth + Rate-Limit | planned | [Spec](FEAT-051-public-signup-api-service-key-rate-limit.md) | 2026-05-18 |
+| FEAT-052 | Partner-Slug + Public-Resolve-Endpoint | planned | [Spec](FEAT-052-partner-slug-public-resolve.md) | 2026-05-18 |
+| FEAT-053 | Self-Signup Email-Verify + Auto-Tenant-Provisioning | planned | [Spec](FEAT-053-self-signup-email-verify-auto-provisioning.md) | 2026-05-18 |
+| FEAT-054 | Pen-Test-Suite-Erweiterung Public-Signup-Caller + Anti-Abuse-Verifikation | planned | [Spec](FEAT-054-pen-test-public-signup-anti-abuse.md) | 2026-05-18 |

@@ -1527,3 +1527,123 @@ Internal-Test-Mode (analog V4.3..V5.1) bis Pre-Production-Compliance-Gate. Erste
 ### Detail-Spec
 
 Siehe `/reports/RPT-209.md` fuer vollstaendige V6-Requirements + Feature-Specs unter `/features/FEAT-04X-*.md`.
+
+## V7 — Mandanten-Self-Signup-Backend (Multiplikator-Skalierungs-Hebel)
+
+### Problem Statement (V7)
+
+V6 hat den Multiplikator-Foundation gebaut (Tenant-Hierarchie + Partner-Branding + Diagnose-Werkzeug + Lead-Push) — aber heute kann ein Mandant nur via Partner-Admin-Invite-Pfad auf die Plattform kommen (Push-Model). Jede neue Mandanten-Anmeldung erfordert eine aktive Berater-Initiative: Partner-Admin loggt in `/admin/partners` ein, legt einen Invite an, schickt manuell den Link weiter. Das blockiert Multiplikator-Skalierung mit Solo-Founder-Kapazitaet — 50 Steuerberater-Partner × 10 Mandanten = 500 manuelle Invite-Aktionen.
+
+Die Vision aus MULTIPLIER_MODEL.md ("Strategaize-Diagnose-Werkzeug das der Steuerberater unter seiner Flagge an seine Mandanten weiterreicht", "Self-Service-First, Berater-Loop als angebotene Option") ist heute UI-seitig nicht abgedeckt: Es gibt keine partner-spezifische Landing-Page, keinen anonymen Signup-Pfad, keine Cross-System-API.
+
+V7 baut die **Backend-Aufnahme-Mechanik** dafuer. Die Landing-Page selbst (Pitch-Content, Co-Branding-Render) lebt im Intelligence-Plattform-Repo (`strategaize-intelligence-studio`) — V7-Onboarding-Plattform liefert nur die API, die die Landing-Page aufruft.
+
+### Goal / Intended Outcome (V7)
+
+Partner-Kanzleien koennen Mandanten via Landing-Page-URL (`intelligence.strategaize.com/p/<partner-slug>`) selbst-onboarden lassen. Mandant fuellt das Signup-Formular aus (Email + Name + DSGVO-Consent) → bekommt Bestaetigungs-Mail → Klick auf Verify-Link provisioniert automatisch einen `partner_client`-Tenant unter dem richtigen Partner-Tenant → Mandant landet direkt im Diagnose-Werkzeug (FEAT-045, V6.3 live). Lead-Push (FEAT-046, V6 live) funktioniert nachgelagert unveraendert.
+
+Erwartung: Berater muss nur 1× pro Mandant einen Link schicken (oder gar via Mass-Outreach in seinem CRM), Strategaize uebernimmt den Rest der Aufnahme.
+
+### Target Users (V7)
+
+- **Primaer: Mandant (End-User)** — Selbst-Onboarding via Landing-Page. Erwartet einfachen Signup (Email + Name + Consent) und sofortigen Diagnose-Werkzeug-Einstieg nach Verify-Klick.
+- **Indirekt: Partner-Admin** — Bekommt neue Mandanten in seinem Cockpit ohne aktive Invite-Pflicht. Sieht Self-Signup-Eintraege im `partner_client_mapping` mit `invitation_source='self_signup'` (V7-Spalte) als Abgrenzung zu V6 `partner_invite`.
+- **Caller: Intelligence-Plattform-API** (externer Service) — Authentifiziert via Service-Key (`x-strategaize-service-key`), reicht Signup-Aufrufe von Browser-Side der Landing-Page durch.
+- **strategaize_admin** — Sieht Self-Signup-Statistik in Admin-Sicht (V7 Backend-Daten, Dashboard-Tile als V7.1/V8).
+
+### V7 In Scope
+
+1. **Public-API Endpoint `POST /api/public/signup`** mit Service-Key-Auth via `x-strategaize-service-key` Header. Body: `{ partner_slug, email, first_name, last_name, company_name?, dsgvo_consent_accepted, dsgvo_consent_text_version }`. Response 202 mit `expires_at` oder strukturierter Error-Code. FEAT-051.
+2. **Public-Resolve-Endpoint `GET /api/public/partner/:slug`** ohne Auth fuer Landing-Page-Render. Response 200 mit `display_name`, `logo_url`, `accent_color`, `has_active_diagnostic_template`. Light Rate-Limit (60/h/IP). FEAT-052.
+3. **Partner-Slug-Mechanik**: Migration 097 fuegt `partner_organization.slug` UNIQUE hinzu + Backfill aller existierenden Partner. Slug-Generator mit Umlaut-Transliteration + Kollisions-Suffix. Reserve-Liste fuer System-Slugs. FEAT-052.
+4. **Email-Verify-Mechanik**: Migration 098 legt `pending_signup`-Tabelle an. POST signup erzeugt Row + sendet Verify-Mail (Strategaize-Brand, deutsch, IONOS-DKIM). Klartext-Token NIE persistiert, nur SHA-256-Hash. 24h TTL, hourly Cleanup-Cron. FEAT-053.
+5. **Auto-Tenant-Provisioning**: Verify-Endpoint-Klick triggert transactional Anlage `tenant` (kind=`partner_client`) + `auth.users` + `profiles` (mit `first_name`/`last_name` aus Payload) + `partner_client_mapping` (status=`accepted`, source=`self_signup`). Migration 098 erweitert `partner_client_mapping` um `invitation_source` + DSGVO-Consent-Spalten. FEAT-053.
+6. **Anti-Abuse V1**: 3 Signups/h/IP, Email-Domain-Block-Liste statisch in ENV, kein Captcha. Service-Key-Compare timing-safe. Audit-Log nur mit Email-Hash + IP-Hash (DSGVO). FEAT-051.
+7. **Pen-Test-Suite-Erweiterung**: Neuer Akteur `unauthenticated_public_signup_caller` mit 4 Sub-Varianten (noKey / wrongKey / validKey / rate_limited). Min. 18 Test-Cases gegen Coolify-DB. FEAT-054.
+8. **ISSUE-051 Side-Fix**: Auto-Provisioning setzt `profiles.first_name`/`last_name` korrekt → Lead-Push-Payload (FEAT-046) liefert echten Namen statt Email-Local-Part. Existierende V6-Daten bleiben unbetroffen (Backfill optional in V7.1).
+9. **F-1 Side-Fix**: 1-Zeilen-Kommentar-Korrektur in `src/app/dashboard/diagnose/actions.ts:242-243` (kein eigener Slice, mitgenommen in FEAT-053-Backend-Touch).
+
+### V7 Out of Scope
+
+- **Landing-Page-UI** — lebt im Intelligence-Plattform-Repo, nicht hier. V7-Onboarding-Plattform liefert nur Backend-API.
+- **Multi-Sprach-Variante** der Signup-Mail oder Error-Bodies (V8+, NL-Markt).
+- **Partner-konfigurierbarer Pitch-Inhalt** (V7 Strategaize-zentral konfiguriert).
+- **Partner-Approve-Workflow** (Mandant signupt → Partner muss freischalten). V7 = auto-accept. V8+ als optionaler Partner-Tier-Feature.
+- **Konkurrenz-Schutz** (Steuerberater A linkt auf Landing-Page B). V7 vertraut auf Anti-Abuse-Defaults + Email-Verify.
+- **Captcha-Integration** (hCaptcha/Turnstile). V7 ohne — Rate-Limit + Email-Verify reichen fuer Internal-Test-Mode-Risikoprofil. Bei Spam-Welle: V7.1-Followup.
+- **DSGVO-Consent-Versionierung** als eigene Tabelle. V7 speichert nur `_version`-String + Timestamp am `partner_client_mapping`. Audit-Tabelle V8+.
+- **Self-Signup-Statistik-Dashboard** fuer Partner-Admin. V7 nur Daten in DB. Dashboard-Tile V8+.
+- **Webhook-Notification an Partner-Admin** (Mail bei neuem Self-Signup). V8+.
+- **Re-Send-Verify-Mail-Button** auf Pending-Page. V7 hat fixed 24h Expiry. V8+ UX-Erweiterung.
+- **Subdomain-Mapping pro Partner** (`<slug>.partner.strategaize.de`). V7+ Backlog-Kandidat.
+- **Backfill `first_name`/`last_name` fuer V6-Bestands-Mandanten**. V7.1 Optional-Polish — ISSUE-051 betrifft V6-Daten weiter.
+
+### Core Features (V7 — Detail siehe `/features/FEAT-05X-*.md`)
+
+- **FEAT-051** Public-Signup-API + Service-Key-Auth + Rate-Limit
+- **FEAT-052** Partner-Slug + Public-Resolve-Endpoint
+- **FEAT-053** Self-Signup Email-Verify + Auto-Tenant-Provisioning (inkl. ISSUE-051-Resolution + F-1-Cleanup)
+- **FEAT-054** Pen-Test-Suite-Erweiterung Public-Signup-Caller + Anti-Abuse-Verifikation
+
+### Constraints (V7)
+
+- **No new external dependencies** — Reuse vorhandener Libs (rate-limit.ts In-Memory, github-slugger fuer Slug, IONOS-SMTP-Adapter, supabase-server-client).
+- **DSGVO-Konformitaet** — Consent-Akzeptanz dokumentiert in `partner_client_mapping` inkl. Versions-String + Timestamp. Audit-Log nur Hash, kein Klartext-PII.
+- **EU-Region** — Daten bleiben in Hetzner-DB Frankfurt. Email-Versand via bestehender SMTP-Adapter (IONOS DKIM in V4.2 verifiziert).
+- **Cross-System-Sicherheit** — Service-Key wird NUR in Intelligence-Plattform-ENV gespeichert und NIE im Browser exposed (Server-Side-Call-only von IS-API-Route an Onboarding-Plattform). Timing-safe-Compare-Pflicht.
+- **Reuse-Pflicht (strategaize-pattern-reuse Rule)** — `partner_organization`-Schema aus Migration 090 bleibt unveraendert (nur Slug-Spalte hinzu), `rate-limit.ts` wird wiederverwendet, V6 Accept-Invitation-Pattern wird als Vorlage adaptiert, V6 SMTP-Adapter wird wiederverwendet. Kein Re-Build existierender Mechaniken.
+- **Reihenfolge-Klausel** — V7 darf erst nach V6.3 (Diagnose-Werkzeug live) gehen. V6.3 ist live seit 2026-05-17, V6.4 STABLE bestaetigt 2026-05-18 (RPT-295) → V7-Start ist freigegeben.
+- **Internal-Test-Mode bleibt bis Pre-Production-Compliance-Gate (BL-104 Anwalts-Review)** — V7 RELEASED-Marker = Internal-Test-Mode-Release-Marker. Kein echter Public-Live-Pilot vor Anwalts-OK (User-Pflicht extern, parallel zu V7-Code-Arbeit).
+
+### Risks / Assumptions (V7)
+
+#### Risiken
+- **Spam-Welle ohne Captcha**: Spammer mit IP-Rotation koennten viele Pending-Tenants erzeugen. Mitigation: 24h TTL + Hourly-Cleanup-Cron + Domain-Block-Liste. Bei realer Welle: V7.1 Captcha-Followup.
+- **Email-Verify-Mail wird als Spam markiert**: IONOS-DKIM laeuft seit V4.2, aber Verify-Mail-Volumen kann auffallen. Mitigation: Monitor erste 20 Signups, ggf. Email-Service-Wechsel zu Resend/SES in V8+.
+- **Race-Condition Doppel-Klick auf Verify-Link**: Mandant klickt 2x schnell hintereinander → Doppel-Provisioning. Mitigation: DB-Transaction + `pending_signup.status='verified'`-Lock + UNIQUE-Constraint auf `(partner_tenant_id, email_lower)`.
+- **Partner-Slug-Kollision bei Backfill**: Zwei Partner mit gleichem `display_name`. Mitigation: Slug-Generator mit `-2`/`-3`-Suffix, Backfill idempotent.
+- **Service-Key-Leakage in Intelligence-Plattform-ENV**: Wenn IS-Container kompromittiert ist, kann Angreifer beliebige Signups triggern. Mitigation: Service-Key-Rotation alle 6 Monate (DEC-Eintrag in /architecture), Audit-Log aller Aufrufe.
+
+#### Annahmen
+- Intelligence-Plattform-Repo (`strategaize-intelligence-studio`) existiert oder wird parallel aufgesetzt. Landing-Page-UI ist V7-Onboarding-Plattform-Out-of-Scope.
+- IONOS-SMTP-Adapter (V4.2 Reminders Reuse) ist einsatzbereit.
+- `partner_organization`-Tenant-Beziehung ist via Migration 090 (V6) korrekt aufgesetzt. Self-Signup nutzt nur existierende `parent_partner_tenant_id`-FK.
+- V6.3 Diagnose-Werkzeug (FEAT-045) ist live und kann von neuen Mandanten ohne Wizard-Block aufgerufen werden.
+
+### Success Criteria (V7)
+
+- **SC-V7-1**: Simulierter Cross-System-Self-Signup-Flow (POST signup mit gueltigem Service-Key + valider Slug + neuer Email) liefert 202 + Verify-Mail wird gesendet + Verify-Klick provisioniert korrekt `partner_client`-Tenant + tenant_admin-User.
+- **SC-V7-2**: Pen-Test-Suite-Erweiterung deckt min. 18 Negativ-Faelle ab (kein Key / falscher Key / unknown Slug / Reserve-Slug / Rate-Limit / Doppel-Email / Validation / Domain-Block / expired Token / Token-Replay / Race-Condition). Alle PASS.
+- **SC-V7-3**: Mandant kann unmittelbar nach Verify-Klick + Set-Password den Diagnose-Werkzeug-Flow starten (FEAT-045-Reuse, kein Onboarding-Wizard-Block).
+- **SC-V7-4**: Lead-Push-Payload (FEAT-046) enthaelt korrekten `first_name` + `last_name` fuer Self-Signup-Mandanten (ISSUE-051 fuer Self-Signup-Path resolved).
+- **SC-V7-5**: Coolify-DB-Smoke nach Deploy: Migration 097 + 098 sauber appliziert (Slug-UNIQUE, pending_signup-Tabelle, partner_client_mapping-Spalten).
+- **SC-V7-6**: Live-Smoke gegen Hetzner: rate-limit haelt 4. Signup-Versuch innerhalb 1h ab (429), 25h spaeter wieder durch.
+- **SC-V7-7**: Audit-Log enthaelt KEIN Klartext-Email + KEIN Klartext-IP (DSGVO-Datensparsamkeit) — verifiziert via Pen-Test AC.
+
+### Open Questions (V7)
+
+- **Q-V7-A**: Email-Verify-Token-Mechanik — Custom `pending_signup`-Tabelle (Option A, in FEAT-053 vorgeschlagen) oder GoTrue-`generateLink({type:'signup'})`-Reuse (Option C)? Tradeoff: A = volle Kontrolle, keine `auth.users`-Polution bei Spam, mehr Code; C = bestehende GoTrue-Mechanik, weniger Code, aber bei Spam-Welle wachsen `auth.users` ungebremst. Empfehlung Option A. Entscheidung in /architecture V7.
+- **Q-V7-B**: Partner-Slug-Backfill — Automatisch fuer existierende Partner (Internal-Test-Mode ~2-3 Partner-Tenants) oder Strategaize-Admin manuell bestaetigen? Empfehlung: Auto-Slug bei Backfill idempotent. Entscheidung in /architecture V7.
+- **Q-V7-C**: TTL fuer Pending-Signups — 24h, 48h, oder 7 Tage? Empfehlung: 24h + optionale Reminder-Mail nach 4h. Entscheidung in /architecture mit Cron-Plan.
+- **Q-V7-D**: Rate-Limit-Persistenz — In-Memory reicht fuer V7 (1-Container) oder DB-basiert (Multi-Replica-zukunftssicher)? Empfehlung: In-Memory. Entscheidung in /architecture.
+- **Q-V7-E**: Verify-Link Domain — `onboarding.strategaizetransition.com/auth/verify-signup?token=...` oder partner-spezifische Subdomain? Empfehlung: Strategaize-zentral (Partner-Co-Branding erst nach Login sichtbar). Entscheidung in /architecture.
+- **Q-V7-F**: Email-Sender-Adresse — `noreply@strategaize.de`, `onboarding@strategaize.de`, oder reply-to: partner_contact_email? Empfehlung: `onboarding@strategaize.de` als From + `reply-to: <partner_contact_email>` als Co-Branding-Hint. Entscheidung in /architecture.
+- **Q-V7-G**: Idempotenz bei doppeltem Signup mit gleicher Email + gleichem Partner (Pending oder schon verifiziert) — strikter 409 oder idempotenter 202 (Re-Send-Mail)? Tradeoff: 409 = klare Semantik, kein Re-Send fuer vergessene Mail; 202-Idempotent = freundlicher, aber Spam-Vektor. Empfehlung: 409 mit User-friendly-Error "Bitte Inbox pruefen oder in 24h erneut versuchen". Entscheidung in /architecture.
+
+### Delivery Mode (V7)
+
+**SaaS Product** (konsistent V6/V6.1/V6.2/V6.3/V6.4). Stronger QA + TDD-mandatory fuer Business-Logic (Auto-Provisioning-Transaktion, Service-Key-Auth, Rate-Limit, Token-Hash-Compare). Pen-Test-Suite-Erweiterung Pflicht. Internal-Test-Mode bis Pre-Production-Compliance-Gate (BL-104 Anwalts-Review extern).
+
+### Slice-Skizze (informativ, finaler Schnitt in /slice-planning)
+
+- **SLC-131** Migration 097 + Slug-Generator + Public-Resolve-Endpoint (FEAT-052) ~1d
+- **SLC-132** Migration 098 + Public-Signup-API + Service-Key-Auth + Rate-Limit (FEAT-051) ~1.5d
+- **SLC-133** Verify-Endpoint + Auto-Tenant-Provisioning + Email-Template + ISSUE-051 Fix + F-1 Fix (FEAT-053) ~2d
+- **SLC-134** Pen-Test-Suite-Erweiterung + Coolify-Test-Setup (FEAT-054) ~1d
+- **SLC-135** TTL-Cleanup-Cron + Final-Hardening + Live-Smoke (FEAT-053 Operational) ~0.5d
+
+Geschaetzt ~3-5 Code-Side-Tage + Pen-Test-Lauf + Live-Smoke + /post-launch. Architecture-Open-Questions Q-V7-A..G in /architecture V7 entscheiden.
+
+### Detail-Spec
+
+Siehe `/reports/RPT-296.md` fuer V7-Requirements-Completion-Report + Feature-Specs unter `/features/FEAT-05X-*.md`.
