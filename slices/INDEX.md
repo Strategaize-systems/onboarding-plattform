@@ -631,4 +631,92 @@ Single-Slice-Release: SLC-130 mit 5 strikt sequenziellen MTs.
 | MT-5 Quality-Gates + Records | ~30min |
 | **Total Slice** | **~3h** |
 
+## V7 Slices (Mandanten-Self-Signup-Backend — Multiplikator-Skalierungs-Hebel)
+
+V7-Scope: 5 Slices als Pull-Model-Foundation fuer Self-Service-Onboarding ueber partner-spezifische Landing-Pages (gehostet im Intelligence-Plattform-Repo). 4 Features (FEAT-051..054), 2 Migrations (097 partner_organization.slug + Backfill, 098 pending_signup + partner_client_mapping-Extension). Reuse-Quote ~50% (DEC-107 Service-Key-Pattern, rate-limit.ts, V6 Accept-Invitation-Pattern, V4.2 SMTP-Adapter, V6 Pen-Test-Architektur). Geschaetzt ~5 Code-Side-Tage + Pen-Test + Live-Smoke. Architektur: RPT-297 (`/architecture` done 2026-05-18), DEC-129..138.
+
+| ID | Slice | Feature | Status | Priority | Created |
+|----|-------|---------|--------|----------|---------|
+| SLC-131 | [Partner-Slug Foundation + Public-Resolve-Endpoint](SLC-131-partner-slug-foundation-public-resolve.md) | FEAT-052 | planned | High | 2026-05-18 |
+| SLC-132 | [Public-Signup-API + Service-Key + Pending-Storage](SLC-132-public-signup-api-service-key-pending-storage.md) | FEAT-051 + FEAT-053 | planned | High | 2026-05-18 |
+| SLC-133 | [Verify-Endpoint + Auto-Provisioning + Side-Fixes (ISSUE-051 + F-1)](SLC-133-verify-endpoint-auto-provisioning-side-fixes.md) | FEAT-053 | planned | High | 2026-05-18 |
+| SLC-134 | [Pen-Test-Suite-Erweiterung Public-Signup-Caller](SLC-134-pen-test-suite-public-signup-caller.md) | FEAT-054 | planned | High | 2026-05-18 |
+| SLC-135 | [TTL-Cleanup-Cron + Final-Hardening + Live-Smoke-Plan](SLC-135-ttl-cleanup-cron-final-hardening-live-smoke.md) | FEAT-053 Op | planned | Medium | 2026-05-18 |
+
+### V7 Execution Order
+
+**Strikte Reihenfolge: SLC-131 → SLC-132 → SLC-133 → SLC-134 → SLC-135.** Keine Parallelisierung zwischen Slices.
+
+- **SLC-131 (Partner-Slug Foundation, 7 MTs, ~1d):** Migration 097 (slug-Spalte + Auto-Backfill + UNIQUE-Index) + `src/lib/partner/slug.ts` Generator + `src/lib/partner/reserved-slugs.ts` + `createPartnerOrganization`-Erweiterung + Public-Resolve-Endpoint `GET /api/public/partner/[slug]/route.ts` + `partnerResolveLimiter` 60/h. Pre-Condition fuer SLC-132 (Slug-Lookup ist Signup-Pre-Condition).
+- **SLC-132 (Public-Signup-API + Pending-Storage, 8 MTs, ~1.5d):** Migration 098 (pending_signup-Tabelle + partner_client_mapping-Extension) + Service-Key-Verifier `src/lib/auth/service-key.ts` (timing-safe-equal + Statistical-Test) + `signupLimiter` 3/h + Pending-Repo + Email-Template render-Helper + Public-Signup-Endpoint `POST /api/public/signup`. Pre-Condition fuer SLC-133 (pending_signup-Rows existieren).
+- **SLC-133 (Verify-Endpoint + Auto-Provisioning + Side-Fixes, 7 MTs, ~2d):** Auto-Provision Pure-Function `src/lib/signup/auto-provision.ts` (transactional 5-Schritt-Sequenz mit auth.admin.createUser ZUERST) + Magic-Link-Session-Helper + Verify-Endpoint Page `/auth/verify-signup` (4 Branches invalid/expired/already_verified/pending+valid) + ISSUE-051 Resolution (first_name/last_name in profiles) + F-1 Side-Fix (actions.ts:242-243 Kommentar). Pre-Condition fuer SLC-134 (alle 3 Endpoints testbar).
+- **SLC-134 (Pen-Test-Suite-Erweiterung, 8 MTs, ~1d):** Neuer Akteur `unauthenticated_public_signup_caller` mit 4 Sub-Varianten + 18 Test-Cases (11 POST signup + 3 GET partner + 4 GET verify) + Service-Key-Timing-Safe-Statistical-Test (1000 Iter, Random-Seed fix) + DSGVO-Compliance-Test (Negativ-Probe) + Pen-Test-Report `RPT-300-v7-pen-test.md`. BLOCKING fuer /qa V7.
+- **SLC-135 (TTL-Cleanup-Cron + Final-Hardening, 6 MTs, ~0.5d):** Cleanup-Endpoint `/api/cron/pending-signup-cleanup` (UPDATE expired + DELETE > 7-Tage + Audit-Log) + Coolify-Scheduled-Task-Setup `pending-signup-cleanup-hourly` (User-Pflicht) + ENV-Setup PUBLIC_SIGNUP_SERVICE_KEY + PUBLIC_SIGNUP_BLOCKED_EMAIL_DOMAINS (User-Pflicht, BEIDE Coolify-Resources Onboarding + IS) + IONOS-Postfach-Check `onboarding@strategaize.de` (User-Pflicht) + Live-Smoke-Plan dokumentiert in `docs/V7_LIVE_SMOKE_PLAN.md`. Pre-Condition fuer /qa V7 Gesamt-Pass.
+
+### V7 Pflicht-Gates
+
+- **SC-V7-1:** Migration 097 idempotent + Live + alle Bestand-Partner haben Slug.
+- **SC-V7-2:** Migration 098 idempotent + Live + pending_signup-Schema 12 Spalten + 3 Indices + mapping-Extension.
+- **SC-V7-3:** Service-Key-Compare ist timing-safe (Statistical-Test PASS, Bound 200ns).
+- **SC-V7-4:** Audit-Log fuer alle 3 Endpoints enthaelt nur SHA-256-Hashes, kein Klartext-PII (DSGVO-Compliance-Test PASS, Negativ-Probe detektiert).
+- **SC-V7-5:** Pen-Test-Suite 18/18 Cases PASS gegen Coolify-DB im node:20-Container.
+- **SC-V7-6:** Live-Smoke 13-Schritt-Plan dokumentiert + ENV-Setup + IONOS-Postfach pre-Deploy verifiziert.
+- **SC-V7-7:** Code-Quality-Gates pro Slice: ESLint 0/0 + tsc EXIT=0 + Build PASS + Vitest 0 Regression + npm audit 0 neue Findings.
+
+### V7 Out-of-Scope (deferred V7.1 / V8+)
+
+- **Optionale 4h-Reminder-Mail** (Teil von DEC-131) → V7.1 Optional-Polish.
+- **Captcha-Integration** → V7.1-Sprint (DEC-137 Trigger-Schwelle > 50 Pending/24h ohne Verify).
+- **Backfill V6-Bestands-Mandanten first_name/last_name** (ISSUE-051 fuer V6-Daten) → V7.1 Optional.
+- **Re-Send-Verify-Mail-Button** auf Pending-Page → V8+ UX-Erweiterung.
+- **Webhook-Notification an Partner-Admin** bei neuem Signup → V8+.
+- **Partner-Approve-Workflow** → V8+ (V7 Auto-Accept).
+- **Multi-Sprach-Variante** (NL/EN) der Verify-Pages + Email-Templates → V8+.
+- **Custom Magic-Link-Domain pro Partner** + Sub-Domain-Mapping → V7+ Backlog.
+- **Service-Key-Rotation-UI** → V8+ (V7 manuell-koordiniert per DEC-136).
+- **Dual-Key-Support** fuer Zero-Downtime-Rotation → V8+.
+- **DB-basiertes Rate-Limit** fuer Multi-Replica-Setup → V8+.
+- **DSGVO-Consent-Versionierung als eigene Tabelle** → V8+ Audit-Tabelle.
+- **Auth-Tx-Rollback-Mechanik** fuer auth.users-Cleanup bei PostgreSQL-Fail → V8+ (V7-Tradeoff akzeptiert).
+- **Self-Signup-Statistik-Dashboard** fuer Partner-Admin → V8+.
+- **Subdomain-Mapping** pro Partner → V7+ Backlog.
+
+### V7 Pre-Conditions
+
+- V6.4 STABLE (erfuellt — RPT-295 2026-05-18).
+- Coolify-Postgres-Container erreichbar via `docker ps --format '{{.Names}}' | grep ^supabase-db`.
+- IONOS-SMTP-Adapter funktional (V4.2 verifiziert).
+- `src/lib/rate-limit.ts` aus V4.2 verfuegbar (additive V7-Erweiterung).
+- V6 Accept-Invitation-Pattern als Vorlage fuer Auto-Provisioning verfuegbar.
+- TEST_DATABASE_URL gegen Coolify-DB konfigurierbar.
+- CRON_SECRET ENV-Variable existing in Coolify (V4.2-Setup).
+
+### V7 Stop-Gates
+
+- **Keine V7-Aktivierung im IS-Repo** (Intelligence-Plattform) vor SLC-135 LIVE + Pen-Test PASS + Live-Smoke PASS.
+- **Keine parallele Schema-Aenderung an `partner_organization` oder `partner_client_mapping`** waehrend SLC-131 / SLC-132 (Migration-Lock-Effekt).
+- **Pre-Production-Compliance-Gate (BL-104 Anwalts-Review)** bleibt User-Pflicht extern — blockiert ersten echten Live-Pilot-Partner, NICHT V7-Internal-Test-Mode-Code-Arbeit. Parallel laufend zu V7.
+
+### V7 Slice-Aufwand-Schaetzung
+
+| Slice | MTs | geschaetzte Dauer (Solo-Founder 2-3h/Tag) |
+|---|---|---|
+| SLC-131 | 7 | ~1d (~5h reine Implementation) |
+| SLC-132 | 8 | ~1.5d (~10h, Service-Key-Statistical-Test + Endpoint-Vitest-Suite zeitintensiv) |
+| SLC-133 | 7 | ~2d (~7.5h, Auto-Provision Transactional-Komplexitaet + Race-Test) |
+| SLC-134 | 8 | ~1d (~9h, 18 Pen-Test-Cases + Statistical + DSGVO + Report) |
+| SLC-135 | 6 | ~0.5d (~3.5h Agent + ~30min User-Pflicht-Actions) |
+| **Total V7** | **36 MTs** | **~5 Code-Side-Tage + Pen-Test-Lauf + Live-Smoke + /post-launch** |
+
+### V7 Pflicht-Vorbereitungs-Backlog (parallel zum Code-Bau, kein Skill-Block)
+
+- **BL-098 V7-Self-Signup-Umbrella**: Status `in_progress`, version `V7`. Wird auf `done` gesetzt nach SLC-135 abgeschlossen + /deploy V7.
+- **BL-106..BL-110 V7-Sub-Slices**: pro Slice ein eigenes Backlog-Item, sequenziell `open → in_progress → done` waehrend Slice-Lifecycle.
+- **BL-104 Pre-Production-Compliance-Gate (Anwalts-Review)** bleibt offen — User-Pflicht extern. Blockiert ersten echten Live-Pilot-Partner.
+- **ISSUE-073 NL-BTW-Nummer-Lieferung** bleibt offen — User-Pflicht extern. Coolify-ENV-Update bei Lieferung (~2min, 0 Code-Touch).
+
+### V7 Cross-System-Abhaengigkeit (NICHT V7-Onboarding-Block)
+
+**Intelligence-Plattform-Repo (`strategaize-intelligence-studio`):** muss V7-Landing-Page-UI + Server-Side-Caller bauen. V7-Onboarding-Plattform kann unabhaengig deployen — IS-Repo kann nachgelagert bauen, dann ist Self-Signup-Funnel live. User-Koordinations-Punkt, kein V7-Onboarding-Code-Block.
+
 Plus **~30min Live-Smoke** nach Coolify-Redeploy (User-Pflicht-Aktion).

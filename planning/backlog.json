@@ -1029,6 +1029,56 @@
       "version": "V6.4",
       "description": "Polish-Slice fuer das Diagnose-Werkzeug-Template-System. Heutige Constraint UNIQUE(slug) erlaubt nur eine aktive Version pro Slug — Update via ON CONFLICT (slug) DO UPDATE ueberschreibt die existierende Row. Konsequenz: alte Diagnose-Berichte zeigen nach einem Template-Update die NEUEN Block-Titel und Block-Intro-Texte, weil bericht/page.tsx aus dem aktuellen template.blocks rendert. KU.body und KU.metadata.score bleiben unveraendert (sind persistiert), aber die umrahmenden Texte aendern sich. Fuer Internal-Test-Mode + Smoke-Tests akzeptabel; vor erstem echten Live-Pilot-Partner (BL-104) noch akzeptabel weil keine echten Mandanten-Berichte existieren; SPAETESTENS vor Self-Signup-Funnel (V7 BL-098) sollte echte Versionierung stehen, damit Steuerberater alten Mandanten-Bericht 6 Monate spaeter mit Original-Texten oeffnen kann (Vertrauens-Asset). Umfang: (1) ALTER TABLE template DROP CONSTRAINT template_slug_key, (2) CREATE UNIQUE INDEX template_slug_version_unique ON template(slug, version), (3) src/app/dashboard/diagnose/start/page.tsx Template-Lookup auf 'WHERE slug=... ORDER BY created_at DESC LIMIT 1' (neueste Version fuer neue Sessions), (4) src/app/dashboard/diagnose/[id]/bericht/page.tsx Template-Lookup ueber session.template_id direkt (jede Session referenziert eigene Version), (5) Migrations-Pattern in docs/DIAGNOSE_TEMPLATE_EDITING.md von ON CONFLICT(slug) auf ON CONFLICT(slug, version) umstellen. Aufwand: ~2-3h Backend + ~1h Vitest + ~30min Live-Smoke gegen alte+neue Sessions. Pre-Condition: keine. Stop-Gate: keine. Verweis: docs/DIAGNOSE_TEMPLATE_EDITING.md Sektion V6.4-Polish-Slice fuer echte Versionierung.",
       "createdAt": "2026-05-17"
+    },
+    {
+      "id": "BL-106",
+      "title": "V7 SLC-131 Partner-Slug Foundation + Public-Resolve-Endpoint (FEAT-052)",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V7",
+      "description": "Fundament fuer V7-Self-Signup-Funnel. Migration 097 (partner_organization.slug NOT NULL UNIQUE + Auto-Backfill DO-Block mit Umlaut-Translit + Suffix-Resolver) + Live-Apply auf Hetzner. Reserve-Slugs-Liste (admin/api/p/etc.). Slug-Generator src/lib/partner/slug.ts (Umlaut-Transliteration ae/oe/ue/ss, max 60 chars, Kollisions-Suffix). createPartnerOrganization-Erweiterung um Auto-Slug. Public-Resolve-Endpoint GET /api/public/partner/[slug]/route.ts (anonymer Browser-fetch, Reserve-Pre-Check + Rate-Limit 60/h + Cache-Header 1min). partnerResolveLimiter + extractClientIp Helper additive in src/lib/rate-limit.ts. 14 Vitest (9 Slug-Gen + 5 Endpoint). 7 MTs ~5h ~1d. Reuse: github-slugger via src/lib/handbook/slugify.ts + V4.2 In-Memory-Limiter. Pre-Condition fuer SLC-132. Sub-Item von BL-098 (V7-Umbrella). SLC-131.",
+      "createdAt": "2026-05-18"
+    },
+    {
+      "id": "BL-107",
+      "title": "V7 SLC-132 Public-Signup-API + Service-Key-Auth + Rate-Limit + Pending-Storage (FEAT-051 + FEAT-053-Storage)",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V7",
+      "description": "Kern-Schnittstelle V7-Self-Signup-Flow. Migration 098 (pending_signup-Tabelle 12 Spalten + 3 Indices + RLS default-deny + partner_client_mapping-Extension invitation_source CHECK partner_invite|self_signup + dsgvo_consent_text_version + dsgvo_consent_accepted_at) + Live-Apply auf Hetzner. Service-Key-Verifier src/lib/auth/service-key.ts (timing-safe-equal aus node:crypto + Statistical-Test 1000 Iter). signupLimiter 3/h additive in src/lib/rate-limit.ts. Pending-Signup-Repo (insertPendingSignup + findActivePendingSignup + findPendingByTokenHash). Email-Template renderSignupVerifyTemplate als render-Helper in src/lib/email.ts (per RPT-297 P-1 Empfehlung, kein Subfolder-Refactor). Public-Signup-Endpoint POST /api/public/signup mit 13-Schritt-Pipeline (Service-Key -> Rate-Limit -> zod -> Domain-Block -> Slug-Resolve -> Doppel-Check -> Token-Hash -> Pending-Insert -> Email-Send -> Audit-Log -> 202). 24 Vitest (6 Service-Key + 6 Repo + 12 Endpoint). 8 MTs ~10h ~1.5d. Reuse: DEC-107 Service-Key-Compare + V4.2 SMTP + V6 error_log Audit-Pattern. Sub-Item von BL-098. SLC-132.",
+      "createdAt": "2026-05-18"
+    },
+    {
+      "id": "BL-108",
+      "title": "V7 SLC-133 Verify-Endpoint + Auto-Tenant-Provisioning + ISSUE-051 + F-1 Side-Fixes (FEAT-053-Kern)",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V7",
+      "description": "Funktionaler Abschluss V7-Self-Signup-Flow. Auto-Provision Pure-Function src/lib/signup/auto-provision.ts (5-Schritt-Sequenz: auth.admin.createUser ZUERST fuer Konflikt-Detection, dann PostgreSQL-Tx tenant -> profiles -> partner_client_mapping -> pending_signup UPDATE status=verified). Magic-Link-Session-Helper Reuse V6 Accept-Invitation-Pattern. Verify-Endpoint /auth/verify-signup Server-Component mit 4 Branches (invalid_token / expired / already_verified / pending+valid) + 3 Sub-Components (InvalidLinkPage + ExpiredLinkPage + ErrorPage). Redirect /auth/set-password?session=<onetime>. Side-Fix ISSUE-051 (first_name/last_name in profiles fuer Self-Signup korrekt gesetzt, V6-Bestand unbetroffen, Backfill V7.1 optional) + Side-Fix F-1 (actions.ts:242-243 Kommentar-Korrektur). 14 Vitest (7 auto-provision + 6 endpoint + 1 race-condition). 7 MTs ~7.5h ~2d. Reuse: V6 Accept-Invitation-Pattern + auth.admin.createUser-Pattern. Tradeoff: auth.users-Orphan bei PostgreSQL-Tx-Fail nach createUser-Erfolg (V7-akzeptiert, V8+ Outbox-Pattern). Sub-Item von BL-098. SLC-133.",
+      "createdAt": "2026-05-18"
+    },
+    {
+      "id": "BL-109",
+      "title": "V7 SLC-134 Pen-Test-Suite-Erweiterung Public-Signup-Caller + Anti-Abuse-Verifikation (FEAT-054)",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V7",
+      "description": "Systematische Anti-Abuse-Verifikation V7. Neuer Pen-Test-Akteur unauthenticated_public_signup_caller mit 4 Sub-Varianten (noKey, wrongKey, validKey, validKey+rate_limited). 18 Test-Cases gegen alle 3 V7-Public-Endpoints (11 POST signup + 3 GET partner + 4 GET verify) + Service-Key-Timing-Safe-Statistical-Test (1000 Iter, Random-Seed fix via vi.stubGlobal, Bound 200ns) + DSGVO-Compliance-Test mit Negativ-Probe (Klartext-Email/IP-Detection). Tests laufen gegen Coolify-DB im node:20-Container per coolify-test-setup.md (SAVEPOINT-Pattern bei expected HTTP-Errors). Pen-Test-Report RPT-300-v7-pen-test.md mit Pass-Rate + Residual-Risks. 8 MTs ~9h ~1d. BLOCKING fuer /qa V7 Gesamt-Pass. Reuse: V6 5-Rollen-Pen-Test-Suite-Architektur (DEC-100). Sub-Item von BL-098. SLC-134.",
+      "createdAt": "2026-05-18"
+    },
+    {
+      "id": "BL-110",
+      "title": "V7 SLC-135 TTL-Cleanup-Cron + Final-Hardening + Live-Smoke-Plan (FEAT-053 Op)",
+      "type": "feature",
+      "priority": "medium",
+      "status": "open",
+      "version": "V7",
+      "description": "Operativer Abschluss V7 vor /qa Gesamt-Pass. Cleanup-Endpoint /api/cron/pending-signup-cleanup (CRON_SECRET-Header + UPDATE expired Pending-Rows + DELETE > 7-Tage alte expired Rows + Audit-Log). 5 Vitest (Auth-Reject + Expire-Update + Delete-> 7-days + Idempotent-Second-Call + Audit-Log-Probe). Coolify-Scheduled-Task pending-signup-cleanup-hourly (0 * * * *) Setup (User-Pflicht inkl. Tabellen-Doku + Cron-Verifikation). ENV-Setup PUBLIC_SIGNUP_SERVICE_KEY (32-byte hex Random direkt-Wert per feedback_env_value_not_command, BEIDE Coolify-Resources Onboarding + IS, User-Pflicht) + PUBLIC_SIGNUP_BLOCKED_EMAIL_DOMAINS (Default 10 Wegwerf-Domains). IONOS-Postfach-Check onboarding@strategaize.de (DEC-134, User-Pflicht, Pre-Deploy-Smoke-Send-Test). Live-Smoke-Plan dokumentiert in docs/V7_LIVE_SMOKE_PLAN.md (13 Schritte, Cross-System-Smoke IS->Onboarding). 6 MTs ~3.5h Agent-Time + ~30min User-Action = ~0.5d total. Reuse: DEC-059 Coolify-Cron-Pattern + V4.2 capture-reminders-daily + verifyCronSecret-Helper. Sub-Item von BL-098. Pre-Condition fuer /qa V7 + /deploy V7. SLC-135.",
+      "createdAt": "2026-05-18"
     }
   ]
 }
