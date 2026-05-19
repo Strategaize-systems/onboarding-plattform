@@ -1,5 +1,15 @@
 # Known Issues
 
+### ISSUE-077 — Webpack-Build-Fail durch route.ts-Helper-Exports in evidence/upload (Next 16 strict-validation)
+- Status: open
+- Severity: Low
+- Area: V7.1-Polish / Next 16 / route.ts-Validation
+- Summary: `src/app/api/capture/[sessionId]/evidence/upload/route.ts` (SLC-019, Commit 23deb56) exportiert Helper-Functions `validateMimeType`, `validateFileSize` + Constants `ALLOWED_MIME_TYPES`, `MAX_FILE_SIZE` aus einem Next.js-route.ts-File. Next 16 Webpack-Build strict-validiert route.ts-Exports und reject diese: `"validateMimeType" is not a valid Route export field. Next.js build worker exited with code: 1`. Default-Turbopack-Build (was Coolify-Production nutzt) ignoriert das und PASSES. Lokaler `next build --webpack` failt damit zuverlaessig — keine SLC-bezogene Regression, sondern pre-existing seit SLC-019. Entdeckt 2026-05-19 in OP V7 SLC-135 /backend RPT-307 F-1.
+- Impact: **Kein Production-Block** — Coolify nutzt Turbopack-Default-Build. Webpack-Build ist lokal nicht zuverlaessig als Build-Gate. Build-Probe via `--webpack` kann pre-existing-Fails treffen, was Slice-Bewertung verfaelscht. Workaround: Build-Gate ueber Hetzner-Test-Repo mit Default-Turbopack durchfuehren (siehe IMP-643).
+- Workaround: Helper-Functions + Constants aus `route.ts` in eigenes `validation.ts`-Modul auslagern + Re-Import in `route.ts`. ~5min Fix.
+- Next Action: V7.1-Polish-Slice (nicht release-blockierend fuer V7).
+- Related: OP V7 SLC-135 RPT-307 F-1, Dev-System IMP-643 (Turbopack-Junction), Original-Commit 23deb56 (SLC-019).
+
 ### ISSUE-076 — V6.3 SLC-105 ai_cost_ledger Silent INSERT-Fail (role='light_pipeline_block' nicht in CHECK-Constraint)
 - Status: resolved
 - Resolved: 2026-05-17
