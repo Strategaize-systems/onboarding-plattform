@@ -49,9 +49,23 @@ export async function updateSession(request: NextRequest) {
   // SLC-104 MT-7: Partner-Branding-Logo wird auch fuer anonyme Login-Page geladen
   // (Branding ab erstem Pixel, vor Login). Route hat eigenen UUID-Guard + RPC-Check.
   const isApiPartnerBranding = pathname.startsWith("/api/partner-branding/");
+  // BL-111 (V7 ISSUE-078): /api/public/* hat eigene Auth via x-strategaize-service-key
+  // Header und muss anonym erreichbar sein. /auth/verify-signup ist die anonyme
+  // Verify-Token-Landing-Page fuer das V7-Self-Signup-Flow.
+  const isApiPublic = pathname.startsWith("/api/public/");
+  const isAuthVerifySignup = pathname.startsWith("/auth/verify-signup");
 
   // Not logged in → redirect to login (unless on public path)
-  if (!user && !isPublicPath && !isApiHealth && !isApiCron && !isApiUnsubscribe && !isApiPartnerBranding) {
+  if (
+    !user &&
+    !isPublicPath &&
+    !isApiHealth &&
+    !isApiCron &&
+    !isApiUnsubscribe &&
+    !isApiPartnerBranding &&
+    !isApiPublic &&
+    !isAuthVerifySignup
+  ) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
