@@ -5,9 +5,9 @@
       "title": "V7 ISSUE-078 Hotfix: src/lib/supabase/middleware.ts Whitelist erweitern um /api/public/* + /auth/verify-signup",
       "type": "fix",
       "priority": "high",
-      "status": "open",
+      "status": "done",
       "version": "V7",
-      "description": "P0-Blocker aus RPT-309 F-2: src/lib/supabase/middleware.ts:47-58 updateSession-Whitelist enthaelt nicht /api/public/* + /auth/verify-signup. ALL V7-Live-HTTP-Requests werden 307 zu /login redirected. 4-Zeilen-Edit: isApiPublic + isAuthVerifySignup als Konstanten + Erweiterung der !user-Check-Bedingung. Plus Vitest fuer Whitelist-Logic (E2E mit fetch durch Proxy). Plus Build + Coolify-Redeploy + Live-Verify (curl POST /api/public/signup -> erwartet 401 invalid_service_key, NICHT 307). Aufwand ~30min. Pflicht-Fix vor V7 Live-Deploy. Siehe ISSUE-078, RPT-309 F-2.",
+      "description": "P0-Blocker aus RPT-309 F-2: src/lib/supabase/middleware.ts:47-58 updateSession-Whitelist enthaelt nicht /api/public/* + /auth/verify-signup. ALL V7-Live-HTTP-Requests werden 307 zu /login redirected. RESOLVED 2026-05-19 via Hotfix-Commit 576f5f4 (Master-Merge b03139e): isApiPublic + isAuthVerifySignup als Konstanten + Erweiterung der !user-Check-Bedingung. Vitest src/lib/supabase/__tests__/middleware.test.ts mit 5 Cases (3 Whitelist + 2 Regression-Guard) + RED-GREEN verifiziert. Coolify-Redeploy User-Pflicht durch + Live-Verify 4/4 PASS: POST /api/public/signup -> 401 invalid_service_key (NICHT 307), GET /api/public/partner/:slug -> 404, GET /auth/verify-signup -> 200, /dashboard -> 307 Regression-Guard. Siehe RPT-310.",
       "createdAt": "2026-05-19"
     },
     {

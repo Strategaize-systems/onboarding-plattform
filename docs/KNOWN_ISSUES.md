@@ -11,14 +11,17 @@
 - Related: RPT-309 F-1, V7 OP RPT-300+302+304+306+308, V7_LIVE_SMOKE_PLAN.md Cross-System-Pre-Conditions
 
 ### ISSUE-078 — V7 OP Proxy-Whitelist fehlt /api/public/* und /auth/verify-signup → ALL Live-Endpoints 307 zu /login
-- Status: open
+- Status: resolved
+- Resolution Date: 2026-05-19
+- Resolution Commit: 576f5f4 (Hotfix slc-v7-hotfix-proxy-whitelist) + b03139e (Master-Merge)
+- Resolution Report: RPT-310
 - Severity: Blocker
 - Area: V7 / FEAT-051+052+053 / OP / src/lib/supabase/middleware.ts Whitelist
 - Summary: 2026-05-19 im /qa V7 Gesamt-Lauf entdeckt (RPT-309 F-2). [src/lib/supabase/middleware.ts:47-58](src/lib/supabase/middleware.ts#L47-L58) `updateSession()` Whitelist enthaelt aktuell nur `isPublicPath` (statische Pfade), `isApiHealth`, `isApiCron`, `isApiUnsubscribe`, `isApiPartnerBranding`. Fehlt komplett: `isApiPublic` (Pattern `/api/public/*`) und `isAuthVerifySignup` (Pattern `/auth/verify-signup`). Konsequenz: 100% der V7-Public-Routen werden mit 307 zu /login redirected bevor der Route-Handler sie sieht. Reproduziert via `curl -X POST https://onboarding.strategaizetransition.com/api/public/signup` UND via `docker exec node -e fetch('http://localhost:3000/api/public/signup', { redirect: 'manual' })` — beide HTTP 307 / Location: /login. SLC-131..135 Vitest-Tests haben Bug nie entdeckt weil sie Route-Handler-Functions direkt importieren (kein HTTP-Request durch Proxy).
 - Impact: Vollstaendiger Production-Outage des V7-Features sobald ISSUE-079 (IS-Caller) gefixt ist. Auch jetzt verhindert es jeden direkten Browser-Klick auf `/auth/verify-signup?token=...` — Mandant koennte nie verifizieren. **Source-Code-Bug in OP, Pflicht-Fix vor V7-Live-Deploy.**
 - Workaround: Keiner — Code-Edit + Re-Deploy noetig.
-- Next Action: 4-Zeilen-Source-Edit in `src/lib/supabase/middleware.ts:47`: `const isApiPublic = pathname.startsWith("/api/public/");` + `const isAuthVerifySignup = pathname.startsWith("/auth/verify-signup");` plus Erweiterung der `if (!user && ...)`-Check-Bedingung um `&& !isApiPublic && !isAuthVerifySignup`. Vitest-Test fuer Whitelist-Logic (E2E mit fetch durch Proxy gegen Route-Handler-Spy). Build + Coolify-Redeploy. Live-Verify via `curl -X POST .../api/public/signup` → erwartet 401 invalid_service_key oder 422 validation_failed (NICHT mehr 307). Aufwand ~30min total.
-- Related: RPT-309 F-2, V7 OP RPT-300+302+304+306+308 (Slice-Vitest-Bias-Limitation), V4.3 SLC-053 RPT-134 (middleware.ts→proxy.ts Rename)
+- Next Action: RESOLVED — Fix in BL-111 implementiert: 2 neue Konstanten `isApiPublic = pathname.startsWith("/api/public/")` + `isAuthVerifySignup = pathname.startsWith("/auth/verify-signup")` ergaenzt, `!user`-Redirect-Bedingung erweitert. Vitest `src/lib/supabase/__tests__/middleware.test.ts` NEU mit 5 Cases (3 Whitelist-Smoke + 2 Regression-Guard). RED-GREEN-Cycle verifiziert: pre-fix 3/5 rot, post-fix 5/5 gruen. Live-Verify 2026-05-19 nach Coolify-Redeploy: POST `/api/public/signup` mit invalid-key → HTTP 401 invalid_service_key (NICHT 307). GET `/api/public/partner/:slug` → HTTP 404 vom Route-Handler. GET `/auth/verify-signup?token=X` → HTTP 200 Server-Component. Regression-Guard `/dashboard` weiterhin HTTP 307 → /login.
+- Related: RPT-309 F-2 (Bug-Discovery), RPT-310 (Resolution), V7 OP RPT-300+302+304+306+308 (Slice-Vitest-Bias-Limitation), V4.3 SLC-053 RPT-134 (middleware.ts→proxy.ts Rename), Dev-System IMP-651 (Live-Endpoint-Smoke in Slice-/qa)
 
 ### ISSUE-077 — Webpack-Build-Fail durch route.ts-Helper-Exports in evidence/upload (Next 16 strict-validation)
 - Status: open
