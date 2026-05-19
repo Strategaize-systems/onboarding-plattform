@@ -1065,7 +1065,7 @@
       "title": "V7 SLC-134 Pen-Test-Suite-Erweiterung Public-Signup-Caller + Anti-Abuse-Verifikation (FEAT-054)",
       "type": "feature",
       "priority": "high",
-      "status": "open",
+      "status": "done",
       "version": "V7",
       "description": "Systematische Anti-Abuse-Verifikation V7. Neuer Pen-Test-Akteur unauthenticated_public_signup_caller mit 4 Sub-Varianten (noKey, wrongKey, validKey, validKey+rate_limited). 18 Test-Cases gegen alle 3 V7-Public-Endpoints (11 POST signup + 3 GET partner + 4 GET verify) + Service-Key-Timing-Safe-Statistical-Test (1000 Iter, Random-Seed fix via vi.stubGlobal, Bound 200ns) + DSGVO-Compliance-Test mit Negativ-Probe (Klartext-Email/IP-Detection). Tests laufen gegen Coolify-DB im node:20-Container per coolify-test-setup.md (SAVEPOINT-Pattern bei expected HTTP-Errors). Pen-Test-Report RPT-300-v7-pen-test.md mit Pass-Rate + Residual-Risks. 8 MTs ~9h ~1d. BLOCKING fuer /qa V7 Gesamt-Pass. Reuse: V6 5-Rollen-Pen-Test-Suite-Architektur (DEC-100). Sub-Item von BL-098. SLC-134.",
       "createdAt": "2026-05-18"
