@@ -1,6 +1,26 @@
 {
   "items": [
     {
+      "id": "BL-111",
+      "title": "V7 ISSUE-078 Hotfix: src/lib/supabase/middleware.ts Whitelist erweitern um /api/public/* + /auth/verify-signup",
+      "type": "fix",
+      "priority": "high",
+      "status": "open",
+      "version": "V7",
+      "description": "P0-Blocker aus RPT-309 F-2: src/lib/supabase/middleware.ts:47-58 updateSession-Whitelist enthaelt nicht /api/public/* + /auth/verify-signup. ALL V7-Live-HTTP-Requests werden 307 zu /login redirected. 4-Zeilen-Edit: isApiPublic + isAuthVerifySignup als Konstanten + Erweiterung der !user-Check-Bedingung. Plus Vitest fuer Whitelist-Logic (E2E mit fetch durch Proxy). Plus Build + Coolify-Redeploy + Live-Verify (curl POST /api/public/signup -> erwartet 401 invalid_service_key, NICHT 307). Aufwand ~30min. Pflicht-Fix vor V7 Live-Deploy. Siehe ISSUE-078, RPT-309 F-2.",
+      "createdAt": "2026-05-19"
+    },
+    {
+      "id": "BL-112",
+      "title": "V7 ISSUE-079: IS-Repo Self-Signup-Caller-Implementation (Cross-Repo-Slice in strategaize-intelligence-studio)",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V7",
+      "description": "P0-Blocker aus RPT-309 F-1: IS-Repo strategaize-intelligence-studio HEAD a7d02de hat KEINE V7-Self-Signup-Caller-Implementation. PUBLIC_SIGNUP_SERVICE_KEY ENV ist gesetzt aber nie referenziert. Eigenes Cross-Repo-Slice-Planning im IS-Repo: V7-Self-Signup-Landing-Page (Next-Page mit Form an Partner-Slug-URL) + /api/landing/signup Caller-Endpoint mit Service-Key-Header-Set + Body-Forward an OP /api/public/signup. Aufwand 4-8h je nach Slice-Granularitaet. Pre-Condition: BL-111 ist gefixt (sodass IS-Caller einen echten Response statt 307 bekommt). Siehe ISSUE-079, RPT-309 F-1.",
+      "createdAt": "2026-05-19"
+    },
+    {
       "id": "BL-001",
       "title": "Foundation Data Model & RBAC",
       "type": "feature",

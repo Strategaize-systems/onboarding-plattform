@@ -1,5 +1,25 @@
 # Known Issues
 
+### ISSUE-079 — V7 Cross-System Self-Signup-Funnel: IS-Caller-Implementation komplett fehlt
+- Status: open
+- Severity: Blocker
+- Area: V7 / FEAT-053 / Cross-Repo / IS-Self-Signup-Caller
+- Summary: 2026-05-19 im /qa V7 Gesamt-Lauf entdeckt (RPT-309 F-1). IS-Repo `strategaize-intelligence-studio` HEAD `a7d02de` (SLC-204 Postmark+SES Webhooks) enthaelt KEINE V7-Self-Signup-Caller-Implementation. `find /app/.next/server/app -name "route*.js" | grep -iE "signup|landing|partner"` → 0 Treffer. `https://is.strategaizetransition.com/api/landing/signup` → HTTP 404 + Next-404-Prerender. PUBLIC_SIGNUP_SERVICE_KEY ENV ist in IS-Coolify-Resource gesetzt (Pre-Smoke MT-4 verified), wird aber im IS-Code nie referenziert.
+- Impact: V7-Self-Signup-Funnel ist Cross-System-blocked. Der Mandant kann nirgendwo eine IS-Landing-Page sehen oder einen Verify-Flow anstossen. OP-Code-Side ist bereit fuer Caller-Hits, aber kein Caller existiert. V7-Feature-Versprechen (Cross-System-Funnel) ist nicht erfuellt.
+- Workaround: Keiner — Cross-Repo-Slice-Planning + Implementation noetig im IS-Repo.
+- Next Action: Eigene `/slice-planning` Session im `strategaize-intelligence-studio` Repo: V7-Self-Signup-Landing-Page (Next-Page mit Form an Partner-Slug-URL) + `/api/landing/signup` Caller-Endpoint mit Service-Key-Header-Set + Body-Forward an OP `/api/public/signup`. Aufwand 4-8h je nach Slice-Granularitaet. Pre-Condition: ISSUE-078 ist gefixt (sodass IS-Caller einen echten Response statt 307 bekommt).
+- Related: RPT-309 F-1, V7 OP RPT-300+302+304+306+308, V7_LIVE_SMOKE_PLAN.md Cross-System-Pre-Conditions
+
+### ISSUE-078 — V7 OP Proxy-Whitelist fehlt /api/public/* und /auth/verify-signup → ALL Live-Endpoints 307 zu /login
+- Status: open
+- Severity: Blocker
+- Area: V7 / FEAT-051+052+053 / OP / src/lib/supabase/middleware.ts Whitelist
+- Summary: 2026-05-19 im /qa V7 Gesamt-Lauf entdeckt (RPT-309 F-2). [src/lib/supabase/middleware.ts:47-58](src/lib/supabase/middleware.ts#L47-L58) `updateSession()` Whitelist enthaelt aktuell nur `isPublicPath` (statische Pfade), `isApiHealth`, `isApiCron`, `isApiUnsubscribe`, `isApiPartnerBranding`. Fehlt komplett: `isApiPublic` (Pattern `/api/public/*`) und `isAuthVerifySignup` (Pattern `/auth/verify-signup`). Konsequenz: 100% der V7-Public-Routen werden mit 307 zu /login redirected bevor der Route-Handler sie sieht. Reproduziert via `curl -X POST https://onboarding.strategaizetransition.com/api/public/signup` UND via `docker exec node -e fetch('http://localhost:3000/api/public/signup', { redirect: 'manual' })` — beide HTTP 307 / Location: /login. SLC-131..135 Vitest-Tests haben Bug nie entdeckt weil sie Route-Handler-Functions direkt importieren (kein HTTP-Request durch Proxy).
+- Impact: Vollstaendiger Production-Outage des V7-Features sobald ISSUE-079 (IS-Caller) gefixt ist. Auch jetzt verhindert es jeden direkten Browser-Klick auf `/auth/verify-signup?token=...` — Mandant koennte nie verifizieren. **Source-Code-Bug in OP, Pflicht-Fix vor V7-Live-Deploy.**
+- Workaround: Keiner — Code-Edit + Re-Deploy noetig.
+- Next Action: 4-Zeilen-Source-Edit in `src/lib/supabase/middleware.ts:47`: `const isApiPublic = pathname.startsWith("/api/public/");` + `const isAuthVerifySignup = pathname.startsWith("/auth/verify-signup");` plus Erweiterung der `if (!user && ...)`-Check-Bedingung um `&& !isApiPublic && !isAuthVerifySignup`. Vitest-Test fuer Whitelist-Logic (E2E mit fetch durch Proxy gegen Route-Handler-Spy). Build + Coolify-Redeploy. Live-Verify via `curl -X POST .../api/public/signup` → erwartet 401 invalid_service_key oder 422 validation_failed (NICHT mehr 307). Aufwand ~30min total.
+- Related: RPT-309 F-2, V7 OP RPT-300+302+304+306+308 (Slice-Vitest-Bias-Limitation), V4.3 SLC-053 RPT-134 (middleware.ts→proxy.ts Rename)
+
 ### ISSUE-077 — Webpack-Build-Fail durch route.ts-Helper-Exports in evidence/upload (Next 16 strict-validation)
 - Status: open
 - Severity: Low
