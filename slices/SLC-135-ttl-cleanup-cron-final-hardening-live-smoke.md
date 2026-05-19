@@ -145,7 +145,33 @@ Pre-Deploy-Smoke-Send-Test:
 
 `docs/V7_LIVE_SMOKE_PLAN.md` (NEU) oder Anhang in `reports/RPT-300-v7-pen-test.md` (SLC-134-Report-Erweiterung):
 
-Schritte fuer `/qa V7` oder `/deploy V7`:
+#### Migration-Apply Standard-Procedure (Pflicht VOR jedem Live-Smoke + /deploy V7)
+
+Quelle: RPT-305 F-5 + RPT-306 QA-F2 (OP V7 SLC-134) + Memory `reference_postgrest_schema_reload.md`.
+
+PostgREST auf Coolify-Self-hosted-Supabase cached Schema-Metadata. Nach jeder Migration (CREATE/ALTER TABLE, GRANT, neue Policy, neue Funktion im public-Schema) bleibt der `/rest/v1/<tabelle>`-Endpoint fuer ~5min auf dem alten Cache und gibt HTTP 404 statt 201/200 zurueck — bis Auto-Reload greift. Workaround: expliziter NOTIFY-Trigger sofort nach Migration-Apply.
+
+```bash
+# 1. Migration applizieren via base64+psql-Pattern (siehe .claude/rules/sql-migration-hetzner.md)
+DB_CONTAINER=$(ssh root@<server> "docker ps --format '{{.Names}}' | grep ^supabase-db")
+base64 -w0 sql/migrations/NNN_*.sql | ssh root@<server> "cat > /tmp/mig.b64 && base64 -d /tmp/mig.b64 > /tmp/mig.sql"
+ssh root@<server> "docker exec -i $DB_CONTAINER psql -U postgres -d postgres < /tmp/mig.sql"
+
+# 2. PostgREST Schema-Cache invalidieren — PFLICHT
+ssh root@<server> "docker exec $DB_CONTAINER psql -U postgres -d postgres -c \"NOTIFY pgrst, 'reload schema';\""
+
+# 3. Verifikation: betroffene Tabelle/Function ueber PostgREST in <5s erreichbar
+ssh root@<server> "curl -s -o /dev/null -w '%{http_code}\n' \
+  -H 'apikey: <SUPABASE_SERVICE_ROLE_KEY>' \
+  'http://supabase-kong-...:8000/rest/v1/<tabelle>?limit=1'"
+# Erwartet: 200. Bei 404: nochmal NOTIFY senden + 30s warten.
+```
+
+Wer das vergisst: Live-Smoke-Schritte 4-7 schlagen mit `relation "<tabelle>" does not exist` oder leerem PostgrestError fehl. Beobachtet bei SLC-134 Pen-Test nach Hotfix-Migration 098a (~5min 404-Fenster bis Reload).
+
+#### 13-Schritt-Live-Smoke fuer `/qa V7` oder `/deploy V7`
+
+0. **Migration-Apply Standard-Procedure** (s.o.) fuer alle pending Migrations. NOTIFY pgrst danach PFLICHT. Verifikation HTTP 200 auf betroffenen REST-Endpoints VOR Schritt 1.
 1. Test-Service-Key in BEIDEN Coolify-Resources gesetzt (User-Verifikation).
 2. Test-Partner-Slug `qa-steuerberater-demo` (existing V6.3 Test-Partner) verfuegbar in DB.
 3. IS-Server-Side-Caller: POST `/api/landing/signup` (IS-Repo) mit Body `{ partner_slug: 'qa-steuerberater-demo', email: 'qa-selfsignup-test@strategaizetransition.com', first_name: 'V7', last_name: 'Smoke', dsgvo_consent_accepted: true, dsgvo_consent_text_version: 'v1-2026-05' }`.
@@ -196,6 +222,7 @@ Schritte fuer `/qa V7` oder `/deploy V7`:
 | AC-8 | `PUBLIC_SIGNUP_BLOCKED_EMAIL_DOMAINS` mit Default-Liste 10 Wegwerf-Domains in Onboarding-Coolify-Resource gesetzt. User-Bestaetigung in MT-4. |
 | AC-9 | IONOS-Postfach `onboarding@strategaize.de` existiert als Postfach oder Alias. User-Bestaetigung in MT-5. Pre-Deploy-Smoke-Send-Test optional. |
 | AC-10 | `docs/V7_LIVE_SMOKE_PLAN.md` existiert mit 13-Schritt-Plan fuer /qa V7 oder /deploy V7. |
+| AC-10a | `docs/V7_LIVE_SMOKE_PLAN.md` enthaelt die **Migration-Apply Standard-Procedure** mit `NOTIFY pgrst, 'reload schema'` als Pflicht-Step nach jedem Migration-Apply + HTTP-200-Verifikation auf betroffene REST-Endpoints (RPT-306 QA-F2 + RPT-305 F-5). Cross-Link auf `reference_postgrest_schema_reload.md` + `.claude/rules/sql-migration-hetzner.md`. |
 | AC-11 | Quality-Gates: ESLint 0/0, tsc EXIT=0, Build PASS, Vitest 0 Regression. |
 
 ## Pre-Conditions
@@ -233,17 +260,20 @@ Schritte fuer `/qa V7` oder `/deploy V7`:
 
 ### MT-2: V7_LIVE_SMOKE_PLAN.md Dokumentation
 
-- **Goal:** 13-Schritt-Live-Smoke-Plan + Cleanup-Anleitung dokumentiert.
+- **Goal:** 13-Schritt-Live-Smoke-Plan + Migration-Apply-Standard-Procedure + Cleanup-Anleitung dokumentiert.
 - **Files:**
   - `docs/V7_LIVE_SMOKE_PLAN.md` (NEU)
 - **Expected behavior:**
-  - Markdown-Sections: Pre-Conditions / 13-Schritt-Plan / Post-Smoke-Cleanup / Troubleshooting.
+  - Markdown-Sections: Pre-Conditions / Migration-Apply Standard-Procedure / 13-Schritt-Plan / Post-Smoke-Cleanup / Troubleshooting.
+  - **Migration-Apply Standard-Procedure (Pflicht, RPT-306 QA-F2 + RPT-305 F-5):** dokumentiert base64+psql-Migration-Apply UND nachfolgendes `NOTIFY pgrst, 'reload schema'` UND HTTP-200-Verifikation auf betroffene REST-Endpoints. Cross-Link auf Memory `reference_postgrest_schema_reload.md` + `.claude/rules/sql-migration-hetzner.md`. Wer das vergisst: 5min HTTP-404-Fenster nach jedem Migration-Apply.
+  - Step 0 im 13-Schritt-Plan ist die Migration-Apply Standard-Procedure (mit NOTIFY pgrst + HTTP-200-Check vor Schritt 1).
   - Cross-Link auf existing Test-Partner `qa-steuerberater-demo` aus V6.3.
   - Cross-Link auf existing Smoke-Test-User-Email (`qa-selfsignup-test@strategaizetransition.com` als Konvention).
   - Cleanup-SQL-Snippet (DELETE-Cascade fuer Test-User + Mapping + Pending).
 - **Verification:**
   - `ls docs/V7_LIVE_SMOKE_PLAN.md` → File existiert.
   - Markdown-Preview rendert sauber.
+  - `grep -c "NOTIFY pgrst" docs/V7_LIVE_SMOKE_PLAN.md` → mindestens 1 Treffer (Migration-Apply Standard-Procedure dokumentiert).
 - **Dependencies:** keine (parallelisierbar zu MT-1).
 
 ### MT-3: Coolify-Scheduled-Task Setup (User-Pflicht)
