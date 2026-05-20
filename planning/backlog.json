@@ -15,7 +15,7 @@
       "title": "V7.1 FEAT-055: Inline-Text-Override-Foundation (text_override-Tabelle + Resolver + Audit + RLS)",
       "type": "feature",
       "priority": "high",
-      "status": "open",
+      "status": "done",
       "version": "V7.1",
       "description": "User-Direktive 2026-05-20 nach SLC-700-Live-Test (DEC-140): Foundation fuer Edit-of-all-Texts ohne Code-Deploy. Generische `text_override`-Tabelle mit Scope-Hierarchie (global/template/partner) + `text_override_history`-Audit-Tabelle + RLS (partner_admin nur eigene partner_org) + Resolver-Lib mit O(1)-Map-Cache pro Request-Context + Save-/Reset-Server-Actions + Admin-Page /admin/text-overrides + Pen-Test-Erweiterung. Schlankes Pattern (keine 5 Edit-UIs pro Text-Klasse, keine CMS-Workflows). Foundation-Pflicht VOR FEAT-056/057/059/060. Aufwand ~12-18h. Siehe FEAT-055.",
       "createdAt": "2026-05-20"
