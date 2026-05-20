@@ -1,14 +1,25 @@
 # Known Issues
 
-### ISSUE-079 — V7 Cross-System Self-Signup-Funnel: IS-Caller-Implementation komplett fehlt
+### ISSUE-080 — OP SMTP_PASS Drift: V7-Self-Signup-Mails silent broken bei invaliden IONOS-Credentials
 - Status: open
+- Severity: High
+- Area: V7 / Operations / SMTP / src/lib/email.ts
+- Summary: 2026-05-20 im SLC-700 Cross-System Live-Smoke entdeckt (IS RPT-219 F-1). OP-Coolify-ENV `SMTP_PASS` war gegenueber IONOS invalid. Symptom: Insert-Pfad (pending_signup-Row) funktioniert, OP returnt 202 fuer den IS-Caller — aber Mail-Send wirft IONOS `535 Authentication credentials invalid`, sichtbar nur in App-Logs `[api/public/signup] Invalid login: 535 ...`. Keine User-erkennbare Fehlermeldung. User bekommt Success-State auf IS-Landing ("Bitte pruefen Sie Ihren Posteingang"), aber keine Mail.
+- Impact: V7-Self-Signup-Funnel ist **silent broken** wenn IONOS-Passwort rotiert oder Coolify-ENV-Drift. 202-trotz-Mail-Fail ist V7-Design-Entscheidung ([src/app/api/public/signup/route.ts:417-432](src/app/api/public/signup/route.ts#L417-L432) "best-effort, 202 trotzdem bei SMTP-Fail") — sinnvoll bei temporaerem Fail, gefaehrlich bei permanentem Credential-Drift. Pre-Live-Verification per V7_LIVE_SMOKE_PLAN.md MT-5 verlangt "Smoke-Send-Test gruen" → war hier nicht produktiv-aktuell.
+- Workaround: User-IONOS-Passwort-Rotation + Coolify-ENV-Update + Redeploy. In SLC-700-Live-Smoke 2026-05-20 erfolgreich angewendet (Container `app-bwkg80w04wgccos48gcws8cs-075328679729`).
+- Next Action: Backlog-Item fuer **SMTP-Healthcheck-Job**: periodisch `transporter.verify()` mit Coolify-Cron, bei Fail Sentry-Alert + Audit-Log-Entry. Optional Diskussion: 202→500 konvergieren bei `sendMail`-Fail oder Re-Try-Queue mit Backoff statt Silent-Fail.
+- Related: IS RPT-219 F-1, V7_LIVE_SMOKE_PLAN.md MT-5, [src/lib/email.ts:9](src/lib/email.ts#L9)
+
+### ISSUE-079 — V7 Cross-System Self-Signup-Funnel: IS-Caller-Implementation komplett fehlt
+- Status: resolved
+- Resolution Date: 2026-05-20
+- Resolution Slice: IS-Repo SLC-700 (Master HEAD `1970caf`) + LIVE Phase 1 PASS RPT-219
 - Severity: Blocker
 - Area: V7 / FEAT-053 / Cross-Repo / IS-Self-Signup-Caller
 - Summary: 2026-05-19 im /qa V7 Gesamt-Lauf entdeckt (RPT-309 F-1). IS-Repo `strategaize-intelligence-studio` HEAD `a7d02de` (SLC-204 Postmark+SES Webhooks) enthaelt KEINE V7-Self-Signup-Caller-Implementation. `find /app/.next/server/app -name "route*.js" | grep -iE "signup|landing|partner"` → 0 Treffer. `https://is.strategaizetransition.com/api/landing/signup` → HTTP 404 + Next-404-Prerender. PUBLIC_SIGNUP_SERVICE_KEY ENV ist in IS-Coolify-Resource gesetzt (Pre-Smoke MT-4 verified), wird aber im IS-Code nie referenziert.
-- Impact: V7-Self-Signup-Funnel ist Cross-System-blocked. Der Mandant kann nirgendwo eine IS-Landing-Page sehen oder einen Verify-Flow anstossen. OP-Code-Side ist bereit fuer Caller-Hits, aber kein Caller existiert. V7-Feature-Versprechen (Cross-System-Funnel) ist nicht erfuellt.
-- Workaround: Keiner — Cross-Repo-Slice-Planning + Implementation noetig im IS-Repo.
-- Next Action: Eigene `/slice-planning` Session im `strategaize-intelligence-studio` Repo: V7-Self-Signup-Landing-Page (Next-Page mit Form an Partner-Slug-URL) + `/api/landing/signup` Caller-Endpoint mit Service-Key-Header-Set + Body-Forward an OP `/api/public/signup`. Aufwand 4-8h je nach Slice-Granularitaet. Pre-Condition: ISSUE-078 ist gefixt (sodass IS-Caller einen echten Response statt 307 bekommt).
-- Related: RPT-309 F-1, V7 OP RPT-300+302+304+306+308, V7_LIVE_SMOKE_PLAN.md Cross-System-Pre-Conditions
+- Impact: V7-Self-Signup-Funnel war Cross-System-blocked. Der Mandant konnte nirgendwo eine IS-Landing-Page sehen oder einen Verify-Flow anstossen.
+- Resolution: IS-Repo SLC-700 implementiert (Slice-Planning RPT-214, Backend RPT-215, /qa-PASS-with-deferred RPT-216, Master-Merge HEAD `1970caf`). LIVE Phase 1 PASS am 2026-05-20 verifiziert per RPT-219 mit 8/8 Pflicht-Schritten gruen: IS-Landing `/de/landing/qa-steuerberater-demo` → Form-Submit → OP `/api/public/signup` → Verify-Mail → Auto-Provisioning-Chain komplett.
+- Related: RPT-309 F-1, IS RPT-219 (LIVE-Resolution), V7 OP RPT-300+302+304+306+308
 
 ### ISSUE-078 — V7 OP Proxy-Whitelist fehlt /api/public/* und /auth/verify-signup → ALL Live-Endpoints 307 zu /login
 - Status: resolved
