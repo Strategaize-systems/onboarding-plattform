@@ -139,3 +139,17 @@ V7-Scope (User-Entscheidung 2026-05-18 nach V6.4 STABLE-Bestaetigung RPT-295): B
 | FEAT-052 | Partner-Slug + Public-Resolve-Endpoint | done | [Spec](FEAT-052-partner-slug-public-resolve.md) | 2026-05-18 |
 | FEAT-053 | Self-Signup Email-Verify + Auto-Tenant-Provisioning | in_progress | [Spec](FEAT-053-self-signup-email-verify-auto-provisioning.md) | 2026-05-18 |
 | FEAT-054 | Pen-Test-Suite-Erweiterung Public-Signup-Caller + Anti-Abuse-Verifikation | planned | [Spec](FEAT-054-pen-test-public-signup-anti-abuse.md) | 2026-05-18 |
+
+## V7.1 Features (Inline-Text-Override-Foundation + Funnel-Polish + Telemetrie)
+
+V7.1-Scope (User-Entscheidung 2026-05-20 Option A nach DEC-139 V8-Diary-Split): Substantielle Polish-Iteration mit Inline-Text-Override-Foundation als Foundation-Feature (FEAT-055/056), plus Helper-Texts (FEAT-057), Funnel-Telemetrie (FEAT-058), Look-Polish (FEAT-059), Bericht-Email-PDF (FEAT-060), Back-Link Quick-Win (FEAT-061). Reihenfolge SLC-136 -> SLC-142 ist BLOCKING (Foundation zuerst). Geschaetzt ~36-60h Code-Side + ~3-6h Helper-Texts-Inhalt.
+
+| ID | Feature | Status | Spec | Created |
+|----|---------|--------|------|---------|
+| FEAT-055 | Inline-Text-Override-Foundation (Tabelle + Resolver + Audit + RLS) | planned | [Spec](FEAT-055-inline-text-override-foundation.md) | 2026-05-20 |
+| FEAT-056 | EditableText-Komponente + Text-Migration A/D/E/F | planned | [Spec](FEAT-056-editabletext-component-text-migration.md) | 2026-05-20 |
+| FEAT-057 | Helper-Texts mit Beispieldefinitionen pro Frage | planned | [Spec](FEAT-057-helper-texts-questions.md) | 2026-05-20 |
+| FEAT-058 | Diagnose-Funnel-Telemetrie (diagnose_event + Tracker + Analytics-Page) | planned | [Spec](FEAT-058-diagnose-funnel-telemetrie.md) | 2026-05-20 |
+| FEAT-059 | Look-and-Feel-Polish nach Style Guide V2 (Start + Run + Bericht) | planned | [Spec](FEAT-059-look-feel-polish.md) | 2026-05-20 |
+| FEAT-060 | Bericht-Email mit PDF-Attachment (@react-pdf/renderer) | planned | [Spec](FEAT-060-bericht-email-pdf.md) | 2026-05-20 |
+| FEAT-061 | Back-Link auf /datenschutz + /impressum | planned | [Spec](FEAT-061-back-link-legal-pages.md) | 2026-05-20 |

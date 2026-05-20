@@ -1647,3 +1647,139 @@ Geschaetzt ~3-5 Code-Side-Tage + Pen-Test-Lauf + Live-Smoke + /post-launch. Arch
 ### Detail-Spec
 
 Siehe `/reports/RPT-296.md` fuer V7-Requirements-Completion-Report + Feature-Specs unter `/features/FEAT-05X-*.md`.
+
+## V7.1 — Inline-Text-Override-Foundation + Funnel-Polish + Telemetrie
+
+### Problem Statement (V7.1)
+
+Der SLC-700-Live-Test am 2026-05-20 (Cross-System V-Cross-System-V7) hat den End-to-End-Self-Signup-Funnel erfolgreich verifiziert — aber gleichzeitig fuenf konkrete User-Facing-Schwaechen freigelegt:
+
+1. **Text-Hardcode-Problem**: Saemtliche User-sichtbaren Strings im Diagnose-Funnel (24 Frage-Texte, 6 Block-Titel, Bericht-Layout-Strings, Email-Bodies, Pflicht-Output-Aussage, CTA-Captions, Empty-States) liegen entweder in `template.blocks[]`-Migrations (A+B), im React-Code (D+F), im Email-Adapter (E) oder im KI-System-Prompt (H). Jede Aenderung erfordert Migration oder Code-Deploy. Solo-Founder + Partner-Kanzleien koennen Standardtexte NICHT iterativ verfeinern, ohne den Entwicklungsprozess zu blockieren.
+2. **One-Size-Fits-All scheitert**: Verschiedene Steuerberater-Partner haben verschiedene Mandantenkreise (Mittelstand vs. KMU, Branchen-Schwerpunkt, Sprachton). Wenn ein Partner eine Frage als "fuer meine Mandanten zu abstrakt" markiert, gibt es heute keinen Per-Partner-Override-Mechanismus.
+3. **Hilfetexte fehlen**: Fragen mit Strategie-Fachbegriffen (z.B. "Wieviele kritische Wissensbereiche gibt es in Ihrer Firma?") koennen Mandanten ohne Berater-Hintergrund nicht beantworten — Conversion-Killer.
+4. **Funnel-Telemetrie fehlt**: Es gibt heute keine Daten ueber Drop-off pro Frage, Hilfetext-Klicks, Time-on-Question. Ohne diese Signale ist keine systematische Funnel-Optimierung moeglich (Learning-Loop).
+5. **Polish-Defizite**: Look-and-Feel des Diagnose-Funnels ist Internal-Tool-Style (nicht Marketing-Layer-konform), Bericht kann nur via Browser-Print-Dialog als PDF gespeichert werden (kein Email-Versand-Pfad), und auf `/datenschutz` + `/impressum` fehlen Back-Links.
+
+### Goal / Intended Outcome (V7.1)
+
+Strategaize + Partner-Kanzleien koennen alle User-sichtbaren Texte des Diagnose-Funnels **inline editieren** (kleines Pencil-Icon im Render-Tree), mit drei Override-Stufen (global → template → partner). Strategaize iteriert Standardtexte zentral, Partner passen pro Mandantenkreis an. Edit-Aktionen werden audited. Funnel-Telemetrie erfasst Drop-off, Helper-Text-Hits, Time-on-Question — Grundlage fuer datengetriebene Conversion-Optimierung. Hilfetexte mit Beispieldefinitionen machen Fach-Begriffe verstaendlich. Bericht kann per Email an Mandant + Partner verschickt werden. Look-and-Feel folgt Strategaize Style Guide V2.
+
+Erwartung nach V7.1: Solo-Founder muss keinen Code-Deploy mehr ausloesen, um Standardtexte zu iterieren. Partner kann eigene Anpassungen vornehmen ohne Coding-Skills. Erste Conversion-Optimierungs-Hypothesen (Frage X umformulieren, Helper-Text Y erweitern) koennen evidence-based getestet werden.
+
+### Target Users (V7.1)
+
+- **strategaize_admin** — Pflegt Standardtexte (Global-Default-Scope). Sieht zentrale Override-Uebersicht "Welche Texte wurden von welchem Partner ueberschrieben?" und kann Per-Partner-Overrides reviewen. Sieht globale Funnel-Telemetrie (alle Partner aggregiert).
+- **partner_admin** — Editiert Per-Partner-Overrides fuer eigenen Mandantenkreis. Sieht Telemetrie der eigenen Mandanten (nicht anderer Partner). Sieht "Standard / Eigener Override" Toggle pro Text.
+- **Mandant (End-User)** — Profitiert von verstaendlicheren Fragen (Helper-Texts), professionellerem Look-and-Feel, Email-Versand des Berichts. Sieht KEINE Edit-Icons.
+- **partner_employee** — Wie partner_admin, aber Read-Only fuer Texte (keine Edit-Berechtigung in V7.1; spaeter konfigurierbar).
+
+### V7.1 In Scope
+
+1. **FEAT-055 Inline-Text-Override-Foundation** — `text_override`-Tabelle mit `(scope, scope_id, text_key, text_value, locale, updated_by, updated_at, audit_log)`. Drei Scope-Werte: `global`, `template`, `partner`. Hierarchischer `text_key` (z.B. `template.partner_diagnostic.block.wissensmanagement.question.q1.label` oder `diagnose.bericht.cta.ich_will_mehr`). Resolver `resolveText(key, partnerOrgId, locale)` mit O(1)-Map-Cache (Pre-Load aller Overrides bei Server-Render). Audit-Log-Tabelle `text_override_history` mit jedem Edit-Diff (alter Wert + neuer Wert + Editor + Timestamp). RLS: `strategaize_admin` darf global+template+alle-partner, `partner_admin` darf nur eigene partner_organization. Reset-Funktion "auf Standard zuruecksetzen" loescht Override-Row (Default kommt automatisch wieder).
+2. **FEAT-056 EditableText-React-Komponente + Text-Migration** — `<EditableText keyPath="..." defaultText="..." scope="..." multiline?={true} />`. Rendert Default-Text + (bei `strategaize_admin`/`partner_admin`) ein kleines Pencil-Icon. Klick oeffnet Inline-Editor (Modal fuer mehrzeilig, Inline-Textarea fuer einzeilig). Save schreibt via Server-Action in `text_override`. Migration aller bestehenden Hardcodes auf EditableText: A (Template-Frage-Texte, Block-Titel, Closing-Statement — bleiben in Migration als Defaults, EditableText laedt sie via Resolver), D (Bericht-Page-Strings: Page-Title, Score-Labels, CTA, Print-Button), E (Email-Templates: Verify-Mail, Reminder-Mail, Invitation-Mail — Subject + Body), F (relevante i18n-Strings im Diagnose-Funnel-Pfad). Coverage-Ziel: ~50-80 Text-Keys. **H (KI-System-Prompt) bleibt out-of-scope** (wird nicht von Partner editiert, technisch sensibel).
+3. **FEAT-057 Helper-Texts pro Frage (BL-115)** — Schema-Erweiterung `template.blocks[].questions[].helper_text` + `.examples_md` JSONB-Felder. Info-Icon neben Frage-Label, Klick zeigt Modal mit Definition (helper_text) + 2-3 konkreten Branchen-Beispielen (examples_md, Markdown). Initial-Content fuer alle 24 Fragen des `partner_diagnostic v1`-Templates via Migration-Seed. Helper-Texts sind ueber FEAT-055 editierbar. Cross-Repo-Schema-Sync mit IS V3 Questionnaire Builder (DEC-063 dort) — identische JSONB-Feld-Form, damit IS V3 Builder-Output direkt in OP-Light-Pipeline rendert.
+4. **FEAT-058 Diagnose-Funnel-Telemetrie (BL-117)** — Neue Tabelle `diagnose_event` mit `(capture_session_id, tenant_id, event_type, question_key, payload_json, created_at)`. Event-Types: `question_start`, `question_answer`, `question_skip`, `helper_text_open`, `session_paused`, `session_resumed`, `session_abandoned`. Client-Side-Tracker-Lib `src/lib/telemetry/diagnose.ts` mit Browser-Heartbeat (5s-Intervall, beforeunload-Flush). Admin-Analytics-Page `/admin/diagnose-funnel-analytics` zeigt: Drop-off-Prozent pro Frage, Helper-Text-Klick-Rate pro Frage, Median-Time-on-Question. Scope-Filter (alle / pro Partner). DSGVO: Event-Daten anonymisiert (kein Klartext-PII), Aggregation NIE auf Einzel-Mandanten-Ebene exponiert. Strategaize sieht alle, Partner-Admin nur eigene.
+5. **FEAT-059 Look-and-Feel-Polish (BL-114)** — Diagnose-Start-Screen + 24-Fragen-Pages + Bericht-Page nach Strategaize Style Guide V2 (Typografie-Hierarchie, Spacing, mehrfarbige Section-Cards-Pattern aus IS-SLC-115, QuickActionRing-Pattern fuer Bericht-Aktionen, Empty-/Error-States). Pre-Condition: FEAT-056 EditableText-Migration durch (sonst Doppelarbeit beim Re-Styling). Page-Level-Visual-Reference-Checklist aus IS-SLC-114-Lehre (siehe `feedback_look_alignment_needs_page_level_scope.md`).
+6. **FEAT-060 Bericht-Email mit PDF-Attachment (BL-116)** — Server-Action `sendDiagnoseReportByEmail` nach Bericht-Generierung. Empfaenger-Auswahl: (a) Mandant selbst, (b) Partner-Steuerberater (cc), (c) zusaetzliche Email-Adresse. PDF via `@react-pdf/renderer` server-side gerendert (kein puppeteer — kein Headless-Chrome-Overhead). IONOS-SMTP-Adapter-Reuse aus V4.2. Bestehender Print-CSS bleibt als Browser-Fallback. Email-Subject + Body via FEAT-055 editierbar.
+7. **FEAT-061 Back-Link auf /datenschutz + /impressum (BL-113)** — Header-Back-Link "Zurueck" oben links auf beiden Pages. Routes nutzen `document.referrer` mit Fallback `/dashboard`. Quick-Win ~15-30min.
+
+### V7.1 Out of Scope
+
+- **KI-System-Prompt-Edit** (H) — `buildLightPipelinePrompt` in `light-pipeline.ts` bleibt Code. Aenderung erfordert weiter Code-Deploy. Begruendung: Prompt-Engineering ist sensibel, Versions-Kontrolle via Git wichtiger als Live-Edit.
+- **Mehrsprachige Overrides** (locale ungleich `de`) — V7.1 nur Deutsch. `locale`-Spalte ist im Schema vorgesehen, aber UI exposed nur `de`. Multi-Sprach-UI ist V8+ (NL-Markt-Vorbereitung).
+- **Edit-of-Texts fuer partner_employee** — V7.1 nur `strategaize_admin` + `partner_admin`. Employee-Edit-Berechtigung kommt als optionale Erweiterung V8+.
+- **Diff-View "Standard vs. Override"** in UI — V7.1 zeigt nur aktuellen Wert + "Auf Standard zuruecksetzen"-Button. Side-by-Side-Diff ist Polish V7.2+.
+- **Bulk-Edit-Mode** (mehrere Text-Keys gleichzeitig editieren) — V7.1 nur Single-Key-Edit pro Klick. Bulk-Edit ist V8+.
+- **Telemetrie-Export als CSV/Excel** — V7.1 nur In-App-Analytics-Page. Export ist V8+.
+- **Telemetrie pro einzelnen Mandant exponieren** — DSGVO-Risiko, V7.1 nur aggregierte Sicht ab 5 Sessions pro Daten-Cluster. Single-Mandant-Drilldown bleibt V8+ mit Consent-Mechanik.
+- **PDF-Branding pro Partner** (Logo, Brief-Vorlage) — V7.1 nur Strategaize-Standard-PDF. Per-Partner-Branding ist V7.2+ Polish.
+- **Reminder-Mail "Bericht wartet auf Versand"** — V7.1 nur Manual-Trigger durch Mandant. Auto-Reminder V8+.
+- **Conversion-A/B-Test-Mechanik** — V7.1 misst nur. A/B-Variants pro Frage sind IS V3.1 (BL-088 dort) + spaeter OP-Side. Cross-Repo-Bruecke vorgesehen, aber nicht V7.1-Scope.
+- **i18n-File Komplett-Migration** — V7.1 migriert nur Diagnose-Funnel-Pfad-Strings auf EditableText. Sidebar, Auth-Pages, Admin-Pages bleiben i18n-File-basiert.
+- **Diary-Mode** — bleibt V8.
+
+### Core Features (V7.1 — Detail siehe `/features/FEAT-05X-*.md`)
+
+- **FEAT-055** Inline-Text-Override-Foundation (Tabelle + Resolver + Audit + RLS)
+- **FEAT-056** EditableText-React-Komponente + Text-Migration A/D/E/F (~50-80 Keys)
+- **FEAT-057** Helper-Texts pro Frage (Schema + Initial-Content + Cross-Repo-Sync IS V3)
+- **FEAT-058** Diagnose-Funnel-Telemetrie (diagnose_event + Tracker + Analytics-Page)
+- **FEAT-059** Look-and-Feel-Polish nach Style Guide V2 (Start + Run + Bericht)
+- **FEAT-060** Bericht-Email mit PDF-Attachment (@react-pdf/renderer)
+- **FEAT-061** Back-Link auf /datenschutz + /impressum
+
+### Constraints (V7.1)
+
+- **Kein riesiges Template-System** (User-Direktive 2026-05-20): Eine generische `text_override`-Tabelle + Resolver + Inline-Edit-Komponente. KEINE 5 verschiedenen Edit-UIs pro Text-Klasse, KEINE Page-Builder-Komplexitaet, KEINE Custom-CMS-Workflows.
+- **EditableText als Foundation-Pflicht**: BL-114 (Look-Polish) darf erst NACH FEAT-056-Migration laufen (sonst Doppelarbeit beim Re-Styling). Slice-Reihenfolge SLC-136 → SLC-137 → ... ist BLOCKING.
+- **No new external dependencies** mit Ausnahme `@react-pdf/renderer` (FEAT-060). Edit-Layer ohne externe Bibliotheken (kein react-quill / draft.js / lexical fuer V7.1 — Plain-Text + Markdown reicht).
+- **DSGVO-Konformitaet Telemetrie**: Event-Daten ohne Klartext-PII. Aggregation NIE unter 5 Sessions pro Daten-Cluster exponieren. Mandant-spezifischer Drilldown NICHT in V7.1.
+- **Cross-Repo-Schema-Sync mit IS V3** (FEAT-057): `template.blocks[].questions[].helper_text + .examples_md` JSONB-Felder MUESSEN identisch geschnitten sein wie IS V3 Questionnaire-Builder-Output (DEC-063 IS-Repo). Schema-Aenderungen abgestimmt.
+- **Reuse-Pflicht (strategaize-pattern-reuse Rule)**: IONOS-SMTP-Adapter aus V4.2 (FEAT-060), partner_organization-Schema aus Migration 090 unveraendert, RLS-Pattern aus V6 reusen, rate-limit.ts wiederverwenden falls Edit-Endpoints rate-limited werden muessen.
+- **Audit-Pflicht**: Jeder Edit-Schritt (EditableText.save, Per-Partner-Override-Anlage, Reset-auf-Standard) wird in `text_override_history` festgehalten. DSGVO-Auskunftspflicht-relevant.
+- **Performance-Budget**: Resolver-Pre-Load aller Overrides bei Server-Render muss unter 50ms bleiben (50-80 Keys mal 2-3 Scopes = ca. 200 Rows max in V7.1). Wenn das groesser wird, Cache-Refresh on-write.
+- **Locale-Forward-Compat**: `text_override.locale` ist Schema-Pflicht (Default `de`), auch wenn V7.1-UI nur Deutsch exponiert. V8+ NL-Variante baut additiv darauf auf.
+
+### Risks / Assumptions (V7.1)
+
+#### Risiken
+
+- **Edit-Foundation-Bloat**: User-Direktive ist "kein riesiges Template-System", aber Inline-Edit ueberall + Audit + Reset + Override-Liste-Page koennten heimlich wachsen. Mitigation: harter SLC-136-Schnitt mit klar definiertem Komponenten-Set (text_override-Tabelle, Resolver, EditableText-Komponente, save-Action, Admin-Liste-Page, History-Tabelle, Reset). Nicht mehr.
+- **Text-Key-Schema-Drift**: 50-80 Keys haendisch zuteilen ist fehleranfaellig. Eine vergessene Migration laesst Hardcode zurueck, EditableText-Wrapping ist inkonsistent. Mitigation: SLC-137 startet mit Grep-Audit ueber alle User-facing-Strings im Diagnose-Funnel-Pfad, dann systematisches Mapping `<old-string> -> <key-path>`.
+- **Performance-Regression bei Server-Render**: Resolver-Pre-Load fuer jeden Render-Pfad ist potenziell ein N+1-Query-Risiko. Mitigation: Single-Query SELECT pro Partner-Render, Map-Cache pro Request-Context, ggf. React-Context-Provider.
+- **Telemetrie-Drop-off-False-Positives**: User schliesst Tab ungleich User bricht ab. Mitigation: `session_paused` (Tab-Switch via visibilitychange) vs. `session_abandoned` (no-event-fuer-30min) explizit unterscheiden. Doku in Analytics-Page-Header.
+- **Cross-Repo-Sync-Bruch IS V3**: Wenn IS V3 helper_text-Schema anders schneidet als OP V7.1, ist Builder-Output nicht renderbar. Mitigation: Schema-Sync vor SLC-138-Start explizit cross-checken (Memory-Update + DEC-Eintrag in beiden Repos).
+- **PDF-Engine-Limitationen**: `@react-pdf/renderer` rendert nicht alle Tailwind-Klassen. Mitigation: PDF nutzt eigenen Stil-Pfad, KEIN 1:1-Browser-Render. Akzeptierter Tradeoff (PDF ungleich HTML-Print).
+- **Telemetrie-Test-Pollution**: SLC-700-Live-Test produziert Test-Events. Mitigation: `diagnose_event.tenant_id` Filter in Analytics-Query auf nicht-Test-Tenants beschraenkt; alternativ `is_test`-Flag pro Event.
+
+#### Annahmen
+
+- IONOS-SMTP-Adapter aus V4.2 ist weiter einsatzbereit (Verify-Mail-Versand in V7-Live-Smoke verifiziert).
+- `partner_organization`-Tenant-Hierarchie aus V6 Migration 090 ist stabil.
+- IS V3 Questionnaire Builder (DEC-063) implementiert `helper_text + examples_md` als JSONB im Builder-Output — Schema wird in /architecture V7.1 finalisiert.
+- Strategaize Style Guide V2 ist aktuelle Quelle der Wahrheit fuer Look-and-Feel (Memory `feedback_style_guide_v2_mandatory.md` + `feedback_v2_sidebar_pflicht.md`).
+- Solo-Founder-Kapazitaet erlaubt 6-8 zusammenhaengende Code-Side-Tage fuer V7.1.
+
+### Success Criteria (V7.1)
+
+- **SC-V7.1-1**: `text_override`-Tabelle live appliziert. Insert via Server-Action funktioniert fuer alle drei Scopes (global/template/partner). RLS verbietet partner_admin den Zugriff auf andere partner_organization-IDs (Pen-Test-Case).
+- **SC-V7.1-2**: `<EditableText keyPath="..." defaultText="..." />` rendert Default ohne Override-Row, rendert Override wenn vorhanden. Pencil-Icon nur fuer `strategaize_admin` + `partner_admin`-Rollen sichtbar. Klick oeffnet Editor, Save schreibt Override, neuer Render zeigt neuen Text.
+- **SC-V7.1-3**: Mindestens 50 Text-Keys im Diagnose-Funnel sind auf EditableText migriert. Grep-Audit `EditableText` mindestens 50 Treffer, Grep-Audit "hardcoded Strings im Diagnose-Pfad" liefert 0 Treffer (mit dokumentierten Ausnahmen).
+- **SC-V7.1-4**: `partner_diagnostic v1`-Template hat 24 Fragen mit `helper_text + examples_md` Initial-Content. Frontend rendert Info-Icon, Klick zeigt Modal. Helper-Text-Edit via EditableText funktioniert.
+- **SC-V7.1-5**: `diagnose_event`-Tabelle live. Browser-Tracker emittiert mindestens 5 Event-Types in einem End-to-End-Test-Run (question_start, question_answer, helper_text_open, session_paused, session_abandoned). Analytics-Page `/admin/diagnose-funnel-analytics` zeigt Drop-off-Prozent pro Frage fuer mindestens 10 Test-Runs.
+- **SC-V7.1-6**: Style-Guide-V2-Konformitaet auf Start + Run + Bericht-Pages verifiziert via Page-Level-Visual-Reference-Checklist. Mindestens 5 Sub-Checks (Spacing, Typography, Section-Cards, QuickActionRing, Empty-States) PASS.
+- **SC-V7.1-7**: Server-Action `sendDiagnoseReportByEmail` schickt PDF an Mandant + Partner-Steuerberater. PDF-Attachment ist valide (pdftk-validate o.ae.). IONOS-SMTP-Delivery verifiziert.
+- **SC-V7.1-8**: Back-Link auf `/datenschutz` + `/impressum` funktioniert, Fallback `/dashboard` bei fehlendem Referrer.
+- **SC-V7.1-9**: Cross-Repo-Schema-Sync mit IS V3 verifiziert via Schema-Compare-Skript oder manueller Cross-Check (helper_text + examples_md identisch in beiden Repos).
+- **SC-V7.1-10**: Audit-Log `text_override_history` enthaelt Eintrag fuer jeden Edit-Schritt mit `(text_key, old_value, new_value, editor_id, editor_role, created_at)`.
+
+### Open Questions (V7.1)
+
+- **Q-V7.1-A**: Edit-Modal vs. Inline-Editor — Modal fuer alle Edits (konsistente UX, breakable Layout-Probleme), Inline-Textarea fuer einzeilig + Modal fuer mehrzeilig, oder rein Inline mit Auto-Resize? Empfehlung: Hybrid (Inline fuer bis 80 Zeichen, Modal sonst). Entscheidung in /architecture.
+- **Q-V7.1-B**: Markdown-Support in Text-Werten — Plain-Text only, Markdown rendered via remark@15, oder limitierte Markdown-Subset (bold, italic, links)? Empfehlung: limitierte Markdown-Subset, da Helper-Texts + Email-Bodies Markdown wollen, andere Texte Plain. Entscheidung in /architecture.
+- **Q-V7.1-C**: Override-Cache-Invalidation — Pro-Request-Refresh (einfach, ggf. langsam), DB-Trigger-Notify (komplex, schnell), Manual-Cache-Bust nach Save (mittel)? Empfehlung: Manual-Cache-Bust nach Save + Cache-TTL 60s als Fallback. Entscheidung in /architecture.
+- **Q-V7.1-D**: Text-Key-Namespace-Konvention — Punkt-separiert (`template.partner_diagnostic.block.q1.label`), Slash-separiert (`template/partner_diagnostic/block/q1/label`), oder UUID-basiert? Empfehlung: Punkt-separiert mit fester Hierarchie-Konvention dokumentiert in /architecture.
+- **Q-V7.1-E**: Telemetrie-Sampling — Alle Events erfassen (Datenvolumen-Risiko) oder Sample bei hoher Frequenz (z.B. `question_start` 100%, `heartbeat` 10%)? Empfehlung: 100% in V7.1 (Daten-Volumen klein, max 24 Fragen mal ca. 10s Time-on-Question-Heartbeat mal N Mandanten), Sampling V8+. Entscheidung in /architecture.
+- **Q-V7.1-F**: PDF-Engine-Choice — `@react-pdf/renderer` (React-API, ohne Headless-Chrome) oder `puppeteer` (HTML-Print exakt, viel mehr Setup)? Empfehlung: `@react-pdf/renderer`, akzeptiert eigenen Stil-Pfad. Entscheidung in /architecture.
+- **Q-V7.1-G**: Edit-Audience-Default — `strategaize_admin` und `partner_admin` beide editierbar (Empfehlung) oder erst nur `strategaize_admin` und Per-Partner-Override in V7.2? Tradeoff: weniger RBAC-Komplexitaet vs. weniger Partner-Selbstaendigkeit. Empfehlung: beide editierbar, RBAC ist in V6 schon stabil. Entscheidung in /architecture.
+- **Q-V7.1-H**: Cross-Repo-Schema-Sync-Mechanik — Manual Cross-Check vor Schema-Migration (einfach, fehleranfaellig), gemeinsames Schema-Repo (Overhead), oder gespiegelter Schema-File mit md5-Hash-Check im CI? Empfehlung: Manual Cross-Check + DEC-Eintrag in beiden Repos in /architecture-Phase. Entscheidung in /architecture.
+
+### Delivery Mode (V7.1)
+
+**SaaS Product** (konsistent V6.x/V7). Stronger QA + TDD-mandatory fuer Edit-Foundation (Resolver-Logik, RLS-Pen-Test, Text-Key-Resolution), Telemetrie-Schema, Audit-Log-Korrektheit. Pen-Test-Suite-Erweiterung fuer Edit-Endpoints (partner_admin darf nicht andere partner_organization editieren). Internal-Test-Mode bleibt bis Pre-Production-Compliance-Gate (BL-104 Anwalts-Review extern, parallel).
+
+### Slice-Skizze (informativ, finaler Schnitt in /slice-planning)
+
+- **SLC-136** FEAT-055 Edit-Foundation: Migration `text_override` + `text_override_history` Tabellen, RLS, Resolver-Lib, Save-Server-Action, Reset-Funktion ~12-18h
+- **SLC-137** FEAT-056 EditableText-Komponente + Text-Migration: React-Komponente, Pencil-Icon-Render, Inline-Editor, ~50-80 Hardcode auf EditableText Coverage ~4-8h
+- **SLC-138** FEAT-057 Helper-Texts: Schema-Erweiterung template.blocks[].questions[].helper_text + .examples_md, Initial-Content via Migration fuer 24 Fragen, Info-Icon-UI, Cross-Repo-Schema-Sync mit IS V3 ~6-10h Code + ~3-6h Inhalt
+- **SLC-139** FEAT-058 Telemetrie: diagnose_event-Tabelle, Tracker-Lib mit Browser-Heartbeat, Analytics-Page mit Drop-off + Helper-Hits + Time-on-Question ~6-10h
+- **SLC-140** FEAT-059 Look-and-Feel-Polish: Style Guide V2 Anwendung auf Start + Run + Bericht-Pages, Page-Level-Visual-Reference-Checklist ~4-8h
+- **SLC-141** FEAT-060 Bericht-Email mit PDF: Server-Action, @react-pdf/renderer-Setup, IONOS-SMTP-Reuse, Empfaenger-Auswahl-UI ~4-6h
+- **SLC-142** FEAT-061 Back-Link Quick-Win: Header-Component auf /datenschutz + /impressum ~15-30min
+
+Geschaetzt ~36-60h Code-Side + ~3-6h Helper-Texts-Inhalt + Pen-Test-Erweiterung + Live-Smoke + /post-launch. Reihenfolge SLC-136 -> SLC-137 -> SLC-138 -> SLC-139 -> SLC-140 -> SLC-141 -> SLC-142 ist BLOCKING (Foundation zuerst, Look nach Migration).
+
+### Detail-Spec
+
+V7.1-Requirements-Completion-Report wird in dieser Session erstellt + Feature-Specs unter `/features/FEAT-055-*.md` ... `/features/FEAT-061-*.md`.
