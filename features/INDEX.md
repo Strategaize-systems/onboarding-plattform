@@ -146,7 +146,7 @@ V7.1-Scope (User-Entscheidung 2026-05-20 Option A nach DEC-139 V8-Diary-Split): 
 
 | ID | Feature | Status | Spec | Created |
 |----|---------|--------|------|---------|
-| FEAT-055 | Inline-Text-Override-Foundation (Tabelle + Resolver + Audit + RLS) | planned | [Spec](FEAT-055-inline-text-override-foundation.md) | 2026-05-20 |
+| FEAT-055 | Inline-Text-Override-Foundation (Tabelle + Resolver + Audit + RLS) | done | [Spec](FEAT-055-inline-text-override-foundation.md) | 2026-05-20 |
 | FEAT-056 | EditableText-Komponente + Text-Migration A/D/E/F | planned | [Spec](FEAT-056-editabletext-component-text-migration.md) | 2026-05-20 |
 | FEAT-057 | Helper-Texts mit Beispieldefinitionen pro Frage | planned | [Spec](FEAT-057-helper-texts-questions.md) | 2026-05-20 |
 | FEAT-058 | Diagnose-Funnel-Telemetrie (diagnose_event + Tracker + Analytics-Page) | planned | [Spec](FEAT-058-diagnose-funnel-telemetrie.md) | 2026-05-20 |

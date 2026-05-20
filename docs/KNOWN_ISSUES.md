@@ -1,5 +1,16 @@
 # Known Issues
 
+### ISSUE-081 — V6 Migration 090 Architecture-Drift: 4 in ARCHITECTURE.md vorausgesetzte Helper-Objekte wurden nie erstellt
+- Status: resolved
+- Resolution Date: 2026-05-20
+- Severity: Medium
+- Area: V6 / Migration 090 / RLS-Helper / docs/ARCHITECTURE.md
+- Summary: Pre-Migration-Check beim Start von SLC-136 (V7.1) 2026-05-20 hat aufgedeckt, dass die in ARCHITECTURE.md V6+V7 vorausgesetzten Helper-Objekte (`is_strategaize_admin(uuid) -> boolean`, View `partner_admin_view (user_id, partner_org_id)`, View `tenant_to_partner_view (tenant_id, partner_org_id)`, Function `current_tenant_id() -> uuid`) in der Production-DB nicht existieren. Migration 090 (`090_v6_partner_tenant_foundation.sql`) hat sie nicht angelegt. Bestehend waren stattdessen `auth.user_role()` + `auth.user_tenant_id()` aus Blueprint-V3.4-Erbschaft. V6 + V7-Code hat das Architecture-Doku-Gap nicht ausgeloest, weil die V6/V7-Policies direkt auf `auth.user_role()`-Inline-Patterns geschrieben waren — Drift erst beim V7.1-SLC-136-Migration-Check sichtbar.
+- Impact: SLC-136 Migration 101 wuerde mit "function is_strategaize_admin does not exist" crashen, da Policies explizit auf diese Helper-Names verweisen (ARCHITECTURE.md V7.1-Section). SLC-138 + SLC-139 spaeter ebenfalls. Risiko: stille Architecture-Doku-Drift, weil V6-Code-Patterns andere Namen verwenden als V7.1-Architecture-Doku.
+- Resolution: Per DEC-149 (User-Bestaetigung 2026-05-20) wurde Option A gewaehlt: Helper-Praeambel in Migration 101 (MIG-044) nachgezogen. 4 Objekte als idempotente CREATE OR REPLACE FUNCTION/VIEW angelegt. SLC-138 + SLC-139 nutzen die Helper wieder, statt das Pattern dort zu duplizieren. Architecture-Doku bleibt unveraendert weil Realitaet jetzt mit Doku uebereinstimmt.
+- Next Action: Keine — Resolution per DEC-149. Optional zukuenftig: Pre-Migration-Check-Skript automatisieren (siehe IMP-Backlog).
+- Related: DEC-149, MIG-044, ARCHITECTURE.md V7.1-Section Zeile 6549+
+
 ### ISSUE-080 — OP SMTP_PASS Drift: V7-Self-Signup-Mails silent broken bei invaliden IONOS-Credentials
 - Status: open
 - Severity: High
