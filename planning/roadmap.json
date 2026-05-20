@@ -127,10 +127,17 @@
       "order": 17
     },
     {
+      "id": "v7-1",
+      "name": "V7.1",
+      "status": "planned",
+      "summary": "**V7-Polish-Sammler (User-Feedback aus SLC-700-Live-Test 2026-05-20).** Kompakter Polish-Cycle nach V7-Release, vor V8-Diary-Mode-Substantial-Step. Scope-Items: BL-113 Back-Link auf /datenschutz + /impressum (~15-30min Low-Priority Quick-Win). BL-114 Diagnose-Flow Look-and-Feel professioneller (Style-Guide V2-Konformitaet, Typografie-Hierarchie, Section-Cards-Pattern aus IS-SLC-115, ~4-8h Medium-Priority). BL-115 Hilfetexte/Tooltips an Diagnose-Fragen mit Beispieldefinitionen (Schema-Erweiterung `template.blocks[].questions[].helper_text + .examples_md` JSONB, Cross-Repo-Sync mit IS V3 Questionnaire Builder DEC-063, ~6-10h High-Priority). BL-116 Diagnose-Bericht per Email an Mandant + Partner-cc + zusaetzliche Adresse (IONOS-SMTP-Reuse aus V4.2 + PDF-Generator, ~4-6h Medium-Priority). BL-117 Diagnose-Funnel-Telemetrie (`diagnose_event`-Tabelle, Drop-off pro Frage, Hilfetext-Hits, Time-on-Question, Cross-Repo-Brueckenpotenzial Recommendation IS V3, ~6-10h High-Priority — Pre-Condition fuer Effekt-Messung BL-114+BL-115). **Reihenfolge-Empfehlung**: BL-117 zuerst (Telemetrie-Foundation), dann BL-115 (Hilfetexte-Schema-Erweiterung), dann BL-114 (Look-Polish unter laufender Telemetrie), dann BL-116 (Email-Versand), zuletzt BL-113 (Back-Link Quick-Win). Cross-Repo-Schema-Sync mit IS V3 Schema-Migration MUSS koordiniert werden (gleicher JSONB-Felder-Schnitt). Geschaetzt ~21-34h Code-Side ueber 4-5 Slices SLC-136..140. DEC-139 dokumentiert Auftrennung V7.1=Polish vs. V8=Diary.",
+      "order": 17.5
+    },
+    {
       "id": "v8",
       "name": "V8",
       "status": "planned",
-      "summary": "Diary-Mode als zusaetzlicher Capture-Modus (zeitlich verteilte In-Situ-Aufnahmen, Mobile/PWA). Architektur-Hooks wurden in V4 vorbereitet (FEAT-025 Capture-Mode-Extension). Versionsnummer ehemals V5 (vor 2026-04-23 Re-Numerierung), dann V6, jetzt V8 nach Multiplikator-Layer-Priorisierung (NL-Investor-Substanz Q4 2026). Diary-Mode adressiert das Erfassen von seltenem, situativem Wissen (z.B. nur monatlich auftretende Ausnahmen), das in Questionnaire/Walkthrough/Dialogue-Modi nicht praktikabel ist.",
+      "summary": "Diary-Mode als zusaetzlicher Capture-Modus (zeitlich verteilte In-Situ-Aufnahmen, Mobile/PWA). Architektur-Hooks wurden in V4 vorbereitet (FEAT-025 Capture-Mode-Extension). Versionsnummer ehemals V5 (vor 2026-04-23 Re-Numerierung), dann V6, jetzt V8 nach Multiplikator-Layer-Priorisierung (NL-Investor-Substanz Q4 2026). Diary-Mode adressiert das Erfassen von seltenem, situativem Wissen (z.B. nur monatlich auftretende Ausnahmen), das in Questionnaire/Walkthrough/Dialogue-Modi nicht praktikabel ist. V7.1-Polish-Sammler (BL-113..117) laeuft vorher als kompakter Cycle (siehe DEC-139).",
       "order": 18
     },
     {
