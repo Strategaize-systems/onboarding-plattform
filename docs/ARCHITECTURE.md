@@ -6430,3 +6430,657 @@ Reihenfolge: SLC-131 BEFORE SLC-132 (Slug-Lookup ist Signup-Pre-Condition), SLC-
 
 Geschaetzt ~5 Code-Side-Tage + Pen-Test-Lauf + Live-Smoke + /post-launch. Architecture-Open-Questions Q-V7-A..G alle entschieden (DEC-129..DEC-138).
 
+
+## V7.1 Architektur — Inline-Text-Override-Foundation + Funnel-Polish + Telemetrie
+
+V7.1 ergaenzt die V7-Self-Signup-Foundation um eine **generische Text-Override-Mechanik** + **Diagnose-Funnel-Telemetrie** + **Bericht-Email-PDF**, ohne neue externe Services oder Container-Topologie-Aenderungen. Die V7.1-Architektur ist **additiv**: alle bestehenden Komponenten bleiben funktional unveraendert, neue Tabellen + Lib-Module + UI-Komponenten kommen dazu.
+
+Die zentrale Entscheidung (DEC-140) ist die **schlanke generische `text_override`-Tabelle mit Scope-Hierarchie (global -> template -> partner)** + **Resolver-Map mit per-Request-Cache** + **EditableText-React-Komponente mit Pencil-Icon-Inline-Edit**. Bewusster Verzicht auf separate Edit-UIs pro Text-Klasse, externes CMS, oder Page-Builder-Komplexitaet — User-Direktive 2026-05-20 "kein riesiges Template-System".
+
+### V7.1 Architecture Summary
+
+- **3 neue Migrations** (101 text_override + text_override_history, 099 template.questions[].helper_text + examples_md JSONB, 100 diagnose_event), alle additiv zu V7-Bestand.
+- **1 neue npm-Dependency**: `@react-pdf/renderer` (FEAT-060, PDF-Generierung server-side ohne Headless-Chrome). 0 weitere externe Dependencies.
+- **Resolver-Layer**: `src/lib/text-override/resolver.ts` + `<TextOverrideProvider>`-React-Context. Server-Component-Pre-Load aller Overrides bei jeder Page in einer Single-Query, per-Request-Map-Cache, O(1)-Lookup pro EditableText-Render.
+- **Edit-UI**: `<EditableText keyPath defaultText scope multiline markdown />`-React-Komponente. Hybrid-Editor (Inline-Textarea bei Default-Text <= 80 chars, Modal bei multiline=true oder Default-Text > 80 chars, DEC-143).
+- **Cache-Invalidation**: Manual `revalidatePath()` + `router.refresh()` nach Save-Action, plus 60s-In-Memory-Map-TTL als Fallback (DEC-145). Coolify-Single-Container-Setup macht Cross-Container-Bust nicht noetig.
+- **RLS-Pflicht**: strategaize_admin alle Scopes, partner_admin nur own-partner_org, tenant_admin/tenant_member Read-Only (DEC-148).
+- **Telemetrie**: Client-Side-Tracker + 8 Event-Types + 5s-Heartbeat + 100%-Sampling V7.1 (DEC-147) + DSGVO-Schwelle 5 Sessions in Aggregations-Sicht.
+- **PDF-Engine**: `@react-pdf/renderer` mit eigenem Stil-Pfad (DEC-141), KEIN Browser-HTML-Print-Parity. A4 + 20mm Margins.
+- **Cross-Repo-Schema-Sync mit IS V3**: helper_text + examples_md JSONB-Felder identisch in beiden Repos (DEC-142, Spiegel-DEC-073 in IS-Repo).
+- **0 neue Container, 0 neue Cron-Jobs**: alle V7.1-Pfade laufen im bestehenden `app`-Container. 30min-Abandoned-Detector ist on-demand-Query in Analytics-Page (Server-Component), kein eigener Cron noetig.
+
+### V7.1 Topologie
+
+```
+                  ┌──────────────────────────────────────────────────┐
+                  │ Mandant / strategaize_admin / partner_admin      │
+                  │ (Browser)                                        │
+                  └──────────┬───────────────────────────────────────┘
+                             │
+                             │ (1) Server-Render einer Diagnose-Page
+                             ▼
+                  ┌──────────────────────────────────────────────────┐
+                  │ Next.js Server-Component                         │
+                  │  - <TextOverrideProvider>                        │
+                  │  - loadOverrides(partnerOrgId, locale)           │
+                  └──────────┬───────────────────────────────────────┘
+                             │ (2) Single-Query
+                             ▼
+                  ┌──────────────────────────────────────────────────┐
+                  │ Coolify-Postgres                                 │
+                  │  text_override (scope, scope_id, text_key, ...)  │
+                  └──────────┬───────────────────────────────────────┘
+                             │ (3) Map<text_key, text_value>
+                             │     mit Reihenfolge partner > template > global
+                             ▼
+                  ┌──────────────────────────────────────────────────┐
+                  │ React-Tree Render                                │
+                  │  <EditableText keyPath="..." defaultText="..." /> │
+                  │  - resolveText(map, key, default)                │
+                  │  - Pencil-Icon nur fuer Admin-Rollen             │
+                  └──────────┬───────────────────────────────────────┘
+                             │ (4) Edit-Klick auf Pencil-Icon
+                             ▼
+                  ┌──────────────────────────────────────────────────┐
+                  │ Inline-Textarea (default <= 80 chars)            │
+                  │   ODER                                           │
+                  │ Modal-Editor (multiline / > 80 chars)            │
+                  └──────────┬───────────────────────────────────────┘
+                             │ (5) Save → saveTextOverride-Server-Action
+                             ▼
+                  ┌──────────────────────────────────────────────────┐
+                  │ saveTextOverride(scope, scopeId, key, value)     │
+                  │  - RLS-Check                                     │
+                  │  - UPSERT text_override                          │
+                  │  - INSERT text_override_history (audit)          │
+                  │  - revalidatePath() + Cache-Bust                 │
+                  └──────────────────────────────────────────────────┘
+
+  Telemetrie-Pfad (parallel zu Diagnose-Render):
+                  ┌──────────────────────────────────────────────────┐
+                  │ Mandant-Browser (Diagnose-Run-Page)              │
+                  │  - trackEvent('question_start', ...)             │
+                  │  - 5s-Heartbeat 'session_heartbeat'              │
+                  │  - beforeunload 'session_paused'                 │
+                  └──────────┬───────────────────────────────────────┘
+                             │ POST /api/diagnose-event
+                             ▼
+                  ┌──────────────────────────────────────────────────┐
+                  │ diagnose_event INSERT (Coolify-Postgres)         │
+                  └──────────────────────────────────────────────────┘
+
+  PDF-Email-Pfad (FEAT-060):
+                  Mandant -> Server-Action sendDiagnoseReportByEmail
+                          -> @react-pdf/renderer (in-process)
+                          -> IONOS-SMTP (existing)
+                          -> Mandant-Inbox + Partner-Inbox + optional-3.-Empfaenger
+```
+
+### V7.1 Main Components
+
+| # | Component | Layer | Files (geplant) | FEAT |
+|---|---|---|---|---|
+| 1 | text_override-Tabelle + history | DB | Migration 101 | FEAT-055 |
+| 2 | Resolver-Lib | Lib | `src/lib/text-override/resolver.ts` | FEAT-055 |
+| 3 | Save/Reset-Server-Actions | Lib | `src/lib/text-override/actions.ts` | FEAT-055 |
+| 4 | Admin-Page Override-Liste | UI | `src/app/admin/text-overrides/page.tsx` + `.../[id]/history/page.tsx` | FEAT-055 |
+| 5 | TextOverrideProvider Context | UI | `src/components/text-override/Provider.tsx` | FEAT-056 |
+| 6 | EditableText-Komponente | UI | `src/components/text-override/EditableText.tsx` | FEAT-056 |
+| 7 | Text-Key-Audit-Skript | Tools | `scripts/audit-editable-text-coverage.mjs` | FEAT-056 |
+| 8 | Helper-Text-Schema | DB | Migration 099 (Erweiterung template-JSONB) | FEAT-057 |
+| 9 | Helper-Text-Initial-Content | DB | Migration 099a (24 Fragen Initial-Texts) | FEAT-057 |
+| 10 | Info-Icon + Modal in Diagnose-Run | UI | `src/app/dashboard/diagnose/run/components/HelperTextModal.tsx` | FEAT-057 |
+| 11 | Admin-Helper-Edit-Page | UI | `src/app/admin/templates/partner-diagnostic/questions/[questionKey]/helper/page.tsx` | FEAT-057 |
+| 12 | diagnose_event-Tabelle | DB | Migration 100 | FEAT-058 |
+| 13 | Telemetry-Tracker-Lib | Lib | `src/lib/telemetry/diagnose.ts` (Client-Side) | FEAT-058 |
+| 14 | Diagnose-Event-API | API | `src/app/api/diagnose-event/route.ts` | FEAT-058 |
+| 15 | Funnel-Analytics-Page | UI | `src/app/admin/diagnose-funnel-analytics/page.tsx` + `.../actions.ts` | FEAT-058 |
+| 16 | Style Guide V2 Polish | UI | `src/app/dashboard/diagnose/start/page.tsx` + `.../run/page.tsx` + `.../bericht/page.tsx` (Refactor) | FEAT-059 |
+| 17 | QuickActionRing-Komponente | UI | `src/app/dashboard/diagnose/bericht/components/QuickActionRing.tsx` | FEAT-059 |
+| 18 | PDF-Generator | Lib | `src/lib/pdf/diagnose-report.tsx` (@react-pdf/renderer) | FEAT-060 |
+| 19 | Send-Report-Email-Action | Lib | `src/app/dashboard/diagnose/bericht/actions.ts` (Erweiterung) | FEAT-060 |
+| 20 | Send-Report-Email-Modal | UI | `src/app/dashboard/diagnose/bericht/components/SendReportByEmailModal.tsx` | FEAT-060 |
+| 21 | LegalPageHeader-Komponente | UI | `src/components/legal/LegalPageHeader.tsx` | FEAT-061 |
+| 22 | Edit-Endpoint-Pen-Test | Tests | `__tests__/pen-test/text-override-pen-test.test.ts` | FEAT-055 |
+
+Alle Komponenten folgen Reuse-Pflicht aus `.claude/rules/strategaize-pattern-reuse.md`: RLS-Pattern aus V6 Migration 090, error_log-Audit-Pattern aus V6, Server-Action-Pattern aus V6.3 Diagnose-Werkzeug, IONOS-SMTP aus V4.2 Reminders, rate-limit.ts aus V4.2, remark@15+remark-html@16-Pipeline aus IS-SLC-201 (siehe `feedback_email_render_remark_pattern.md`).
+
+### V7.1 Data Model
+
+**Migration 101 — `text_override` + `text_override_history`** (FEAT-055):
+
+```sql
+-- text_override: Aktueller Wert pro (scope, scope_id, text_key, locale)
+CREATE TABLE text_override (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  scope text NOT NULL CHECK (scope IN ('global','template','partner')),
+  scope_id uuid NULL,
+  text_key text NOT NULL CHECK (text_key ~ '^[a-z0-9._]{1,200}$'),
+  text_value text NOT NULL CHECK (length(text_value) <= 8000),
+  locale text NOT NULL DEFAULT 'de',
+  updated_by uuid NOT NULL REFERENCES auth.users(id),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT scope_id_matches_scope CHECK (
+    (scope = 'global' AND scope_id IS NULL) OR
+    (scope IN ('template','partner') AND scope_id IS NOT NULL)
+  )
+);
+
+CREATE UNIQUE INDEX text_override_unique
+  ON text_override (scope, COALESCE(scope_id, '00000000-0000-0000-0000-000000000000'::uuid), text_key, locale);
+
+CREATE INDEX text_override_key_locale ON text_override (text_key, locale);
+CREATE INDEX text_override_scope_id ON text_override (scope, scope_id) WHERE scope_id IS NOT NULL;
+
+-- text_override_history: Audit-Log fuer DSGVO-Auskunftspflicht
+CREATE TABLE text_override_history (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  text_override_id uuid NULL,  -- NULL bei action='delete' (Row geloescht)
+  scope text NOT NULL,
+  scope_id uuid NULL,
+  text_key text NOT NULL,
+  locale text NOT NULL,
+  old_value text NULL,         -- NULL bei action='create'
+  new_value text NULL,         -- NULL bei action='delete'
+  editor_id uuid NOT NULL REFERENCES auth.users(id),
+  editor_role text NOT NULL,
+  action text NOT NULL CHECK (action IN ('create','update','delete')),
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX text_override_history_key ON text_override_history (text_key, locale, created_at DESC);
+CREATE INDEX text_override_history_editor ON text_override_history (editor_id, created_at DESC);
+
+-- RLS (DEC-148):
+ALTER TABLE text_override ENABLE ROW LEVEL SECURITY;
+ALTER TABLE text_override_history ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY text_override_admin_all ON text_override FOR ALL
+  USING (is_strategaize_admin(auth.uid()))
+  WITH CHECK (is_strategaize_admin(auth.uid()));
+
+CREATE POLICY text_override_partner_read_global_template ON text_override FOR SELECT
+  USING (scope IN ('global','template'));
+
+CREATE POLICY text_override_partner_own ON text_override FOR ALL
+  USING (
+    scope = 'partner' AND
+    scope_id IN (SELECT partner_org_id FROM partner_admin_view WHERE user_id = auth.uid())
+  )
+  WITH CHECK (
+    scope = 'partner' AND
+    scope_id IN (SELECT partner_org_id FROM partner_admin_view WHERE user_id = auth.uid())
+  );
+
+CREATE POLICY text_override_tenant_read ON text_override FOR SELECT
+  USING (
+    scope IN ('global','template') OR
+    (scope = 'partner' AND scope_id = (SELECT partner_org_id FROM tenant_to_partner_view WHERE tenant_id = current_tenant_id()))
+  );
+
+-- History-RLS analog
+CREATE POLICY text_override_history_admin_all ON text_override_history FOR SELECT
+  USING (is_strategaize_admin(auth.uid()));
+
+CREATE POLICY text_override_history_partner_own ON text_override_history FOR SELECT
+  USING (
+    scope_id IN (SELECT partner_org_id FROM partner_admin_view WHERE user_id = auth.uid())
+  );
+
+-- GRANTs Pflicht (siehe feedback_migration_rls_needs_grants.md)
+GRANT SELECT, INSERT, UPDATE, DELETE ON text_override TO service_role, authenticated;
+GRANT SELECT, INSERT ON text_override_history TO service_role, authenticated;
+```
+
+**Migration 099 — `template.blocks[].questions[].helper_text + examples_md`** (FEAT-057):
+
+```sql
+-- Schema-Erweiterung ist JSONB-additiv, kein ALTER TABLE noetig
+-- Migration prueft nur, dass bestehende Templates valide bleiben.
+-- helper_text + examples_md sind optionale Felder im questions[]-JSONB.
+
+-- Validation-Function (idempotent):
+CREATE OR REPLACE FUNCTION public.validate_helper_text_schema()
+RETURNS void LANGUAGE plpgsql AS $$
+BEGIN
+  -- Prueft: jedes question-Objekt darf 'helper_text' (max 300 chars) und
+  -- 'examples_md' (max 800 chars) als optionale string-Felder haben.
+  -- Cross-Repo-Sync-Pflicht mit IS V3 Questionnaire Builder DEC-063.
+  PERFORM 1 FROM template
+  WHERE EXISTS (
+    SELECT 1 FROM jsonb_array_elements(blocks) AS block,
+                  jsonb_array_elements(block->'questions') AS q
+    WHERE (q->>'helper_text' IS NOT NULL AND length(q->>'helper_text') > 300)
+       OR (q->>'examples_md' IS NOT NULL AND length(q->>'examples_md') > 800)
+  );
+  -- Falls Treffer: RAISE EXCEPTION mit Template-ID.
+END $$;
+
+-- Migration 099a (separat): Initial-Content fuer partner_diagnostic v1
+-- UPDATE template SET blocks = (...)
+-- mit 24 question-Objekten, jeweils helper_text + examples_md gesetzt.
+-- (Konkrete Inhalte werden in SLC-138 mit User finalisiert.)
+```
+
+**Migration 100 — `diagnose_event`** (FEAT-058):
+
+```sql
+CREATE TABLE diagnose_event (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  capture_session_id uuid NOT NULL REFERENCES capture_session(id) ON DELETE CASCADE,
+  tenant_id uuid NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  partner_org_id uuid NULL REFERENCES partner_organization(id) ON DELETE SET NULL,
+  event_type text NOT NULL CHECK (event_type IN (
+    'question_start','question_answer','question_skip','helper_text_open',
+    'session_paused','session_resumed','session_abandoned','session_completed',
+    'session_heartbeat'
+  )),
+  question_key text NULL,
+  payload jsonb NOT NULL DEFAULT '{}',
+  is_test boolean NOT NULL DEFAULT false,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX diagnose_event_session ON diagnose_event (capture_session_id, created_at DESC);
+CREATE INDEX diagnose_event_tenant_type ON diagnose_event (tenant_id, event_type, created_at DESC);
+CREATE INDEX diagnose_event_partner ON diagnose_event (partner_org_id, created_at DESC) WHERE partner_org_id IS NOT NULL;
+
+-- RLS:
+ALTER TABLE diagnose_event ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY diagnose_event_admin_all ON diagnose_event FOR SELECT
+  USING (is_strategaize_admin(auth.uid()));
+
+CREATE POLICY diagnose_event_partner_own ON diagnose_event FOR SELECT
+  USING (
+    partner_org_id IN (SELECT partner_org_id FROM partner_admin_view WHERE user_id = auth.uid())
+  );
+
+CREATE POLICY diagnose_event_insert_own_session ON diagnose_event FOR INSERT
+  WITH CHECK (
+    tenant_id = current_tenant_id() AND
+    capture_session_id IN (SELECT id FROM capture_session WHERE tenant_id = current_tenant_id())
+  );
+
+GRANT SELECT, INSERT ON diagnose_event TO service_role, authenticated;
+```
+
+### V7.1 Resolver-Flow im Detail
+
+**Single-Query-Load pro Server-Component-Render:**
+
+```typescript
+// src/lib/text-override/resolver.ts
+export async function loadOverrides(
+  partnerOrgId: string | null,
+  locale: string = 'de'
+): Promise<Map<string, string>> {
+  const supabase = createServerClient();
+  const { data, error } = await supabase
+    .from('text_override')
+    .select('scope, scope_id, text_key, text_value')
+    .or([
+      `scope.eq.global`,
+      `scope.eq.template`,
+      partnerOrgId ? `and(scope.eq.partner,scope_id.eq.${partnerOrgId})` : null
+    ].filter(Boolean).join(','))
+    .eq('locale', locale);
+
+  if (error) throw error;
+
+  // Merge mit Reihenfolge partner > template > global
+  const map = new Map<string, string>();
+  for (const scope of ['global', 'template', 'partner'] as const) {
+    for (const row of data.filter(r => r.scope === scope)) {
+      map.set(row.text_key, row.text_value);
+    }
+  }
+  return map;
+}
+
+export function resolveText(
+  map: Map<string, string>,
+  key: string,
+  defaultText: string
+): string {
+  return map.get(key) ?? defaultText;
+}
+```
+
+**Per-Request-Cache via React-Context:**
+
+```typescript
+// src/components/text-override/Provider.tsx (Server-Component)
+export async function TextOverrideProvider({ children, partnerOrgId }: Props) {
+  const map = await loadOverrides(partnerOrgId, 'de');
+  return <TextOverrideContext.Provider value={{ map, partnerOrgId }}>{children}</TextOverrideContext.Provider>;
+}
+```
+
+**60s-TTL als Fallback** (DEC-145):
+
+```typescript
+// In-Memory-Map mit TTL pro Server-Prozess
+const cache = new Map<string, { map: Map<string,string>; expiresAt: number }>();
+
+export async function loadOverridesWithCache(partnerOrgId, locale) {
+  const cacheKey = `${partnerOrgId}::${locale}`;
+  const cached = cache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) return cached.map;
+  const map = await loadOverrides(partnerOrgId, locale);
+  cache.set(cacheKey, { map, expiresAt: Date.now() + 60_000 });
+  return map;
+}
+```
+
+**Save-Action mit Cache-Bust:**
+
+```typescript
+// src/lib/text-override/actions.ts
+export async function saveTextOverride(scope, scopeId, textKey, newValue, locale) {
+  // ...RLS-Check, Upsert, History-Insert
+  cache.delete(`${scopeId ?? 'null'}::${locale}`);   // Cache invalidiert
+  revalidatePath('/dashboard/diagnose', 'layout');    // Next.js Cache-Bust
+  return { ok: true, newValue };
+}
+```
+
+### V7.1 EditableText-Komponente
+
+**Hybrid-Editor (DEC-143)**:
+
+```tsx
+// src/components/text-override/EditableText.tsx
+type Props = {
+  keyPath: string;
+  defaultText: string;
+  scope?: 'global' | 'template' | 'partner';   // Default 'global'
+  scopeId?: string;                             // Pflicht bei scope='template'|'partner'
+  multiline?: boolean;                          // Default false
+  markdown?: boolean;                           // Default false, opt-in via DEC-144
+  as?: keyof JSX.IntrinsicElements;             // Default 'span'
+};
+
+export function EditableText({ keyPath, defaultText, scope='global', scopeId, multiline=false, markdown=false, as='span' }: Props) {
+  const { map, role, currentPartnerOrgId } = useTextOverride();
+  const text = resolveText(map, keyPath, defaultText);
+
+  const canEdit = role === 'strategaize_admin' || role === 'partner_admin';
+  const useModal = multiline || defaultText.length > 80;   // DEC-143 Schwelle
+
+  if (markdown) {
+    return <MarkdownRender content={text} as={as} editable={canEdit} onEdit={() => openEditor(useModal)} />;
+  }
+  return <PlainTextRender text={text} as={as} editable={canEdit} onEdit={() => openEditor(useModal)} />;
+}
+```
+
+**Inline-Editor (default <= 80 chars, Single-Line)**:
+- Klick auf Pencil-Icon → Span wird zu `<input type="text">` mit Auto-Width.
+- Enter zum Save, Esc zum Cancel.
+- Save-Loading-State per Spinner-Icon-Toggle.
+
+**Modal-Editor (multiline=true ODER default > 80 chars)**:
+- Klick auf Pencil-Icon → Modal-Dialog mit grosser `<textarea rows=8>`.
+- Markdown-Preview-Toggle (falls `markdown={true}`).
+- Save / Cancel-Buttons.
+- "Auf Standard zuruecksetzen"-Button sichtbar wenn Override-Row existiert.
+
+### V7.1 Markdown-Subset (DEC-144)
+
+Markdown rendered via `remark@15` + `remark-html@16` (Pattern aus IS-SLC-201, `feedback_email_render_remark_pattern.md`). Erlaubte Syntax:
+
+- **Bold** `**text**`
+- *Italic* `*text*`
+- [Links](https://...) `[label](url)` mit URL-Validation (https-only)
+- Unordered lists `- item`
+- Ordered lists `1. item`
+- Line-Breaks
+
+**Verboten** (HTML-Sanitizer entfernt):
+- `<script>`, `<iframe>`, `<style>`, andere HTML-Tags
+- Code-Blocks (`` ``` ``)
+- Images (`![]()`)
+- Tables
+
+Markdown-Modus ist opt-in via `markdown={true}` prop auf `<EditableText>`. Default ist Plain-Text (kein Markdown-Parse).
+
+### V7.1 Telemetry-Flow (DEC-147)
+
+**Client-Side-Tracker** (`src/lib/telemetry/diagnose.ts`):
+
+```typescript
+type DiagnoseEventType =
+  | 'question_start' | 'question_answer' | 'question_skip'
+  | 'helper_text_open'
+  | 'session_paused' | 'session_resumed' | 'session_abandoned' | 'session_completed'
+  | 'session_heartbeat';
+
+let currentSession: SessionContext | null = null;
+let heartbeatInterval: ReturnType<typeof setInterval> | null = null;
+
+export function initTracker(session: SessionContext) {
+  currentSession = session;
+  document.addEventListener('visibilitychange', onVisibilityChange);
+  window.addEventListener('beforeunload', onBeforeUnload);
+  startHeartbeat();
+}
+
+function startHeartbeat() {
+  heartbeatInterval = setInterval(() => {
+    if (!document.hidden) {
+      trackEvent('session_heartbeat', { question_key: currentSession?.currentQuestionKey });
+    }
+  }, 5_000);   // DEC-147: 5s-Heartbeat, 100% Sampling
+}
+
+export function trackEvent(type: DiagnoseEventType, payload: Record<string, unknown> = {}) {
+  if (!currentSession) return;
+  const isTest = localStorage.getItem('strategaize:is_test_user') === 'true';
+  fetch('/api/diagnose-event', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      capture_session_id: currentSession.captureSessionId,
+      event_type: type,
+      question_key: payload.question_key ?? null,
+      payload,
+      is_test: isTest,
+    }),
+  }).catch(() => {});   // fire-and-forget, Tracker-Fail NIE blocking
+}
+
+function onVisibilityChange() {
+  if (document.hidden) trackEvent('session_paused');
+  else trackEvent('session_resumed');
+}
+
+function onBeforeUnload() {
+  // sendBeacon fuer reliable delivery bei Tab-Close
+  navigator.sendBeacon('/api/diagnose-event', JSON.stringify({
+    capture_session_id: currentSession?.captureSessionId,
+    event_type: 'session_paused',
+    question_key: currentSession?.currentQuestionKey,
+    payload: { reason: 'beforeunload' },
+    is_test: localStorage.getItem('strategaize:is_test_user') === 'true',
+  }));
+}
+```
+
+**Server-Endpoint** (`src/app/api/diagnose-event/route.ts`):
+- POST-only.
+- Rate-Limit: 600 Events/h pro Session (10 pro Minute).
+- Validation: capture_session_id gehoert dem aktuellen Tenant (RLS via Insert-Policy).
+- INSERT in diagnose_event.
+
+**Analytics-Aggregation** (`src/app/admin/diagnose-funnel-analytics/actions.ts`):
+
+```sql
+-- Drop-off pro Frage (Beispiel-Query)
+SELECT
+  question_key,
+  COUNT(*) FILTER (WHERE event_type = 'question_start') AS starts,
+  COUNT(*) FILTER (WHERE event_type = 'question_answer') AS answered,
+  COUNT(*) FILTER (WHERE event_type = 'question_skip') AS skipped,
+  (COUNT(*) FILTER (WHERE event_type = 'question_start')
+    - COUNT(*) FILTER (WHERE event_type = 'question_answer'))::float /
+    NULLIF(COUNT(*) FILTER (WHERE event_type = 'question_start'), 0) AS dropoff_rate
+FROM diagnose_event
+WHERE
+  is_test = false
+  AND ($partner_org_id IS NULL OR partner_org_id = $partner_org_id)
+  AND created_at >= now() - interval '$range_days days'
+GROUP BY question_key
+HAVING COUNT(DISTINCT capture_session_id) >= 5   -- DSGVO-5-Sessions-Schwelle
+ORDER BY dropoff_rate DESC NULLS LAST;
+```
+
+**30min-Abandoned-Detector**: kein eigener Cron, sondern on-demand-View-Query in Analytics-Page: Sessions ohne Event in den letzten 30min werden als `session_abandoned` gezaehlt (LEFT JOIN auf `diagnose_event`).
+
+### V7.1 PDF-Generation-Flow (DEC-141)
+
+**`@react-pdf/renderer` Setup**:
+
+```tsx
+// src/lib/pdf/diagnose-report.tsx
+import { Document, Page, View, Text, StyleSheet, renderToBuffer } from '@react-pdf/renderer';
+
+const styles = StyleSheet.create({
+  page: { padding: 20 * 2.83465, fontSize: 11 },   // 20mm-Margin
+  header: { fontSize: 18, marginBottom: 12, fontWeight: 'bold' },
+  blockTitle: { fontSize: 13, marginTop: 14, marginBottom: 6, fontWeight: 'bold' },
+  blockText: { lineHeight: 1.4 },
+  footer: { fontSize: 9, marginTop: 18, color: '#666' },
+});
+
+export async function renderDiagnoseReportPdf(
+  sessionData: SessionDataShape,
+  overrides: Map<string, string>
+): Promise<Buffer> {
+  const closingStatement = resolveText(
+    overrides,
+    'template.partner_diagnostic.closing_statement',
+    sessionData.template.metadata.closing_statement
+  );
+
+  return await renderToBuffer(
+    <Document>
+      <Page size="A4" style={styles.page}>
+        <Text style={styles.header}>StrategAIze Diagnose-Bericht</Text>
+        <ScoreVisualPdf scores={sessionData.scores} />
+        {sessionData.blocks.map(b => (
+          <View key={b.key}>
+            <Text style={styles.blockTitle}>{b.title}</Text>
+            <Text style={styles.blockText}>{b.kiCondensation}</Text>
+          </View>
+        ))}
+        <Text style={styles.footer}>{closingStatement}</Text>
+      </Page>
+    </Document>
+  );
+}
+```
+
+**Email-Send-Action**:
+
+```typescript
+export async function sendDiagnoseReportByEmail(input: SendInput) {
+  // ...RLS-Check, Rate-Limit, Recipients-Resolution
+  const pdfBuffer = await renderDiagnoseReportPdf(sessionData, overrides);
+  await sendMail({
+    to: recipients,
+    subject: resolveText(overrides, 'email.diagnose_report.subject', 'Ihr StrategAIze Diagnose-Bericht'),
+    bodyMd: resolveText(overrides, 'email.diagnose_report.body_md', defaultBody),
+    attachments: [{ filename: 'diagnose-bericht.pdf', content: pdfBuffer, contentType: 'application/pdf' }],
+  });
+  await auditLog({ event: 'diagnose_report_emailed', sessionId: input.captureSessionId, recipientsCount: recipients.length });
+}
+```
+
+### V7.1 Cross-Repo-Schema-Sync mit IS V3 (DEC-142)
+
+**OP V7.1 (dieses Repo)** definiert:
+
+```jsonc
+// template.blocks[].questions[]-Schema (Migration 099-Validation)
+{
+  "key": "q1",                     // pflicht
+  "label": "Frage-Text",           // pflicht
+  "options": [...],                // pflicht
+  "helper_text": "Definition...",  // optional, max 300 chars (V7.1-NEU)
+  "examples_md": "- Beispiel A\n- Beispiel B"   // optional, max 800 chars Markdown (V7.1-NEU)
+}
+```
+
+**IS V3 (strategaize-intelligence-studio)** Questionnaire Builder erzeugt identische Schema-Form. Pflicht-Cross-Check in /architecture V7.1:
+
+- DEC-073 in IS-DECISIONS.md mit identischer Schema-Definition + Verweis auf OP-DEC-142.
+- Memory `project_op_v71_cross_repo_helper_text_sync.md` als Cold-Start-Pointer fuer beide Repos.
+- Schema-Aenderungen an `helper_text + examples_md` in beiden Repos NUR koordiniert.
+
+Keine Sync-Mechanik via gemeinsames Schema-Repo oder CI-Hash-Check in V7.1 (DEC-142). Manual-Cross-Check + Spiegel-DEC ist V7.1-Approach, Upgrade auf gemeinsames Schema-Repo ist V8+-Topic falls Drift in Praxis Probleme verursacht.
+
+### V7.1 Security and Privacy
+
+- **RLS-Pen-Test-Pflicht** (FEAT-055 AC-2/3, Pen-Test-Suite-Erweiterung):
+  - partner_admin Partner A darf NICHT Override-Row mit scope=partner, scope_id=Partner-B anlegen/editieren/loeschen.
+  - tenant_admin + tenant_member duerfen NICHT text_override schreiben.
+  - tenant_admin + tenant_member sehen NUR global+template+own-partner-Overrides beim Read.
+- **DSGVO-Datensparsamkeit Telemetrie**:
+  - Event-Payload enthaelt KEIN Klartext-PII (keine Antwort-Inhalte, keine Email, keine IP).
+  - Aggregations-Schwelle: 5 Sessions pro Filter-Kombo. Unter dieser Schwelle wird "zu wenig Daten" angezeigt, nicht der Zahlenwert (Re-Identifikations-Schutz).
+  - is_test-Flag filtert SLC-700-Live-Test-Daten + interne QA-Runs raus.
+- **Audit-Log fuer Edit-Aktionen**:
+  - text_override_history bekommt Insert pro Create/Update/Delete.
+  - DSGVO-Auskunftspflicht: "Was hat User X wann editiert?" beantwortbar via `editor_id`-Index.
+- **EditableText-Role-Check** Server-Side:
+  - Pencil-Icon-Sichtbarkeit ist ZUSAETZLICHE UX-Hinweis, NICHT Security-Gate.
+  - saveTextOverride-Server-Action prueft RLS + Role server-side. Browser-DevTools-Manipulation des Edit-Klicks aendert NICHTS.
+- **PDF-Generation in-process**:
+  - Kein externer PDF-Service, kein Daten-Transfer.
+  - PDF-Bytes werden direkt aus Server-Action an SMTP weitergereicht (kein Disk-Persist, kein Storage-Bucket).
+  - Audit-Log enthaelt nur `recipients_count`, kein Recipient-Klartext.
+
+### V7.1 Constraints and Tradeoffs
+
+- **Coolify-Single-Container-Setup** macht Cache-Cross-Container-Invalidation ueberfluessig. Bei V8+-Multi-Container-Scale-Out muss Cache-Strategy via Redis-pubsub erweitert werden (V8+-DEC).
+- **Resolver-Single-Query** kann bei sehr vielen Overrides (> 5000 Rows) langsam werden. V7.1 erwartet ~50-200 Override-Rows max — innerhalb Performance-Budget. Bei Wachstum: partitionierte Queries pro Scope.
+- **EditableText-Migration ~50-80 Keys** ist Hauptzeitfresser in SLC-137. Grep-Audit + systematisches Mapping `old-string -> key-path` ist Pflicht-Workflow.
+- **Helper-Texts-Inhaltsarbeit** ist 3-6h User-Mitarbeit + Code-side parallel. Empfehlung: SLC-138 parallelisiert Code (Schema + Migration + UI) mit User-Content-Erstellung.
+- **PDF-Layout-Limitation**: `@react-pdf/renderer` ist keine 1:1-Browser-Print-Parity. PDF nutzt eigenen Stil-Pfad, das ist akzeptierter Tradeoff (DEC-141).
+- **Telemetrie-Heartbeat 5s** + 100%-Sampling erzeugt ~720 Events/h/Session. Bei 50 parallelen Sessions = 36000 Events/h = 864000/Tag. Skaliert ohne Sampling bis ~500 Sessions parallel. Daruber muss Sampling V8+ eingefuehrt werden.
+- **Cross-Repo-Manual-Cross-Check** mit IS V3 ist V7.1-Approach (DEC-142). Bei Drift muss V8+ entscheiden ob gemeinsames Schema-Repo oder CI-Hash-Check eingefuehrt wird.
+
+### V7.1 Resolved Open Questions
+
+Die acht Open Questions Q-V7.1-A..H aus PRD V7.1-Section sind in V7.1-Architecture entschieden und als DECs dokumentiert:
+
+| Q | Frage | DEC | Entscheidung |
+|---|---|---|---|
+| Q-V7.1-A | Edit-Modal vs. Inline-Editor | DEC-143 | Hybrid: Inline fuer Default-Text <= 80 chars + multiline=false, Modal sonst |
+| Q-V7.1-B | Markdown-Support | DEC-144 | Opt-in via prop, remark@15-Pipeline, Subset (bold/italic/links/lists) |
+| Q-V7.1-C | Cache-Invalidation | DEC-145 | Manual revalidatePath + 60s in-Memory-Map-TTL als Fallback |
+| Q-V7.1-D | Text-Key-Namespace | DEC-146 | Punkt-separiert, 4 Top-Level-Bereiche (template/diagnose/email/legal) |
+| Q-V7.1-E | Telemetrie-Sampling | DEC-147 | 100% V7.1, 5s-Heartbeat, Sampling V8+ falls Volumen waechst |
+| Q-V7.1-F | PDF-Engine-Choice | DEC-141 (V7.1-Requirements) | @react-pdf/renderer |
+| Q-V7.1-G | Edit-Audience | DEC-148 | strategaize_admin + partner_admin schreiben, tenant Read-Only |
+| Q-V7.1-H | Cross-Repo-Schema-Sync | DEC-142 (V7.1-Requirements) | Manual-Cross-Check + Spiegel-DEC im IS-Repo |
+
+### V7.1 Implementation Direction
+
+Reihenfolge SLC-136 -> SLC-142 ist BLOCKING aus Architektur-Gruenden:
+
+| Slice | Komponenten | Pre-Conditions | Aufwand |
+|---|---|---|---|
+| **SLC-136** | Migration 101 + Resolver-Lib + Save/Reset-Actions + Admin-Override-Liste-Page + RLS-Pen-Test | Keine (Foundation) | ~12-18h |
+| **SLC-137** | TextOverrideProvider + EditableText-Komponente + Audit-Skript + Migration A/D/F (~50-80 Keys) + Migration E (Email-Templates) | SLC-136 done | ~4-8h |
+| **SLC-138** | Migration 099 + 099a Helper-Text-Initial-Content + Info-Icon + HelperTextModal + Admin-Helper-Edit-Page + IS V3 Cross-Repo-Sync-Verifikation | SLC-137 done | ~6-10h Code + ~3-6h User-Content |
+| **SLC-139** | Migration 100 + Telemetry-Tracker-Lib + /api/diagnose-event + Funnel-Analytics-Page mit Aggregations-Queries | SLC-138 done (helper_text_open-Events brauchen Info-Icon) | ~6-10h |
+| **SLC-140** | Style Guide V2 Polish auf Start + Run + Bericht-Pages + QuickActionRing-Komponente + Page-Level-Visual-Reference-Checklist | SLC-137 done (EditableText-Migration nicht ueberschrieben) | ~4-8h |
+| **SLC-141** | @react-pdf/renderer-Setup + PDF-Generator + sendDiagnoseReportByEmail-Action + SendReportByEmailModal | SLC-140 done (Bericht-Page Layout finalisiert) | ~4-6h |
+| **SLC-142** | LegalPageHeader-Komponente + Integration auf /datenschutz + /impressum | Keine, parallel moeglich | ~15-30min |
+
+Geschaetzt **~36-60h Code-Side** + ~3-6h Helper-Inhalt + Pen-Test-Erweiterung + Live-Smoke + /post-launch.
+
+**Naechster Schritt: /slice-planning V7.1** — 7 Slices als feste Files anlegen, Micro-Task-Decomposition pro Slice, Acceptance-Criteria + Aufwand-Schaetzung.
