@@ -499,15 +499,16 @@ describe("V7.1 SLC-136 — tenant_member Read-Visibility", () => {
         )
       ).rows[0].id;
 
-      // Seed 4 Override-Rows: global, template, partner=A (own), partner=B (other)
+      // Seed 4 Override-Rows: global, template, partner=A (own), partner=B (other).
+      // text_key MUSS regex [a-z0-9._]{1,200} matchen (CHECK), daher alle lowercase.
       await client.query(
         `INSERT INTO public.text_override
            (scope, scope_id, text_key, text_value, locale, updated_by)
          VALUES
            ('global', NULL, 'vis.global', 'G', 'de', $1),
            ('template', $2, 'vis.tpl', 'T', 'de', $1),
-           ('partner', $3, 'vis.A', 'A', 'de', $1),
-           ('partner', $4, 'vis.B', 'B', 'de', $1)`,
+           ('partner', $3, 'vis.a', 'A', 'de', $1),
+           ('partner', $4, 'vis.b', 'B', 'de', $1)`,
         [f.strategaizeAdmin, tplId, f.partnerOrgA, f.partnerOrgB],
       );
 
@@ -521,8 +522,8 @@ describe("V7.1 SLC-136 — tenant_member Read-Visibility", () => {
         // tenant_member von clientA (parent_partner=partnerA) sieht:
         // - global + template (immer)
         // - partner=partnerOrgA (own-partner via tenant_to_partner_view)
-        // NICHT vis.B (partnerOrgB → kein Match in tenant_to_partner_view)
-        expect(keys).toEqual(["vis.A", "vis.global", "vis.tpl"]);
+        // NICHT vis.b (partnerOrgB → kein Match in tenant_to_partner_view)
+        expect(keys).toEqual(["vis.a", "vis.global", "vis.tpl"]);
       });
     });
   });
