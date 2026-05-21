@@ -1,4 +1,6 @@
 import nodemailer from "nodemailer";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { loadOverridesWithCache, resolveText } from "@/lib/text-override/resolver";
 
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
@@ -9,6 +11,23 @@ const transporter = nodemailer.createTransport({
     pass: process.env.SMTP_PASS,
   },
 });
+
+// V7.1 SLC-137 MT-6 — Email-Templates loaden Text-Overrides server-side ueber
+// SLC-136-Resolver. globalScope only (Email-Versand kennt keinen Partner-
+// Kontext im Send-Path), 60s Cache pro Process.
+//
+// Returns leere Map bei Error (z.B. SMTP-Job ohne DB-Zugriff) — Templates
+// fallen dann auf defaultText zurueck.
+export async function loadEmailOverridesMap(
+  locale: string = "de",
+): Promise<ReadonlyMap<string, string>> {
+  try {
+    const admin = createAdminClient();
+    return await loadOverridesWithCache(admin, null, locale);
+  } catch {
+    return new Map();
+  }
+}
 
 interface SendInviteEmailParams {
   to: string;
@@ -121,10 +140,16 @@ export async function sendMirrorInviteEmail({
 
   const deadlineHtml = deadlineDate ? `<p>${t.deadline(deadlineDate)}</p>` : "";
 
+  // V7.1 SLC-137 MT-6 — Override-Layer (de-Locale; en/nl bleiben Template-Defaults).
+  const overrides = await loadEmailOverridesMap(lang);
+  const subject = resolveText(overrides, "email.mirror_invite.subject", t.subject);
+  const button = resolveText(overrides, "email.mirror_invite.button", t.button);
+  const cta = resolveText(overrides, "email.mirror_invite.cta", t.cta);
+
   await transporter.sendMail({
     from,
     to,
-    subject: t.subject,
+    subject,
     html: `
       <h2>${t.heading}</h2>
       <p>${t.intro(tenantName)}</p>
@@ -133,8 +158,8 @@ export async function sendMirrorInviteEmail({
       <p>${t.confidentiality}</p>
       <p>${t.ai}</p>
       ${deadlineHtml}
-      <p>${t.cta}</p>
-      <p><a href="${verifyUrl}" style="display:inline-block;padding:12px 24px;background:#120774;color:#ffffff;text-decoration:none;border-radius:6px;">${t.button}</a></p>
+      <p>${cta}</p>
+      <p><a href="${verifyUrl}" style="display:inline-block;padding:12px 24px;background:#120774;color:#ffffff;text-decoration:none;border-radius:6px;">${button}</a></p>
       <p style="margin-top:16px;font-size:13px;color:#666;">${t.fallback}</p>
       <p style="font-size:13px;word-break:break-all;">${verifyUrl}</p>
       <br>
@@ -186,15 +211,21 @@ export async function sendInviteEmail({
   const lang = (locale && locale in INVITE_TEMPLATES ? locale : "de") as keyof typeof INVITE_TEMPLATES;
   const t = INVITE_TEMPLATES[lang];
 
+  // V7.1 SLC-137 MT-6 — Override-Layer fuer subject + cta + button (de-Locale).
+  const overrides = await loadEmailOverridesMap(lang);
+  const subject = resolveText(overrides, "email.tenant_invite.subject", t.subject);
+  const cta = resolveText(overrides, "email.tenant_invite.cta", t.cta);
+  const button = resolveText(overrides, "email.tenant_invite.button", t.button);
+
   await transporter.sendMail({
     from,
     to,
-    subject: t.subject,
+    subject,
     html: `
       <h2>${t.heading}</h2>
       <p>${t.intro(tenantName)}</p>
-      <p>${t.cta}</p>
-      <p><a href="${verifyUrl}" style="display:inline-block;padding:12px 24px;background:#120774;color:#ffffff;text-decoration:none;border-radius:6px;">${t.button}</a></p>
+      <p>${cta}</p>
+      <p><a href="${verifyUrl}" style="display:inline-block;padding:12px 24px;background:#120774;color:#ffffff;text-decoration:none;border-radius:6px;">${button}</a></p>
       <p style="margin-top:16px;font-size:13px;color:#666;">${t.fallback}</p>
       <p style="font-size:13px;word-break:break-all;">${verifyUrl}</p>
       <br>
@@ -282,16 +313,26 @@ export async function sendEmployeeInvitationEmail({
 
   const roleHtml = roleHint ? `<p>${t.role(roleHint)}</p>` : "";
 
+  // V7.1 SLC-137 MT-6 — Override-Layer fuer subject + cta + button (de-Locale).
+  const overrides = await loadEmailOverridesMap(lang);
+  const subject = resolveText(
+    overrides,
+    "email.employee_invitation.subject",
+    t.subject(tenantName),
+  );
+  const cta = resolveText(overrides, "email.employee_invitation.cta", t.cta);
+  const button = resolveText(overrides, "email.employee_invitation.button", t.button);
+
   await transporter.sendMail({
     from,
     to,
-    subject: t.subject(tenantName),
+    subject,
     html: `
       <h2>${t.heading(tenantName)}</h2>
       <p>${t.intro(tenantName, displayName ?? null)}</p>
       ${roleHtml}
-      <p>${t.cta}</p>
-      <p><a href="${inviteUrl}" style="display:inline-block;padding:12px 24px;background:#120774;color:#ffffff;text-decoration:none;border-radius:6px;">${t.button}</a></p>
+      <p>${cta}</p>
+      <p><a href="${inviteUrl}" style="display:inline-block;padding:12px 24px;background:#120774;color:#ffffff;text-decoration:none;border-radius:6px;">${button}</a></p>
       <p style="margin-top:16px;font-size:13px;color:#666;">${t.expiry(expiryStr)}</p>
       <p style="margin-top:16px;font-size:13px;color:#666;">${t.fallback}</p>
       <p style="font-size:13px;word-break:break-all;">${inviteUrl}</p>
@@ -366,7 +407,8 @@ interface RenderSignupVerifyTemplateOutput {
  * DKIM-Empfaengerlandschaft bevorzugt Multipart-Mails mit text+html).
  */
 export function renderSignupVerifyTemplate(
-  input: RenderSignupVerifyTemplateInput
+  input: RenderSignupVerifyTemplateInput,
+  overrides?: ReadonlyMap<string, string>,
 ): RenderSignupVerifyTemplateOutput {
   const expiryDate = new Date(input.expires_at_iso);
   const expiryFormatted = expiryDate.toLocaleString("de-DE", {
@@ -377,7 +419,33 @@ export function renderSignupVerifyTemplate(
     minute: "2-digit",
   });
 
-  const subject = `Bestaetigung der E-Mail-Adresse fuer Ihren Strategaize-Zugang ueber ${input.partner_display_name}`;
+  // V7.1 SLC-137 MT-6: jede Subject- + Body-Fragment via resolveText. Wenn
+  // overrides nicht uebergeben werden (Tests, Hot-Paths), wird die leere Map
+  // genutzt -> defaultText. Backwards-compatible.
+  const map = overrides ?? new Map<string, string>();
+
+  const subjectTemplate = resolveText(
+    map,
+    "email.verify_signup.subject",
+    "Bestaetigung der E-Mail-Adresse fuer Ihren Strategaize-Zugang ueber {partner}",
+  );
+  const subject = subjectTemplate.replace("{partner}", input.partner_display_name);
+
+  const greeting = resolveText(
+    map,
+    "email.verify_signup.greeting",
+    "Hallo {name},",
+  ).replace("{name}", input.recipient_first_name);
+  const intro = resolveText(
+    map,
+    "email.verify_signup.intro_html",
+    "Ihr Berater <strong>{partner}</strong> hat Sie eingeladen, die Strategaize-Diagnose zu nutzen. Um Ihren Zugang einzurichten, bestaetigen Sie bitte Ihre E-Mail-Adresse.",
+  ).replace("{partner}", input.partner_display_name);
+  const buttonLabel = resolveText(
+    map,
+    "email.verify_signup.button",
+    "E-Mail-Adresse bestaetigen",
+  );
 
   const html = `
     <div style="font-family:Arial,sans-serif;color:#1f2937;max-width:600px;margin:0 auto;">
@@ -385,16 +453,12 @@ export function renderSignupVerifyTemplate(
         <h1 style="color:#ffffff;margin:0;font-size:20px;">Strategaize</h1>
       </div>
       <div style="padding:24px;">
-        <p>Hallo ${input.recipient_first_name},</p>
-        <p>
-          Ihr Berater <strong>${input.partner_display_name}</strong> hat Sie
-          eingeladen, die Strategaize-Diagnose zu nutzen. Um Ihren Zugang
-          einzurichten, bestaetigen Sie bitte Ihre E-Mail-Adresse.
-        </p>
+        <p>${greeting}</p>
+        <p>${intro}</p>
         <p style="text-align:center;margin:28px 0;">
           <a href="${input.verify_url}"
              style="display:inline-block;padding:12px 24px;background:#120774;color:#ffffff;text-decoration:none;border-radius:6px;">
-            E-Mail-Adresse bestaetigen
+            ${buttonLabel}
           </a>
         </p>
         <p style="font-size:13px;color:#6b7280;">
@@ -492,16 +556,28 @@ export async function sendMandantInvitationEmail({
     day: "numeric",
   });
 
+  // V7.1 SLC-137 MT-6 — Override-Layer per loadEmailOverridesMap.
+  const overrides = await loadEmailOverridesMap("de");
+  const subject = resolveText(
+    overrides,
+    "email.mandant_invitation.subject",
+    t.subject(partnerDisplayName),
+  );
+  const heading = resolveText(overrides, "email.mandant_invitation.heading", t.heading);
+  const what = resolveText(overrides, "email.mandant_invitation.what", t.what);
+  const cta = resolveText(overrides, "email.mandant_invitation.cta", t.cta);
+  const button = resolveText(overrides, "email.mandant_invitation.button", t.button);
+
   await transporter.sendMail({
     from,
     to,
-    subject: t.subject(partnerDisplayName),
+    subject,
     html: `
-      <h2>${t.heading}</h2>
+      <h2>${heading}</h2>
       <p>${t.intro(partnerDisplayName, displayName ?? null)}</p>
-      <p>${t.what}</p>
-      <p>${t.cta}</p>
-      <p><a href="${inviteUrl}" style="display:inline-block;padding:12px 24px;background:#120774;color:#ffffff;text-decoration:none;border-radius:6px;">${t.button}</a></p>
+      <p>${what}</p>
+      <p>${cta}</p>
+      <p><a href="${inviteUrl}" style="display:inline-block;padding:12px 24px;background:#120774;color:#ffffff;text-decoration:none;border-radius:6px;">${button}</a></p>
       <p style="margin-top:16px;font-size:13px;color:#666;">${t.expiry(expiryStr)}</p>
       <p style="margin-top:16px;font-size:13px;color:#666;">${t.fallback}</p>
       <p style="font-size:13px;word-break:break-all;">${inviteUrl}</p>

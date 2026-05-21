@@ -41,6 +41,7 @@ import {
 } from "@/lib/signup/pending-signup-repo";
 import { signupBodySchema } from "@/lib/signup/signup-schema";
 import {
+  loadEmailOverridesMap,
   renderSignupVerifyTemplate,
   sendMail,
 } from "@/lib/email";
@@ -396,13 +397,18 @@ export async function POST(request: NextRequest) {
   const publicAppUrl =
     process.env.NEXT_PUBLIC_APP_URL ?? process.env.PUBLIC_APP_URL ?? "";
   const verifyUrl = `${publicAppUrl}/auth/verify-signup?token=${tokenClear}`;
-  const { subject, html, text } = renderSignupVerifyTemplate({
-    partner_display_name: partnerDisplayName,
-    partner_contact_email: partnerContactEmail,
-    verify_url: verifyUrl,
-    expires_at_iso: inserted.expires_at,
-    recipient_first_name: body.first_name,
-  });
+  // V7.1 SLC-137 MT-6: lade text-override-Map fuer SLC-136-overridable email-fragments.
+  const emailOverrides = await loadEmailOverridesMap("de");
+  const { subject, html, text } = renderSignupVerifyTemplate(
+    {
+      partner_display_name: partnerDisplayName,
+      partner_contact_email: partnerContactEmail,
+      verify_url: verifyUrl,
+      expires_at_iso: inserted.expires_at,
+      recipient_first_name: body.first_name,
+    },
+    emailOverrides,
+  );
 
   const from = `Strategaize <${process.env.SIGNUP_FROM_EMAIL ?? "onboarding@strategaize.de"}>`;
   try {
