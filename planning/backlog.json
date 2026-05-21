@@ -5,7 +5,7 @@
       "title": "V7.1 FEAT-056: EditableText-React-Komponente + Text-Migration A/D/E/F auf 50-80 Hardcode-Strings",
       "type": "feature",
       "priority": "high",
-      "status": "open",
+      "status": "done",
       "version": "V7.1",
       "description": "Foundation-Konsum von FEAT-055: React-Komponente `<EditableText keyPath defaultText scope multiline markdown />` mit Pencil-Icon-Inline-Edit fuer strategaize_admin + partner_admin. Migration aller Hardcode-Strings im Diagnose-Funnel-Pfad: A (Template-Frage-Texte + Block-Titel + Closing-Statement bleiben in Migration als Defaults), D (Bericht-Page-Strings ~15-20 Keys), E (Email-Templates Subject + Body ~12-16 Keys via resolveText server-side), F (relevante i18n-Strings im Diagnose-Pfad ~10-15 Keys). TextOverrideProvider als React-Context. Grep-Audit-Skript `scripts/audit-editable-text-coverage.mjs`. Aufwand ~4-8h Code (Komponente schnell, Migration die Hauptarbeit). Siehe FEAT-056.",
       "createdAt": "2026-05-20"

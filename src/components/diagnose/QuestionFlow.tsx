@@ -22,6 +22,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, AlertCircle, Check } from "lucide-react";
 import type { TemplateBlock } from "@/workers/condensation/light-pipeline";
 import { saveDiagnoseDraft, submitDiagnoseRun } from "@/app/dashboard/diagnose/actions";
+import { EditableText } from "@/components/text-override/EditableText";
 
 interface QuestionFlowProps {
   sessionId: string;
@@ -86,9 +87,23 @@ export function QuestionFlow({
         <Card key={block.key}>
           <CardHeader>
             <CardTitle className="text-base sm:text-lg">
-              Baustein {blockIndex + 1}: {block.title}
+              <EditableText
+                keyPath="diagnose.run.block_prefix"
+                defaultText="Baustein"
+              />{" "}
+              {blockIndex + 1}:{" "}
+              <EditableText
+                keyPath={`template.partner_diagnostic.block.${block.key}.title`}
+                defaultText={block.title}
+              />
             </CardTitle>
-            <p className="mt-1 text-sm text-slate-500">{block.intro}</p>
+            <p className="mt-1 text-sm text-slate-500">
+              <EditableText
+                keyPath={`template.partner_diagnostic.block.${block.key}.intro`}
+                defaultText={block.intro}
+                multiline
+              />
+            </p>
           </CardHeader>
           <CardContent className="space-y-6">
             {block.questions.map((question, qIndex) => {
@@ -97,7 +112,16 @@ export function QuestionFlow({
               return (
                 <fieldset key={question.key} className="space-y-3">
                   <legend className="text-sm font-medium text-slate-800">
-                    Frage {blockIndex + 1}.{qIndex + 1}: {question.text}
+                    <EditableText
+                      keyPath="diagnose.run.question_prefix"
+                      defaultText="Frage"
+                    />{" "}
+                    {blockIndex + 1}.{qIndex + 1}:{" "}
+                    <EditableText
+                      keyPath={`template.partner_diagnostic.question.${question.key}.label`}
+                      defaultText={question.text}
+                      multiline
+                    />
                   </legend>
                   <div className="space-y-2">
                     {question.score_mapping.map((option) => {
@@ -147,17 +171,32 @@ export function QuestionFlow({
             {allAnswered ? (
               <span className="flex items-center gap-1 text-emerald-700">
                 <Check className="h-4 w-4" />
-                Alle 24 Fragen beantwortet
+                <EditableText
+                  keyPath="diagnose.run.all_answered_label"
+                  defaultText="Alle 24 Fragen beantwortet"
+                />
               </span>
             ) : (
               <span>
-                {answeredCount} von {totalQuestions} beantwortet
+                {answeredCount}{" "}
+                <EditableText
+                  keyPath="diagnose.run.progress_separator"
+                  defaultText="von"
+                />{" "}
+                {totalQuestions}{" "}
+                <EditableText
+                  keyPath="diagnose.run.progress_suffix"
+                  defaultText="beantwortet"
+                />
               </span>
             )}
             {isSaving ? (
               <span className="ml-2 inline-flex items-center gap-1 text-xs text-slate-400">
                 <Loader2 className="h-3 w-3 animate-spin" />
-                Speichere...
+                <EditableText
+                  keyPath="diagnose.run.saving_label"
+                  defaultText="Speichere..."
+                />
               </span>
             ) : null}
           </div>
@@ -169,10 +208,16 @@ export function QuestionFlow({
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Sende ab...
+                <EditableText
+                  keyPath="diagnose.run.submitting_label"
+                  defaultText="Sende ab..."
+                />
               </>
             ) : (
-              "Diagnose abschicken"
+              <EditableText
+                keyPath="diagnose.run.submit_button"
+                defaultText="Diagnose abschicken"
+              />
             )}
           </Button>
         </div>
@@ -192,7 +237,12 @@ function ProgressBar({ answered, total }: { answered: number; total: number }) {
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between text-xs text-slate-500">
-        <span>Fortschritt</span>
+        <span>
+          <EditableText
+            keyPath="diagnose.run.progress_label"
+            defaultText="Fortschritt"
+          />
+        </span>
         <span>{pct}%</span>
       </div>
       <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">

@@ -728,7 +728,7 @@ V7.1-Slice-Planning DONE 2026-05-20 (RPT-313). 7 Slices SLC-136..142 mit Micro-T
 | ID | Slice | Feature | Status | Priority | Created |
 |----|-------|---------|--------|----------|---------|
 | SLC-136 | [FEAT-055 Inline-Text-Override-Foundation](SLC-136-text-override-foundation.md) | FEAT-055 | done | High | 2026-05-20 |
-| SLC-137 | [FEAT-056 EditableText-Komponente + Text-Migration](SLC-137-editabletext-component-text-migration.md) | FEAT-056 | planned | High | 2026-05-20 |
+| SLC-137 | [FEAT-056 EditableText-Komponente + Text-Migration](SLC-137-editabletext-component-text-migration.md) | FEAT-056 | done | High | 2026-05-20 |
 | SLC-138 | [FEAT-057 Helper-Texts pro Frage](SLC-138-helper-texts-questions.md) | FEAT-057 | planned | High | 2026-05-20 |
 | SLC-139 | [FEAT-058 Diagnose-Funnel-Telemetrie](SLC-139-diagnose-funnel-telemetrie.md) | FEAT-058 | planned | High | 2026-05-20 |
 | SLC-140 | [FEAT-059 Look-and-Feel-Polish nach Style Guide V2](SLC-140-look-feel-polish.md) | FEAT-059 | planned | Medium | 2026-05-20 |

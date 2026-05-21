@@ -11,12 +11,11 @@
 //   6. Print-Button: window.print() mit print-friendly CSS.
 
 import Image from "next/image";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import { Button } from "@/components/ui/button";
 import { Printer, Sparkles } from "lucide-react";
 import { ScoreVisual } from "./ScoreVisual";
 import { BlockSection } from "./BlockSection";
+import { EditableText } from "@/components/text-override/EditableText";
 
 interface BerichtBlock {
   key: string;
@@ -57,12 +56,21 @@ export function BerichtRenderer({
       <header className="flex flex-col gap-4 border-b border-slate-200 pb-6 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-2">
           <p className="text-xs uppercase tracking-wide text-slate-400">
-            Strategaize-Diagnose
+            <EditableText
+              keyPath="diagnose.bericht.kicker"
+              defaultText="Strategaize-Diagnose"
+            />
           </p>
           <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">
             {mandantName}
           </h1>
-          <p className="text-sm text-slate-500">Erstellt am {dateFmt}</p>
+          <p className="text-sm text-slate-500">
+            <EditableText
+              keyPath="diagnose.bericht.created_at_prefix"
+              defaultText="Erstellt am"
+            />{" "}
+            {dateFmt}
+          </p>
         </div>
         {(partnerLogoUrl || partnerDisplayName) && (
           <div className="flex items-center gap-3">
@@ -84,7 +92,10 @@ export function BerichtRenderer({
             ) : null}
             {partnerDisplayName ? (
               <span className="text-right text-sm text-slate-500">
-                Im Auftrag von
+                <EditableText
+                  keyPath="diagnose.bericht.im_auftrag_von"
+                  defaultText="Im Auftrag von"
+                />
                 <br />
                 <span className="font-medium text-slate-700">
                   {partnerDisplayName}
@@ -97,7 +108,10 @@ export function BerichtRenderer({
 
       <section className="space-y-4 rounded-lg border border-slate-200 bg-slate-50 p-5 print:break-inside-avoid">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-          Reife-Profil
+          <EditableText
+            keyPath="diagnose.bericht.reife_profil_heading"
+            defaultText="Reife-Profil"
+          />
         </h2>
         <ScoreVisual blocks={blocks} />
       </section>
@@ -116,9 +130,13 @@ export function BerichtRenderer({
       </section>
 
       <section className="prose prose-slate max-w-none rounded-lg border-l-4 border-brand-primary bg-brand-primary/5 p-5 print:break-inside-avoid prose-p:text-slate-700">
-        <ReactMarkdown remarkPlugins={[remarkGfm]}>
-          {closingStatement}
-        </ReactMarkdown>
+        <EditableText
+          as="div"
+          keyPath="template.partner_diagnostic.closing"
+          defaultText={closingStatement}
+          markdown
+          multiline
+        />
       </section>
 
       {ichWillMehrCaptureSessionId ? (
@@ -129,17 +147,24 @@ export function BerichtRenderer({
             </div>
             <div className="flex-1">
               <h3 className="font-medium text-slate-900">
-                Ich will mehr von Strategaize
+                <EditableText
+                  keyPath="diagnose.bericht.ich_will_mehr.title"
+                  defaultText="Ich will mehr von Strategaize"
+                />
               </h3>
               <p className="mt-1 text-sm text-slate-600">
-                Strategaize meldet sich mit konkreten Vorschlaegen, wie Sie die
-                Diagnose-Erkenntnisse in den naechsten 90 Tagen nutzen koennen.
-                Sie entscheiden im Anschluss, ob Sie weitermachen.
+                <EditableText
+                  keyPath="diagnose.bericht.ich_will_mehr.body"
+                  defaultText="Strategaize meldet sich mit konkreten Vorschlaegen, wie Sie die Diagnose-Erkenntnisse in den naechsten 90 Tagen nutzen koennen. Sie entscheiden im Anschluss, ob Sie weitermachen."
+                  multiline
+                />
               </p>
               <p className="mt-2 text-xs text-slate-400">
-                Verfuegbar ueber den Dashboard-Block. Sie geben dort einmalig
-                eine Einwilligung — wir senden die Anfrage dann automatisch
-                an Strategaize.
+                <EditableText
+                  keyPath="diagnose.bericht.ich_will_mehr.hint"
+                  defaultText="Verfuegbar ueber den Dashboard-Block. Sie geben dort einmalig eine Einwilligung — wir senden die Anfrage dann automatisch an Strategaize."
+                  multiline
+                />
               </p>
             </div>
           </div>
@@ -154,7 +179,10 @@ export function BerichtRenderer({
           }}
         >
           <Printer className="mr-2 h-4 w-4" />
-          Bericht drucken
+          <EditableText
+            keyPath="diagnose.bericht.print_button"
+            defaultText="Bericht drucken"
+          />
         </Button>
       </div>
     </main>

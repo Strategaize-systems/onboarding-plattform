@@ -1,4 +1,5 @@
 // V6.3 SLC-105 MT-8 — Score-Visual fuer Diagnose-Bericht.
+// V7.1 SLC-137 MT-5 — Score-Labels als EditableText.
 //
 // 6 horizontale Tailwind-Bars (DEC-128). Begruendung:
 //   - 0 neue npm-Dependencies (keine Chart.js/Recharts)
@@ -9,6 +10,8 @@
 //   0-30  → red-500    (Strukturluecke)
 //   31-55 → amber-500  (Teil-Reife)
 //   56-100 → emerald-500 (Tragbar)
+
+import { EditableText } from "@/components/text-override/EditableText";
 
 interface BlockScore {
   key: string;
@@ -26,10 +29,15 @@ function scoreColor(score: number): string {
   return "bg-emerald-500";
 }
 
-function scoreLabel(score: number): string {
-  if (score <= 30) return "Strukturluecke";
-  if (score <= 55) return "Teil-Reife";
-  return "Tragbar";
+function scoreLabelKey(score: number): {
+  key: string;
+  defaultText: string;
+} {
+  if (score <= 30)
+    return { key: "diagnose.bericht.score_label.strukturluecke", defaultText: "Strukturluecke" };
+  if (score <= 55)
+    return { key: "diagnose.bericht.score_label.teil_reife", defaultText: "Teil-Reife" };
+  return { key: "diagnose.bericht.score_label.tragbar", defaultText: "Tragbar" };
 }
 
 export function ScoreVisual({ blocks }: ScoreVisualProps) {
@@ -37,6 +45,7 @@ export function ScoreVisual({ blocks }: ScoreVisualProps) {
   const avg = total > 0
     ? Math.round(blocks.reduce((a, b) => a + b.score, 0) / total)
     : 0;
+  const labelInfo = scoreLabelKey(avg);
 
   return (
     <div className="space-y-4">
@@ -45,7 +54,21 @@ export function ScoreVisual({ blocks }: ScoreVisualProps) {
           {avg}/100
         </span>
         <span className="text-sm text-slate-500">
-          Durchschnitt ueber {total} Bausteine ({scoreLabel(avg)})
+          <EditableText
+            keyPath="diagnose.bericht.average_prefix"
+            defaultText="Durchschnitt ueber"
+          />{" "}
+          {total}{" "}
+          <EditableText
+            keyPath="diagnose.bericht.average_blocks_label"
+            defaultText="Bausteine"
+          />{" "}
+          (
+          <EditableText
+            keyPath={labelInfo.key}
+            defaultText={labelInfo.defaultText}
+          />
+          )
         </span>
       </div>
 

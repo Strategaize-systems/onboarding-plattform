@@ -45,9 +45,12 @@ export function mergeRowsToMap(rows: TextOverrideRow[]): Map<string, string> {
  * defaultText zurueck wenn der Key nicht ueberschrieben ist.
  *
  * Pure function — keine Side-Effects, kein Cache-Touch.
+ *
+ * Akzeptiert ReadonlyMap, damit Caller die Map als Immutable durchreichen
+ * koennen (V7.1 SLC-137 MT-6 Email-Send-Path).
  */
 export function resolveText(
-  map: Map<string, string>,
+  map: ReadonlyMap<string, string>,
   key: string,
   defaultText: string,
 ): string {

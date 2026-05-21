@@ -17,6 +17,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { IchWillMehrModal } from "./IchWillMehrModal";
+import { EditableText } from "@/components/text-override/EditableText";
 
 interface IchWillMehrCardProps {
   captureSessionId: string;
@@ -34,11 +35,18 @@ export function IchWillMehrCard({ captureSessionId }: IchWillMehrCardProps) {
               <Sparkles className="h-5 w-5 text-brand-primary" />
             </div>
             <div>
-              <CardTitle>Ich will mehr von Strategaize</CardTitle>
+              <CardTitle>
+                <EditableText
+                  keyPath="diagnose.ich_will_mehr.card.title"
+                  defaultText="Ich will mehr von Strategaize"
+                />
+              </CardTitle>
               <CardDescription>
-                Sie haben Ihre Diagnose abgeschlossen. Wenn Sie moechten, meldet
-                sich Strategaize bei Ihnen, um die naechsten Schritte direkt zu
-                besprechen.
+                <EditableText
+                  keyPath="diagnose.ich_will_mehr.card.description"
+                  defaultText="Sie haben Ihre Diagnose abgeschlossen. Wenn Sie moechten, meldet sich Strategaize bei Ihnen, um die naechsten Schritte direkt zu besprechen."
+                  multiline
+                />
               </CardDescription>
             </div>
           </div>
@@ -49,7 +57,10 @@ export function IchWillMehrCard({ captureSessionId }: IchWillMehrCardProps) {
             onClick={() => setOpen(true)}
             data-testid="ich-will-mehr-trigger"
           >
-            Kontakt zu Strategaize anfragen
+            <EditableText
+              keyPath="diagnose.ich_will_mehr.card.button"
+              defaultText="Kontakt zu Strategaize anfragen"
+            />
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </CardContent>
