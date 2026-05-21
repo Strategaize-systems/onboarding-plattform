@@ -20,6 +20,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { resolveBrandingForTenant, STRATEGAIZE_DEFAULT_BRANDING } from "@/lib/branding/resolve";
 import { BerichtRenderer } from "@/components/diagnose/BerichtRenderer";
+import { DiagnoseSessionCompletedBeacon } from "@/components/diagnose/DiagnoseSessionCompletedBeacon";
 import { TextOverrideProvider } from "@/components/text-override/Provider";
 import { resolvePartnerOrgIdForTenant } from "@/lib/text-override/partner-org";
 import type { TemplateBlock } from "@/workers/condensation/light-pipeline";
@@ -172,6 +173,7 @@ export default async function BerichtPage(props: PageProps) {
 
   return (
     <TextOverrideProvider partnerOrgId={partnerOrgId} locale="de">
+      <DiagnoseSessionCompletedBeacon captureSessionId={sessionId} />
       <BerichtRenderer
         mandantName={(mandantTenantRes.data?.name as string) ?? "Ihr Unternehmen"}
         partnerDisplayName={partnerDisplayName}

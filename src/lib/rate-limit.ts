@@ -97,6 +97,17 @@ export const signupLimiter = createRateLimiter({
   windowMs: 60 * 60 * 1000, // 1 hour
 });
 
+// V7.2 SLC-139 — Schutz vor Tracker-Bug-Floods + DDoS
+// `POST /api/diagnose-event`. 600 Events pro Stunde pro Session-ID
+// (10 Events/Minute Headroom: question_start + question_answer + 12
+// heartbeats/min + okkasionelle helper_text_open). Per Session-ID statt
+// IP, weil mehrere Mandanten hinter einer NAT moeglich sind (Coworking,
+// Buero, Familie). Session-ID ist UUID → Pseudo-Identifier.
+export const diagnoseEventLimiter = createRateLimiter({
+  maxAttempts: 600,
+  windowMs: 60 * 60 * 1000, // 1 hour
+});
+
 /**
  * Extrahiert die Client-IP fuer Rate-Limit-Identification aus dem
  * `x-forwarded-for`-Header. Coolify+Traefik schreibt den Header bei

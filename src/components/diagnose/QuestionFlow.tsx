@@ -16,7 +16,7 @@
 //
 // Ref: docs/ARCHITECTURE.md V6.3 Phase 2, feedback_native_html_form_pattern.md.
 
-import { useState, useTransition, useMemo } from "react";
+import { useRef, useState, useTransition, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, AlertCircle, Check, Info } from "lucide-react";
@@ -25,6 +25,7 @@ import { saveDiagnoseDraft, submitDiagnoseRun } from "@/app/dashboard/diagnose/a
 import { EditableText } from "@/components/text-override/EditableText";
 import { HelperTextModal } from "./HelperTextModal";
 import { shouldShowInfoIcon } from "./helper-text-modal-logic";
+import { useDiagnoseTelemetry } from "./DiagnoseTelemetryProvider";
 
 interface QuestionFlowProps {
   sessionId: string;
@@ -44,6 +45,11 @@ export function QuestionFlow({
   const [isSubmitting, startSubmit] = useTransition();
   // V7.1 SLC-138 (FEAT-057): aktiv geoeffneter Helper-Text-Modal-State.
   const [helperOpenKey, setHelperOpenKey] = useState<string | null>(null);
+  // V7.2 SLC-139 (FEAT-058): Telemetry-Hook + question_start-Dedup.
+  // Set wird per useRef gehalten, damit re-renders die Set-Identitaet behalten
+  // und kein useEffect+setState getriggert wird (siehe feedback_react19_use_mounted_pattern).
+  const telemetry = useDiagnoseTelemetry();
+  const startedQuestionsRef = useRef<Set<string>>(new Set(Object.keys(initialAnswers)));
 
   const helperFor = useMemo(() => {
     if (!helperOpenKey) return null;
@@ -64,6 +70,14 @@ export function QuestionFlow({
   const allAnswered = answeredCount === totalQuestions;
 
   function handleAnswer(questionKey: string, value: string) {
+    // V7.2 SLC-139: erste Interaktion mit einer Frage emittiert question_start,
+    // jede Antwort-Aenderung danach question_answer.
+    if (!startedQuestionsRef.current.has(questionKey)) {
+      startedQuestionsRef.current.add(questionKey);
+      telemetry.trackEvent({ type: "question_start", questionKey });
+    }
+    telemetry.trackEvent({ type: "question_answer", questionKey, payload: { value } });
+
     setAnswers((prev) => ({ ...prev, [questionKey]: value }));
     setSaveErrors((prev) => {
       const next = { ...prev };
