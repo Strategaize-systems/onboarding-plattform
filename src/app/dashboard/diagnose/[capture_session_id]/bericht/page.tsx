@@ -20,6 +20,8 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { resolveBrandingForTenant, STRATEGAIZE_DEFAULT_BRANDING } from "@/lib/branding/resolve";
 import { BerichtRenderer } from "@/components/diagnose/BerichtRenderer";
+import { TextOverrideProvider } from "@/components/text-override/Provider";
+import { resolvePartnerOrgIdForTenant } from "@/lib/text-override/partner-org";
 import type { TemplateBlock } from "@/workers/condensation/light-pipeline";
 
 interface PageProps {
@@ -163,17 +165,24 @@ export default async function BerichtPage(props: PageProps) {
     }
   }
 
+  const partnerOrgId = await resolvePartnerOrgIdForTenant(
+    supabase,
+    session.tenant_id,
+  );
+
   return (
-    <BerichtRenderer
-      mandantName={(mandantTenantRes.data?.name as string) ?? "Ihr Unternehmen"}
-      partnerDisplayName={partnerDisplayName}
-      partnerLogoUrl={branding.logoUrl}
-      finalizedAt={session.updated_at as string}
-      blocks={blockRows}
-      closingStatement={
-        template.metadata.required_closing_statement ?? ""
-      }
-      ichWillMehrCaptureSessionId={ichWillMehrCaptureSessionId}
-    />
+    <TextOverrideProvider partnerOrgId={partnerOrgId} locale="de">
+      <BerichtRenderer
+        mandantName={(mandantTenantRes.data?.name as string) ?? "Ihr Unternehmen"}
+        partnerDisplayName={partnerDisplayName}
+        partnerLogoUrl={branding.logoUrl}
+        finalizedAt={session.updated_at as string}
+        blocks={blockRows}
+        closingStatement={
+          template.metadata.required_closing_statement ?? ""
+        }
+        ichWillMehrCaptureSessionId={ichWillMehrCaptureSessionId}
+      />
+    </TextOverrideProvider>
   );
 }

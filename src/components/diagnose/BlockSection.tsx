@@ -1,7 +1,10 @@
 // V6.3 SLC-105 MT-8 — Block-Sektion fuer Diagnose-Bericht.
+// V7.1 SLC-137 MT-4 — Block-Title + Intro via EditableText (Template-Scope).
 //
 // Pro Block: Titel + Intro + Score-Bar + KI-Verdichtungs-Kommentar
 // (`knowledge_unit.metadata.comment`, 2-3 Saetze prosaisch aus Bedrock-Run).
+
+import { EditableText } from "@/components/text-override/EditableText";
 
 interface BlockSectionProps {
   blockKey: string;
@@ -18,6 +21,7 @@ function scoreColor(score: number): string {
 }
 
 export function BlockSection({
+  blockKey,
   title,
   intro,
   score,
@@ -27,12 +31,23 @@ export function BlockSection({
     <section className="rounded-lg border border-slate-200 bg-white p-5 print:break-inside-avoid">
       <header className="space-y-2">
         <div className="flex items-baseline justify-between gap-4">
-          <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
+          <h2 className="text-lg font-semibold text-slate-900">
+            <EditableText
+              keyPath={`template.partner_diagnostic.block.${blockKey}.title`}
+              defaultText={title}
+            />
+          </h2>
           <span className="tabular-nums text-base font-semibold text-slate-700">
             {score}/100
           </span>
         </div>
-        <p className="text-sm text-slate-500">{intro}</p>
+        <p className="text-sm text-slate-500">
+          <EditableText
+            keyPath={`template.partner_diagnostic.block.${blockKey}.intro`}
+            defaultText={intro}
+            multiline
+          />
+        </p>
         <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
           <div
             className={`h-full ${scoreColor(score)} transition-all`}

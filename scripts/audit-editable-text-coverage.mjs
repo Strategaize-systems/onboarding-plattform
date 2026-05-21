@@ -144,6 +144,13 @@ function stripIgnoredSpans(text) {
     .replace(/\bimport\s*\(\s*"[^"]*"\s*\)/g, "")
     // style="..."
     .replace(/style\s*=\s*"[^"\n]*"/g, "")
+    // EditableText / resolveText Argumente (defaultText, keyPath, scope)
+    .replace(/<EditableText\b[\s\S]*?\/>/g, "")
+    .replace(/<EditableText\b[\s\S]*?<\/EditableText>/g, "")
+    .replace(/\bresolveText\s*\([^)]*\)/g, "")
+    // aria-label="..."
+    .replace(/aria-label\s*=\s*"[^"\n]*"/g, "")
+    .replace(/data-[\w-]+\s*=\s*"[^"\n]*"/g, "")
     // single-line + multi-line comments
     .replace(/\/\/[^\n]*/g, "")
     .replace(/\/\*[\s\S]*?\*\//g, "");

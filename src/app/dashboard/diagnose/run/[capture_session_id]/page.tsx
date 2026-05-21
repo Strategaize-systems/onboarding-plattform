@@ -12,6 +12,9 @@ import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { QuestionFlow } from "@/components/diagnose/QuestionFlow";
+import { TextOverrideProvider } from "@/components/text-override/Provider";
+import { resolvePartnerOrgIdForTenant } from "@/lib/text-override/partner-org";
+import { EditableText } from "@/components/text-override/EditableText";
 import type {
   TemplateBlock,
 } from "@/workers/condensation/light-pipeline";
@@ -79,23 +82,36 @@ export default async function DiagnoseRunPage(props: PageProps) {
   const blocks = template.blocks as TemplateBlock[];
   const answers = (session.answers as Record<string, string>) ?? {};
 
-  return (
-    <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
-      <header className="mb-6 sm:mb-8">
-        <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">
-          {template.name as string}
-        </h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Beantworten Sie die Fragen ehrlich. Es gibt keine richtigen oder
-          falschen Antworten — nur ein klareres Bild Ihrer Lage.
-        </p>
-      </header>
+  const partnerOrgId = await resolvePartnerOrgIdForTenant(
+    supabase,
+    profile.tenant_id,
+  );
 
-      <QuestionFlow
-        sessionId={sessionId}
-        blocks={blocks}
-        initialAnswers={answers}
-      />
-    </main>
+  return (
+    <TextOverrideProvider partnerOrgId={partnerOrgId} locale="de">
+      <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
+        <header className="mb-6 sm:mb-8">
+          <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">
+            <EditableText
+              keyPath="template.partner_diagnostic.name"
+              defaultText={template.name as string}
+            />
+          </h1>
+          <p className="mt-1 text-sm text-slate-500">
+            <EditableText
+              keyPath="diagnose.run.intro_text"
+              defaultText="Beantworten Sie die Fragen ehrlich. Es gibt keine richtigen oder falschen Antworten — nur ein klareres Bild Ihrer Lage."
+              multiline
+            />
+          </p>
+        </header>
+
+        <QuestionFlow
+          sessionId={sessionId}
+          blocks={blocks}
+          initialAnswers={answers}
+        />
+      </main>
+    </TextOverrideProvider>
   );
 }

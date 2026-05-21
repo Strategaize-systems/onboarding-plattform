@@ -11,12 +11,11 @@
 //   6. Print-Button: window.print() mit print-friendly CSS.
 
 import Image from "next/image";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import { Button } from "@/components/ui/button";
 import { Printer, Sparkles } from "lucide-react";
 import { ScoreVisual } from "./ScoreVisual";
 import { BlockSection } from "./BlockSection";
+import { EditableText } from "@/components/text-override/EditableText";
 
 interface BerichtBlock {
   key: string;
@@ -116,9 +115,13 @@ export function BerichtRenderer({
       </section>
 
       <section className="prose prose-slate max-w-none rounded-lg border-l-4 border-brand-primary bg-brand-primary/5 p-5 print:break-inside-avoid prose-p:text-slate-700">
-        <ReactMarkdown remarkPlugins={[remarkGfm]}>
-          {closingStatement}
-        </ReactMarkdown>
+        <EditableText
+          as="div"
+          keyPath="template.partner_diagnostic.closing"
+          defaultText={closingStatement}
+          markdown
+          multiline
+        />
       </section>
 
       {ichWillMehrCaptureSessionId ? (
