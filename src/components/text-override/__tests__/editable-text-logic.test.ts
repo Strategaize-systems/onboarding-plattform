@@ -124,16 +124,16 @@ describe("isValidTextKey (TEXT_KEY_REGEX spiegelt actions.ts)", () => {
   });
 });
 
-describe("defaultScopeForKey", () => {
-  it("maps template.* -> template", () => {
-    expect(defaultScopeForKey("template.partner_diagnostic.block.q1.label")).toBe("template");
+describe("defaultScopeForKey (V7.1 SLC-137 /qa Auto-Fix: immer 'global')", () => {
+  it("returns 'global' for template.* keys (Inline-Edit hat keinen Template-Kontext)", () => {
+    expect(defaultScopeForKey("template.partner_diagnostic.block.q1.label")).toBe("global");
   });
 
-  it("maps partner.* -> partner", () => {
-    expect(defaultScopeForKey("partner.welcome.headline")).toBe("partner");
+  it("returns 'global' for partner.* keys (Caller setzt scope='partner' explizit wenn gewollt)", () => {
+    expect(defaultScopeForKey("partner.welcome.headline")).toBe("global");
   });
 
-  it("falls back to global for unprefixed keys", () => {
+  it("returns 'global' for unprefixed keys (matches FEAT-056 prop default)", () => {
     expect(defaultScopeForKey("diagnose.bericht.cta")).toBe("global");
     expect(defaultScopeForKey("email.verify_signup.subject")).toBe("global");
   });

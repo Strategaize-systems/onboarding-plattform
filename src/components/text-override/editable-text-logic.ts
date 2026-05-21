@@ -90,15 +90,17 @@ export function isValidTextKey(key: string): boolean {
 }
 
 /**
- * Default-Scope-Konvention pro Key-Praefix:
- *   - template.*  -> 'template'
- *   - partner.*   -> 'partner' (V7.2+, V7.1 ungenutzt)
- *   - sonst       -> 'global'
+ * V7.1 SLC-137 /qa Auto-Fix per Deviation Rule 1: Inline-Edit-Default ist
+ * IMMER 'global', auch fuer template.*-Keys. Grund: actions.ts.validateScope
+ * fordert scope_id != null fuer scope='template'|'partner', und der Inline-
+ * Edit-Pfad hat keinen partner_organization-Kontext fuer einen sinnvollen
+ * Template-Scope-Default (V7.1 V1 hat nur ein partner_diagnostic-Template).
  *
- * Pure function — Tests koennen Default-Scope pro Key-Form pruefen.
+ * Strategaize-Admin kann in /admin/text-overrides spaeter manuell auf
+ * scope='template' oder 'partner' re-zoomen (eigene Page-Logik).
+ *
+ * Konsistent mit FEAT-056-Prop-Spec: `scope?: ... (Default 'global')`.
  */
-export function defaultScopeForKey(keyPath: string): TextOverrideScope {
-  if (keyPath.startsWith("template.")) return "template";
-  if (keyPath.startsWith("partner.")) return "partner";
+export function defaultScopeForKey(_keyPath: string): TextOverrideScope {
   return "global";
 }

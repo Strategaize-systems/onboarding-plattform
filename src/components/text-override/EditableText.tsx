@@ -78,19 +78,15 @@ export function EditableText({
   const [saveError, setSaveError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
+  // V7.1: Inline-Edit-Default scope='global' (siehe defaultScopeForKey).
+  // Caller kann explicit scope='partner' setzen, dann nutzen wir ctx.partnerOrgId
+  // als scope_id (falls scopeId-Prop nicht ueberreicht wird).
   const effectiveScope: TextOverrideScope = scope ?? defaultScopeForKey(keyPath);
   const effectiveScopeId: string | null =
     scopeId !== undefined
       ? scopeId
       : effectiveScope === "partner"
       ? ctx.partnerOrgId
-      : effectiveScope === "template"
-      // V7.1: nur ein Template (partner_diagnostic); scope_id-Mapping erfolgt
-      // hier nicht — das Audit-Skript stellt sicher dass template-Keys die
-      // entsprechende UUID in /admin/text-overrides explizit gesetzt bekommen.
-      // EditableText speichert template-Keys mit scope_id=null und ueberlaesst
-      // /admin/text-overrides die Granularitaet.
-      ? null
       : null;
 
   // Auto-Sync: wenn Resolver-Reload (revalidatePath) neue Werte liefert,
