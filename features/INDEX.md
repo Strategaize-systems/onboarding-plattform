@@ -149,7 +149,7 @@ V7-Scope (User-Entscheidung 2026-05-18 nach V6.4 STABLE-Bestaetigung RPT-295): B
 | FEAT-055 | Inline-Text-Override-Foundation (Tabelle + Resolver + Audit + RLS) | done | [Spec](FEAT-055-inline-text-override-foundation.md) | 2026-05-20 |
 | FEAT-056 | EditableText-Komponente + Text-Migration A/D/E/F | done | [Spec](FEAT-056-editabletext-component-text-migration.md) | 2026-05-20 |
 | FEAT-057 | Helper-Texts mit Beispieldefinitionen pro Frage | done | [Spec](FEAT-057-helper-texts-questions.md) | 2026-05-20 |
-| FEAT-061 | Back-Link auf /datenschutz + /impressum | planned | [Spec](FEAT-061-back-link-legal-pages.md) | 2026-05-20 |
+| FEAT-061 | Back-Link auf /datenschutz + /impressum | done | [Spec](FEAT-061-back-link-legal-pages.md) | 2026-05-20 |
 
 ## V7.2 Features (Funnel-Datenbasis + Conversion-Hebel)
 

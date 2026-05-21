@@ -730,7 +730,7 @@ Plus **~30min Live-Smoke** nach Coolify-Redeploy (User-Pflicht-Aktion).
 | SLC-136 | [FEAT-055 Inline-Text-Override-Foundation](SLC-136-text-override-foundation.md) | FEAT-055 | done | High | 2026-05-20 |
 | SLC-137 | [FEAT-056 EditableText-Komponente + Text-Migration](SLC-137-editabletext-component-text-migration.md) | FEAT-056 | done | High | 2026-05-20 |
 | SLC-138 | [FEAT-057 Helper-Texts pro Frage](SLC-138-helper-texts-questions.md) | FEAT-057 | done | High | 2026-05-20 |
-| SLC-142 | [FEAT-061 Back-Link auf /datenschutz + /impressum](SLC-142-back-link-legal-pages.md) | FEAT-061 | planned | Low | 2026-05-20 |
+| SLC-142 | [FEAT-061 Back-Link auf /datenschutz + /impressum](SLC-142-back-link-legal-pages.md) | FEAT-061 | done | Low | 2026-05-20 |
 
 ### V7.1 Backlog-Mapping (post Smart-Split)
 

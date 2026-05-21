@@ -12,6 +12,8 @@ import remarkGfm from "remark-gfm";
 import rehypeSlug from "rehype-slug";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
 
+import { LegalPageHeader } from "@/components/legal/LegalPageHeader";
+
 export const metadata: Metadata = {
   title: "Datenschutzerklaerung | StrategAIze Onboarding",
   description:
@@ -45,13 +47,16 @@ export default function DatenschutzPage() {
   const content = fs.readFileSync(filePath, "utf8");
 
   return (
-    <main className={PROSE_CLASSES}>
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
-        rehypePlugins={[rehypeSlug, [rehypeAutolinkHeadings, AUTOLINK_OPTIONS]]}
-      >
-        {content}
-      </ReactMarkdown>
-    </main>
+    <>
+      <LegalPageHeader pageTitle="Datenschutzerklaerung" />
+      <main className={PROSE_CLASSES}>
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm]}
+          rehypePlugins={[rehypeSlug, [rehypeAutolinkHeadings, AUTOLINK_OPTIONS]]}
+        >
+          {content}
+        </ReactMarkdown>
+      </main>
+    </>
   );
 }

@@ -8,6 +8,8 @@
 
 import type { Metadata } from "next";
 
+import { LegalPageHeader } from "@/components/legal/LegalPageHeader";
+
 export const metadata: Metadata = {
   title: "Impressum | StrategAIze Onboarding",
   description:
@@ -54,64 +56,67 @@ export default function ImpressumPage() {
   const email = readRequiredEnv("IMPRESSUM_EMAIL");
 
   return (
-    <main className={PROSE_CLASSES}>
-      <h1>Impressum</h1>
-      <p>
-        Angaben gemaess Par. 5 TMG/DDG sowie nach Art. 13 DSGVO fuer die
-        Onboarding-Plattform unter <code>onboarding.strategaizetransition.com</code>.
-      </p>
+    <>
+      <LegalPageHeader pageTitle="Impressum" />
+      <main className={PROSE_CLASSES}>
+        <h1>Impressum</h1>
+        <p>
+          Angaben gemaess Par. 5 TMG/DDG sowie nach Art. 13 DSGVO fuer die
+          Onboarding-Plattform unter <code>onboarding.strategaizetransition.com</code>.
+        </p>
 
-      <h2>Anbieter</h2>
-      <p>
-        <strong>{company}</strong>
-        <br />
-        {street}
-        <br />
-        {zip} {city}
-        <br />
-        {country}
-      </p>
+        <h2>Anbieter</h2>
+        <p>
+          <strong>{company}</strong>
+          <br />
+          {street}
+          <br />
+          {zip} {city}
+          <br />
+          {country}
+        </p>
 
-      <h2>Vertretungsberechtigter</h2>
-      <p>{director}</p>
+        <h2>Vertretungsberechtigter</h2>
+        <p>{director}</p>
 
-      <h2>Kontakt</h2>
-      <p>
-        E-Mail: <a href={`mailto:${email}`}>{email}</a>
-      </p>
+        <h2>Kontakt</h2>
+        <p>
+          E-Mail: <a href={`mailto:${email}`}>{email}</a>
+        </p>
 
-      <h2>Registereintrag</h2>
-      <p>
-        Handelsregister (Kamer van Koophandel): {kvk}
-        <br />
-        Umsatzsteuer-Identifikationsnummer (BTW): {vat}
-      </p>
+        <h2>Registereintrag</h2>
+        <p>
+          Handelsregister (Kamer van Koophandel): {kvk}
+          <br />
+          Umsatzsteuer-Identifikationsnummer (BTW): {vat}
+        </p>
 
-      <h2>Haftungs- und Urheberrechtshinweis</h2>
-      <p>
-        Inhalte und Werke auf dieser Plattform unterliegen dem Urheberrecht. Eine
-        Vervielfaeltigung, Bearbeitung, Verbreitung oder jede Art der Verwertung
-        ausserhalb der Grenzen des Urheberrechts beduerfen der schriftlichen
-        Zustimmung des jeweiligen Rechteinhabers.
-      </p>
-      <p>
-        Die Inhalte der Plattform werden mit groesster Sorgfalt erstellt. Fuer
-        die Richtigkeit, Vollstaendigkeit und Aktualitaet der Inhalte wird jedoch
-        keine Gewaehr uebernommen.
-      </p>
+        <h2>Haftungs- und Urheberrechtshinweis</h2>
+        <p>
+          Inhalte und Werke auf dieser Plattform unterliegen dem Urheberrecht. Eine
+          Vervielfaeltigung, Bearbeitung, Verbreitung oder jede Art der Verwertung
+          ausserhalb der Grenzen des Urheberrechts beduerfen der schriftlichen
+          Zustimmung des jeweiligen Rechteinhabers.
+        </p>
+        <p>
+          Die Inhalte der Plattform werden mit groesster Sorgfalt erstellt. Fuer
+          die Richtigkeit, Vollstaendigkeit und Aktualitaet der Inhalte wird jedoch
+          keine Gewaehr uebernommen.
+        </p>
 
-      <h2>Datenschutz</h2>
-      <p>
-        Informationen zur Verarbeitung personenbezogener Daten finden Sie in der{" "}
-        <a href="/datenschutz">Datenschutzerklaerung</a>.
-      </p>
+        <h2>Datenschutz</h2>
+        <p>
+          Informationen zur Verarbeitung personenbezogener Daten finden Sie in der{" "}
+          <a href="/datenschutz">Datenschutzerklaerung</a>.
+        </p>
 
-      <p>
-        <em>
-          Stand: 2026-05-15 (V6.2-Release, Anwalts-Review pending vor erstem
-          echten Live-Partner).
-        </em>
-      </p>
-    </main>
+        <p>
+          <em>
+            Stand: 2026-05-15 (V6.2-Release, Anwalts-Review pending vor erstem
+            echten Live-Partner).
+          </em>
+        </p>
+      </main>
+    </>
   );
 }

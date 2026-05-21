@@ -65,7 +65,7 @@
       "title": "Back-Link auf /datenschutz + /impressum Pages (zurueck zur Source-Page)",
       "type": "improvement",
       "priority": "low",
-      "status": "open",
+      "status": "done",
       "version": "V7.1",
       "description": "User-Feedback 2026-05-20 nach SLC-700-Self-Signup-Live-Test: Wenn Mandant vom Diagnose-Dashboard-Footer auf 'Datenschutz' oder 'Impressum' klickt, gibt es keinen sichtbaren Weg zurueck zur Source-Page. Browser-Back funktioniert, aber kein expliziter Back-Link oder Breadcrumb im Page-Header. Vorschlag: Header-Link 'Zurueck' oben links oder Breadcrumb 'Diagnose / Datenschutz' mit klickbarem ersten Element. Affected files: src/app/datenschutz/page.tsx + src/app/impressum/page.tsx. Aufwand ~15-30 min.",
       "createdAt": "2026-05-20"
