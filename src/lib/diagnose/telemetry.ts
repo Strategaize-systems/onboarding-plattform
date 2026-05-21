@@ -22,6 +22,5 @@ export function trackHelperTextOpen(payload: HelperTextOpenPayload): void {
   if (typeof window === "undefined") {
     return;
   }
-  // eslint-disable-next-line no-console
   console.debug("[diagnose.telemetry] helper_text_open", payload);
 }
