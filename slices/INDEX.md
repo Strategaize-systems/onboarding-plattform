@@ -723,65 +723,61 @@ Plus **~30min Live-Smoke** nach Coolify-Redeploy (User-Pflicht-Aktion).
 
 ## V7.1 Slices
 
-V7.1-Slice-Planning DONE 2026-05-20 (RPT-313). 7 Slices SLC-136..142 mit Micro-Task-Decomposition. Reihenfolge SLC-136 -> SLC-137 -> SLC-138 -> SLC-139 -> SLC-140 -> SLC-141 -> SLC-142 ist BLOCKING aus Architektur-Gruenden (FEAT-055 ist Foundation, Look-Polish blockt auf EditableText-Migration). SLC-142 ist Quick-Win Parallel-Option. Geschaetzt ~36-60h Code-Side + ~3-6h User-Content + Pen-Test + Live-Smoke.
+**Smart-Split 2026-05-21**: V7.1-Effektiv-Scope auf 4 Slices reduziert (SLC-136..138 + SLC-142). SLC-139 Telemetrie + SLC-141 Email+PDF wandern nach V7.2 (Business-Impact-Buendel). SLC-140 Look-Polish wandert nach V7.3 (rein visuell, blockiert nichts).
 
 | ID | Slice | Feature | Status | Priority | Created |
 |----|-------|---------|--------|----------|---------|
 | SLC-136 | [FEAT-055 Inline-Text-Override-Foundation](SLC-136-text-override-foundation.md) | FEAT-055 | done | High | 2026-05-20 |
 | SLC-137 | [FEAT-056 EditableText-Komponente + Text-Migration](SLC-137-editabletext-component-text-migration.md) | FEAT-056 | done | High | 2026-05-20 |
 | SLC-138 | [FEAT-057 Helper-Texts pro Frage](SLC-138-helper-texts-questions.md) | FEAT-057 | done | High | 2026-05-20 |
-| SLC-139 | [FEAT-058 Diagnose-Funnel-Telemetrie](SLC-139-diagnose-funnel-telemetrie.md) | FEAT-058 | planned | High | 2026-05-20 |
-| SLC-140 | [FEAT-059 Look-and-Feel-Polish nach Style Guide V2](SLC-140-look-feel-polish.md) | FEAT-059 | planned | Medium | 2026-05-20 |
-| SLC-141 | [FEAT-060 Bericht-Email mit PDF-Attachment](SLC-141-bericht-email-pdf.md) | FEAT-060 | planned | Medium | 2026-05-20 |
 | SLC-142 | [FEAT-061 Back-Link auf /datenschutz + /impressum](SLC-142-back-link-legal-pages.md) | FEAT-061 | planned | Low | 2026-05-20 |
 
-### V7.1 Backlog-Mapping
+### V7.1 Backlog-Mapping (post Smart-Split)
 
-- **BL-118 (V7.1 FEAT-055 Edit-Foundation)**: `open -> in_progress` mit SLC-136-Start.
-- **BL-119 (V7.1 FEAT-056 EditableText + Text-Migration)**: `open -> in_progress` mit SLC-137-Start.
-- **BL-115 (V7.1 Hilfetexte/Tooltips)**: `open -> in_progress` mit SLC-138-Start, `done` nach SLC-138-Abschluss.
-- **BL-117 (V7.1 Diagnose-Funnel-Telemetrie)**: `open -> in_progress` mit SLC-139-Start.
-- **BL-114 (V7.1 Look-and-Feel-Polish)**: `open -> in_progress` mit SLC-140-Start.
-- **BL-116 (V7.1 Bericht-Email mit PDF)**: `open -> in_progress` mit SLC-141-Start.
+- **BL-118 (V7.1 FEAT-055 Edit-Foundation)**: `done` (SLC-136 abgeschlossen).
+- **BL-119 (V7.1 FEAT-056 EditableText + Text-Migration)**: `done` (SLC-137 abgeschlossen).
+- **BL-115 (V7.1 Hilfetexte/Tooltips)**: `done` (SLC-138 abgeschlossen).
 - **BL-113 (V7.1 Back-Link)**: `open -> done` mit SLC-142-Abschluss.
-
-### V7.1 Pflicht-Reihenfolge (BLOCKING)
-
-```
-SLC-136 (Foundation)
-   |
-   ▼
-SLC-137 (EditableText + Migration)
-   |
-   ▼
-SLC-138 (Helper-Texts)
-   |
-   ▼
-SLC-139 (Telemetrie)
-   |
-   ▼
-SLC-140 (Look-Polish)     <─── blockt auf SLC-137 (EditableText muss da sein vor Re-Styling)
-   |
-   ▼
-SLC-141 (Email-PDF)
-   |
-   ▼
-SLC-142 (Back-Link)       <─── parallel moeglich, Quick-Win
-```
 
 ### V7.1 Cross-Repo-Pflicht
 
-SLC-138 hat in MT-1 explizite **Cross-Repo-Schema-Cross-Check** mit IS V3 (DEC-070/071/073 Cross-Repo-Anker). Vor Migration 099 Apply: Memory `project_op_v71_cross_repo_helper_text_sync.md` aktualisieren mit Cross-Check-Datum.
+SLC-138 hat in MT-1 explizite **Cross-Repo-Schema-Cross-Check** mit IS V3 (DEC-070/071/073 Cross-Repo-Anker) — durchgefuehrt 2026-05-21.
 
-### V7.1 Worktree-Pflicht (SaaS-Mode)
+## V7.2 Slices (Funnel-Datenbasis + Conversion-Hebel)
 
-Alle 7 Slices nutzen Worktree-Isolation:
-- `slc-136-text-override-foundation`
-- `slc-137-editabletext-component-migration`
-- `slc-138-helper-texts-questions`
-- `slc-139-diagnose-funnel-telemetrie`
-- `slc-140-look-feel-polish`
-- `slc-141-bericht-email-pdf`
-- `slc-142-back-link-legal-pages`
+**Smart-Split aus V7.1 2026-05-21**. Buendelt Business-Impact-Features: Datenbasis fuer Funnel-Optimierung (Telemetrie) + Conversion-Hebel (Bericht-Email mit PDF an Mandant + Partner-Steuerberater). Geschaetzt ~10-16h Code-Side ueber 2-3 Sessions.
+
+| ID | Slice | Feature | Status | Priority | Created |
+|----|-------|---------|--------|----------|---------|
+| SLC-139 | [FEAT-058 Diagnose-Funnel-Telemetrie](SLC-139-diagnose-funnel-telemetrie.md) | FEAT-058 | planned | High | 2026-05-20 |
+| SLC-141 | [FEAT-060 Bericht-Email mit PDF-Attachment](SLC-141-bericht-email-pdf.md) | FEAT-060 | planned | Medium | 2026-05-20 |
+
+### V7.2 Backlog-Mapping
+
+- **BL-117 (V7.2 Diagnose-Funnel-Telemetrie)**: `open -> in_progress` mit SLC-139-Start.
+- **BL-116 (V7.2 Bericht-Email mit PDF)**: `open -> in_progress` mit SLC-141-Start.
+
+### V7.2 Reihenfolge (empfohlen)
+
+SLC-139 vor SLC-141 — Telemetrie sammelt ab Tag 1 Daten zur Bewertung der Bericht-Email-Wirkung.
+
+## V7.3 Slices (Look-Polish nach Style Guide V2)
+
+**Smart-Split aus V7.1 2026-05-21**. Reines Visual-Polish, blockiert nichts. Pre-Condition: V7.2 released (QuickActionRing Email-Button-Slot existiert real, sonst 3 statt 4 Aktionen).
+
+| ID | Slice | Feature | Status | Priority | Created |
+|----|-------|---------|--------|----------|---------|
+| SLC-140 | [FEAT-059 Look-and-Feel-Polish nach Style Guide V2](SLC-140-look-feel-polish.md) | FEAT-059 | planned | Medium | 2026-05-20 |
+
+### V7.3 Backlog-Mapping
+
+- **BL-114 (V7.3 Look-and-Feel-Polish)**: `open -> in_progress` mit SLC-140-Start.
+
+### V7.1/V7.2/V7.3 Worktree-Pflicht (SaaS-Mode)
+
+Alle Slices nutzen Worktree-Isolation:
+- V7.1: `slc-136-text-override-foundation` ✓, `slc-137-editabletext-component-migration` ✓, `slc-138-helper-texts-questions` ✓, `slc-142-back-link-legal-pages` (pending)
+- V7.2: `slc-139-diagnose-funnel-telemetrie`, `slc-141-bericht-email-pdf`
+- V7.3: `slc-140-look-feel-polish`
 
 Master-Merge nur nach Slice-/qa PASS (Pattern aus V7).

@@ -1,6 +1,6 @@
 # FEAT-059 — Look-and-Feel-Polish nach Style Guide V2
 
-**Version:** V7.1
+**Version:** V7.3 (Smart-Split aus V7.1 2026-05-21)
 **Status:** planned
 **Created:** 2026-05-20
 

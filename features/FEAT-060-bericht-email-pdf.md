@@ -1,6 +1,6 @@
 # FEAT-060 — Bericht-Email mit PDF-Attachment
 
-**Version:** V7.1
+**Version:** V7.2 (Smart-Split aus V7.1 2026-05-21)
 **Status:** planned
 **Created:** 2026-05-20
 

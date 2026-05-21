@@ -140,16 +140,30 @@ V7-Scope (User-Entscheidung 2026-05-18 nach V6.4 STABLE-Bestaetigung RPT-295): B
 | FEAT-053 | Self-Signup Email-Verify + Auto-Tenant-Provisioning | in_progress | [Spec](FEAT-053-self-signup-email-verify-auto-provisioning.md) | 2026-05-18 |
 | FEAT-054 | Pen-Test-Suite-Erweiterung Public-Signup-Caller + Anti-Abuse-Verifikation | planned | [Spec](FEAT-054-pen-test-public-signup-anti-abuse.md) | 2026-05-18 |
 
-## V7.1 Features (Inline-Text-Override-Foundation + Funnel-Polish + Telemetrie)
+## V7.1 Features (Inline-Text-Override-Foundation + Helper-Texts + Back-Link)
 
-V7.1-Scope (User-Entscheidung 2026-05-20 Option A nach DEC-139 V8-Diary-Split): Substantielle Polish-Iteration mit Inline-Text-Override-Foundation als Foundation-Feature (FEAT-055/056), plus Helper-Texts (FEAT-057), Funnel-Telemetrie (FEAT-058), Look-Polish (FEAT-059), Bericht-Email-PDF (FEAT-060), Back-Link Quick-Win (FEAT-061). Reihenfolge SLC-136 -> SLC-142 ist BLOCKING (Foundation zuerst). Geschaetzt ~36-60h Code-Side + ~3-6h Helper-Texts-Inhalt.
+**Smart-Split 2026-05-21**: V7.1-Effektiv-Scope auf 4 Features reduziert (FEAT-055..057 + FEAT-061). FEAT-058 Telemetrie + FEAT-060 Email-PDF nach V7.2 verschoben (Business-Impact-Buendel). FEAT-059 Look-Polish nach V7.3 verschoben (rein visuell).
 
 | ID | Feature | Status | Spec | Created |
 |----|---------|--------|------|---------|
 | FEAT-055 | Inline-Text-Override-Foundation (Tabelle + Resolver + Audit + RLS) | done | [Spec](FEAT-055-inline-text-override-foundation.md) | 2026-05-20 |
 | FEAT-056 | EditableText-Komponente + Text-Migration A/D/E/F | done | [Spec](FEAT-056-editabletext-component-text-migration.md) | 2026-05-20 |
 | FEAT-057 | Helper-Texts mit Beispieldefinitionen pro Frage | done | [Spec](FEAT-057-helper-texts-questions.md) | 2026-05-20 |
-| FEAT-058 | Diagnose-Funnel-Telemetrie (diagnose_event + Tracker + Analytics-Page) | planned | [Spec](FEAT-058-diagnose-funnel-telemetrie.md) | 2026-05-20 |
-| FEAT-059 | Look-and-Feel-Polish nach Style Guide V2 (Start + Run + Bericht) | planned | [Spec](FEAT-059-look-feel-polish.md) | 2026-05-20 |
-| FEAT-060 | Bericht-Email mit PDF-Attachment (@react-pdf/renderer) | planned | [Spec](FEAT-060-bericht-email-pdf.md) | 2026-05-20 |
 | FEAT-061 | Back-Link auf /datenschutz + /impressum | planned | [Spec](FEAT-061-back-link-legal-pages.md) | 2026-05-20 |
+
+## V7.2 Features (Funnel-Datenbasis + Conversion-Hebel)
+
+**Smart-Split aus V7.1 2026-05-21**. Buendelt Business-Impact-Features: Datenbasis fuer Funnel-Optimierung + Conversion-Hebel (Mandant teilt Bericht mit Berater).
+
+| ID | Feature | Status | Spec | Created |
+|----|---------|--------|------|---------|
+| FEAT-058 | Diagnose-Funnel-Telemetrie (diagnose_event + Tracker + Analytics-Page) | planned | [Spec](FEAT-058-diagnose-funnel-telemetrie.md) | 2026-05-20 |
+| FEAT-060 | Bericht-Email mit PDF-Attachment (@react-pdf/renderer) | planned | [Spec](FEAT-060-bericht-email-pdf.md) | 2026-05-20 |
+
+## V7.3 Features (Look-Polish nach Style Guide V2)
+
+**Smart-Split aus V7.1 2026-05-21**. Reines Visual-Polish. Pre-Condition: V7.2 released (QuickActionRing Email-Button-Slot existiert real).
+
+| ID | Feature | Status | Spec | Created |
+|----|---------|--------|------|---------|
+| FEAT-059 | Look-and-Feel-Polish nach Style Guide V2 (Start + Run + Bericht) | planned | [Spec](FEAT-059-look-feel-polish.md) | 2026-05-20 |

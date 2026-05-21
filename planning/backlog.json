@@ -26,7 +26,7 @@
       "type": "feature",
       "priority": "high",
       "status": "open",
-      "version": "V7.1",
+      "version": "V7.2",
       "description": "User-Feedback 2026-05-20 nach SLC-700-Self-Signup-Live-Test (Diagnose-Start-Screen): Wir muessen den Diagnose-Funnel kontinuierlich optimieren koennen. Pflicht-Datensignale: (1) welche Frage abgebrochen (Question-Drop-off pro Frage), (2) wo werden Hilfetexte oft geklickt (deutet auf unklare Frage-Formulierung), (3) Time-on-Question pro Frage (lange Verweilzeit = User unsicher). Schema-Vorschlag: neue Tabelle `diagnose_event` mit (capture_session_id, tenant_id, event_type ENUM 'question_start'|'question_answer'|'question_skip'|'helper_text_open'|'session_paused'|'session_abandoned', question_key, payload jsonb, created_at). Optional Browser-Heartbeat fuer Time-on-Question. Pre-Condition fuer BL-115 (Hilfetexte) + BL-114 (Look-Polish) Effect-Messung. DSGVO: Event-Daten anonymisiert pro pending_signup-Hash oder per tenant_id. Admin-Analytics-Page fuer strategaize_admin + partner_admin (eigene Partner-Mandanten). Cross-Repo-Brueckenpotenzial: IS V3 Questionnaire Builder kann Drop-off-Daten zurueckspielen als Recommendation 'Frage X hat 40% Drop-off → umformulieren'. Aufwand ~6-10h Slice.",
       "createdAt": "2026-05-20"
     },
@@ -36,7 +36,7 @@
       "type": "feature",
       "priority": "medium",
       "status": "open",
-      "version": "V7.1",
+      "version": "V7.2",
       "description": "User-Feedback 2026-05-20 nach SLC-700-Self-Signup-Live-Test: Aktuell kann der Mandant den Bericht nur ueber den Browser-Print-Dialog als PDF speichern. Sinnvoll fuer Conversion + Partner-Bindung: nach Bericht-Generierung optional eine 'Bericht per Email zusenden'-Action mit Empfaenger-Auswahl (1) Mandant selbst, (2) Partner-Steuerberater cc, (3) zusaetzliche Email-Adresse (z.B. Geschaeftspartner). Pattern-Reuse: IONOS-SMTP-Adapter aus V4.2 (gleiche Mailer-Lib wie V7 Verify-Mails). PDF-Generierung server-side via puppeteer oder @react-pdf/renderer. Affected: neue Server-Action `sendDiagnoseReportByEmail` + PDF-Generator + Email-Template. Bestehender Print-CSS bleibt als Fallback. Aufwand ~4-6h.",
       "createdAt": "2026-05-20"
     },
@@ -56,7 +56,7 @@
       "type": "improvement",
       "priority": "medium",
       "status": "open",
-      "version": "V7.1",
+      "version": "V7.3",
       "description": "User-Feedback 2026-05-20 nach SLC-700-Self-Signup-Live-Test: Look der Diagnose-Start-Screen + 24-Fragen-Pages + Bericht-Page koennte professioneller sein. Erster Eindruck beim Self-Signup-Mandanten — visuelle Qualitaet muss Marketing-Layer entsprechen, nicht nach 'internal tool' aussehen. Konkretisierung im Slice: (1) Style-Guide-Vergleich Strategaize Style Guide V2 + Marketing-Konzept-Brand, (2) Typografie-Hierarchie (Headings, Frage-Karten, CTA-Buttons), (3) Spacing + White-Space, (4) Mehrfarbige Section-Cards wie in IS V1.2 SLC-115, (5) QuickActionRing-Pattern fuer Bericht-Aktionen, (6) Empty-/Error-States schoener. Affected pages: src/app/dashboard/diagnose/start/page.tsx + .../run/page.tsx + .../bericht/page.tsx + Komponenten. Pattern-Reuse aus IS-SLC-115 Page-Level-Style-Guide-V2 wo zutreffend. Aufwand ~4-8h.",
       "createdAt": "2026-05-20"
     },
