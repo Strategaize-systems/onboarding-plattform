@@ -45,7 +45,7 @@
       "title": "Hilfetexte / Tooltips an Diagnose-Fragen mit Beispieldefinitionen (Begriffe wie 'Wissensbereich')",
       "type": "feature",
       "priority": "high",
-      "status": "open",
+      "status": "done",
       "version": "V7.1",
       "description": "User-Feedback 2026-05-20 nach SLC-700-Self-Signup-Live-Test: Diagnose-Fragen mit Fach-Begriffen (Beispiel: 'Wieviele kritische Wissensbereiche gibt es in Ihrer Firma?') koennen Mandanten ohne Strategie-Hintergrund nicht beantworten. Mandant ist Kunde des Steuerberaters, nicht Strategie-Experte — Conversion-Risiko wenn Frage unverstanden. Pflicht: pro Frage optional ein `helper_text` (Begriffsdefinition) + `examples_md` (2-3 konkrete Branchen-Beispiele) anklickbar. Schema-Erweiterung (additiv): `template.blocks[].questions[].helper_text` + `.examples_md` JSONB-Felder. UI: Info-Icon neben Frage-Label, beim Klick Tooltip oder Modal mit Definition + Beispielen. Initial-Content-Schreibarbeit: 24 Fragen x (~150-250 Worte Definition + Beispiele) = ~3-6h Inhaltsarbeit. Code-Aufwand ~3-4h. Total ~6-10h. Pre-Condition fuer hoehere Conversion bei Self-Signup-Mandanten.",
       "createdAt": "2026-05-20"

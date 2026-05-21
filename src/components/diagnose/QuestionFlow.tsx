@@ -19,10 +19,12 @@
 import { useState, useTransition, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, AlertCircle, Check } from "lucide-react";
+import { Loader2, AlertCircle, Check, Info } from "lucide-react";
 import type { TemplateBlock } from "@/workers/condensation/light-pipeline";
 import { saveDiagnoseDraft, submitDiagnoseRun } from "@/app/dashboard/diagnose/actions";
 import { EditableText } from "@/components/text-override/EditableText";
+import { HelperTextModal } from "./HelperTextModal";
+import { shouldShowInfoIcon } from "./helper-text-modal-logic";
 
 interface QuestionFlowProps {
   sessionId: string;
@@ -40,6 +42,17 @@ export function QuestionFlow({
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSaving, startSaving] = useTransition();
   const [isSubmitting, startSubmit] = useTransition();
+  // V7.1 SLC-138 (FEAT-057): aktiv geoeffneter Helper-Text-Modal-State.
+  const [helperOpenKey, setHelperOpenKey] = useState<string | null>(null);
+
+  const helperFor = useMemo(() => {
+    if (!helperOpenKey) return null;
+    for (const block of blocks) {
+      const q = block.questions.find((it) => it.key === helperOpenKey);
+      if (q) return q;
+    }
+    return null;
+  }, [helperOpenKey, blocks]);
 
   const totalQuestions = useMemo(
     () => blocks.reduce((acc, b) => acc + (b.questions?.length ?? 0), 0),
@@ -122,6 +135,19 @@ export function QuestionFlow({
                       defaultText={question.text}
                       multiline
                     />
+                    {shouldShowInfoIcon({
+                      helperText: question.helper_text,
+                      examplesMd: question.examples_md,
+                    }) ? (
+                      <button
+                        type="button"
+                        onClick={() => setHelperOpenKey(question.key)}
+                        aria-label="Erklaerung mit Beispielen anzeigen"
+                        className="ml-1.5 inline-flex h-5 w-5 -mb-0.5 items-center justify-center rounded-full text-slate-400 opacity-60 transition-opacity hover:opacity-100 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                      >
+                        <Info className="h-3.5 w-3.5" />
+                      </button>
+                    ) : null}
                   </legend>
                   <div className="space-y-2">
                     {question.score_mapping.map((option) => {
@@ -228,6 +254,20 @@ export function QuestionFlow({
           </p>
         ) : null}
       </div>
+
+      {/* V7.1 SLC-138 (FEAT-057): geteilter Helper-Modal, wird via helperOpenKey gesteuert. */}
+      {helperFor ? (
+        <HelperTextModal
+          open={true}
+          onClose={() => setHelperOpenKey(null)}
+          templateSlug="partner_diagnostic"
+          questionKey={helperFor.key}
+          questionLabel={helperFor.text}
+          helperTextDefault={helperFor.helper_text ?? null}
+          examplesMdDefault={helperFor.examples_md ?? null}
+          captureSessionId={sessionId}
+        />
+      ) : null}
     </div>
   );
 }

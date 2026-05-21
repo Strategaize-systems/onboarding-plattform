@@ -48,6 +48,16 @@ export interface TemplateQuestion {
   question_type: QuestionType;
   scale_direction: "positive" | "negative";
   score_mapping: ScoreMappingEntry[];
+  /**
+   * V7.1 SLC-138 (FEAT-057, DEC-073). Optionale Definition (max 300 chars).
+   * Wird im Diagnose-Run als Info-Icon-Modal angezeigt.
+   */
+  helper_text?: string | null;
+  /**
+   * V7.1 SLC-138 (FEAT-057, DEC-073). Optionale Branchen-Beispiele als
+   * Markdown-Subset (max 800 chars). Wird via react-markdown + remark-gfm gerendert.
+   */
+  examples_md?: string | null;
 }
 
 /** Ein Baustein aus template.blocks. 4 Fragen pro Block in V6.3-Workshop. */
