@@ -13,7 +13,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // ============================================================
 
 const revalidatePathMock = vi.fn();
-const invalidateOverrideCacheMock = vi.fn();
+const resetOverrideCacheMock = vi.fn();
 const getUserMock = vi.fn();
 const fromMock = vi.fn();
 
@@ -29,16 +29,13 @@ vi.mock("@/lib/supabase/server", () => ({
   }),
 }));
 
-// Cache-Invalidate-Mock — Tests prueft Aufruf-Args. Resolver-Lib selbst ist
-// unbetroffen.
+// Cache-Reset-Mock — V7.1 SLC-137 /qa Auto-Fix (F-4): actions rufen jetzt
+// resetOverrideCache() statt invalidateOverrideCache(scope_id, locale).
 vi.mock("../resolver", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../resolver")>();
   return {
     ...actual,
-    invalidateOverrideCache: (
-      partnerOrgId: string | null,
-      locale?: string,
-    ) => invalidateOverrideCacheMock(partnerOrgId, locale),
+    resetOverrideCache: () => resetOverrideCacheMock(),
   };
 });
 
@@ -98,7 +95,7 @@ function setUser(userId: string | null) {
 
 beforeEach(() => {
   revalidatePathMock.mockReset();
-  invalidateOverrideCacheMock.mockReset();
+  resetOverrideCacheMock.mockReset();
   getUserMock.mockReset();
   fromMock.mockReset();
 });
@@ -282,7 +279,7 @@ describe("saveTextOverride create", () => {
         action: "create",
       }),
     );
-    expect(invalidateOverrideCacheMock).toHaveBeenCalledWith(null, "de");
+    expect(resetOverrideCacheMock).toHaveBeenCalled();
     expect(revalidatePathMock).toHaveBeenCalled();
   });
 });
@@ -344,7 +341,7 @@ describe("saveTextOverride update", () => {
         action: "update",
       }),
     );
-    expect(invalidateOverrideCacheMock).toHaveBeenCalledWith("part-1", "de");
+    expect(resetOverrideCacheMock).toHaveBeenCalled();
   });
 
   it("no-op when newValue === oldValue (no history spam, no cache-invalidate)", async () => {
@@ -381,7 +378,7 @@ describe("saveTextOverride update", () => {
 
     expect(result).toEqual({ ok: true, data: { created: false } });
     expect(insertHistorySpy).not.toHaveBeenCalled();
-    expect(invalidateOverrideCacheMock).not.toHaveBeenCalled();
+    expect(resetOverrideCacheMock).not.toHaveBeenCalled();
     expect(revalidatePathMock).not.toHaveBeenCalled();
   });
 });
@@ -438,7 +435,7 @@ describe("resetTextOverride", () => {
         action: "delete",
       }),
     );
-    expect(invalidateOverrideCacheMock).toHaveBeenCalledWith(null, "de");
+    expect(resetOverrideCacheMock).toHaveBeenCalled();
   });
 
   it("returns existed=false when no override row present (no-op, no history, no cache-bust)", async () => {
@@ -471,7 +468,7 @@ describe("resetTextOverride", () => {
 
     expect(result).toEqual({ ok: true, data: { existed: false } });
     expect(insertHistorySpy).not.toHaveBeenCalled();
-    expect(invalidateOverrideCacheMock).not.toHaveBeenCalled();
+    expect(resetOverrideCacheMock).not.toHaveBeenCalled();
   });
 
   it("propagates RLS-DELETE-Error", async () => {

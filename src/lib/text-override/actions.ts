@@ -19,7 +19,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import { invalidateOverrideCache, type TextOverrideScope } from "./resolver";
+import { resetOverrideCache, type TextOverrideScope } from "./resolver";
 import type { UserRole } from "@/types/db";
 
 // ============================================================
@@ -239,8 +239,14 @@ export async function saveTextOverride(
     return { ok: false, error: histErr.message };
   }
 
-  // 5) Cache invalidieren + revalidatePath
-  invalidateOverrideCache(scopeCheck.scopeId, locale);
+  // 5) Cache invalidieren + revalidatePath.
+  // V7.1 SLC-137 /qa-Live-Smoke Auto-Fix per Deviation Rule 1 (F-4):
+  // invalidateOverrideCache(scope_id) bricht NICHT die Provider-Cache-Eintraege,
+  // weil deren cacheKey auf partnerOrgId basiert (nicht scope_id). Eine globale
+  // Override-Aenderung muss ALLE partner-scoped Cache-Eintraege invalidieren.
+  // Full reset ist pragmatisch + korrekt — der Cache wird beim naechsten Render
+  // mit einem DB-Query neu aufgebaut, Kosten vernachlaessigbar.
+  resetOverrideCache();
   revalidateOverridePaths();
 
   return { ok: true, data: { created: isCreate } };
@@ -307,8 +313,11 @@ export async function resetTextOverride(
   });
   if (histErr) return { ok: false, error: histErr.message };
 
-  // 4) Cache invalidieren + revalidatePath
-  invalidateOverrideCache(scopeCheck.scopeId, locale);
+  // 4) Cache invalidieren + revalidatePath.
+  // V7.1 SLC-137 /qa-Live-Smoke Auto-Fix per Deviation Rule 1 (F-4):
+  // siehe saveTextOverride — full reset weil partner-scoped Provider-Loads
+  // sonst nicht invalidiert werden.
+  resetOverrideCache();
   revalidateOverridePaths();
 
   return { ok: true, data: { existed: true } };
