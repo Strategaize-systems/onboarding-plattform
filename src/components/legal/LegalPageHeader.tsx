@@ -27,7 +27,7 @@ export function LegalPageHeader({
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-4 pt-6">
+    <div className="max-w-3xl mx-auto px-4 pt-6 flex items-center justify-between gap-4">
       <Link
         href={defaultBackHref}
         onClick={handleClick}
@@ -37,6 +37,9 @@ export function LegalPageHeader({
         <ChevronLeft className="h-4 w-4" aria-hidden="true" />
         <span>Zurueck</span>
       </Link>
+      <span className="text-xs uppercase tracking-wide text-slate-500" aria-hidden="true">
+        {pageTitle}
+      </span>
     </div>
   );
 }
