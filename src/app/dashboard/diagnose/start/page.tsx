@@ -21,6 +21,9 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { resolveBrandingForTenant } from "@/lib/branding/resolve";
 import { startDiagnoseRun } from "../actions";
+import { TextOverrideProvider } from "@/components/text-override/Provider";
+import { resolvePartnerOrgIdForTenant } from "@/lib/text-override/partner-org";
+import { EditableText } from "@/components/text-override/EditableText";
 
 export const metadata = {
   title: "Strategaize-Diagnose | Onboarding",
@@ -55,24 +58,41 @@ export default async function DiagnoseStartPage() {
     !tenantRow ||
     tenantRow.tenant_kind !== "partner_client"
   ) {
+    const partnerOrgIdGate = await resolvePartnerOrgIdForTenant(
+      supabase,
+      profile.tenant_id,
+    );
     return (
-      <main className="mx-auto max-w-2xl px-6 py-16">
-        <Card>
-          <CardHeader>
-            <CardTitle>Diagnose-Werkzeug</CardTitle>
-            <CardDescription>
-              Aktuell nur fuer Mandanten ueber einen Partner-Steuerberater
-              verfuegbar.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-slate-600">
-              Direkt-Kunden erhalten die Diagnose in einer kuenftigen Version.
-              Bei Fragen wenden Sie sich an Strategaize.
-            </p>
-          </CardContent>
-        </Card>
-      </main>
+      <TextOverrideProvider partnerOrgId={partnerOrgIdGate} locale="de">
+        <main className="mx-auto max-w-2xl px-6 py-16">
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                <EditableText
+                  keyPath="diagnose.start.gate.title"
+                  defaultText="Diagnose-Werkzeug"
+                />
+              </CardTitle>
+              <CardDescription>
+                <EditableText
+                  keyPath="diagnose.start.gate.description"
+                  defaultText="Aktuell nur fuer Mandanten ueber einen Partner-Steuerberater verfuegbar."
+                  multiline
+                />
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-slate-600">
+                <EditableText
+                  keyPath="diagnose.start.gate.hint"
+                  defaultText="Direkt-Kunden erhalten die Diagnose in einer kuenftigen Version. Bei Fragen wenden Sie sich an Strategaize."
+                  multiline
+                />
+              </p>
+            </CardContent>
+          </Card>
+        </main>
+      </TextOverrideProvider>
     );
   }
 
@@ -110,63 +130,91 @@ export default async function DiagnoseStartPage() {
     profile.tenant_id ?? "",
   );
 
+  const partnerOrgId = await resolvePartnerOrgIdForTenant(
+    supabase,
+    profile.tenant_id,
+  );
+
   return (
-    <main className="mx-auto max-w-2xl space-y-6 px-6 py-12">
-      {branding.displayName ? (
-        <div className="flex items-center gap-3">
-          {branding.logoUrl ? (
-            <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-white">
-              <Image
-                src={branding.logoUrl}
-                alt={`${branding.displayName} Logo`}
-                width={48}
-                height={48}
-                unoptimized
-                className="h-full w-full object-contain"
-              />
-            </div>
-          ) : null}
-          <span className="text-sm text-slate-500">
-            Ihr Steuerberater:{" "}
-            <span className="font-medium text-slate-700">
-              {branding.displayName}
+    <TextOverrideProvider partnerOrgId={partnerOrgId} locale="de">
+      <main className="mx-auto max-w-2xl space-y-6 px-6 py-12">
+        {branding.displayName ? (
+          <div className="flex items-center gap-3">
+            {branding.logoUrl ? (
+              <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-white">
+                <Image
+                  src={branding.logoUrl}
+                  alt={`${branding.displayName} Logo`}
+                  width={48}
+                  height={48}
+                  unoptimized
+                  className="h-full w-full object-contain"
+                />
+              </div>
+            ) : null}
+            <span className="text-sm text-slate-500">
+              <EditableText
+                keyPath="diagnose.start.steuerberater_label"
+                defaultText="Ihr Steuerberater:"
+              />{" "}
+              <span className="font-medium text-slate-700">
+                {branding.displayName}
+              </span>
             </span>
-          </span>
-        </div>
-      ) : null}
+          </div>
+        ) : null}
 
-      <div>
-        <h1 className="text-3xl font-bold text-slate-900">
-          Strategaize-Diagnose
-        </h1>
-        <p className="mt-2 text-sm text-slate-500">
-          Strukturierte Selbsteinschaetzung Ihrer Unternehmens-Reife.
-          Wir fragen 24 Punkte entlang sechs Bausteine, jeweils mit fertigen
-          Antwort-Optionen — Sie waehlen, was am ehesten zutrifft.
-        </p>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Ablauf</CardTitle>
-          <CardDescription>
-            6 Bausteine x 4 Fragen = 24 Antworten. Dauer ca. 8-12 Minuten.
-            Sie koennen jederzeit unterbrechen — der Stand bleibt gespeichert.
-            Nach dem Abschicken erstellt Strategaize automatisch einen
-            kommentierten Bericht.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form action={startDiagnoseRun}>
-            <Button type="submit">Diagnose starten</Button>
-          </form>
-          <p className="mt-3 text-xs text-slate-400">
-            Keine menschliche Pruefung — Sie erhalten den Bericht direkt nach
-            der Verdichtung. Strategaize speichert Ihre Antworten nur zur
-            Generierung dieses Berichts.
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">
+            <EditableText
+              keyPath="diagnose.start.heading"
+              defaultText="Strategaize-Diagnose"
+            />
+          </h1>
+          <p className="mt-2 text-sm text-slate-500">
+            <EditableText
+              keyPath="diagnose.start.subheading"
+              defaultText="Strukturierte Selbsteinschaetzung Ihrer Unternehmens-Reife. Wir fragen 24 Punkte entlang sechs Bausteine, jeweils mit fertigen Antwort-Optionen — Sie waehlen, was am ehesten zutrifft."
+              multiline
+            />
           </p>
-        </CardContent>
-      </Card>
-    </main>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              <EditableText
+                keyPath="diagnose.start.ablauf.title"
+                defaultText="Ablauf"
+              />
+            </CardTitle>
+            <CardDescription>
+              <EditableText
+                keyPath="diagnose.start.ablauf.description"
+                defaultText="6 Bausteine x 4 Fragen = 24 Antworten. Dauer ca. 8-12 Minuten. Sie koennen jederzeit unterbrechen — der Stand bleibt gespeichert. Nach dem Abschicken erstellt Strategaize automatisch einen kommentierten Bericht."
+                multiline
+              />
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form action={startDiagnoseRun}>
+              <Button type="submit">
+                <EditableText
+                  keyPath="diagnose.start.start_button"
+                  defaultText="Diagnose starten"
+                />
+              </Button>
+            </form>
+            <p className="mt-3 text-xs text-slate-400">
+              <EditableText
+                keyPath="diagnose.start.privacy_hint"
+                defaultText="Keine menschliche Pruefung — Sie erhalten den Bericht direkt nach der Verdichtung. Strategaize speichert Ihre Antworten nur zur Generierung dieses Berichts."
+                multiline
+              />
+            </p>
+          </CardContent>
+        </Card>
+      </main>
+    </TextOverrideProvider>
   );
 }
