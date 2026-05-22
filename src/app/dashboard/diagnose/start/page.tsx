@@ -1,4 +1,7 @@
 // V6.3 SLC-105 MT-6 — Diagnose-Werkzeug Start-Page.
+// V7.3 SLC-140 MT-2 — Look-Polish nach Style Guide V2:
+//   HeroSection + ThreeStepsBlock + StartCTA als separate Components.
+//   Auth-Gate-Logik + Tenant-Kind-Check + Redirect-Handling UNVERAENDERT.
 //
 // Server-Component mit Auth-Gate:
 //   - User eingeloggt + Profil vorhanden
@@ -8,22 +11,25 @@
 // Bei Bestand einer laufenden Diagnose: Re-Direct in den passenden
 // Folge-Pfad (start/run/bericht-pending/bericht — abhaengig vom Status).
 //
-// Layout: Branding-Header (Partner-Logo + Display-Name) + Welcome-Text +
-// "Diagnose starten"-Button (Server-Action `startDiagnoseRun`).
+// Layout: Partner-Branding-Header (Logo + Steuerberater-Name) + Hero +
+// 3-Schritte-Block + Start-CTA mit Loading-Indicator. Direkt-Kunden-Gate
+// bleibt minimaler Card-Hinweis (kein voller Polish noetig).
 //
 // Ref: docs/ARCHITECTURE.md V6.3 Phase 1 (Run-Flow Auth-Gate + Branding).
+// Ref: slices/SLC-140-look-feel-polish.md MT-2.
 
 import { redirect } from "next/navigation";
 import Image from "next/image";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { resolveBrandingForTenant } from "@/lib/branding/resolve";
-import { startDiagnoseRun } from "../actions";
 import { TextOverrideProvider } from "@/components/text-override/Provider";
 import { resolvePartnerOrgIdForTenant } from "@/lib/text-override/partner-org";
 import { EditableText } from "@/components/text-override/EditableText";
+import { HeroSection } from "./components/HeroSection";
+import { ThreeStepsBlock } from "./components/ThreeStepsBlock";
+import { StartCTA } from "./components/StartCTA";
 
 export const metadata = {
   title: "Strategaize-Diagnose | Onboarding",
@@ -137,7 +143,7 @@ export default async function DiagnoseStartPage() {
 
   return (
     <TextOverrideProvider partnerOrgId={partnerOrgId} locale="de">
-      <main className="mx-auto max-w-2xl space-y-6 px-6 py-12">
+      <main className="mx-auto max-w-4xl space-y-8 px-4 py-10 sm:px-6 sm:py-12">
         {branding.displayName ? (
           <div className="flex items-center gap-3">
             {branding.logoUrl ? (
@@ -164,56 +170,13 @@ export default async function DiagnoseStartPage() {
           </div>
         ) : null}
 
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">
-            <EditableText
-              keyPath="diagnose.start.heading"
-              defaultText="Strategaize-Diagnose"
-            />
-          </h1>
-          <p className="mt-2 text-sm text-slate-500">
-            <EditableText
-              keyPath="diagnose.start.subheading"
-              defaultText="Strukturierte Selbsteinschaetzung Ihrer Unternehmens-Reife. Wir fragen 24 Punkte entlang sechs Bausteine, jeweils mit fertigen Antwort-Optionen — Sie waehlen, was am ehesten zutrifft."
-              multiline
-            />
-          </p>
-        </div>
+        <HeroSection />
 
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              <EditableText
-                keyPath="diagnose.start.ablauf.title"
-                defaultText="Ablauf"
-              />
-            </CardTitle>
-            <CardDescription>
-              <EditableText
-                keyPath="diagnose.start.ablauf.description"
-                defaultText="6 Bausteine x 4 Fragen = 24 Antworten. Dauer ca. 8-12 Minuten. Sie koennen jederzeit unterbrechen — der Stand bleibt gespeichert. Nach dem Abschicken erstellt Strategaize automatisch einen kommentierten Bericht."
-                multiline
-              />
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form action={startDiagnoseRun}>
-              <Button type="submit">
-                <EditableText
-                  keyPath="diagnose.start.start_button"
-                  defaultText="Diagnose starten"
-                />
-              </Button>
-            </form>
-            <p className="mt-3 text-xs text-slate-400">
-              <EditableText
-                keyPath="diagnose.start.privacy_hint"
-                defaultText="Keine menschliche Pruefung — Sie erhalten den Bericht direkt nach der Verdichtung. Strategaize speichert Ihre Antworten nur zur Generierung dieses Berichts."
-                multiline
-              />
-            </p>
-          </CardContent>
-        </Card>
+        <ThreeStepsBlock />
+
+        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+          <StartCTA />
+        </div>
       </main>
     </TextOverrideProvider>
   );
