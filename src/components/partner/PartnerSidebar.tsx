@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { logout } from "@/app/login/actions";
 import {
+  BarChart3,
   Building2,
   IdCard,
   LayoutDashboard,
@@ -45,6 +46,9 @@ export function PartnerSidebar({
   const isBrandingActive = pathname.startsWith("/partner/dashboard/branding");
   const isStammdatenActive = pathname.startsWith(
     "/partner/dashboard/stammdaten",
+  );
+  const isFunnelActive = pathname.startsWith(
+    "/partner/dashboard/diagnose-funnel-analytics",
   );
 
   return (
@@ -137,6 +141,19 @@ export function PartnerSidebar({
             className={`h-4 w-4 ${isStammdatenActive ? "text-white" : ""}`}
           />
           Stammdaten
+        </Link>
+        <Link
+          href="/partner/dashboard/diagnose-funnel-analytics"
+          className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
+            isFunnelActive
+              ? "bg-gradient-to-r from-brand-primary to-brand-primary-dark text-white shadow-[0_8px_16px_-4px_rgba(68,84,184,0.35)]"
+              : "text-slate-400 hover:bg-white/[0.06] hover:text-slate-200"
+          }`}
+        >
+          <BarChart3
+            className={`h-4 w-4 ${isFunnelActive ? "text-white" : ""}`}
+          />
+          Funnel-Analytics
         </Link>
       </nav>
 

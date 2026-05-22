@@ -990,9 +990,9 @@ Der uebernommene Blueprint-Stand ist noch nicht auf einer Onboarding-Plattform-I
 - Risk: Falls Initial-Content (099a) Texte > 300/800 chars enthaelt: Validation-Function schlaegt fehl. Mitigation: Content-Validierung vor Migration-Apply via `validate_helper_text_schema()`-Probe.
 - Rollback Notes: Schema-additiv -> Rollback = `UPDATE template SET blocks = blocks_strip_helper(blocks);` (Helper-Function unstrip Felder helper_text + examples_md). Bestaande Templates ohne Helper-Texts unbetroffen.
 
-### MIG-046 — V7.1 SLC-139 diagnose_event Tabelle (Migration 100, planned)
-- Date: 2026-05-20
-- Scope: Neue Tabelle `diagnose_event` mit (capture_session_id FK, tenant_id FK, partner_org_id FK NULL, event_type CHECK 9-Werte-Enum, question_key NULL, payload jsonb, is_test bool, created_at timestamptz) + Indizes auf (capture_session_id, created_at) + (tenant_id, event_type, created_at) + (partner_org_id, created_at WHERE NOT NULL) + RLS-Policies + GRANTs.
+### MIG-046 — V7.2 SLC-139 diagnose_event Tabelle (Migration 100, live 2026-05-21)
+- Date: 2026-05-21
+- Scope: Neue Tabelle `diagnose_event` mit (capture_session_id FK, tenant_id FK, partner_org_id FK NULL, event_type CHECK 9-Werte-Enum, question_key NULL, payload jsonb, is_test bool, created_at timestamptz) + Indizes auf (capture_session_id, created_at) + (tenant_id, event_type, created_at) + (partner_org_id, created_at WHERE NOT NULL) + 3 RLS-Policies (strategaize_admin all, partner_admin SELECT own partner_org_id, authenticated INSERT own-tenant) + GRANTs (SELECT/INSERT authenticated, SELECT partner_admin, ALL service_role). LIVE auf Coolify-DB Container `supabase-db-bwkg80w04wgccos48gcws8cs-150442851439` 2026-05-21 + NOTIFY pgrst.
 - Reason: V7.1 FEAT-058 Diagnose-Funnel-Telemetrie (BL-117). Drop-off pro Frage, Helper-Text-Hits, Time-on-Question als Funnel-Optimierungs-Grundlage (Learning-Loop).
 - Affected Areas: Neue Tabelle, keine Aenderung an bestehenden Tabellen. RLS verbietet tenant_admin + tenant_member SELECT (nur strategaize_admin + partner_admin sehen Events). INSERT erlaubt fuer authenticated mit Insert-Policy `tenant_id = current_tenant_id() AND capture_session_id gehoert own-tenant`.
 - DSGVO-Schutz: Event-Payload OHNE Klartext-PII (keine Antwort-Inhalte, keine Email, keine IP). Aggregations-Schwelle 5 Sessions pro Filter-Kombo in Analytics-Page (Re-Identifikations-Schutz).

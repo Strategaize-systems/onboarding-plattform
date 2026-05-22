@@ -25,7 +25,7 @@
       "title": "Diagnose-Funnel Telemetrie (Drop-off pro Frage, Hilfetext-Hits, Time-on-Question)",
       "type": "feature",
       "priority": "high",
-      "status": "open",
+      "status": "done",
       "version": "V7.2",
       "description": "User-Feedback 2026-05-20 nach SLC-700-Self-Signup-Live-Test (Diagnose-Start-Screen): Wir muessen den Diagnose-Funnel kontinuierlich optimieren koennen. Pflicht-Datensignale: (1) welche Frage abgebrochen (Question-Drop-off pro Frage), (2) wo werden Hilfetexte oft geklickt (deutet auf unklare Frage-Formulierung), (3) Time-on-Question pro Frage (lange Verweilzeit = User unsicher). Schema-Vorschlag: neue Tabelle `diagnose_event` mit (capture_session_id, tenant_id, event_type ENUM 'question_start'|'question_answer'|'question_skip'|'helper_text_open'|'session_paused'|'session_abandoned', question_key, payload jsonb, created_at). Optional Browser-Heartbeat fuer Time-on-Question. Pre-Condition fuer BL-115 (Hilfetexte) + BL-114 (Look-Polish) Effect-Messung. DSGVO: Event-Daten anonymisiert pro pending_signup-Hash oder per tenant_id. Admin-Analytics-Page fuer strategaize_admin + partner_admin (eigene Partner-Mandanten). Cross-Repo-Brueckenpotenzial: IS V3 Questionnaire Builder kann Drop-off-Daten zurueckspielen als Recommendation 'Frage X hat 40% Drop-off → umformulieren'. Aufwand ~6-10h Slice.",
       "createdAt": "2026-05-20"
