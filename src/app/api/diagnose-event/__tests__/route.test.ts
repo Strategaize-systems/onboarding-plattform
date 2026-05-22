@@ -21,11 +21,13 @@ interface FromMocks {
 }
 
 function buildSupabaseMock(opts: { userId?: string | null; from: FromMocks }) {
-  const insertSelectSingle = vi
+  // route.ts ruft `.insert(...)` direkt (KEIN .select().single() Chain) —
+  // siehe Kommentar in route.ts: PostgREST-RETURNING wuerde SELECT-RLS
+  // anstossen und der tenant_admin/tenant_member-Insert-Pfad scheitert.
+  // Insert-Fn ist daher direkt awaitable und resolved zu PostgrestResponse.
+  const insertFn = vi
     .fn()
-    .mockResolvedValue(opts.from.insert ?? { data: { id: "event-uuid" }, error: null });
-  const insertSelect = vi.fn(() => ({ single: insertSelectSingle }));
-  const insertFn = vi.fn(() => ({ select: insertSelect }));
+    .mockResolvedValue(opts.from.insert ?? { data: null, error: null });
 
   return {
     auth: {
@@ -178,14 +180,14 @@ describe("POST /api/diagnose-event", () => {
     expect((await res.json()).error).toBe("session_not_owned");
   });
 
-  it("returns 201 with inserted event id on happy path", async () => {
+  it("returns 201 on happy path with correct INSERT body (no RETURNING)", async () => {
     const supabase = buildSupabaseMock({
       userId: VALID_USER_ID,
       from: {
         profile: { data: { tenant_id: VALID_TENANT_ID }, error: null },
         session: { data: { id: HAPPY_BODY.capture_session_id, tenant_id: VALID_TENANT_ID }, error: null },
         tenant: { data: { parent_partner_tenant_id: "partner-org-xyz" }, error: null },
-        insert: { data: { id: "event-new" }, error: null },
+        insert: { data: null, error: null },
       },
     });
     vi.mocked(createClient).mockResolvedValue(supabase as never);
@@ -195,7 +197,7 @@ describe("POST /api/diagnose-event", () => {
     const res = await POST(makeRequest(happy) as unknown as Parameters<typeof POST>[0]);
     expect(res.status).toBe(201);
     const body = await res.json();
-    expect(body.id).toBe("event-new");
+    expect(body.ok).toBe(true);
     expect(supabase._insertFn).toHaveBeenCalledTimes(1);
     const firstCallArgs = supabase._insertFn.mock.calls[0] as unknown as [Record<string, unknown>];
     expect(firstCallArgs[0]).toEqual({
@@ -218,7 +220,7 @@ describe("POST /api/diagnose-event", () => {
           profile: { data: { tenant_id: VALID_TENANT_ID }, error: null },
           session: { data: { id: sessionId, tenant_id: VALID_TENANT_ID }, error: null },
           tenant: { data: { parent_partner_tenant_id: null }, error: null },
-          insert: { data: { id: "evt" }, error: null },
+          insert: { data: null, error: null },
         },
       });
     }

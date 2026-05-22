@@ -111,8 +111,16 @@ export async function POST(request: NextRequest) {
     .single();
   const partnerOrgId = tenant?.parent_partner_tenant_id ?? null;
 
-  // 8. INSERT (RLS verifies tenant_id matches auth.user_tenant_id())
-  const { data: inserted, error: insertError } = await supabase
+  // 8. INSERT (RLS WITH CHECK verifies tenant_id matches auth.user_tenant_id())
+  //
+  // KEIN .select("id") — sonst triggert PostgREST RETURNING, das die
+  // SELECT-Phase fuer den eingefuegten Row eroeffnet. Migration 100 hat
+  // bewusst KEINE SELECT-Policy fuer tenant_admin/tenant_member (Diagnose
+  // wird vom Mandanten gefuettert, aber er soll seine eigenen Events nicht
+  // zurueck lesen — Read-Pfad ist strategaize_admin + partner_admin).
+  // Live-Smoke 2026-05-22 (RPT-329): RETURNING-Path fuehrte zu 500
+  // "new row violates row-level security policy" trotz korrektem WITH CHECK.
+  const { error: insertError } = await supabase
     .from("diagnose_event")
     .insert({
       capture_session_id: captureSessionId,
@@ -122,13 +130,11 @@ export async function POST(request: NextRequest) {
       question_key: questionKey,
       payload,
       is_test: isTest,
-    })
-    .select("id")
-    .single();
+    });
 
   if (insertError) {
     return jsonError("insert_failed", 500);
   }
 
-  return NextResponse.json({ id: inserted!.id }, { status: 201 });
+  return NextResponse.json({ ok: true }, { status: 201 });
 }
