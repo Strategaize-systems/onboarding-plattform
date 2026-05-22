@@ -1,6 +1,8 @@
 "use client";
 
 // V6.3 SLC-105 MT-8 — Diagnose-Bericht-Renderer (Client-Component fuer Print-Button).
+// V7.2 SLC-141 MT-5 — Interim "Bericht per E-Mail senden"-Button + Modal-Open
+//   (Option b, kein QuickActionRing-Wait auf SLC-140).
 //
 // Layout:
 //   1. Header: Partner-Logo + Display-Name + Mandant-Name + Datum.
@@ -8,13 +10,15 @@
 //   3. Pro Block: BlockSection mit Titel + Intro + Score-Bar + Bedrock-Kommentar.
 //   4. Pflicht-Output-Aussage (Markdown) via react-markdown (DEC-117 Reuse).
 //   5. Sub-Karte "Ich will mehr von Strategaize" als Stub (Hook auf SLC-106).
-//   6. Print-Button: window.print() mit print-friendly CSS.
+//   6. Print-Button + Email-Send-Button.
 
+import { useState } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { Printer, Sparkles } from "lucide-react";
+import { Mail, Printer, Sparkles } from "lucide-react";
 import { ScoreVisual } from "./ScoreVisual";
 import { BlockSection } from "./BlockSection";
+import { SendReportByEmailModal } from "./SendReportByEmailModal";
 import { EditableText } from "@/components/text-override/EditableText";
 
 interface BerichtBlock {
@@ -26,6 +30,8 @@ interface BerichtBlock {
 }
 
 export interface BerichtRendererProps {
+  /** Pflicht ab SLC-141 MT-5: wird an SendReportByEmailModal weitergereicht. */
+  captureSessionId: string;
   mandantName: string;
   partnerDisplayName: string | null;
   partnerLogoUrl: string | null;
@@ -37,6 +43,7 @@ export interface BerichtRendererProps {
 }
 
 export function BerichtRenderer({
+  captureSessionId,
   mandantName,
   partnerDisplayName,
   partnerLogoUrl,
@@ -45,6 +52,7 @@ export function BerichtRenderer({
   closingStatement,
   ichWillMehrCaptureSessionId,
 }: BerichtRendererProps) {
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
   const dateFmt = new Intl.DateTimeFormat("de-DE", {
     year: "numeric",
     month: "long",
@@ -184,7 +192,23 @@ export function BerichtRenderer({
             defaultText="Bericht drucken"
           />
         </Button>
+        <Button
+          onClick={() => setEmailModalOpen(true)}
+          data-testid="bericht-send-email-button"
+        >
+          <Mail className="mr-2 h-4 w-4" />
+          <EditableText
+            keyPath="diagnose.bericht.send_email_button"
+            defaultText="Bericht per E-Mail senden"
+          />
+        </Button>
       </div>
+
+      <SendReportByEmailModal
+        captureSessionId={captureSessionId}
+        open={emailModalOpen}
+        onOpenChange={setEmailModalOpen}
+      />
     </main>
   );
 }

@@ -175,6 +175,7 @@ export default async function BerichtPage(props: PageProps) {
     <TextOverrideProvider partnerOrgId={partnerOrgId} locale="de">
       <DiagnoseSessionCompletedBeacon captureSessionId={sessionId} />
       <BerichtRenderer
+        captureSessionId={sessionId}
         mandantName={(mandantTenantRes.data?.name as string) ?? "Ihr Unternehmen"}
         partnerDisplayName={partnerDisplayName}
         partnerLogoUrl={branding.logoUrl}
