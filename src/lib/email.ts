@@ -344,14 +344,30 @@ export async function sendEmployeeInvitationEmail({
 
 // ─── Generic sendMail adapter (V7 SLC-132 MT-6 — testable email-send path) ──
 
+/**
+ * V7.2 SLC-141 MT-4: optionale Datei-Anhaenge fuer sendMail. Mirrors
+ * nodemailer-Shape (filename + content). contentType ist optional, weil
+ * nodemailer von filename ableitet (".pdf" -> "application/pdf").
+ */
+export interface SendMailAttachment {
+  filename: string;
+  content: Buffer | string;
+  contentType?: string;
+}
+
 interface SendMailParams {
-  to: string;
+  /** to-Header, Komma-separierter String oder Array (nodemailer akzeptiert beides). */
+  to: string | string[];
+  /** Optional cc-Header fuer Mehr-Empfaenger-Versand (V7.2 SLC-141). */
+  cc?: string | string[];
   from: string;
   /** Optional reply-to header (Public-Signup uses partner_contact_email). */
   replyTo?: string;
   subject: string;
   html: string;
   text?: string;
+  /** Optional Anhaenge (V7.2 SLC-141 Diagnose-Bericht-PDF). */
+  attachments?: SendMailAttachment[];
 }
 
 /**
@@ -365,10 +381,12 @@ export async function sendMail(params: SendMailParams): Promise<void> {
   await transporter.sendMail({
     from: params.from,
     to: params.to,
+    cc: params.cc,
     replyTo: params.replyTo,
     subject: params.subject,
     html: params.html,
     text: params.text,
+    attachments: params.attachments,
   });
 }
 

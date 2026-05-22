@@ -108,6 +108,18 @@ export const diagnoseEventLimiter = createRateLimiter({
   windowMs: 60 * 60 * 1000, // 1 hour
 });
 
+// V7.2 SLC-141 — Spam-Schutz fuer Bericht-Email-Send (FEAT-060 AC-5).
+// `sendDiagnoseReportByEmail` Server-Action. 5 Versende pro Stunde pro
+// capture_session_id. Identifier ist die Session-UUID statt User-ID,
+// weil ein User mehrere Sessions parallel haben kann und sich nicht
+// gegenseitig blockieren sollen. SMTP-Provider ist die echte Grenze; das
+// Limit verhindert versehentliche Email-Floods (Doppelklick, Retry-Loop
+// bei zwischenzeitlichem SMTP-Fehler).
+export const diagnoseReportEmailLimiter = createRateLimiter({
+  maxAttempts: 5,
+  windowMs: 60 * 60 * 1000, // 1 hour
+});
+
 /**
  * Extrahiert die Client-IP fuer Rate-Limit-Identification aus dem
  * `x-forwarded-for`-Header. Coolify+Traefik schreibt den Header bei
