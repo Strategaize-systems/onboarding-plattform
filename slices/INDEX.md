@@ -750,7 +750,7 @@ SLC-138 hat in MT-1 explizite **Cross-Repo-Schema-Cross-Check** mit IS V3 (DEC-0
 | ID | Slice | Feature | Status | Priority | Created |
 |----|-------|---------|--------|----------|---------|
 | SLC-139 | [FEAT-058 Diagnose-Funnel-Telemetrie](SLC-139-diagnose-funnel-telemetrie.md) | FEAT-058 | done | High | 2026-05-20 |
-| SLC-141 | [FEAT-060 Bericht-Email mit PDF-Attachment](SLC-141-bericht-email-pdf.md) | FEAT-060 | planned | Medium | 2026-05-20 |
+| SLC-141 | [FEAT-060 Bericht-Email mit PDF-Attachment](SLC-141-bericht-email-pdf.md) | FEAT-060 | in_progress | Medium | 2026-05-20 |
 
 ### V7.2 Backlog-Mapping
 
