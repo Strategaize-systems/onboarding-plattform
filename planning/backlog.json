@@ -35,7 +35,7 @@
       "title": "Diagnose-Bericht per Email an Mandant + Partner-Steuerberater senden (PDF-Attachment)",
       "type": "feature",
       "priority": "medium",
-      "status": "in_progress",
+      "status": "done",
       "version": "V7.2",
       "description": "User-Feedback 2026-05-20 nach SLC-700-Self-Signup-Live-Test: Aktuell kann der Mandant den Bericht nur ueber den Browser-Print-Dialog als PDF speichern. Sinnvoll fuer Conversion + Partner-Bindung: nach Bericht-Generierung optional eine 'Bericht per Email zusenden'-Action mit Empfaenger-Auswahl (1) Mandant selbst, (2) Partner-Steuerberater cc, (3) zusaetzliche Email-Adresse (z.B. Geschaeftspartner). Pattern-Reuse: IONOS-SMTP-Adapter aus V4.2 (gleiche Mailer-Lib wie V7 Verify-Mails). PDF-Generierung server-side via puppeteer oder @react-pdf/renderer. Affected: neue Server-Action `sendDiagnoseReportByEmail` + PDF-Generator + Email-Template. Bestehender Print-CSS bleibt als Fallback. Aufwand ~4-6h.",
       "createdAt": "2026-05-20"

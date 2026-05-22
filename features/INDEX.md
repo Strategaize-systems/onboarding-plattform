@@ -158,7 +158,7 @@ V7-Scope (User-Entscheidung 2026-05-18 nach V6.4 STABLE-Bestaetigung RPT-295): B
 | ID | Feature | Status | Spec | Created |
 |----|---------|--------|------|---------|
 | FEAT-058 | Diagnose-Funnel-Telemetrie (diagnose_event + Tracker + Analytics-Page) | done | [Spec](FEAT-058-diagnose-funnel-telemetrie.md) | 2026-05-20 |
-| FEAT-060 | Bericht-Email mit PDF-Attachment (@react-pdf/renderer) | in_progress | [Spec](FEAT-060-bericht-email-pdf.md) | 2026-05-20 |
+| FEAT-060 | Bericht-Email mit PDF-Attachment (@react-pdf/renderer) | done | [Spec](FEAT-060-bericht-email-pdf.md) | 2026-05-20 |
 
 ## V7.3 Features (Look-Polish nach Style Guide V2)
 
