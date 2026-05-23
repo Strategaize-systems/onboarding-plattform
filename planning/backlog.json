@@ -55,9 +55,9 @@
       "title": "Diagnose-Flow Look-and-Feel professioneller (Self-Signup-Mandanten-Erstanblick)",
       "type": "improvement",
       "priority": "medium",
-      "status": "in_progress",
+      "status": "done",
       "version": "V7.3",
-      "description": "User-Feedback 2026-05-20 nach SLC-700-Self-Signup-Live-Test: Look der Diagnose-Start-Screen + 24-Fragen-Pages + Bericht-Page koennte professioneller sein. Re-Plan 2026-05-22 in /slice-planning V7.3 (RPT-335): SLC-140 mit 7 MTs MT-1..MT-7, ~30 Visual-Sub-Checks ueber 3 Pages, Pre-Audit-Findings 4: (1) kein eigenes design-system/-Layer im Repo, shadcn/ui+Tailwind direct; (2) keine 6-Section-Token in tailwind.config — pragmatische Tailwind-Default-Palette blue/emerald/amber/violet/rose/teal; (3) kein Playwright im Repo, MT-6a Setup-Pflicht ~1-2h; (4) Diagnose-Components-Subfolders existieren noch nicht. Realistischer Aufwand ~6-12h Code-Side (war 4-8h). Pattern-Reuse aus IS-SLC-115 Page-Level-Visual-Reference-Checklist (8-12 Sub-Checks pro Page). Affected pages: src/app/dashboard/diagnose/start + run + bericht + bericht-pending + neue Components-Subfolder.",
+      "description": "User-Feedback 2026-05-20 nach SLC-700-Self-Signup-Live-Test: Look der Diagnose-Start-Screen + 24-Fragen-Pages + Bericht-Page koennte professioneller sein. Re-Plan 2026-05-22 in /slice-planning V7.3 (RPT-335): SLC-140 mit 7 MTs MT-1..MT-7, ~30 Visual-Sub-Checks ueber 3 Pages, Pre-Audit-Findings 4: (1) kein eigenes design-system/-Layer im Repo, shadcn/ui+Tailwind direct; (2) keine 6-Section-Token in tailwind.config — pragmatische Tailwind-Default-Palette blue/emerald/amber/violet/rose/teal; (3) kein Playwright im Repo, MT-6a Setup-Pflicht ~1-2h; (4) Diagnose-Components-Subfolders existieren noch nicht. Realistischer Aufwand ~6-12h Code-Side (war 4-8h). Pattern-Reuse aus IS-SLC-115 Page-Level-Visual-Reference-Checklist (8-12 Sub-Checks pro Page). Affected pages: src/app/dashboard/diagnose/start + run + bericht + bericht-pending + neue Components-Subfolder. **DONE code-side 2026-05-23 MT-1..MT-7** (Branch slc-140-look-feel-polish, 9 Baseline-PNGs + 4 Visual-Findings F-1..F-4 als Material fuer /qa SLC-140 dokumentiert im Slice-File-Anhang). Naechster Schritt: /qa SLC-140 Slice-Schluss + Master-Merge.",
       "createdAt": "2026-05-20"
     },
     {

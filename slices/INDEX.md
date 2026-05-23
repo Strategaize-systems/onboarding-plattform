@@ -767,11 +767,11 @@ SLC-139 vor SLC-141 — Telemetrie sammelt ab Tag 1 Daten zur Bewertung der Beri
 
 | ID | Slice | Feature | Status | Priority | Created |
 |----|-------|---------|--------|----------|---------|
-| SLC-140 | [FEAT-059 Look-and-Feel-Polish nach Style Guide V2](SLC-140-look-feel-polish.md) | FEAT-059 | planned | Medium | 2026-05-20 |
+| SLC-140 | [FEAT-059 Look-and-Feel-Polish nach Style Guide V2](SLC-140-look-feel-polish.md) | FEAT-059 | done | Medium | 2026-05-20 |
 
 ### V7.3 Backlog-Mapping
 
-- **BL-114 (V7.3 Look-and-Feel-Polish)**: `open -> in_progress` mit SLC-140-Start.
+- **BL-114 (V7.3 Look-and-Feel-Polish)**: `in_progress -> done` 2026-05-23 nach MT-7 (Records + Visual-Findings-Doku); /qa SLC-140 als Slice-Schluss-Block pending.
 
 ### V7.1/V7.2/V7.3 Worktree-Pflicht (SaaS-Mode)
 

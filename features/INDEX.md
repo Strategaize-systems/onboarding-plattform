@@ -166,4 +166,4 @@ V7-Scope (User-Entscheidung 2026-05-18 nach V6.4 STABLE-Bestaetigung RPT-295): B
 
 | ID | Feature | Status | Spec | Created |
 |----|---------|--------|------|---------|
-| FEAT-059 | Look-and-Feel-Polish nach Style Guide V2 (Start + Run + Bericht) | planned | [Spec](FEAT-059-look-feel-polish.md) | 2026-05-20 |
+| FEAT-059 | Look-and-Feel-Polish nach Style Guide V2 (Start + Run + Bericht) | done | [Spec](FEAT-059-look-feel-polish.md) | 2026-05-20 |

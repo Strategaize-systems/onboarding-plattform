@@ -2,9 +2,10 @@
 
 **Feature:** FEAT-059
 **Version:** V7.3 (Smart-Split aus V7.1 2026-05-21, Re-Plan 2026-05-22 nach V7.2-Release)
-**Status:** planned
+**Status:** done (code-side, MT-1..MT-7 alle abgeschlossen 2026-05-23, /qa SLC-140 als Slice-Schluss pending)
 **Created:** 2026-05-20, Re-Planned 2026-05-22 (RPT-335)
 **Estimated effort:** ~6-12h Code-Side (Pre-Audit hat Playwright-Setup-Lueke aufgedeckt)
+**Actual effort:** ~10h Code-Side (MT-6 wie geplant aufwendigster Teil mit Live-Run-Setup 1.5h)
 **Pre-Conditions:**
 - V7.2 RELEASED (REL-021, main HEAD `a11374d`, Live-Smoke PASS RPT-334) — QuickActionRing braucht den Email-Button-Slot, der durch SLC-141 MT-5 als Interim-Button in `BerichtRenderer` existiert (User-Default Option b, kein QuickActionRing-Wait).
 - SLC-137 EditableText-Migration LIVE (RPT-320) — Audit-Skript-Run als Quality-Gate.
@@ -239,9 +240,9 @@ Pattern aus [[feedback-look-alignment-needs-page-level-scope]] — pro Page 8-12
 
 ### Page 3: `/dashboard/diagnose/[id]/bericht`
 1. [ ] Page-Header mit Partner-Branding + Title sichtbar oben.
-2. [ ] ScoreVisual mit 6 mehrfarbigen Bars (Reihenfolge identisch zu BlockSectionCards).
+2. [ ] ScoreVisual mit 6 Block-Score-Zeilen (jeweils 0-100 mit score-range-Farben red/amber/emerald), Block-Reihenfolge identisch zu BlockSectionCards (Phrasierung korrigiert in MT-7 per F-3 — die ursprueglich gemeinten "mehrfarbigen Bars" pro Block existieren nicht, ScoreVisual zeigt einen Balken pro Block in der nach Score abgeleiteten Ampel-Farbe).
 3. [ ] 6 BlockSectionCards in 6 distinct Akzent-Farben (blue/emerald/amber/violet/rose/teal).
-4. [ ] Block-Color-Reihenfolge zwischen ScoreVisual-Bars und BlockSectionCards identisch.
+4. [ ] Block-Reihenfolge zwischen ScoreVisual-Bars und BlockSectionCards identisch (Index-Match via `block-colors.ts`-Helper).
 5. [ ] KI-Kommentar in jeder Card als gerendertes Markdown (nicht raw).
 6. [ ] QuickActionRing sichtbar mit 3-4 Aktionen.
 7. [ ] Email-Action im QuickActionRing oeffnet SendReportByEmailModal (SLC-141-Wiring).
@@ -255,6 +256,24 @@ Pattern aus [[feedback-look-alignment-needs-page-level-scope]] — pro Page 8-12
 1. [ ] Spinner oder Progress-Animation sichtbar.
 2. [ ] Estimated-Time-Hint sichtbar ("ca. 1-2 Minuten").
 3. [ ] EditableText fuer alle Strings.
+
+## Bekannte Visuals — Material fuer /qa SLC-140
+
+Aus MT-6c Baseline-Run 2026-05-23 (9 PNGs unter `tests/e2e/diagnose-pages.spec.ts-snapshots/`, dokumentiert in Memory `project_op_v73_slc140_mt6_baselines_done`). Diese Findings sind keine Code-Bugs in MT-1..MT-5, sondern Beobachtungen aus dem Live-Render-Snapshot, die in /qa SLC-140 Live-Browser-Smoke endgueltig bewertet werden muessen.
+
+### F-1 (Medium): Floating "N"-User-Avatar auf Start- + Bericht-Mobile-Snapshots
+Auf `diagnose-start-chromium-mobile-win32.png` links neben Step-1-Card sichtbar ein kleiner schwarzer Kreis mit "N". Auf `diagnose-bericht-chromium-mobile-win32.png` ebenfalls links neben "Strukturelle KI-Reife"-Card. Vermutung: User-Profile-Avatar aus `AppHeader`, der bei Mobile-Layout ueberlappt — oder dev-only Element. **In /qa pruefen via Live-Browser-Smoke** ob das intended ist oder ein Visual-Bug, der einen Auto-Fix per Deviation Rule 1/2 erfordert.
+
+### F-2 (Medium): Run-Page rendert Long-Form-Mode statt Step-by-Step bei leeren answers
+`diagnose-run-chromium-mobile-win32.png` ist 14529px hoch — die Page rendert alle 24 Fragen scrollbar untereinander. Vermutung: bei `capture_session.answers = {}` (Test-Setup-Default) faellt die Page in einen Long-Form-Mode. In /qa klaeren: ist das intended fuer first-visit oder muesste auch fuer empty-answers ein Step-by-Step-Mode gelten? Wenn intended: Baseline-Snapshot ist korrekt und dokumentiert das First-Visit-Verhalten.
+
+### F-3 (Low): ScoreVisual rendert 6 Block-Score-Zeilen, nicht 6 mehrfarbige Bars
+Bestaetigt R-6 Carry-Over aus mt5-Memory. ScoreVisual zeigt einen Balken pro Block, eingefaerbt nach score-range (red/amber/emerald), nicht pro Block in der Block-Akzent-Farbe. **In MT-7 dokumentiert (Page 3 Check 2 oben umformuliert)**, keine Code-Aenderung — die aktuelle Implementierung ist konsistent mit dem `block-colors.ts`-Helper, der nur fuer die `BlockSectionCard`-Akzent-Linie genutzt wird, nicht fuer ScoreVisual.
+
+### F-4 (Medium): Touch-Target-Audit Mobile fail auf Start + Run
+2 echte Touch-Target-Findings aus MT-6c Live-Run:
+- Start-Mobile: 1 interaktives Element < 44px hoch (aggregiert in `expect.soft`, genaue Element-Identifikation in `trace.zip`)
+- Run-Mobile: Target #145 hat `boundingBox.height = 32px`. Target-Nummer #145 deutet auf zu breiten Selektor (`button, [role='radio'], label:has(input[type='radio'])`) hin — vermutlich werden Container-Labels mit eingefangen, die optisch keine Touch-Targets sind. **In /qa SLC-140 entweder Selektor enger schneiden** (`button:not([role="presentation"])`) **ODER `data-testid="touch-target"`-Marker in den Spec-relevanten Komponenten setzen** und die Audit-Logik auf diesen Marker umstellen.
 
 ## Empfohlene Reihenfolge
 
