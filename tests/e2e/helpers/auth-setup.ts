@@ -219,7 +219,6 @@ export async function cleanupActor(env: E2EEnv, actor: PartnerClientActor): Prom
   const delResp = await adminApi(env, `/auth/v1/admin/users/${actor.userId}`, { method: "DELETE" });
   if (!delResp.ok && delResp.status !== 404) {
     // Nicht-fatal: weiterleiten als Warning. Cleanup soll robust sein.
-    // eslint-disable-next-line no-console
     console.warn(`cleanupActor: admin delete user ${actor.userId} returned ${delResp.status}`);
   }
 
