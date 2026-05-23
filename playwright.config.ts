@@ -1,4 +1,10 @@
 import { defineConfig, devices } from "@playwright/test";
+import { config as loadDotenv } from "dotenv";
+import { resolve } from "path";
+
+// Playwright laeuft ausserhalb des Next.js-Context — .env.local wird nicht
+// automatisch geladen. dotenv vor defineConfig() Pflicht.
+loadDotenv({ path: resolve(__dirname, ".env.local") });
 
 const BASE_URL = process.env.E2E_BASE_URL ?? "http://localhost:3000";
 

@@ -177,6 +177,11 @@ export async function setupPartnerClientActor(
  * Pflicht: Browser-Navigate (NICHT fetch), damit Cookies aus der Response
  * im Browser-Context persistiert werden. Memory-Hinweis aus
  * reference_magic_link_smoke_pattern.
+ *
+ * Wichtige Implementations-Detail (auth/callback/route.ts:13-22):
+ * Die /auth/callback-Route IGNORIERT den `next`-Query-Param und redirected
+ * hard auf /dashboard. Daher: Callback abwarten, dann explizit zu next
+ * navigieren. Cookies sind nach Callback gesetzt, alle Folge-Navs sind auth'd.
  */
 export async function loginViaMagicLink(
   page: Page,
@@ -199,8 +204,13 @@ export async function loginViaMagicLink(
 
   const callbackUrl = `${env.baseUrl.replace(/\/$/, "")}/auth/callback?token_hash=${encodeURIComponent(
     hashedToken,
-  )}&type=magiclink&next=${encodeURIComponent(next)}`;
+  )}&type=magiclink`;
   await page.goto(callbackUrl);
+  // Callback redirected hart auf /dashboard. Warte darauf, dann navigate zu next.
+  await page.waitForURL(/\/dashboard(\/|$|\?)/, { timeout: 15_000 });
+  if (next !== "/dashboard") {
+    await page.goto(`${env.baseUrl.replace(/\/$/, "")}${next}`);
+  }
 }
 
 /**
@@ -209,8 +219,10 @@ export async function loginViaMagicLink(
  */
 export async function cleanupActor(env: E2EEnv, actor: PartnerClientActor): Promise<void> {
   await withDb(env.testDatabaseUrl, async (client) => {
+    // ai_jobs.capture_session_id liegt in payload JSONB. Einfacher per
+    // tenant_id raeumen — alles zu dem Test-Mandanten weg.
+    await client.query(`DELETE FROM public.ai_jobs WHERE tenant_id = $1`, [actor.mandantTenantId]);
     if (actor.captureSessionId) {
-      await client.query(`DELETE FROM public.ai_jobs WHERE capture_session_id = $1`, [actor.captureSessionId]);
       await client.query(`DELETE FROM public.capture_session WHERE id = $1`, [actor.captureSessionId]);
     }
     await client.query(`DELETE FROM public.profiles WHERE id = $1`, [actor.userId]);
