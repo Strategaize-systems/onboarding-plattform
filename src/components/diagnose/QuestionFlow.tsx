@@ -1,12 +1,15 @@
 "use client";
 
 // V6.3 SLC-105 MT-6 — Mandanten-Diagnose Frage-Flow Client-Component.
+// V7.3 SLC-140 MT-3 — Layout-Wrap mit ProgressIndicator (top sticky) +
+//   AnswerOptionCard (statt Plain-Radio) + AutoSaveIndicator + NavigationButtons.
+//   Helper-Modal-Verkabelung (SLC-138) + Telemetry (SLC-139) UNVERAENDERT.
 //
 // Linearer Frage-Flow ohne Block-Submit-Granularitaet:
 //   - 24 Fragen (6 Bloecke x 4) als linear scrollbare Liste mit
 //     Block-Header pro Gruppe (visuelle Orientierung, keine technische
 //     Trennung).
-//   - Pro Frage: Radio-Button-Liste mit den `score_mapping[].label`-Strings
+//   - Pro Frage: AnswerOptionCard-Liste mit den `score_mapping[].label`-Strings
 //     EXAKT — das schuetzt `computeBlockScores` vor R-V63-2 String-Drift.
 //   - useTransition-pattern (siehe feedback_native_html_form_pattern.md)
 //     fuer Server-Action-Calls ohne react-hook-form.
@@ -17,15 +20,18 @@
 // Ref: docs/ARCHITECTURE.md V6.3 Phase 2, feedback_native_html_form_pattern.md.
 
 import { useRef, useState, useTransition, useMemo } from "react";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, AlertCircle, Check, Info } from "lucide-react";
+import { AlertCircle, Info } from "lucide-react";
 import type { TemplateBlock } from "@/workers/condensation/light-pipeline";
 import { saveDiagnoseDraft, submitDiagnoseRun } from "@/app/dashboard/diagnose/actions";
 import { EditableText } from "@/components/text-override/EditableText";
 import { HelperTextModal } from "./HelperTextModal";
 import { shouldShowInfoIcon } from "./helper-text-modal-logic";
 import { useDiagnoseTelemetry } from "./DiagnoseTelemetryProvider";
+import { ProgressIndicator } from "@/app/dashboard/diagnose/run/components/ProgressIndicator";
+import { AnswerOptionCard } from "@/app/dashboard/diagnose/run/components/AnswerOptionCard";
+import { AutoSaveIndicator } from "@/app/dashboard/diagnose/run/components/AutoSaveIndicator";
+import { NavigationButtons } from "@/app/dashboard/diagnose/run/components/NavigationButtons";
 
 interface QuestionFlowProps {
   sessionId: string;
@@ -108,7 +114,7 @@ export function QuestionFlow({
 
   return (
     <div className="space-y-8">
-      <ProgressBar answered={answeredCount} total={totalQuestions} />
+      <ProgressIndicator answered={answeredCount} total={totalQuestions} />
 
       {blocks.map((block, blockIndex) => (
         <Card key={block.key}>
@@ -164,33 +170,15 @@ export function QuestionFlow({
                     ) : null}
                   </legend>
                   <div className="space-y-2">
-                    {question.score_mapping.map((option) => {
-                      const isSelected = value === option.label;
-                      return (
-                        <label
-                          key={option.label}
-                          className={`flex cursor-pointer items-start gap-3 rounded-md border p-3 text-sm transition-colors ${
-                            isSelected
-                              ? "border-brand-primary bg-brand-primary/5"
-                              : "border-slate-200 hover:bg-slate-50"
-                          }`}
-                        >
-                          <input
-                            type="radio"
-                            name={question.key}
-                            value={option.label}
-                            checked={isSelected}
-                            onChange={() =>
-                              handleAnswer(question.key, option.label)
-                            }
-                            className="mt-1"
-                          />
-                          <span className="flex-1 text-slate-700">
-                            {option.label}
-                          </span>
-                        </label>
-                      );
-                    })}
+                    {question.score_mapping.map((option) => (
+                      <AnswerOptionCard
+                        key={option.label}
+                        name={question.key}
+                        label={option.label}
+                        selected={value === option.label}
+                        onSelect={() => handleAnswer(question.key, option.label)}
+                      />
+                    ))}
                   </div>
                   {errorMsg ? (
                     <p className="flex items-center gap-1 text-xs text-red-600">
@@ -205,62 +193,18 @@ export function QuestionFlow({
         </Card>
       ))}
 
-      <div className="sticky bottom-4 z-10 rounded-lg border border-slate-200 bg-white p-4 shadow-md">
-        <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="text-sm text-slate-600">
-            {allAnswered ? (
-              <span className="flex items-center gap-1 text-emerald-700">
-                <Check className="h-4 w-4" />
-                <EditableText
-                  keyPath="diagnose.run.all_answered_label"
-                  defaultText="Alle 24 Fragen beantwortet"
-                />
-              </span>
-            ) : (
-              <span>
-                {answeredCount}{" "}
-                <EditableText
-                  keyPath="diagnose.run.progress_separator"
-                  defaultText="von"
-                />{" "}
-                {totalQuestions}{" "}
-                <EditableText
-                  keyPath="diagnose.run.progress_suffix"
-                  defaultText="beantwortet"
-                />
-              </span>
-            )}
-            {isSaving ? (
-              <span className="ml-2 inline-flex items-center gap-1 text-xs text-slate-400">
-                <Loader2 className="h-3 w-3 animate-spin" />
-                <EditableText
-                  keyPath="diagnose.run.saving_label"
-                  defaultText="Speichere..."
-                />
-              </span>
-            ) : null}
-          </div>
-          <Button
-            onClick={handleSubmit}
-            disabled={!allAnswered || isSubmitting}
-            type="button"
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                <EditableText
-                  keyPath="diagnose.run.submitting_label"
-                  defaultText="Sende ab..."
-                />
-              </>
-            ) : (
-              <EditableText
-                keyPath="diagnose.run.submit_button"
-                defaultText="Diagnose abschicken"
-              />
-            )}
-          </Button>
-        </div>
+      <div>
+        <NavigationButtons
+          backHref="/dashboard/diagnose/start"
+          disabled={!allAnswered}
+          isSubmitting={isSubmitting}
+          onSubmit={handleSubmit}
+        >
+          <AutoSaveIndicator
+            isSaving={isSaving}
+            answeredCount={answeredCount}
+          />
+        </NavigationButtons>
         {submitError ? (
           <p className="mt-3 flex items-center gap-1 text-sm text-red-600">
             <AlertCircle className="h-4 w-4" />
@@ -282,29 +226,6 @@ export function QuestionFlow({
           captureSessionId={sessionId}
         />
       ) : null}
-    </div>
-  );
-}
-
-function ProgressBar({ answered, total }: { answered: number; total: number }) {
-  const pct = total > 0 ? Math.round((answered / total) * 100) : 0;
-  return (
-    <div className="space-y-1">
-      <div className="flex items-center justify-between text-xs text-slate-500">
-        <span>
-          <EditableText
-            keyPath="diagnose.run.progress_label"
-            defaultText="Fortschritt"
-          />
-        </span>
-        <span>{pct}%</span>
-      </div>
-      <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
-        <div
-          className="h-full bg-brand-primary transition-all"
-          style={{ width: `${pct}%` }}
-        />
-      </div>
     </div>
   );
 }
