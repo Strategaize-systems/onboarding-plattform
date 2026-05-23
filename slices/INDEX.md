@@ -773,11 +773,25 @@ SLC-139 vor SLC-141 — Telemetrie sammelt ab Tag 1 Daten zur Bewertung der Beri
 
 - **BL-114 (V7.3 Look-and-Feel-Polish)**: `in_progress -> done` 2026-05-23 nach MT-7 (Records + Visual-Findings-Doku); /qa SLC-140 als Slice-Schluss-Block pending.
 
-### V7.1/V7.2/V7.3 Worktree-Pflicht (SaaS-Mode)
+## V7.4 Slices (App-Shell Touch-Target + Auth-Pages-Polish)
+
+**1-Slice-Polish-Iteration als direkter Followup zu V7.3 RELEASED 2026-05-23 (RPT-337).** Begruendung: Live-Smoke-Empirie hat belegt dass alle Mobile-Touch-Target-Violations (<44px) App-Shell-Pattern sind (3 Footer-Links h=19px + 1 shadcn-Default-Button h=40px). WCAG-2.1-AA-Konformitaet vor erstem echten Pilot-Partner-Onboarding. Pre-Conditions: V7.3 RELEASED, Playwright im Repo, Style-Guide-V2-konforme Auth-Pages-Layouts.
+
+| ID | Slice | Feature | Status | Priority | Created |
+|----|-------|---------|--------|----------|---------|
+| SLC-143 | [FEAT-062 App-Shell + Auth-Pages Touch-Target-Polish](SLC-143-app-shell-auth-pages-touch-target-polish.md) | FEAT-062 | planned | Medium | 2026-05-23 |
+
+### V7.4 Backlog-Mapping
+
+- **BL-120 (V7.4 FEAT-062 App-Shell + Auth-Pages-Polish)**: `open -> in_progress` 2026-05-23 mit /slice-planning. `-> done` mit SLC-143-Slice-Schluss-/qa-PASS.
+- **BL-121 (V7.4 Touch-Target-Audit-Skript)**: `open -> wontfix` 2026-05-23 per DEC-154 (manueller Playwright-MCP-Audit reicht).
+
+### V7.1/V7.2/V7.3/V7.4 Worktree-Pflicht (SaaS-Mode)
 
 Alle Slices nutzen Worktree-Isolation:
 - V7.1: `slc-136-text-override-foundation` ✓, `slc-137-editabletext-component-migration` ✓, `slc-138-helper-texts-questions` ✓, `slc-142-back-link-legal-pages` (pending)
 - V7.2: `slc-139-diagnose-funnel-telemetrie`, `slc-141-bericht-email-pdf`
 - V7.3: `slc-140-look-feel-polish`
+- V7.4: `slc-143-app-shell-auth-pages-polish` (pending)
 
 Master-Merge nur nach Slice-/qa PASS (Pattern aus V7).
