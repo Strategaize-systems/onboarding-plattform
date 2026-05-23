@@ -1,19 +1,11 @@
 import Image from "next/image";
-import Link from "next/link";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Sparkles } from "lucide-react";
 import { IchWillMehrCard } from "@/components/diagnose/IchWillMehrCard";
 import {
   IchWillMehrStatusCard,
   type IchWillMehrAuditStatus,
 } from "@/components/diagnose/IchWillMehrStatusCard";
+import { EmptyState } from "@/app/dashboard/diagnose/start/components/EmptyState";
 
 /**
  * V6 SLC-103 MT-7 / SLC-104 MT-9 — Welcome-Block fuer Mandanten unter
@@ -108,32 +100,18 @@ export function PartnerClientWelcomeBlock({
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <div className="rounded-full bg-brand-primary/10 p-3">
-              <Sparkles className="h-5 w-5 text-brand-primary" />
-            </div>
-            <div>
-              <CardTitle>Strategaize-Diagnose starten</CardTitle>
-              <CardDescription>
-                Beantworten Sie strukturierte Fragen zu Ihrem Unternehmen.
-                Strategaize wertet die Antworten aus und Ihr Steuerberater
-                bespricht den Bericht mit Ihnen.
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Button asChild>
-            <Link href="/dashboard/diagnose/start">Diagnose starten</Link>
-          </Button>
-          <p className="mt-3 text-xs text-slate-400">
-            24 Fragen, ca. 8-12 Minuten. Sie koennen jederzeit unterbrechen —
-            der Stand bleibt gespeichert.
-          </p>
-        </CardContent>
-      </Card>
+      <EmptyState
+        icon={Sparkles}
+        titleKeyPath="dashboard.partner_client.diagnose_card.title"
+        titleDefault="Strategaize-Diagnose starten"
+        descriptionKeyPath="dashboard.partner_client.diagnose_card.description"
+        descriptionDefault="Beantworten Sie strukturierte Fragen zu Ihrem Unternehmen. Strategaize wertet die Antworten aus und Ihr Steuerberater bespricht den Bericht mit Ihnen."
+        ctaHref="/dashboard/diagnose/start"
+        ctaKeyPath="dashboard.partner_client.diagnose_card.cta"
+        ctaDefault="Diagnose starten"
+        hintKeyPath="dashboard.partner_client.diagnose_card.hint"
+        hintDefault="24 Fragen, ca. 8-12 Minuten. Sie koennen jederzeit unterbrechen — der Stand bleibt gespeichert."
+      />
 
       {ichWillMehrAuditStatus ? (
         <IchWillMehrStatusCard
