@@ -1,5 +1,15 @@
 # Known Issues
 
+### ISSUE-082 — Verify-Signup-ErrorPage rendert eigenes Inline-Footer + Custom-styled "Zur Anmeldung"-Link h=36 (Touch-Target-Violation Mobile)
+- Status: open
+- Severity: Low
+- Area: V7 / Auth / src/app/auth/verify-signup/page.tsx
+- Summary: V7.4 SLC-143 MT-1 Pre-Audit (RPT-342) hat aufgedeckt, dass `/auth/verify-signup`-ErrorPage-State (z.B. bei dummy-token-Render) zwei Probleme zeigt: (1) ein Custom-styled `<a href="/login">Zur Anmeldung</a>` mit Tailwind-Klassen die wie shadcn-Button aussehen, h=36px Mobile, sub-44px-Tap-Area; (2) eigener Inline-Footer mit "Datenschutz" + "Impressum"-Links h=16 — Duplikat zum globalen StrategaizePoweredFooter (insgesamt 2x Datenschutz-Link sichtbar).
+- Impact: Mobile-WCAG-2.1-AA-Violation auf "Zur Anmeldung"-Tap-Target. Visual-Doppelung (2x Footer) wirkt unprofessional. NICHT Auth-Flow-bruchend — beide Probleme sind nur kosmetisch + Accessibility.
+- Out-of-Scope V7.4: Per Slice-Spec AC-2/AC-3 (Scope: nur shadcn-`<Button>`-Default + StrategaizePoweredFooter). DEC-151 + DEC-152-Mitigation-Pfad fasst Custom-styled-Anchors bewusst NICHT an.
+- Next Action: Optionales BL-Item fuer V7.5+ oder spaetere Polish-Iteration: (a) Custom-`<a>` durch shadcn-`<Button asChild><Link>...`-Pattern ersetzen (gewinnt automatisch DEC-151 Default-Anhebung), (b) Inline-Footer in verify-signup/page.tsx entfernen (StrategaizePoweredFooter rendert global via app/layout.tsx, doppelte Rendering ist Redundanz). Aufwand ~30min.
+- Related: RPT-342, FEAT-062, IMP-774 (Dev-System Skill-Improvement zu Audit-Coverage-Erweiterung)
+
 ### ISSUE-081 — V6 Migration 090 Architecture-Drift: 4 in ARCHITECTURE.md vorausgesetzte Helper-Objekte wurden nie erstellt
 - Status: resolved
 - Resolution Date: 2026-05-20
