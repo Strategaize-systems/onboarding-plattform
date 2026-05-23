@@ -50,3 +50,8 @@ next-env.d.ts
 
 # video files (too large for git, deployed via SCP/rsync)
 /public/videos/*.mp4
+
+# Playwright artifacts (test runs, never committed)
+/test-results/
+/playwright-report/
+/playwright/.cache/
