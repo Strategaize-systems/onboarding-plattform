@@ -109,7 +109,16 @@ test.describe("Diagnose Run Page", () => {
     );
     await page.waitForURL(/\/dashboard\/diagnose\/run\//, { timeout: 15_000 });
     await page.waitForLoadState("networkidle");
-    const targets = page.locator("button:visible, [role='radio']:visible, label:has(input[type='radio']):visible");
+    // /qa SLC-140 F-4 Auto-Fix (Deviation Rule 1, RPT-337 2026-05-23):
+    // Vorher: `button:visible, [role='radio']:visible, label:has(input[type='radio']):visible`
+    // — fing das `<input type='radio'>` (h-4 w-4 = 16px) implizit als role='radio'
+    // ein, obwohl das umschliessende `<label>` in AnswerOptionCard `min-h-[44px]`
+    // hat. Resultat: false-positive Target-Count #145 = ~32px aus dem Native-Input.
+    // Fix: Touch-Target ist das visuell anklickbare Element (button/label/link),
+    // nicht das gehidete Native-Input. Selektor strikt auf button/label/anchor.
+    const targets = page.locator(
+      "button:visible, a[role='button']:visible, label:has(input[type='radio']):visible",
+    );
     const count = await targets.count();
     expect(count).toBeGreaterThan(0);
     for (let i = 0; i < count; i++) {
