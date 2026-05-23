@@ -5,9 +5,9 @@
       "title": "V7.4 Optional: Touch-Target-Audit-Skript als CI-Schutz (pendant zu audit-editable-text-coverage.mjs)",
       "type": "improvement",
       "priority": "low",
-      "status": "open",
+      "status": "wontfix",
       "version": "V7.4",
-      "description": "Optional-Item in /architecture V7.4 als Q-V7.4-D zu entscheiden. Skript `scripts/audit-touch-targets.mjs` das nach `npm run build` alle Production-Bundle-Pages auf interaktive Elemente <44px scannt (Headless-Chromium oder Playwright). CI-Run-Pflicht via pre-commit-Hook oder GitHub-Actions. Verhindert kuenftige Touch-Target-Regressions an neu hinzugefuegten Components. Aufwand ~1-2h Skript + Setup. Falls Q-V7.4-D auf NEIN entscheidet: BL-121 wird auf wontfix gesetzt.",
+      "description": "Optional-Item in /architecture V7.4 als Q-V7.4-D zu entscheiden. Skript `scripts/audit-touch-targets.mjs` das nach `npm run build` alle Production-Bundle-Pages auf interaktive Elemente <44px scannt (Headless-Chromium oder Playwright). CI-Run-Pflicht via pre-commit-Hook oder GitHub-Actions. Verhindert kuenftige Touch-Target-Regressions an neu hinzugefuegten Components. Aufwand ~1-2h Skript + Setup. **Entschieden NEIN in /architecture V7.4 (DEC-154 2026-05-23)**: manueller Playwright-MCP-Audit in /qa-Skill ist etabliertes Pattern, CI-Skript disproportional zu V7.4-Polish-Scope. Status wontfix. Bei kuenftiger Component-Library-Refactor-Iteration neu evaluieren.",
       "createdAt": "2026-05-23"
     },
     {

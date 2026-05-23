@@ -7084,3 +7084,85 @@ Reihenfolge SLC-136 -> SLC-142 ist BLOCKING aus Architektur-Gruenden:
 Geschaetzt **~36-60h Code-Side** + ~3-6h Helper-Inhalt + Pen-Test-Erweiterung + Live-Smoke + /post-launch.
 
 **Naechster Schritt: /slice-planning V7.1** — 7 Slices als feste Files anlegen, Micro-Task-Decomposition pro Slice, Acceptance-Criteria + Aufwand-Schaetzung.
+
+## V7.4 Architektur — App-Shell Touch-Target + Auth-Pages-Polish
+
+### Architecture Summary
+
+V7.4 ist eine 1-Slice-Polish-Iteration ohne neue Backend-Pfade, ohne DB-Migration, ohne neue Dependencies. Architektur-Effekt beschraenkt sich auf 4 isolierte Aenderungspunkte: 1 Component-Tweak in `components/ui/button.tsx` (shadcn Default-Size), 1 Component-Tweak in `StrategaizePoweredFooter` (Padding), Verifikation der 4 Auth-Pages-Layouts und 4 neue Playwright-Mobile-Baselines.
+
+Q-V7.4-A..D wurden mit Minimal-Scope-Pfad entschieden (DEC-151..154). Diese Section dokumentiert das Architektur-Delta + Risiko-Mitigation.
+
+### Main Components Affected
+
+| Component | Path | Change | Risk |
+|---|---|---|---|
+| `Button` shadcn-Default | `src/components/ui/button.tsx` | Default-Size `h-10 -> h-11` in `buttonVariants` cva | M — alle `<Button>` ohne `size`-Prop werden 4px hoeher |
+| `StrategaizePoweredFooter` | `src/components/branding/StrategaizePoweredFooter.tsx` (Source-of-Truth in MT-1 final verifizieren) | Touch-Area-Padding um 3 Links (`py-3` oder `min-h-[44px] inline-flex items-center px-3`) | L — Footer-Hoehe wird groesser, Desktop-Layout-Audit Pflicht |
+| Auth-Pages (`<Button>`-Konsum) | `src/app/login/login-form.tsx`, `src/app/auth/set-password/set-password-form.tsx`, `src/app/accept-invitation/[token]/page.tsx`, `src/app/auth/verify-signup/page.tsx` | KEIN Code-Edit — uebernehmen Default-Size-Anhebung automatisch | L |
+| `IchWillMehrCard` (`<Button>`-Konsum) | `src/components/diagnose/IchWillMehrCard.tsx` | KEIN Code-Edit — uebernimmt Default-Size-Anhebung automatisch | L |
+| Playwright Visual-Regression | `tests/e2e/diagnose-pages.spec.ts` + NEU `tests/e2e/auth-pages.spec.ts` | Neue Spec fuer 4 Auth-Pages-Mobile-Baselines + V7.3-Diagnose-Baselines-Re-Run mit Diff-Review | L |
+
+### Data Model
+
+Unveraendert. 0 Migrations.
+
+### Data Flow / Request Flow
+
+Unveraendert. 0 neue API-Routes, 0 neue Server-Actions, 0 neue Cron-Jobs.
+
+### External Dependencies
+
+Unveraendert. 0 neue Production-Deps. (`@playwright/test` als devDep bleibt aus V7.3.)
+
+### Security / Privacy
+
+Unveraendert. Touch-Target-Polish hat 0 Auth-Logic-Implikationen.
+
+### Constraints + Tradeoffs
+
+- **Cascading-Effect-Risk** durch globale Button-Default-Anhebung (DEC-151) — mitigiert durch MT-1 Usage-Audit + MT-5 Visual-Regression-Re-Run mit Diff-Review.
+- **Surgical-Changes-Disziplin** (CLAUDE.md Rule 3) — keine "Wenn-wir-schon-dabei-sind"-Aenderungen am Auth-Layout oder Footer-Inhalt.
+- **Pattern-Reuse-Pflicht** (CLAUDE.md Rule 5) — shadcn-cva-Size-Mechanik nutzen, kein eigenes Touch-Target-Pattern erfinden.
+
+### Implementation Direction
+
+**1 Slice SLC-143 mit 6 Micro-Tasks ~3-5h Code-Side.** Reihenfolge:
+
+1. **MT-1 Pre-Audit (~30min)**
+   - Grep `<Button` ohne `size="..."`-Prop im gesamten Repo, Ergebnis als Tabelle dokumentieren
+   - Live-Mobile-Audit der 4 Auth-Pages (Login + Set-Password + Accept-Invitation + Verify-Signup) per Playwright-MCP gegen Production, ist-Werte aller Buttons + interaktiven Elemente festhalten
+   - Footer-Component Source-of-Truth identifizieren
+
+2. **MT-2 shadcn-Button-Default-Anhebung (~15min)**
+   - 1 Edit in `src/components/ui/button.tsx` cva `size.default: "h-10 ..."` -> `"h-11 ..."`
+   - tsc + eslint Quality-Gate
+
+3. **MT-3 Footer-Touch-Target (~30min)**
+   - Source-Component aus MT-1 mit `min-h-[44px] inline-flex items-center px-3` o.ae. anreichern
+   - Visual-Smoke auf 3 Viewports (375/768/1280) per Playwright-MCP
+
+4. **MT-4 Auth-Pages Visual-Verify (~30min)**
+   - 4 Pages auf 3 Viewports per Playwright-MCP rendern, Layout-Bruch-Check
+   - Keine Code-Edits erwartet (Buttons uebernehmen Default-Anhebung automatisch)
+
+5. **MT-5 Playwright-Baselines (~1-2h)**
+   - V7.3 9 Diagnose-Funnel-Baselines re-run, Diff-Review (erwartet: minimale Button-Height-Anhebung im Diff)
+   - NEU 4 Auth-Pages-Mobile-Baselines anlegen (Login real, Set-Password / Accept-Invitation / Verify-Signup mit dummy-Token = visualisiert ErrorPage-State oder Form-State)
+   - Auth-Pages-Spec-File `tests/e2e/auth-pages.spec.ts` neu
+
+6. **MT-6 Records-Update + Slice-Schluss (~30min)**
+   - SLC-143 -> done, FEAT-062 -> done, BL-120 -> done
+   - Run /qa als Folge-Schritt vor Master-Merge
+
+### Open Technical Questions (zu klaeren in /slice-planning oder pre-MT-1)
+
+- Test-Akteur fuer Set-Password/Verify-Signup-Baseline: dummy-Token reicht (Page rendert ErrorPage statt Form — beide Visuals sind baseline-wuerdig) — finale Entscheidung in /slice-planning oder als MT-1-Sub-Decision
+- Footer-Padding-Konkretisierung: `py-3` (24px + 19px line-height = ~43px-44px) vs `min-h-[44px] flex`-Pattern — Entscheidung in MT-3 abhaengig von Layout-Resultat
+- Diff-Threshold fuer V7.3-Baselines-Re-Run: Playwright-Default ist 0.2% Pixel-Diff. Button-Height-Anhebung um 4px in einer Page produziert ~1% Diff -> Threshold-Update auf 2% empfohlen, oder Baselines komplett neu generieren
+
+### V7.4 vs V7.3 vs V7.2 vs V7.1 Architektur-Kontext
+
+Diese V7.4-Section ergaenzt die V7.1-Section (`text_override`-Foundation) und V7-Section (Self-Signup-Backend). V7.2 (Telemetrie + Email-PDF) und V7.3 (Look-Polish) wurden historisch nicht als eigene Architektur-Sections eingepflegt — ihre Strukturentscheidungen liegen in DECs (DEC-128 ScoreVisual-Farben, DEC-150 EditableText-Pattern) und Slice-Files. V7.4 folgt der gleichen Disziplin: Decisions in DECISIONS.md, Implementation-Direction in dieser kompakten Section.
+
+**Naechster Schritt: /slice-planning SLC-143** — 1 Slice-File mit Micro-Task-Decomposition (6 MTs aus Implementation-Direction oben) + Acceptance-Criteria (aus FEAT-062 AC-1..8) + Aufwand-Schaetzung pro MT.

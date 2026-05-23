@@ -143,7 +143,7 @@
     {
       "id": "v7-4",
       "name": "V7.4",
-      "status": "planned",
+      "status": "active",
       "summary": "**App-Shell Touch-Target + Auth-Pages-Polish (1-Slice-Iteration).** Direkter Followup zu V7.3 RELEASED 2026-05-23 (RPT-337). Begruendung: V7.3 Live-Smoke hat empirisch belegt, dass alle Mobile-Touch-Target-Violations (<44px) App-Shell-Pattern sind (3 Footer-Links h=19px + 1 shadcn-Default-Button h=40px in IchWillMehrCard), nicht Diagnose-Funnel-Scope. WCAG-2.1-AA-Konformitaet (Success Criterion 2.5.5 Target Size) vor erstem echten Pilot-Partner. 1 Feature FEAT-062, 1 Slice SLC-143, 5-7 MTs, ~3-5h Code-Side. **In Scope V7.4**: (a) Footer `StrategaizePoweredFooter` 3 Links auf >=44px Touch-Area, (b) shadcn-Button-Default-Size-Polish (global oder selektiv per Q-V7.4-A), (c) Auth-Pages Touch-Target-Verifikation (/login + /auth/set-password + /accept-invitation/[token] + /auth/verify-signup), (d) Visual-Regression-Baselines erneuern (V7.3 9 PNGs + 4-12 neue Auth-Baselines per Q-V7.4-B). **Out of Scope V7.4**: EditableText-Migration auf Auth-Pages (V7.5+), Auth-Pages-Layout-Redesign, Admin-Bereich (V8+), Dark-Mode (V8+), Input-Felder Touch-Target (Q-V7.4-C entscheidet), F-2 Run-Page Live-E2E mit socat-Tunnel (separates Tooling-Item). **Open Questions Q-V7.4-A..D** zu klaeren in /architecture V7.4. **Pre-Conditions ERFUELLT**: V7.3 RELEASED, Playwright im Repo, Style-Guide-V2 auf Auth-Pages-Layout vorhanden. **Naechster Schritt**: /architecture V7.4 (~30-60min) entscheidet Q-V7.4-A..D, dann /slice-planning SLC-143.",
       "order": 17.8
     },
