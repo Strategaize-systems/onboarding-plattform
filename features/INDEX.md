@@ -167,3 +167,11 @@ V7-Scope (User-Entscheidung 2026-05-18 nach V6.4 STABLE-Bestaetigung RPT-295): B
 | ID | Feature | Status | Spec | Created |
 |----|---------|--------|------|---------|
 | FEAT-059 | Look-and-Feel-Polish nach Style Guide V2 (Start + Run + Bericht) | deployed | [Spec](FEAT-059-look-feel-polish.md) | 2026-05-20 |
+
+## V7.4 Features (App-Shell Touch-Target + Auth-Pages-Polish)
+
+**1-Slice-Polish-Iteration** als direkter Followup zu V7.3 RELEASED 2026-05-23 (RPT-337). Begruendung: Live-Smoke V7.3 hat empirisch belegt, dass alle Touch-Target-Violations <44px App-Shell-Pattern sind (Footer-Links + shadcn-Default-Button), nicht Diagnose-Funnel-Scope. WCAG-2.1-AA-Konformitaet vor erstem echten Pilot-Partner.
+
+| ID | Feature | Status | Spec | Created |
+|----|---------|--------|------|---------|
+| FEAT-062 | App-Shell Touch-Target + Auth-Pages-Polish (Footer + shadcn-Button + 4 Auth-Pages) | planned | [Spec](FEAT-062-app-shell-auth-pages-touch-target-polish.md) | 2026-05-23 |

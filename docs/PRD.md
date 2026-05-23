@@ -1783,3 +1783,77 @@ Geschaetzt ~36-60h Code-Side + ~3-6h Helper-Texts-Inhalt + Pen-Test-Erweiterung 
 ### Detail-Spec
 
 V7.1-Requirements-Completion-Report wird in dieser Session erstellt + Feature-Specs unter `/features/FEAT-055-*.md` ... `/features/FEAT-061-*.md`.
+
+## V7.4 — App-Shell Touch-Target + Auth-Pages-Polish (1-Slice-Iteration)
+
+### Problem Statement
+Aus dem V7.3 Live-Smoke (RPT-337) wurde empirisch belegt, dass alle Mobile-Touch-Target-Violations (<44px) **App-Shell-Pattern** sind, nicht Diagnose-Funnel-Scope: 3 Footer-Links (Datenschutz/Impressum/Aufgesetzt-Strategaize, h=19px) auf jeder Page + 1 shadcn-Default-`Button` in `IchWillMehrCard` (h=40px). Beide sind seit V6/V7.x unveraendert. Im Internal-Test-Mode war das toleriert; vor erstem echten Pilot-Partner mit echtem Mobile-Traffic ist es Reibungs-Punkt im "ersten Anblick"-Eindruck.
+
+Parallel: Auth-Pages (`/login`, `/auth/set-password`, `/accept-invitation/[token]`, `/auth/verify-signup`) sind heute zwar Style-Guide-V2-konformes Card-Layout (Branding-Gradient + StrategAIze-Logo + Card + Form), nutzen aber gleichfalls shadcn-Default-Buttons (h=40px) — selbe Touch-Target-Schwaeche. Eine konsolidierte Polish-Welle behebt beide Themen in einem Slice.
+
+### Goal / Intended Outcome
+Touch-Target-Audit auf den 3 Diagnose-Funnel-Pages + den 4 Auth-Pages auf Mobile-Viewport (375px) liefert 0 Violations <44px in den festgelegten Scopes. Auth-Pages bleiben visuell unveraendert (kein Redesign), nur Buttons + ggf. Inputs werden auf Touch-Target-tauglich angehoben.
+
+### Target Users
+- **Self-Signup-Mandanten (V7-Mandantentyp partner_client)** — primaere Mobile-Touch-Nutzer beim ersten Anblick (Login → Diagnose-Funnel)
+- **Bestehende User aller Tenant-Typen** — sekundaer betroffen ueber `/login`, `/auth/set-password`, `/accept-invitation`
+- **Strategaize-Admin** — neutral (Desktop-Workflow)
+
+### V1 (V7.4) Scope
+- **App-Shell Footer-Touch-Targets**: `StrategaizePoweredFooter`-Component (3 Links Datenschutz/Impressum/Aufgesetzt-Strategaize) von h=19px auf >=44px anheben — entweder ueber Padding-Vergroesserung (`py-3` o.ae.) oder ueber `min-h`-Class. Bestehende Footer-Position + visuelle Hierarchie bleiben erhalten.
+- **shadcn-Button-Default-Size-Polish**: 1 lokale Aenderung am shadcn-Button-Component (Default-Size `h-10` -> `h-11`) ODER selektive `size="lg"`-Prop-Aufhebung an konkreten Usage-Sites (Login-Submit + Set-Password-Submit + Accept-Invitation-Submit + Verify-Signup-Submit + IchWillMehrCard-Trigger + ggf. weitere). **Entscheidung in /architecture (Q-V7.4-A).**
+- **Auth-Pages Touch-Target-Verifikation**: `/login`, `/auth/set-password`, `/accept-invitation/[token]`, `/auth/verify-signup` — Mobile-375px Audit aller Buttons + Form-Submit-Elemente.
+- **Visual-Regression-Baselines erneuern**: V7.3 hat 9 Playwright-Baselines fuer Diagnose-Funnel angelegt. V7.4 ergaenzt Baselines fuer Auth-Pages (4 Pages x 3 Viewports = 12 zusaetzliche Baselines) ODER fuegt nur Mobile-Baselines hinzu (4 x 1 = 4). **Entscheidung in /architecture (Q-V7.4-B).**
+
+### Out of Scope V7.4
+- **EditableText-Migration auf Auth-Pages** — Auth-Pages nutzen `next-intl` (`useTranslations`), Strings sind nicht admin-editierbar. Migration auf FEAT-055-Pattern waere moeglich, aber Auth-Pages werden in der V7-Self-Signup-Reihenfolge (Landing -> Email-Verify -> Set-Password -> /dashboard) nur 1x pro neuem Mandanten beruehrt -> niedriger ROI. Optional spaeter V7.5+.
+- **Auth-Pages Layout-Redesign** — heute schon Style-Guide-V2-konformes Card-Layout, keine Schwaeche identifiziert.
+- **Admin-Bereich-Polish** — V8+ (DEC-101 + spaetere Pilot-Partner-Feedback-Iterationen).
+- **Dark-Mode** — V8+.
+- **Input-Felder Touch-Target-Polish** — shadcn-Input-Default ist `h-10` (40px), aber Inputs sind primaer Keyboard-Focus, sekundaer Tap-Target. **Out-of-V7.4-Scope**, in /architecture pruefen ob als Sub-Item zu V7.4 hinzuzufuegen (Q-V7.4-C).
+- **F-2 Run-Page Live-E2E-Verifikation mit socat-Tunnel** — RPT-337-Followup, separates Tooling-Setup-Item, kein V7.4-Code-Scope.
+
+### Core Features
+- **FEAT-062**: App-Shell Touch-Target + Auth-Pages-Polish (1 Feature, 1 Slice SLC-143).
+
+### Constraints
+- **Pre-Conditions ERFUELLT**: V7.3 RELEASED (REL-022, main b88b20d), Playwright im Repo (seit SLC-140 MT-6a), Style-Guide-V2-Konsistenz auf Diagnose-Funnel + Auth-Pages-Layout vorhanden.
+- **Surgical-Changes-Disziplin**: V7.4 darf **NUR** Touch-Target-relevante Aenderungen einbringen. Keine "Wenn-wir-schon-dabei-sind"-Refactors am Auth-Layout, kein Re-Skinning von Cards, keine i18n-Strings-Aenderungen.
+- **Visual-Regression-Schutz**: Existierende V7.3-Baselines (9 PNGs) muessen entweder PASS bleiben (wenn nur Button-Hoehe sich aendert und das im Baseline-Threshold absorbiert wird) ODER kontrolliert neu generiert werden mit Diff-Doku in Slice-Spec.
+- **shadcn-Component-Eigentum**: Falls Default-Size-Override gewaehlt wird (Q-V7.4-A), muss das in einem klar dokumentierten Tailwind-Config- oder Component-Override-Pattern erfolgen, das nicht durch shadcn-CLI-Updates ueberschrieben wird.
+
+### Risks / Assumptions
+- **R-V7.4-1**: shadcn-Default-Button-Override-Pfad koennte unbeabsichtigt andere Buttons im Repo (Admin-Cockpit, Diagnose-Funnel) aendern -> Visual-Regression-Risk. Mitigation: vor Implementierung Usage-Audit (Grep auf `<Button` ohne `size="..."`), nach Implementierung Playwright-Baselines-Re-Run mit Diff-Review.
+- **R-V7.4-2**: Niedrig-priorisierter Polish-Scope — der Wert ist gering ohne realen User-Traffic-Loss-Beleg. Tradeoff akzeptabel weil 1-Slice-Aufwand klein (~3-5h Code-Side) und vor erstem Pilot-Partner-Onboarding sinnvoller Schritt.
+- **A-V7.4-1**: Annahme — Footer-Touch-Target-Anhebung via `py-3` oder `min-h`-Class kollidiert nicht mit Footer-Layout-Symmetrie auf Desktop. Live-Verifikation auf 3 Viewports (375 / 768 / 1280) Pflicht.
+
+### Success Criteria
+- **SC-V7.4-1**: Touch-Target-Audit auf Mobile 375px = 0 Violations <44px in folgenden Scopes: (a) Diagnose-Funnel (Start + Run + Bericht — bereits 0 Violations vor V7.4, Regression-Schutz), (b) Auth-Pages (Login + Set-Password + Accept-Invitation + Verify-Signup), (c) App-Shell (Footer auf JEDER Page, IchWillMehrCard auf Dashboard).
+- **SC-V7.4-2**: 0 Visual-Regression in V7.3-Diagnose-Funnel-Baselines (9 PNGs) — entweder PASS unveraendert oder mit dokumentiertem Threshold-Update.
+- **SC-V7.4-3**: 4 neue Mobile-Baselines fuer Auth-Pages angelegt (Login + Set-Password + Accept-Invitation + Verify-Signup), als Regression-Schutz fuer kuenftige Auth-Refactors.
+- **SC-V7.4-4**: Auth-Pages-Inhaltsfunktionalitaet unveraendert (Login funktioniert, Set-Password funktioniert, Accept-Invitation funktioniert, Verify-Signup funktioniert) — Live-Smoke via Playwright-MCP gegen Production-Build.
+
+### Open Questions
+- **Q-V7.4-A**: shadcn-Button-Default-Size global anheben (`h-10 -> h-11` im components/ui/button.tsx) ODER selektiv per Usage-Site mit `size="lg"`-Prop? Trade-off: global = einheitlicher + weniger Code-Touch + Regression-Risk; selektiv = praeziser + mehr Code-Touch + niedrigeres Risk.
+- **Q-V7.4-B**: Auth-Pages-Baselines nur Mobile (4 PNGs) ODER alle 3 Viewports (12 PNGs)? Trade-off: Mobile-only = schlanker Baseline-Set + auf primaeren Use-Case fokussiert; alle 3 = vollstaendig + mehr Pflege-Aufwand.
+- **Q-V7.4-C**: shadcn-Input-Default-Size (h-10) auch anheben? Trade-off: konsistenter mit Button-Polish + Tap-Target-strenger; aber Inputs sind primaer Keyboard-Focus -> Wert-Schwellen niedriger.
+- **Q-V7.4-D**: Touch-Target-Audit-Skript (pendant zu `audit-editable-text-coverage.mjs`) als CI-Schutz fuer kuenftige Komponenten-Adds einfuehren JA/NEIN? Trade-off: ja = automatischer Regression-Schutz fuer V7.4+; nein = manueller Audit-Modus, Aufwand-Schluss-Klausel.
+
+### Delivery Mode
+**SaaS Product** (konsistent zu V7.x-Linie). Touch-Target >=44px ist W3C-Accessibility-Pflicht (WCAG 2.1 AA Success Criterion 2.5.5) und Apple/Google Mobile-UX-Standard. V7.4 schliesst eine objektive Accessibility-Luecke vor Pilot-Partner-Onboarding.
+
+### Slice-Skizze (informativ, finaler Schnitt in /slice-planning)
+
+- **SLC-143** FEAT-062 App-Shell + Auth-Pages Touch-Target-Polish: 5-7 Micro-Tasks ~3-5h Code-Side. MT-Skizze:
+  - MT-1 Pre-Audit (Live-Mobile-Audit Login + Set-Password + Accept-Invitation + Verify-Signup + Footer + IchWillMehrCard, ist-Werte dokumentieren)
+  - MT-2 Q-V7.4-A-Decision-Implementation (shadcn-Button Default-Size oder selektiv)
+  - MT-3 Footer-Component Touch-Target-Anhebung
+  - MT-4 Auth-Pages Visual-Verify (kein Layout-Bruch) + ggf. selektive Input-Polish (per Q-V7.4-C)
+  - MT-5 Playwright-Baselines-Update (V7.3 9 PNGs + 4-12 neue Auth-Baselines per Q-V7.4-B)
+  - MT-6 Records-Update (FEAT-062 + SLC-143 + STATE)
+  - MT-7 (optional, per Q-V7.4-D) Touch-Target-Audit-Skript als CI-Schutz
+
+Geschaetzt **~3-5h Code-Side** ueber 1 Slice. Realistische Session-Anzahl: 1 Mini-Session A (Pre-Audit + Q-V7.4-Klaerung) + 1 Full-Session B (Implementation + /qa + Live-Smoke + Master-Merge).
+
+### Detail-Spec
+V7.4-Requirements-Completion-Report wird in dieser Session erstellt als RPT-339. Feature-Spec unter `/features/FEAT-062-app-shell-auth-pages-touch-target-polish.md`. /architecture-Schritt klaert Q-V7.4-A..D und definiert /slice-planning-Vorbereitung.
