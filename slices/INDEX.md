@@ -779,11 +779,11 @@ SLC-139 vor SLC-141 — Telemetrie sammelt ab Tag 1 Daten zur Bewertung der Beri
 
 | ID | Slice | Feature | Status | Priority | Created |
 |----|-------|---------|--------|----------|---------|
-| SLC-143 | [FEAT-062 App-Shell + Auth-Pages Touch-Target-Polish](SLC-143-app-shell-auth-pages-touch-target-polish.md) | FEAT-062 | planned | Medium | 2026-05-23 |
+| SLC-143 | [FEAT-062 App-Shell + Auth-Pages Touch-Target-Polish](SLC-143-app-shell-auth-pages-touch-target-polish.md) | FEAT-062 | done | Medium | 2026-05-23 |
 
 ### V7.4 Backlog-Mapping
 
-- **BL-120 (V7.4 FEAT-062 App-Shell + Auth-Pages-Polish)**: `open -> in_progress` 2026-05-23 mit /slice-planning. `-> done` mit SLC-143-Slice-Schluss-/qa-PASS.
+- **BL-120 (V7.4 FEAT-062 App-Shell + Auth-Pages-Polish)**: `open -> in_progress` 2026-05-23 mit /slice-planning. `-> done` 2026-05-24 nach MT-2..MT-5a + MT-6 Records (RPT-343). MT-5b Baseline-Generation deferred ins Slice-Schluss-/qa.
 - **BL-121 (V7.4 Touch-Target-Audit-Skript)**: `open -> wontfix` 2026-05-23 per DEC-154 (manueller Playwright-MCP-Audit reicht).
 
 ### V7.1/V7.2/V7.3/V7.4 Worktree-Pflicht (SaaS-Mode)
@@ -792,6 +792,6 @@ Alle Slices nutzen Worktree-Isolation:
 - V7.1: `slc-136-text-override-foundation` ✓, `slc-137-editabletext-component-migration` ✓, `slc-138-helper-texts-questions` ✓, `slc-142-back-link-legal-pages` (pending)
 - V7.2: `slc-139-diagnose-funnel-telemetrie`, `slc-141-bericht-email-pdf`
 - V7.3: `slc-140-look-feel-polish`
-- V7.4: `slc-143-app-shell-auth-pages-polish` (pending)
+- V7.4: `slc-143-app-shell-auth-pages-polish` (code-side done 2026-05-24, /qa + Master-Merge pending)
 
 Master-Merge nur nach Slice-/qa PASS (Pattern aus V7).

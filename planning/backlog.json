@@ -15,7 +15,7 @@
       "title": "V7.4 FEAT-062: App-Shell Touch-Target + Auth-Pages-Polish (Footer + shadcn-Default-Button + 4 Auth-Pages)",
       "type": "improvement",
       "priority": "medium",
-      "status": "in_progress",
+      "status": "done",
       "version": "V7.4",
       "description": "Direkter Followup zu V7.3 RELEASED 2026-05-23 (RPT-337). Live-Smoke-Empirie: alle Mobile-Touch-Target-Violations <44px sind App-Shell-Pattern (3 Footer-Links h=19px + 1 shadcn-Default-Button h=40px in IchWillMehrCard), nicht Diagnose-Funnel-Scope. WCAG-2.1-AA Success-Criterion 2.5.5 Target-Size-Konformitaet vor erstem echten Pilot-Partner-Onboarding. 1 Slice SLC-143 (geplant) mit 5-7 MTs, ~3-5h Code-Side. **Scope**: (a) Footer-Component `StrategaizePoweredFooter` 3 Links auf >=44px Touch-Area, (b) shadcn-Button-Default-Size-Polish (global h-10->h-11 oder selektiv size='lg' per Q-V7.4-A), (c) Auth-Pages Touch-Target-Verifikation (Login/Set-Password/Accept-Invitation/Verify-Signup), (d) Visual-Regression-Baselines erneuern (V7.3 9 PNGs + 4-12 neue Auth-Baselines per Q-V7.4-B). **Out of Scope**: EditableText-Migration Auth-Pages (V7.5+), Layout-Redesign, Input-Felder-Touch-Target (Q-V7.4-C entscheidet), Admin-Bereich (V8+), Dark-Mode (V8+). Open Questions Q-V7.4-A..D in /architecture V7.4 entscheiden. Pre-Conditions: V7.3 RELEASED, Playwright im Repo, Style-Guide-V2-konforme Auth-Pages-Layouts vorhanden.",
       "createdAt": "2026-05-23"
