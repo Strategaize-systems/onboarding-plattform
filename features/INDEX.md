@@ -174,4 +174,4 @@ V7-Scope (User-Entscheidung 2026-05-18 nach V6.4 STABLE-Bestaetigung RPT-295): B
 
 | ID | Feature | Status | Spec | Created |
 |----|---------|--------|------|---------|
-| FEAT-062 | App-Shell Touch-Target + Auth-Pages-Polish (Footer + shadcn-Button + 4 Auth-Pages) | done | [Spec](FEAT-062-app-shell-auth-pages-touch-target-polish.md) | 2026-05-23 |
+| FEAT-062 | App-Shell Touch-Target + Auth-Pages-Polish (Footer + shadcn-Button + 4 Auth-Pages) | deployed | [Spec](FEAT-062-app-shell-auth-pages-touch-target-polish.md) | 2026-05-23 |
