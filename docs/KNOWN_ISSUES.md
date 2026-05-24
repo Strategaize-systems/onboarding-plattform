@@ -1,5 +1,15 @@
 # Known Issues
 
+### ISSUE-083 — Partner-Mandant-Welcome (`tenant_kind='partner_client'`) hat keinen Logout-Button
+- Status: open
+- Severity: High
+- Area: V6 / SLC-103 MT-7 Partner-Mandant-Branch / src/app/dashboard/page.tsx
+- Summary: User-Befund 2026-05-24 (Live auf `https://onboarding.strategaizetransition.com/dashboard` als Partner-Mandant "Privat" unter "QA Steuerberater Demo"). Die schlanke Welcome-Page fuer partner_client-Tenants nutzt den `DashboardClient`-Wrapper nicht und hat damit keine `DashboardSidebar`. Die existierende `logout()`-Server-Action aus `src/app/login/actions.ts:47` wird in `DashboardSidebar.tsx:202-208` nur in Direct-Client/Employee-Flows aufgerufen. Mandant sieht nur Welcome + Diagnose-Karten + Footer (Datenschutz/Impressum/Branding) — **kein sichtbarer Weg zum Abmelden**.
+- Impact: Compliance-/UX-Bug. Mandant muss F12-Cookies-Loeschen oder andere Workarounds nutzen. ISO27001-/DSGVO-relevant fuer ersten echten Pilot-Partner-Onboarding. Auch auf Folge-Pages (Diagnose-Start, Run, Bericht) vermutlich gleiche Luecke — muss in BL-122-Scope verifiziert werden.
+- Workaround: F12 → Application → Cookies → alle `sb-...`-Cookies fuer `onboarding.strategaizetransition.com` loeschen → Reload → landet auf `/login`. Oder Inkognito-Tab schliessen.
+- Next Action: BL-122 V7.5 implementieren — minimaler User-Header (Email + Logout-Button rechts oben) auf partner_client-Welcome + Verifikation auf Diagnose-Folge-Pages. Logout-Pattern 1:1 aus `dashboard-sidebar.tsx` portieren. Touch-Target >=44px konsistent zu V7.4 DEC-151. Aufwand ~1-2h.
+- Related: BL-122, V6 SLC-103, V6 SLC-104 (Partner-Branding), feedback_user_facing_scope_edit_capability_required.md (User-Direktive 2026-05-20: User-Facing-Features brauchen vollstaendige UX schon in V1).
+
 ### ISSUE-082 — Verify-Signup-ErrorPage rendert eigenes Inline-Footer + Custom-styled "Zur Anmeldung"-Link h=36 (Touch-Target-Violation Mobile)
 - Status: open
 - Severity: Low

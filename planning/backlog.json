@@ -1,6 +1,16 @@
 {
   "items": [
     {
+      "id": "BL-122",
+      "title": "V7.5 Partner-Mandant-Layout: Logout-Button + minimaler User-Header auf partner_client-Welcome",
+      "type": "bug",
+      "priority": "high",
+      "status": "open",
+      "version": "V7.5",
+      "description": "User-Befund 2026-05-24 (Handoff-Session): Wenn ein Mandant unter einem Partner-Steuerberater (tenant_kind='partner_client') eingeloggt ist, landet er auf der schlanken Welcome-Page (`src/app/dashboard/page.tsx` V6 SLC-103 MT-7 Branch). Diese Page nutzt den `DashboardClient`-Wrapper NICHT und hat damit auch keine `DashboardSidebar`. Footer enthaelt nur Datenschutz/Impressum/Branding — **kein Logout-Button**. Mandant hat keinen sichtbaren Weg zum Abmelden, muss F12-Cookies-Loeschen oder andere Workarounds nutzen. ISO27001-/DSGVO-relevant fuer ersten echten Pilot-Partner. **Scope V7.5**: (a) minimaler User-Header (Email + Logout-Button rechts oben) auf partner_client-Welcome, (b) Logout-Pattern wiederverwenden aus `src/components/dashboard-sidebar.tsx:202-208` (handleLogout → `logout()` Server-Action aus `src/app/login/actions.ts:47`), (c) Touch-Target >=44px konsistent zu V7.4 DEC-151, (d) auch auf `/dashboard/diagnose/start`, `/dashboard/diagnose/run/[id]`, `/dashboard/diagnose/[id]/bericht` pruefen ob Logout-Erreichbarkeit gegeben ist (vermutlich gleiche Luecke). **Reuse-Pflicht**: bestehende `logout()` Server-Action + LogOut-Icon aus lucide-react + Style-Guide-V2 Tailwind-Default-Stil. **Out of Scope**: vollstaendige Sidebar fuer Partner-Mandant (nicht passend zu schlankem Welcome-Konzept), Profile-Settings, Sprach-Switch. Aufwand ~1-2h Code + Visual-Verify in 3 Viewports.",
+      "createdAt": "2026-05-24"
+    },
+    {
       "id": "BL-121",
       "title": "V7.4 Optional: Touch-Target-Audit-Skript als CI-Schutz (pendant zu audit-editable-text-coverage.mjs)",
       "type": "improvement",
