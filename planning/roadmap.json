@@ -129,7 +129,7 @@
     {
       "id": "v7-1",
       "name": "V7.1",
-      "status": "active",
+      "status": "released",
       "summary": "**Smart-Split 2026-05-21: V7.1-Restscope auf SLC-136..138 + SLC-142 reduziert** (Edit-Foundation + EditableText + Helper-Texts + Back-Link-Quick-Win). SLC-139 Telemetrie + SLC-141 Bericht-Email-PDF nach V7.2 verschoben (Business-Impact-Buendel: Datenbasis + Conversion-Hebel). SLC-140 Look-Polish nach V7.3 verschoben (rein visuell, blockiert nichts). Begruendung: V7-Funnel live, V7.1 = Polish-Iteration mit Helper-Texts als Haupt-Wert (LIVE 2026-05-21 RPT-323). SLC-142 als 15-30min Quick-Win schliesst V7.1 ab. (Vorheriger Scope-Anker: 7 Features FEAT-055..061 mit Reihenfolge SLC-136..142. Detail-Historie siehe STATE.md.) **Internal-Test-Mode bleibt** bis Pre-Production-Compliance-Gate. **Naechster Schritt V7.1**: /backend SLC-142 (Back-Link Legal-Pages, ~30min).",
       "order": 17.5
     },

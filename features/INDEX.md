@@ -135,10 +135,10 @@ V7-Scope (User-Entscheidung 2026-05-18 nach V6.4 STABLE-Bestaetigung RPT-295): B
 
 | ID | Feature | Status | Spec | Created |
 |----|---------|--------|------|---------|
-| FEAT-051 | Public-Signup-API + Service-Key-Auth + Rate-Limit | in_progress | [Spec](FEAT-051-public-signup-api-service-key-rate-limit.md) | 2026-05-18 |
-| FEAT-052 | Partner-Slug + Public-Resolve-Endpoint | done | [Spec](FEAT-052-partner-slug-public-resolve.md) | 2026-05-18 |
-| FEAT-053 | Self-Signup Email-Verify + Auto-Tenant-Provisioning | in_progress | [Spec](FEAT-053-self-signup-email-verify-auto-provisioning.md) | 2026-05-18 |
-| FEAT-054 | Pen-Test-Suite-Erweiterung Public-Signup-Caller + Anti-Abuse-Verifikation | planned | [Spec](FEAT-054-pen-test-public-signup-anti-abuse.md) | 2026-05-18 |
+| FEAT-051 | Public-Signup-API + Service-Key-Auth + Rate-Limit | deployed | [Spec](FEAT-051-public-signup-api-service-key-rate-limit.md) | 2026-05-18 |
+| FEAT-052 | Partner-Slug + Public-Resolve-Endpoint | deployed | [Spec](FEAT-052-partner-slug-public-resolve.md) | 2026-05-18 |
+| FEAT-053 | Self-Signup Email-Verify + Auto-Tenant-Provisioning | deployed | [Spec](FEAT-053-self-signup-email-verify-auto-provisioning.md) | 2026-05-18 |
+| FEAT-054 | Pen-Test-Suite-Erweiterung Public-Signup-Caller + Anti-Abuse-Verifikation | deployed | [Spec](FEAT-054-pen-test-public-signup-anti-abuse.md) | 2026-05-18 |
 
 ## V7.1 Features (Inline-Text-Override-Foundation + Helper-Texts + Back-Link)
 
@@ -146,10 +146,10 @@ V7-Scope (User-Entscheidung 2026-05-18 nach V6.4 STABLE-Bestaetigung RPT-295): B
 
 | ID | Feature | Status | Spec | Created |
 |----|---------|--------|------|---------|
-| FEAT-055 | Inline-Text-Override-Foundation (Tabelle + Resolver + Audit + RLS) | done | [Spec](FEAT-055-inline-text-override-foundation.md) | 2026-05-20 |
-| FEAT-056 | EditableText-Komponente + Text-Migration A/D/E/F | done | [Spec](FEAT-056-editabletext-component-text-migration.md) | 2026-05-20 |
-| FEAT-057 | Helper-Texts mit Beispieldefinitionen pro Frage | done | [Spec](FEAT-057-helper-texts-questions.md) | 2026-05-20 |
-| FEAT-061 | Back-Link auf /datenschutz + /impressum | done | [Spec](FEAT-061-back-link-legal-pages.md) | 2026-05-20 |
+| FEAT-055 | Inline-Text-Override-Foundation (Tabelle + Resolver + Audit + RLS) | deployed | [Spec](FEAT-055-inline-text-override-foundation.md) | 2026-05-20 |
+| FEAT-056 | EditableText-Komponente + Text-Migration A/D/E/F | deployed | [Spec](FEAT-056-editabletext-component-text-migration.md) | 2026-05-20 |
+| FEAT-057 | Helper-Texts mit Beispieldefinitionen pro Frage | deployed | [Spec](FEAT-057-helper-texts-questions.md) | 2026-05-20 |
+| FEAT-061 | Back-Link auf /datenschutz + /impressum | deployed | [Spec](FEAT-061-back-link-legal-pages.md) | 2026-05-20 |
 
 ## V7.2 Features (Funnel-Datenbasis + Conversion-Hebel)
 
