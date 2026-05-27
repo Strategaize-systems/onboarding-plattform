@@ -1199,6 +1199,26 @@
       "version": "V7",
       "description": "Operativer Abschluss V7 vor /qa Gesamt-Pass. Cleanup-Endpoint /api/cron/pending-signup-cleanup (CRON_SECRET-Header + UPDATE expired Pending-Rows + DELETE > 7-Tage alte expired Rows + Audit-Log). 5 Vitest (Auth-Reject + Expire-Update + Delete-> 7-days + Idempotent-Second-Call + Audit-Log-Probe). Coolify-Scheduled-Task pending-signup-cleanup-hourly (0 * * * *) Setup (User-Pflicht inkl. Tabellen-Doku + Cron-Verifikation). ENV-Setup PUBLIC_SIGNUP_SERVICE_KEY (32-byte hex Random direkt-Wert per feedback_env_value_not_command, BEIDE Coolify-Resources Onboarding + IS, User-Pflicht) + PUBLIC_SIGNUP_BLOCKED_EMAIL_DOMAINS (Default 10 Wegwerf-Domains). IONOS-Postfach-Check onboarding@strategaize.de (DEC-134, User-Pflicht, Pre-Deploy-Smoke-Send-Test). Live-Smoke-Plan dokumentiert in docs/V7_LIVE_SMOKE_PLAN.md (13 Schritte, Cross-System-Smoke IS->Onboarding). 6 MTs ~3.5h Agent-Time + ~30min User-Action = ~0.5d total. Reuse: DEC-059 Coolify-Cron-Pattern + V4.2 capture-reminders-daily + verifyCronSecret-Helper. Sub-Item von BL-098. Pre-Condition fuer /qa V7 + /deploy V7. SLC-135.",
       "createdAt": "2026-05-18"
+    },
+    {
+      "id": "BL-123",
+      "title": "SLC-353 OP KI-Workspace (Pattern P-010 portieren)",
+      "type": "feature",
+      "priority": "medium",
+      "status": "open",
+      "version": "V7.6",
+      "description": "Pattern P-010 KI-Workspace-Hybrid aus Business System V6.6 SLC-661..666 ins OP portieren. 5 vordefinierte Berichts-Buttons fuer Mandanten-Kontext (z.B. 'Welche SOPs habe ich schon?', 'Was fehlt mir fuer Exit-Reife?', 'Welche Workarounds nutzen meine Mitarbeiter?'). Freie Frage-Box mit Whisper-Voice-Input (wiederverwendet aus V3 SLC-025..032). Streaming-Antwort aus Bedrock eu-central-1 mit Cost-Tracking in ai_cost_ledger. RAG-Quellen: OP-eigene Mandanten-Daten (RLS-isoliert) PLUS IS-Knowledge-API (ENV STRATEGAIZE_KNOWLEDGE_API_BASE_URL + STRATEGAIZE_KNOWLEDGE_SERVICE_KEY). Acceptance: Mandant kann Workspace aufrufen, 5 vordefinierte Berichte funktionieren, freie Frage liefert sinnvolle Antwort (Mix aus eigenen Daten + IS-Foundation-Knowledge), Voice-Input funktioniert, Cost-Tracking. Aufwand 2-3 Tage. Pattern P-010 + P-003 + P-004 + P-002 + P-074. Pre-Condition: IS V3.5 SLC-352 (Knowledge-API) live. Anwalt-Gate: keiner, da nur Foundation-Knowledge + RLS-isolierte Mandanten-Daten.",
+      "createdAt": "2026-05-27"
+    },
+    {
+      "id": "BL-124",
+      "title": "SLC-354 OP->IS Verdichtungs-Cron mit Consent + PII-Redaction",
+      "type": "feature",
+      "priority": "medium",
+      "status": "open",
+      "version": "V7.6",
+      "description": "Daily Cron 03:00, der verdichtete Wissens-Bausteine nach IS pusht. Pre-Conditions: (1) aktiver Mandanten-Consent type='knowledge_aggregation' (Erweiterung lead_push_consent-Tabelle aus V6 SLC-106), (2) Berater-Review-Freigabe (neuer Flag released_for_knowledge_aggregation in knowledge_unit, Erweiterung des Berater-Review-Workflows aus V4.1 SLC-041..043), (3) zweiter PII-Redaction-Pass via V5 SLC-076..078-Worker. HTTP-POST zu IS-Knowledge-API mit Service-Key. aggregation_level='pseudonymized', pii_redacted=true. Idempotenz via Hash (gleicher Inhalt nicht zweimal). ENV: STRATEGAIZE_KNOWLEDGE_API_BASE_URL, STRATEGAIZE_KNOWLEDGE_SERVICE_KEY, KNOWLEDGE_PUSH_CRON_SECRET, KNOWLEDGE_PUSH_ENABLED (default false, bis Anwalt). Cron-Route: /api/cron/push-to-intelligence-studio. Audit: in OP wird dokumentiert was raus ging, in IS wird dokumentiert was rein kam. Acceptance: Test-Mandant mit Consent + freigegebenen Items -> 5 Items in IS sichtbar. Test-Mandant ohne Consent -> 0 Items uebertragen. PII-Item wird vor Uebermittlung redacted. Aufwand 1-2 Tage. Pattern P-020 + P-032 + P-043 + P-058. **Anwalt-Gate: Live-Schaltung erst nach DSGVO-Sign-off**. Bauen + Test-Modus erlaubt ohne Anwalt.",
+      "createdAt": "2026-05-27"
     }
   ]
 }
