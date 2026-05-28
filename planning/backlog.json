@@ -1219,6 +1219,26 @@
       "version": "V7.6",
       "description": "Daily Cron 03:00, der verdichtete Wissens-Bausteine nach IS pusht. Pre-Conditions: (1) aktiver Mandanten-Consent type='knowledge_aggregation' (Erweiterung lead_push_consent-Tabelle aus V6 SLC-106), (2) Berater-Review-Freigabe (neuer Flag released_for_knowledge_aggregation in knowledge_unit, Erweiterung des Berater-Review-Workflows aus V4.1 SLC-041..043), (3) zweiter PII-Redaction-Pass via V5 SLC-076..078-Worker. HTTP-POST zu IS-Knowledge-API mit Service-Key. aggregation_level='pseudonymized', pii_redacted=true. Idempotenz via Hash (gleicher Inhalt nicht zweimal). ENV: STRATEGAIZE_KNOWLEDGE_API_BASE_URL, STRATEGAIZE_KNOWLEDGE_SERVICE_KEY, KNOWLEDGE_PUSH_CRON_SECRET, KNOWLEDGE_PUSH_ENABLED (default false, bis Anwalt). Cron-Route: /api/cron/push-to-intelligence-studio. Audit: in OP wird dokumentiert was raus ging, in IS wird dokumentiert was rein kam. Acceptance: Test-Mandant mit Consent + freigegebenen Items -> 5 Items in IS sichtbar. Test-Mandant ohne Consent -> 0 Items uebertragen. PII-Item wird vor Uebermittlung redacted. Aufwand 1-2 Tage. Pattern P-020 + P-032 + P-043 + P-058. **Anwalt-Gate: Live-Schaltung erst nach DSGVO-Sign-off**. Bauen + Test-Modus erlaubt ohne Anwalt.",
       "createdAt": "2026-05-27"
+    },
+    {
+      "id": "BL-125",
+      "title": "V7.7 SLC-147 MT-1: ISSUE-082 Verify-Signup-Pages-Polish (3 Components — shadcn-Button + Footer-Single-Source)",
+      "type": "fix",
+      "priority": "low",
+      "status": "in_progress",
+      "version": "V7.7",
+      "description": "ISSUE-082 (Low) resolved via SLC-147 MT-1. Aus V7.4-SLC-143-Pre-Audit (RPT-342) bekannt: 3 ErrorPage-Components in src/app/auth/verify-signup/_components/ haben Custom-styled Link h=36 statt shadcn-Button h=44 (DEC-151-Violation) + Inline-Footer-Duplikat (StrategaizePoweredFooter rendert ohnehin global via app/layout.tsx). Fix: ErrorPage.tsx + InvalidLinkPage.tsx (Custom-Link -> Button asChild + Inline-Footer raus) + ExpiredLinkPage.tsx (nur Inline-Footer raus). Aufwand ~15-20min. Quality-Gates: tsc + ESLint EXIT=0. Live-Smoke nach Master-Merge: 3 URL-Patterns mit dummy/invalid Token.",
+      "createdAt": "2026-05-28"
+    },
+    {
+      "id": "BL-126",
+      "title": "V7.7 SLC-147 MT-2: ISSUE-077 Evidence-Upload-Route Helper-Extraktion (validation.ts)",
+      "type": "fix",
+      "priority": "low",
+      "status": "in_progress",
+      "version": "V7.7",
+      "description": "ISSUE-077 (Low) resolved via SLC-147 MT-2. Aus V7-SLC-135-/backend (RPT-307 F-1) bekannt: route.ts in src/app/api/capture/[sessionId]/evidence/upload/ exportiert 5 Helper-Symbole (ALLOWED_MIME_TYPES, MAX_FILE_SIZE, validateMimeType, validateFileSize, sanitizeFilename) — Next 16 Webpack-strict-validation rejected diese (nur POST/GET/dynamic etc. sind valid Route-Exports). Production-Coolify nutzt Turbopack (default), wo es passt — kein Production-Block. Aber Webpack-Build-Gate lokal pre-existing kaputt. Fix: 5 Symbole in validation.ts auslagern, route.ts importiert von ./validation, upload-validation.test.ts Import-Pfad anpassen. Aufwand ~5-10min. Quality-Gates: tsc + ESLint + Vitest upload-validation gruen.",
+      "createdAt": "2026-05-28"
     }
   ]
 }

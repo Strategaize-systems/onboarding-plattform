@@ -796,6 +796,14 @@ Polish-Iteration nach V7.4-Release. SLC-144 + SLC-145 + SLC-146 als Quick-Wins d
 | SLC-145 | Admin-Demo-Mode (strategaize_admin sieht Mandanten-Funnel inkl. EditableText-Pencils) | — | done | High | 2026-05-25 |
 | SLC-146 | Partner-Client Mandant-Header + Logout-Button | BL-122 / ISSUE-083 | done | High | 2026-05-25 |
 
+## V7.7 Slices (Polish-Sammler)
+
+Polish-Iteration nach V7.5-Release. Zwei dokumentierte Low-Severity-Issues aus KNOWN_ISSUES (ISSUE-082 Verify-Signup-Pages-Polish, ISSUE-077 Evidence-Route-Helper-Extraction). V7.6 ist mit Knowledge Foundation OP belegt (Cross-Repo IS V3.5 + BS V8.7), V7.7 trennt Polish sauber davon.
+
+| ID | Slice | Feature | Status | Priority | Created |
+|----|-------|---------|--------|----------|---------|
+| SLC-147 | [V7.7 Polish-Sammler (Verify-Signup-Pages + Evidence-Route-Helper-Extraction)](SLC-147-v77-polish-sammler.md) | ISSUE-082 + ISSUE-077 | planned | Low | 2026-05-28 |
+
 ### V7.1/V7.2/V7.3/V7.4 Worktree-Pflicht (SaaS-Mode)
 
 Alle Slices nutzen Worktree-Isolation:

@@ -176,6 +176,13 @@
       "order": 19
     },
     {
+      "id": "v7-7",
+      "name": "V7.7",
+      "status": "active",
+      "summary": "**Polish-Sammler #2 — gestartet 2026-05-28.** Direkter Followup nach V7.5-Release 2026-05-25 als Quick-Win. 1 Slice SLC-147 mit 3 MTs (~1-1.5h Code-Side): ISSUE-082 Verify-Signup-Pages-Polish (3 Components: ErrorPage + InvalidLinkPage + ExpiredLinkPage — Custom-styled Link h=36 -> shadcn-Button asChild via DEC-151, Inline-Footer-Duplikate raus weil StrategaizePoweredFooter global via app/layout.tsx rendert) + ISSUE-077 Evidence-Upload-Route Helper-Extraktion (5 Symbole aus route.ts in validation.ts auslagern fuer Next 16 Webpack-strict-validation). **Pre-Conditions**: V7.5 RELEASED 2026-05-25 (REL-024). **Out of Scope**: ISSUE-073 IMPRESSUM_VAT (externe User-Pflicht, BTW-Nr. besorgen), andere Auth-Pages-Polish, shadcn-Button-Style-Aenderungen. **Reihenfolge**: V7.7 vor V7.6 Knowledge Foundation, weil V7.6 externe Pre-Conditions hat (IS V3.5 SLC-352 Knowledge-API + Anwalt-Sign-off fuer SLC-354), V7.7 hat 0 Pre-Conditions. **Worktree**: slc-147-v77-polish (SaaS-Mode Pflicht).",
+      "order": 17.97
+    },
+    {
       "id": "v7-6",
       "name": "V7.6",
       "status": "planned",
