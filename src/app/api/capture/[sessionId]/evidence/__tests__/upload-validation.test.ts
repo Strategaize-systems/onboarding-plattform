@@ -5,7 +5,7 @@ import {
   sanitizeFilename,
   ALLOWED_MIME_TYPES,
   MAX_FILE_SIZE,
-} from "../upload/route";
+} from "../upload/validation";
 
 describe("Evidence Upload Validation", () => {
   describe("validateMimeType", () => {
