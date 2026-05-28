@@ -30,6 +30,7 @@ import { EditableText } from "@/components/text-override/EditableText";
 import { HeroSection } from "./components/HeroSection";
 import { ThreeStepsBlock } from "./components/ThreeStepsBlock";
 import { StartCTA } from "./components/StartCTA";
+import { AdminDemoBanner } from "@/components/admin/AdminDemoBanner";
 
 export const metadata = {
   title: "Strategaize-Diagnose | Onboarding",
@@ -59,11 +60,13 @@ export default async function DiagnoseStartPage() {
     .single();
 
   // Direkt-Kunden-Hinweis (kein partner_client → Diagnose nicht verfuegbar).
-  if (
-    profile.role !== "tenant_admin" ||
-    !tenantRow ||
-    tenantRow.tenant_kind !== "partner_client"
-  ) {
+  // V7.5 SLC-145: strategaize_admin mit zugewiesenem partner_client-Tenant
+  // wird wie tenant_admin behandelt (Demo-Mode mit EditableText-Pencils).
+  const isPartnerClientMember =
+    (profile.role === "tenant_admin" || profile.role === "strategaize_admin") &&
+    !!tenantRow &&
+    tenantRow.tenant_kind === "partner_client";
+  if (!isPartnerClientMember) {
     const partnerOrgIdGate = await resolvePartnerOrgIdForTenant(
       supabase,
       profile.tenant_id,
@@ -143,6 +146,7 @@ export default async function DiagnoseStartPage() {
 
   return (
     <TextOverrideProvider partnerOrgId={partnerOrgId} locale="de">
+      <AdminDemoBanner role={profile.role} tenantName={tenantRow?.name as string | undefined} />
       <main className="mx-auto max-w-4xl space-y-8 px-4 py-10 sm:px-6 sm:py-12">
         {branding.displayName ? (
           <div className="flex items-center gap-3">

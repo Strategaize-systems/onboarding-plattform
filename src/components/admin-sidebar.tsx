@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { logout } from "@/app/login/actions";
-import { Users, FileText, BookOpen, ClipboardCheck, LogOut, Menu, X, Shield, Building2, BarChart3, Pencil, HelpCircle } from "lucide-react";
+import { Users, FileText, BookOpen, ClipboardCheck, LogOut, Menu, X, Shield, Building2, BarChart3, Pencil, HelpCircle, Eye } from "lucide-react";
 import { useState } from "react";
 
 const NAV_ITEMS = [
@@ -14,6 +14,7 @@ const NAV_ITEMS = [
   { href: "/admin/diagnose-funnel-analytics", label: "Funnel-Analytics", icon: BarChart3 },
   { href: "/admin/text-overrides", label: "Text-Overrides", icon: Pencil },
   { href: "/admin/templates/partner-diagnostic", label: "Helper-Texts", icon: HelpCircle },
+  { href: "/dashboard", label: "Mandanten-Demo", icon: Eye },
   { href: "/admin/handbook", label: "Handbuch", icon: BookOpen },
 ];
 

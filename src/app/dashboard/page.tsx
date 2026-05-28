@@ -9,6 +9,7 @@ import { BlockReviewStatusCard } from "@/components/cockpit/BlockReviewStatusCar
 import { InactiveEmployeesCard } from "@/components/cockpit/InactiveEmployeesCard";
 import { WalkthroughReviewStatusCard } from "@/components/cockpit/WalkthroughReviewStatusCard";
 import { PartnerClientWelcomeBlock } from "@/components/dashboard/PartnerClientWelcomeBlock";
+import { AdminDemoBanner } from "@/components/admin/AdminDemoBanner";
 import { resolveBrandingForTenant, STRATEGAIZE_DEFAULT_BRANDING } from "@/lib/branding/resolve";
 import { DashboardClient } from "./dashboard-client";
 import { StatusCockpit } from "./StatusCockpit";
@@ -43,17 +44,24 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
-  if (profile.role === "strategaize_admin") {
+  // V7.5 SLC-145 — Admin-Demo-Mode-Hook.
+  // Wenn strategaize_admin keinen tenant_id zugeordnet hat: weiter ins
+  // Admin-Cockpit. Wenn er einen tenant_id hat (Demo-Verortung in einem
+  // Mandanten-Tenant via Operativ-DB-Update), faellt er in den
+  // partner_client-Branch unten und sieht Mandanten-Funnel inkl. EditableText-
+  // Pencils. Damit Admin-Sicht ohne separate Impersonation/View-As-Mechanik.
+  if (profile.role === "strategaize_admin" && !profile.tenant_id) {
     redirect("/admin");
   }
 
   // V6 SLC-103 MT-7 — Mandanten-Tenant-Branch.
   // Mandanten unter Partner-Steuerberatern (tenant_kind='partner_client') sehen
   // einen schlanken Welcome + Diagnose-Karten-Block, KEIN V4/V5-Cockpit.
-  // Branch greift ausschliesslich fuer tenant_admin in partner_client-Tenants;
+  // V7.5 SLC-145: strategaize_admin mit zugewiesenem partner_client-Tenant
+  // landet auch hier (Demo-Mode). EditableText-Pencils werden fuer admin sichtbar.
   // Direkt-Kunden (tenant_kind='direct_client') behalten ihr bestehendes
   // Cockpit unveraendert (regression-frei).
-  if (profile.role === "tenant_admin" && profile.tenant_id) {
+  if ((profile.role === "tenant_admin" || profile.role === "strategaize_admin") && profile.tenant_id) {
     const admin = createAdminClient();
     const { data: tenantRow } = await admin
       .from("tenants")
@@ -157,15 +165,18 @@ export default async function DashboardPage() {
       }
 
       return (
-        <div className="mx-auto max-w-3xl px-6 py-12">
-          <PartnerClientWelcomeBlock
-            mandantCompanyName={tenantRow.name as string}
-            partnerDisplayName={partnerDisplayName}
-            partnerLogoUrl={branding.logoUrl}
-            ichWillMehrCaptureSessionId={ichWillMehrCaptureSessionId}
-            ichWillMehrAuditStatus={ichWillMehrAuditStatus}
-          />
-        </div>
+        <>
+          <AdminDemoBanner role={profile.role} tenantName={tenantRow.name as string} />
+          <div className="mx-auto max-w-3xl px-6 py-12">
+            <PartnerClientWelcomeBlock
+              mandantCompanyName={tenantRow.name as string}
+              partnerDisplayName={partnerDisplayName}
+              partnerLogoUrl={branding.logoUrl}
+              ichWillMehrCaptureSessionId={ichWillMehrCaptureSessionId}
+              ichWillMehrAuditStatus={ichWillMehrAuditStatus}
+            />
+          </div>
+        </>
       );
     }
   }

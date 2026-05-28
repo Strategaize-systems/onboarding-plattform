@@ -22,6 +22,7 @@ import { resolveBrandingForTenant, STRATEGAIZE_DEFAULT_BRANDING } from "@/lib/br
 import { BerichtRenderer } from "@/components/diagnose/BerichtRenderer";
 import { DiagnoseSessionCompletedBeacon } from "@/components/diagnose/DiagnoseSessionCompletedBeacon";
 import { TextOverrideProvider } from "@/components/text-override/Provider";
+import { AdminDemoBanner } from "@/components/admin/AdminDemoBanner";
 import { resolvePartnerOrgIdForTenant } from "@/lib/text-override/partner-org";
 import type { TemplateBlock } from "@/workers/condensation/light-pipeline";
 
@@ -173,6 +174,10 @@ export default async function BerichtPage(props: PageProps) {
 
   return (
     <TextOverrideProvider partnerOrgId={partnerOrgId} locale="de">
+      <AdminDemoBanner
+        role={profile.role}
+        tenantName={(mandantTenantRes.data?.name as string | undefined) ?? null}
+      />
       <DiagnoseSessionCompletedBeacon captureSessionId={sessionId} />
       <BerichtRenderer
         captureSessionId={sessionId}
