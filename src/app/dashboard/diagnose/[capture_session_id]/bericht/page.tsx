@@ -23,6 +23,7 @@ import { BerichtRenderer } from "@/components/diagnose/BerichtRenderer";
 import { DiagnoseSessionCompletedBeacon } from "@/components/diagnose/DiagnoseSessionCompletedBeacon";
 import { TextOverrideProvider } from "@/components/text-override/Provider";
 import { AdminDemoBanner } from "@/components/admin/AdminDemoBanner";
+import { MandantHeader } from "@/components/dashboard/MandantHeader";
 import { resolvePartnerOrgIdForTenant } from "@/lib/text-override/partner-org";
 import type { TemplateBlock } from "@/workers/condensation/light-pipeline";
 
@@ -45,7 +46,7 @@ export default async function BerichtPage(props: PageProps) {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id, tenant_id, role")
+    .select("id, tenant_id, role, email")
     .eq("id", user.id)
     .single();
   if (!profile) redirect("/login");
@@ -178,6 +179,7 @@ export default async function BerichtPage(props: PageProps) {
         role={profile.role}
         tenantName={(mandantTenantRes.data?.name as string | undefined) ?? null}
       />
+      <MandantHeader email={profile.email} role={profile.role} />
       <DiagnoseSessionCompletedBeacon captureSessionId={sessionId} />
       <BerichtRenderer
         captureSessionId={sessionId}

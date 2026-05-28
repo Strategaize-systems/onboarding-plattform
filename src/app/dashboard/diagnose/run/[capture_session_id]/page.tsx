@@ -15,6 +15,7 @@ import { QuestionFlow } from "@/components/diagnose/QuestionFlow";
 import { DiagnoseTelemetryProvider } from "@/components/diagnose/DiagnoseTelemetryProvider";
 import { TextOverrideProvider } from "@/components/text-override/Provider";
 import { AdminDemoBanner } from "@/components/admin/AdminDemoBanner";
+import { MandantHeader } from "@/components/dashboard/MandantHeader";
 import { resolvePartnerOrgIdForTenant } from "@/lib/text-override/partner-org";
 import { EditableText } from "@/components/text-override/EditableText";
 import type {
@@ -40,7 +41,7 @@ export default async function DiagnoseRunPage(props: PageProps) {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id, tenant_id, role")
+    .select("id, tenant_id, role, email")
     .eq("id", user.id)
     .single();
   if (!profile) redirect("/login");
@@ -93,6 +94,7 @@ export default async function DiagnoseRunPage(props: PageProps) {
     <TextOverrideProvider partnerOrgId={partnerOrgId} locale="de">
       <DiagnoseTelemetryProvider captureSessionId={sessionId}>
         <AdminDemoBanner role={profile.role} tenantName={tenantRow.name as string} />
+        <MandantHeader email={profile.email} role={profile.role} />
         <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
           <header className="mb-6 sm:mb-8">
             <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">

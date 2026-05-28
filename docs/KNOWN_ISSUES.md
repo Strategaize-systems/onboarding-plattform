@@ -1,8 +1,9 @@
 # Known Issues
 
 ### ISSUE-083 — Partner-Mandant-Welcome (`tenant_kind='partner_client'`) hat keinen Logout-Button
-- Status: open
+- Status: resolved
 - Severity: High
+- Resolution: V7.5 SLC-146 (2026-05-25) — MandantHeader-Component (sticky-top, Email + Logout-Button, Touch-Target >=44px konsistent zu V7.4 DEC-151) auf 5 Mandanten-Pages eingebaut (Welcome + Diagnose-Start + Direkt-Kunden-Gate + Run + Bericht + Bericht-Pending failed/submitted). Pattern aus DashboardSidebar.handleLogout 1:1 portiert. Header rendert nicht fuer strategaize_admin (dort AdminDemoBanner mit Zurueck-Link).
 - Area: V6 / SLC-103 MT-7 Partner-Mandant-Branch / src/app/dashboard/page.tsx
 - Summary: User-Befund 2026-05-24 (Live auf `https://onboarding.strategaizetransition.com/dashboard` als Partner-Mandant "Privat" unter "QA Steuerberater Demo"). Die schlanke Welcome-Page fuer partner_client-Tenants nutzt den `DashboardClient`-Wrapper nicht und hat damit keine `DashboardSidebar`. Die existierende `logout()`-Server-Action aus `src/app/login/actions.ts:47` wird in `DashboardSidebar.tsx:202-208` nur in Direct-Client/Employee-Flows aufgerufen. Mandant sieht nur Welcome + Diagnose-Karten + Footer (Datenschutz/Impressum/Branding) — **kein sichtbarer Weg zum Abmelden**.
 - Impact: Compliance-/UX-Bug. Mandant muss F12-Cookies-Loeschen oder andere Workarounds nutzen. ISO27001-/DSGVO-relevant fuer ersten echten Pilot-Partner-Onboarding. Auch auf Folge-Pages (Diagnose-Start, Run, Bericht) vermutlich gleiche Luecke — muss in BL-122-Scope verifiziert werden.

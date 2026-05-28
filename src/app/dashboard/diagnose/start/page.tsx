@@ -31,6 +31,7 @@ import { HeroSection } from "./components/HeroSection";
 import { ThreeStepsBlock } from "./components/ThreeStepsBlock";
 import { StartCTA } from "./components/StartCTA";
 import { AdminDemoBanner } from "@/components/admin/AdminDemoBanner";
+import { MandantHeader } from "@/components/dashboard/MandantHeader";
 
 export const metadata = {
   title: "Strategaize-Diagnose | Onboarding",
@@ -47,7 +48,7 @@ export default async function DiagnoseStartPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id, tenant_id, role")
+    .select("id, tenant_id, role, email")
     .eq("id", user.id)
     .single();
   if (!profile) redirect("/login");
@@ -73,6 +74,7 @@ export default async function DiagnoseStartPage() {
     );
     return (
       <TextOverrideProvider partnerOrgId={partnerOrgIdGate} locale="de">
+        <MandantHeader email={profile.email} role={profile.role} />
         <main className="mx-auto max-w-2xl px-6 py-16">
           <Card>
             <CardHeader>
@@ -147,6 +149,7 @@ export default async function DiagnoseStartPage() {
   return (
     <TextOverrideProvider partnerOrgId={partnerOrgId} locale="de">
       <AdminDemoBanner role={profile.role} tenantName={tenantRow?.name as string | undefined} />
+      <MandantHeader email={profile.email} role={profile.role} />
       <main className="mx-auto max-w-4xl space-y-8 px-4 py-10 sm:px-6 sm:py-12">
         {branding.displayName ? (
           <div className="flex items-center gap-3">

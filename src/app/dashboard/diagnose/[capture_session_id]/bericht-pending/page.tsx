@@ -18,6 +18,7 @@ import { TextOverrideProvider } from "@/components/text-override/Provider";
 import { resolvePartnerOrgIdForTenant } from "@/lib/text-override/partner-org";
 import { PendingState } from "./components/PendingState";
 import { ErrorState } from "../bericht/components/ErrorState";
+import { MandantHeader } from "@/components/dashboard/MandantHeader";
 
 interface PageProps {
   params: Promise<{ capture_session_id: string }>;
@@ -38,7 +39,7 @@ export default async function BerichtPendingPage(props: PageProps) {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id, tenant_id, role")
+    .select("id, tenant_id, role, email")
     .eq("id", user.id)
     .single();
   if (!profile) redirect("/login");
@@ -68,6 +69,7 @@ export default async function BerichtPendingPage(props: PageProps) {
   if (session.status === "failed") {
     return (
       <TextOverrideProvider partnerOrgId={partnerOrgId} locale="de">
+        <MandantHeader email={profile.email} role={profile.role} />
         <main className="mx-auto max-w-2xl px-6 py-16">
           <ErrorState
             titleKeyPath="diagnose.bericht_pending.failed.title"
@@ -88,6 +90,7 @@ export default async function BerichtPendingPage(props: PageProps) {
   // status='submitted' → Polling im Client.
   return (
     <TextOverrideProvider partnerOrgId={partnerOrgId} locale="de">
+      <MandantHeader email={profile.email} role={profile.role} />
       <main className="mx-auto max-w-2xl px-6 py-16">
         <PendingState
           titleKeyPath="diagnose.bericht_pending.title"

@@ -786,6 +786,16 @@ SLC-139 vor SLC-141 — Telemetrie sammelt ab Tag 1 Daten zur Bewertung der Beri
 - **BL-120 (V7.4 FEAT-062 App-Shell + Auth-Pages-Polish)**: `open -> in_progress` 2026-05-23 mit /slice-planning. `-> done` 2026-05-24 nach MT-2..MT-5a + MT-6 Records (RPT-343). MT-5b Baseline-Generation deferred ins Slice-Schluss-/qa.
 - **BL-121 (V7.4 Touch-Target-Audit-Skript)**: `open -> wontfix` 2026-05-23 per DEC-154 (manueller Playwright-MCP-Audit reicht).
 
+## V7.5 Slices (Polish-Sammler)
+
+Polish-Iteration nach V7.4-Release. SLC-144 + SLC-145 + SLC-146 als Quick-Wins direkt aus User-Live-Test-Befunden 2026-05-25.
+
+| ID | Slice | Feature | Status | Priority | Created |
+|----|-------|---------|--------|----------|---------|
+| SLC-144 | Admin-Sidebar Quick-Fix (Text-Overrides + Helper-Texts Links + Empty-State-Erklaerung) | — | done | Medium | 2026-05-25 |
+| SLC-145 | Admin-Demo-Mode (strategaize_admin sieht Mandanten-Funnel inkl. EditableText-Pencils) | — | done | High | 2026-05-25 |
+| SLC-146 | Partner-Client Mandant-Header + Logout-Button | BL-122 / ISSUE-083 | done | High | 2026-05-25 |
+
 ### V7.1/V7.2/V7.3/V7.4 Worktree-Pflicht (SaaS-Mode)
 
 Alle Slices nutzen Worktree-Isolation:

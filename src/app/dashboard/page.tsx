@@ -10,6 +10,7 @@ import { InactiveEmployeesCard } from "@/components/cockpit/InactiveEmployeesCar
 import { WalkthroughReviewStatusCard } from "@/components/cockpit/WalkthroughReviewStatusCard";
 import { PartnerClientWelcomeBlock } from "@/components/dashboard/PartnerClientWelcomeBlock";
 import { AdminDemoBanner } from "@/components/admin/AdminDemoBanner";
+import { MandantHeader } from "@/components/dashboard/MandantHeader";
 import { resolveBrandingForTenant, STRATEGAIZE_DEFAULT_BRANDING } from "@/lib/branding/resolve";
 import { DashboardClient } from "./dashboard-client";
 import { StatusCockpit } from "./StatusCockpit";
@@ -167,6 +168,7 @@ export default async function DashboardPage() {
       return (
         <>
           <AdminDemoBanner role={profile.role} tenantName={tenantRow.name as string} />
+          <MandantHeader email={profile.email} role={profile.role} />
           <div className="mx-auto max-w-3xl px-6 py-12">
             <PartnerClientWelcomeBlock
               mandantCompanyName={tenantRow.name as string}
