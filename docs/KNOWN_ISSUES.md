@@ -33,9 +33,12 @@
 - Related: DEC-149, MIG-044, ARCHITECTURE.md V7.1-Section Zeile 6549+
 
 ### ISSUE-080 — OP SMTP_PASS Drift: V7-Self-Signup-Mails silent broken bei invaliden IONOS-Credentials
-- Status: open
+- Status: resolved
+- Resolution Date: 2026-05-25
 - Severity: High
 - Area: V7 / Operations / SMTP / src/lib/email.ts
+- Resolution: V7.5-Live-Verifikation 2026-05-25 via SSH + Python smtplib STARTTLS-Login gegen smtp.ionos.de:587 mit SMTP_USER + SMTP_PASS aus dem App-Container-ENV: `AUTH OK — SMTP credentials valid`. Letzter dokumentierter Fail im error_log: 2026-05-20 07:41 UTC (`Invalid login: 535 Authentication credentials invalid`) — seitdem 0 SMTP-Auth-Failures in 14d-Scan. Vermutlich SMTP_PASS in Coolify-ENV zwischenzeitlich aktualisiert. Self-Signup-Funnel End-to-End-Test (Cross-System via Intelligence-Studio-Landing) bleibt aufgeschoben fuer ersten realen Pilot-Partner-Onboarding.
+- Followup: BL-Item fuer V7.6+ — SMTP-Healthcheck als Coolify-Cron (taeglicher `transporter.verify()` + Audit-Log + Alert bei 535-Errors). Verhindert kuenftige Silent-Drifts.
 - Summary: 2026-05-20 im SLC-700 Cross-System Live-Smoke entdeckt (IS RPT-219 F-1). OP-Coolify-ENV `SMTP_PASS` war gegenueber IONOS invalid. Symptom: Insert-Pfad (pending_signup-Row) funktioniert, OP returnt 202 fuer den IS-Caller — aber Mail-Send wirft IONOS `535 Authentication credentials invalid`, sichtbar nur in App-Logs `[api/public/signup] Invalid login: 535 ...`. Keine User-erkennbare Fehlermeldung. User bekommt Success-State auf IS-Landing ("Bitte pruefen Sie Ihren Posteingang"), aber keine Mail.
 - Impact: V7-Self-Signup-Funnel ist **silent broken** wenn IONOS-Passwort rotiert oder Coolify-ENV-Drift. 202-trotz-Mail-Fail ist V7-Design-Entscheidung ([src/app/api/public/signup/route.ts:417-432](src/app/api/public/signup/route.ts#L417-L432) "best-effort, 202 trotzdem bei SMTP-Fail") — sinnvoll bei temporaerem Fail, gefaehrlich bei permanentem Credential-Drift. Pre-Live-Verification per V7_LIVE_SMOKE_PLAN.md MT-5 verlangt "Smoke-Send-Test gruen" → war hier nicht produktiv-aktuell.
 - Workaround: User-IONOS-Passwort-Rotation + Coolify-ENV-Update + Redeploy. In SLC-700-Live-Smoke 2026-05-20 erfolgreich angewendet (Container `app-bwkg80w04wgccos48gcws8cs-075328679729`).

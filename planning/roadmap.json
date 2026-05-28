@@ -157,8 +157,8 @@
     {
       "id": "v7-5",
       "name": "V7.5",
-      "status": "planned",
-      "summary": "**Polish-Sammler vor V8.** Mindestens BL-122 (Partner-Mandant-Logout-Button, ISSUE-083 [HIGH]) — Compliance-/UX-Bug aus User-Live-Test 2026-05-24. Pre-Conditions fuer Pilot-Partner-Onboarding. Optional weitere Lows: ISSUE-082 Verify-Signup-Custom-Anchor + Inline-Footer-Duplikat, ISSUE-077 Webpack-Build-Fail evidence/upload route.ts, ISSUE-073 IMPRESSUM_VAT-Platzhalter (User-Pflicht). Aufwand ~2-5h Code je nach Polish-Tiefe.",
+      "status": "released",
+      "summary": "**RELEASED 2026-05-25 — Polish-Sammler nach V7.4-STABLE-Window.** main HEAD `987b8bc` (3 Slices SLC-144 + SLC-145 + SLC-146). SLC-144 Admin-Sidebar-Quick-Fix: zwei fehlende Sidebar-Links Text-Overrides + Helper-Texts + verbesserter Empty-State-Hinweis auf /admin/text-overrides. SLC-145 Admin-Demo-Mode: strategaize_admin in Privat-Tenant verortet, /dashboard-Gate erweitert auf (tenant_admin OR strategaize_admin), AdminDemoBanner sticky-top auf 4 Mandanten-Pages — admin sieht jetzt Mandanten-Funnel inkl. EditableText-Pencils. SLC-146 (BL-122 / ISSUE-083 [HIGH] resolved): MandantHeader-Component mit Email + Logout-Button (Touch-Target >=44px DEC-151) auf 5 Mandanten-Pages, Pattern aus dashboard-sidebar.tsx 1:1 portiert. Plus IchWillMehrCard-Visual-Polish (Button-Alignment an EmptyState-Schwesterkarte). 0 Migrations, 0 neue Container, 0 neue ENVs. ISSUE-082 (Verify-Signup-Custom-Anchor) + ISSUE-077 (Webpack-Build-Fail evidence/upload) + ISSUE-073 (IMPRESSUM_VAT-Platzhalter) bleiben offen fuer V7.6+ oder later Polish-Sammler.",
       "order": 17.9
     },
     {
