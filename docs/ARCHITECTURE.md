@@ -1,7 +1,7 @@
 # Architecture
 
 ## Status
-V1-Architektur festgelegt am 2026-04-14.
+V1-Architektur festgelegt am 2026-04-14. Letzte Erweiterung: **V8 Mandanten-Report-Port** (2026-05-28, RPT-349) — Addendum-Section am Ende dieses Dokuments. 8 V8-DECs (DEC-157..164) in `docs/DECISIONS.md`, 1 geplante Migration (MIG-047 / Migration 102) in `docs/MIGRATIONS.md`. Vorherige Erweiterung: V7.4 (App-Shell Touch-Target, 2026-05-23, RPT-340).
 
 ## Architektur-Zusammenfassung
 
@@ -7166,3 +7166,238 @@ Unveraendert. Touch-Target-Polish hat 0 Auth-Logic-Implikationen.
 Diese V7.4-Section ergaenzt die V7.1-Section (`text_override`-Foundation) und V7-Section (Self-Signup-Backend). V7.2 (Telemetrie + Email-PDF) und V7.3 (Look-Polish) wurden historisch nicht als eigene Architektur-Sections eingepflegt — ihre Strukturentscheidungen liegen in DECs (DEC-128 ScoreVisual-Farben, DEC-150 EditableText-Pattern) und Slice-Files. V7.4 folgt der gleichen Disziplin: Decisions in DECISIONS.md, Implementation-Direction in dieser kompakten Section.
 
 **Naechster Schritt: /slice-planning SLC-143** — 1 Slice-File mit Micro-Task-Decomposition (6 MTs aus Implementation-Direction oben) + Acceptance-Criteria (aus FEAT-062 AC-1..8) + Aufwand-Schaetzung pro MT.
+
+---
+
+## V8 Architecture Addendum — Mandanten-Report-Port (RPT-349, 2026-05-28)
+
+### Architecture Summary
+
+V8 ist eine substantielle Iteration mit 4 neuen Features (FEAT-063..066) auf der bestehenden Capture-Session-Architektur. Es gibt **keine neuen Container**, **keine neuen Cron-Jobs**, **keine neuen Production-Dependencies**, **keine neuen Tabellen** — V8 erweitert ausschliesslich additiv:
+
+- 1 neue Template-Row in `public.template` (Migration 102 / MIG-047)
+- 1 neue JSONB-Spalte-Erweiterung in `capture_session.metadata.v8_report_snapshot` (additivum, keine Schema-Migration)
+- 1 neuer Renderer-Folder `src/lib/pdf/mandanten-report-v2/` (10-15 neue TS-Files)
+- 3 neue UI-Components fuer Antwort-Schemata (`HygieneAnswerPills`, `ReifeSkalaAnswer`, `ReflexionTextarea`)
+- 1 neue Pure-Function-Library `src/lib/diagnose/sui-engine.ts` (Score-Berechnung)
+
+Pattern-Reuse-Quote ueber 70%: V6.3 `runLightPipeline`-Worker-Branch + `template.metadata.usage_kind`-Switch (DEC-126), V7.2 `@react-pdf/renderer`-PDF-Stack (DEC-157), V7.2 `sendDiagnoseReportByEmail`-Email-Pfad (FEAT-060), V7.1 EditableText + HelperTextModal (FEAT-056 + FEAT-057), V6.3 `computeBlockScores`-Pure-Function-Pattern.
+
+Q-V8-A..H wurden als DEC-157..164 entschieden, alle 8 in `docs/DECISIONS.md`. Diese Section dokumentiert das Architektur-Delta + Data-Flow + Slice-Decomposition.
+
+### Main Components Affected
+
+| Component | Path | Change | Risk |
+|---|---|---|---|
+| Template-Seed | NEU `sql/migrations/102_v8_exit_readiness_teaser_template.sql` (MIG-047) | INSERT 1 Row mit 47 Fragen + Stufen-Lookup + Hausaufgaben-Lookup JSONB | L — idempotent via `ON CONFLICT (slug, version) DO UPDATE`, additiv |
+| SUI-Score-Engine | NEU `src/lib/diagnose/sui-engine.ts` (Pure-Functions) + `src/lib/diagnose/wheel-paths.ts` | 6 Pure-Functions: `computeModuleScores`, `computeSui`, `classifySui`, `mapModuleScoreToStufe`, `aggregateHausaufgaben`, `aggregateReflexion`, `selectThreeHebel` + `computeWheelPaths` | L — pure, deterministisch, Vitest-coverable |
+| Server-Action Finalize | NEU `src/lib/diagnose/actions.ts::finalizeMandantenReport` ODER Erweiterung des bestehenden V6.3-Pfads | Schreibt `capture_session.metadata.v8_report_snapshot` JSONB | L — additiv |
+| Worker-Branch | BESTEHEND `src/workers/condensation/` mit `template.metadata.usage_kind`-Switch erweitert | NEUE Branch fuer `usage_kind='mandanten_report_teaser_v1'` — ruft Finalize-Logik OHNE Bedrock (DEC-159) | L — DEC-126 Pattern-Reuse |
+| Fragebogen-UI Switch | `src/app/dashboard/diagnose/run/[id]/page.tsx` Branching auf `question.answer_schema_kind` | 4 Branchings: `choice_5` (Bestand V6.3), `hygiene_yes_partial_no`, `reife_skala_5`, `reflexion_freitext` | M — neue Antwort-Schemata muessen UX-clean integriert sein |
+| Antwort-UI-Components | NEU `src/components/diagnose/HygieneAnswerPills.tsx`, `ReifeSkalaAnswer.tsx`, `ReflexionTextarea.tsx` | 3 Style-Guide-V2 + Touch-Target-44px (DEC-151) + EditableText-konsumierend + HelperTextModal-konsumierend | M — Mobile-Layout-Pflicht |
+| PDF-Renderer V2 | NEU `src/lib/pdf/mandanten-report-v2/` (Folder-Modul) — Sub-Components: `cover.tsx`, `sui-hero.tsx`, `modul-profil.tsx`, `modul-page.tsx`, `wheel.tsx`, `hausaufgaben.tsx`, `hebel.tsx`, `reflexion.tsx`, `cta.tsx`, `styles.ts` + `index.ts::renderMandantenReportV2Pdf` | 17-Seiten-PDF, @react-pdf-Komponenten, Inline-SVG-Wheel via `computeWheelPaths` | M — Phase A/B-Split per [[feedback-slice-phase-a-b-split-for-large-slices]] |
+| Email-Versand-Branch | BESTEHEND `src/app/dashboard/diagnose/actions.ts::sendDiagnoseReportByEmail` (V7.2) | Erkennt `template.metadata.report_renderer='mandanten_report_v2'` und ruft V2-Renderer statt V1-Renderer | L — additivum, V6.3-Pfad unveraendert |
+| Template-Switcher-Resolution | NEU Server-Side in `/dashboard/diagnose/start/page.tsx` | Liest `partner_organization.metadata.default_template_slug ?? 'partner_diagnostic_v1'` + Founder-Override `?template_override=...` nur fuer strategaize_admin (DEC-158) | L — server-side guard |
+| V7.2 PDF-Renderer V1 | `src/lib/pdf/diagnose-report.tsx` (V6.3 6-Block-Variante) | **UNVERAENDERT** — strict no-touch | 0 |
+
+### Data Model
+
+Keine neue Tabelle, keine neue Spalte. Nur JSONB-Erweiterung in bestehenden Spalten:
+
+**`public.template` neue Row:**
+```
+slug='exit-readiness-teaser-v1', version=1
+metadata: {
+  usage_kind: 'mandanten_report_teaser_v1',
+  scoring_kind: 'sui_weighted',
+  report_renderer: 'mandanten_report_v2',
+  stufen_lookup: { m1: { s1: {was_es_bedeutet, unsere_empfehlung}, s2: {...}, ..., s5: {...} }, m2: {...}, ..., m9: {...} },
+  hausaufgaben_lookup: { 'M0.1': { nein: 'Was zu tun...', teilweise: '...' }, 'M0.2': {...}, ..., 'M0.5': {...} },
+  worum_es_geht: { m1: 'Skalierbares Produkt...', m2: '...', ..., m9: '...' },
+  gewichtung: { m1: 10, m2: 10, m3: 10, m4: 10, m5: 10, m6: 10, m7: 10, m8: 10, m9: 20 }
+}
+blocks: [
+  { modul_id: 'M0', name: 'Hygiene-Pruefung', questions: [{ id: 'M0.1', text: 'Vertraege...', answer_schema_kind: 'hygiene_yes_partial_no', helper_text?, examples_md? }, ..., 5 Fragen] },
+  { modul_id: 'M1', name: 'Skalierbares Produkt', questions: [{ id: 'F1.1', text: '...', answer_schema_kind: 'reife_skala_5', score_mapping: {1:0, 2:2, 3:5, 4:8, 5:10}, helper_text?, examples_md? }, ..., 4 Fragen] },
+  ... M2..M9 ...,
+  { modul_id: 'M10', name: 'Reflexion', questions: [{ id: 'R10.1.1', text: '...', answer_schema_kind: 'reflexion_freitext' }, ..., 5 Fragen] }
+]
+```
+
+**`public.capture_session.metadata` JSONB-Erweiterung (additivum, keine Migration):**
+```
+metadata.v8_report_snapshot: {
+  schemaVersion: 1,
+  finalizedAt: '2026-XX-XX',
+  moduleScores: { m1: 6.5, m2: 4.0, ..., m9: 8.0 },
+  sui: 67.0,
+  classification: { kind: 'tragbar', color: 'gruen', label: 'Tragbar', meaning: '...' },
+  stufenMapping: { m1: 3, m2: 2, ..., m9: 4 },
+  hausaufgaben: [{ frage_id: 'M0.1', status: 'nein', text: 'Vertraege...' }, ...],
+  reflexionen: [{ frage_id: 'R10.1.1', text: '...' }, ...],
+  hebel: [{ modul_id: 'm2', score: 4.0, stufe: 2, empfehlung: '...' }, ...]
+}
+```
+
+**`public.partner_organization.metadata` JSONB-Erweiterung (additivum):**
+```
+metadata.default_template_slug: 'exit-readiness-teaser-v1' | 'partner_diagnostic_v1'
+```
+
+Bestehende Tabellen (`capture_response`, `block_checkpoint`, `knowledge_unit`, `validation_layer`) bleiben unveraendert.
+
+### Data Flow / Request Flow
+
+```
+StB legt Partner-Org an / Onboarding-Wizard
+  → partner_organization.metadata.default_template_slug = 'exit-readiness-teaser-v1'
+
+Mandant bekommt Einladung (Co-Hosting-Plattform / Invite-Link)
+  → partner_client_mapping mit invitation_source='self_signup' oder 'invite_token'
+  → Tenant + auth.users + profiles angelegt (V7 Self-Signup oder V4.2 Invite-Flow)
+
+Mandant Login + /dashboard/diagnose/start
+  → Server-Side: partner_org.metadata.default_template_slug -> 'exit-readiness-teaser-v1'
+  → Founder-Override-Check: ?template_override= nur fuer strategaize_admin akzeptiert (DEC-158)
+  → Create capture_session mit template_id=exit-readiness-teaser-v1.v1
+
+/dashboard/diagnose/run/[id] (47 Fragen ueber 11 Module)
+  → QuestionFlow.tsx Branching auf question.answer_schema_kind:
+    * 'hygiene_yes_partial_no' -> <HygieneAnswerPills /> (5 Fragen Modul 0)
+    * 'reife_skala_5'           -> <ReifeSkalaAnswer />   (37 Fragen Module 1-9)
+    * 'reflexion_freitext'      -> <ReflexionTextarea /> (5 Fragen Modul 10)
+  → capture_response-Inserts per Block-Submit-Pattern (Bestand)
+  → diagnose_event Telemetrie pro Frage (FEAT-058-Reuse)
+
+Mandant: "Diagnose abschliessen"
+  → Server-Action finalizeMandantenReport(captureSessionId):
+    1. Read alle capture_response fuer Session
+    2. Pure-Function-Pipeline (DETERMINISTISCH, kein Bedrock-Call):
+       a. computeModuleScores(answers, template) -> { m1, ..., m9 }
+       b. computeSui(moduleScores) -> 0-100
+       c. classifySui(sui) -> { kind, color, label, meaning }
+       d. mapModuleScoreToStufe(score) fuer alle 9 Module
+       e. aggregateHausaufgaben(answers, template) -> Array<{frage_id, status, text}>
+       f. aggregateReflexion(answers, template) -> Array<{frage_id, text}>
+       g. selectThreeHebel(moduleScores) -> 3 Module mit niedrigstem Score
+    3. UPDATE capture_session SET metadata = metadata || jsonb_build_object('v8_report_snapshot', $snapshot)
+    4. INSERT block_checkpoint mit checkpoint_type='auto_final' (V6.3-Pattern-Reuse fuer Status-Tracking)
+  → Redirect zu /dashboard/diagnose/[id] (Bericht-Page)
+
+/dashboard/diagnose/[id] (Bericht-Page)
+  → Bestehende UI (V6.3 oder V8-spezifische?) — V8.0 fuehrt KEINE NEUE WEB-Bericht-UI ein (out-of-scope, V8.1+)
+  → Statt: "Bericht per E-Mail senden"-Button (V7.2 SendReportByEmailModal-Reuse)
+
+User klickt "Bericht senden"
+  → Server-Action sendDiagnoseReportByEmail (V7.2 FEAT-060):
+    1. Read template.metadata.report_renderer -> 'mandanten_report_v2' (V8) oder default (V6.3)
+    2. Branch auf renderer-kind:
+       - 'mandanten_report_v2' -> renderMandantenReportV2Pdf(snapshot) (V8 NEU)
+       - default                -> renderDiagnoseReportPdf(...) (V6.3 BESTAND)
+    3. Email via IONOS-SMTP-Reuse (V4.2)
+  → Empfaenger-Auswahl: self / partner / additional (V7.2-Pattern)
+```
+
+### External Dependencies
+
+V8.0 fuegt **keine neuen Production-Dependencies** hinzu:
+- `@react-pdf/renderer` ^4.5.1 — BESTAND seit V7.2
+- `@playwright/test` ^1.60.0 — devDep, BESTAND seit V7.3
+- AWS Bedrock — KEIN V8-Konsum, da DEC-159/160/161 deterministisch
+- IONOS SMTP — BESTAND seit V4.2
+
+Optional Phase-A-Pivot (nur wenn Spike-Klausel DEC-157 zieht):
+- `satori` + `sharp` (~5MB), Pre-Render-Pipeline fuer Wheel-PNG-Asset
+- Wuerde in /backend SLC-150 MT-1 hinzukommen falls @react-pdf-Wheel visuell nicht akzeptiert
+
+Custom Fonts (Fraunces + JetBrains Mono):
+- Pflege ueber `public/fonts/`-Folder (~150KB Fonts hinzufuegen) oder Google Fonts CDN
+- @react-pdf Font.register() unterstuetzt beide Wege
+
+### Security / Privacy
+
+- Mandanten-Antworten landen wie heute in `capture_response` (RLS-protected via V4 Pattern)
+- `v8_report_snapshot` JSONB im selben Tenant-Scope (RLS folgt `capture_session`-Owner)
+- PDF wird **nicht** persistiert (DEC-163) — kein Storage-Bucket, keine Signed-URLs, kein Cross-Tenant-Leak-Risiko durch unbeabsichtigtes Cachen
+- Email-Versand: Recipient-Auswahl von V7.2 (FEAT-060) — Rate-Limit 5/h/Session bleibt
+- Bedrock-Calls: KEINE in V8.0 (DEC-159..161) — Data-Residency-Implikation trivial: nur SUI-Berechnung lokal in Worker, kein PII-Export
+- Founder-Override `?template_override=...` ist Strategaize-Admin-only (Server-Side-Role-Check) — KEINE Mandant-faking-Vektor
+
+### Constraints + Tradeoffs
+
+- **Premium-Look vs. Simplicity** (DEC-157): @react-pdf-Engine spart Docker-Bloat + Cold-Start, kostet aber CSS-Effekt-Treue (Drop-Shadow, transform:scale). Spike-Klausel in SLC-150 MT-1 ist die Sicherheits-Eskalation falls visuell nicht akzeptiert.
+- **Deterministisch vs. LLM-Personalisierung** (DEC-159..161): V8.0 spart $0.27/Bericht + Founder-Reviewability + Reproduzierbarkeit. LLM-Augmentations-Layer ist V8.1+ Erweiterungspunkt **nach** Founder-Test-Verdict.
+- **Wheel-Schatten-Approximation** (DEC-162): Drop-Shadow + filter:saturate fallen weg oder werden mit 2 ueberlappenden Pfaden simuliert — AC-11 erlaubt das.
+- **Tonalitaets-Migration** (DEC-159): 90+ Texte LEVELS.md → Mandant-Adressat ist EINMALIG manueller Schreib-Prozess in SLC-148 Pre-MT-1. ~30-45min Founder-Pflicht. KEIN LLM-Pass um Drift-Risiko zu vermeiden.
+- **PDF-Re-Generation** (DEC-163): Bei jedem Email-Versand wird PDF neu gerendert (~3-5s). Storage-Cache als V8.1+ Optimierung wenn Volumen >100 Reports/Monat.
+
+### Implementation Direction
+
+**5 Slices SLC-148..152 mit geschaetzt ~5-8 Sessions ueber 2-3 Wochen.**
+
+**SLC-148 — FEAT-063 + FEAT-065 Backend (Template-Daten + Score-Engine)** — ~6-10h
+- Pre-MT-1: Tonalitaets-Migration der 90+ Stufen-Lookup-Texte (Founder-Pflicht, NICHT LLM)
+- MT-1: Migration 102 schreiben + lokaler-Test
+- MT-2: Migration 102 LIVE auf Coolify-DB applizieren
+- MT-3: Pure-Function-Library `src/lib/diagnose/sui-engine.ts` mit 7 Functions + 15+ Vitest
+- MT-4: Pure-Function `computeWheelPaths` in `src/lib/diagnose/wheel-paths.ts` + 6+ Vitest
+- MT-5: Server-Action `finalizeMandantenReport` mit Worker-Branch-Trigger via `usage_kind`
+- MT-6: Worker-Pipeline-Branch in `src/workers/condensation/` fuer `usage_kind='mandanten_report_teaser_v1'`
+- MT-7: Records + /qa SLC-148 + Live-Test einer Founder-Session ohne UI (DB-INSERT capture_response Test-Set, finalize, snapshot-JSONB-Inspection)
+
+**SLC-149 — FEAT-064 Frontend (3 Antwort-Schemata + QuestionFlow-Switch)** — ~4-6h
+- MT-1: HygieneAnswerPills.tsx + Pure-Logic-Helper + Vitest
+- MT-2: ReifeSkalaAnswer.tsx + Pure-Logic-Helper + Vitest (Style-Guide-V2 Farb-Gradient-Entscheidung)
+- MT-3: ReflexionTextarea.tsx + Pure-Logic-Helper + Auto-Save-Indikator + Vitest
+- MT-4: QuestionFlow.tsx Switch-Logik auf answer_schema_kind + 4-Branch-Vitest
+- MT-5: EditableText + HelperTextModal-Integration in alle 3 neuen Components (Reuse-Pattern)
+- MT-6: Records + /qa SLC-149 + Mobile-Smoke per Playwright-MCP (375px-Viewport)
+
+**SLC-150 — FEAT-066 Phase A Backend+Frontend (Renderer-Foundation + Wheel + 3 Pages)** — ~8-12h
+- MT-1: PDF-Engine-Spike (DEC-157 Spike-Klausel) — erste Wheel-Implementation in @react-pdf <Svg> + Visual-Vergleich gegen HTML-Prototyp. Pivot-Trigger auf Hybrid (satori+sharp) wenn Founder-Visual-Akzeptanz fail
+- MT-2: Renderer-Folder `src/lib/pdf/mandanten-report-v2/` + `styles.ts` + Font-Registration
+- MT-3: `cover.tsx` Page 1 (Cover-Titel + Logo-Slot + Mandant-Name + Datum + Wheel-Watermark)
+- MT-4: `sui-hero.tsx` Page 2 (SUI-Score gross + Klassifizierungs-Label + Pitch)
+- MT-5: `wheel.tsx` Sub-Component (Inline @react-pdf <Svg> mit computeWheelPaths)
+- MT-6: `modul-profil.tsx` Page 3 (Wheel + Legende rechts)
+- MT-7: `index.ts::renderMandantenReportV2Pdf(data)` Entry-Point + Vitest Smoke
+- MT-8: Records + /qa SLC-150 + Founder-Visual-Akzeptanz auf 3 Phase-A-Pages
+
+**SLC-151 — FEAT-066 Phase B (9 Modul-Pages + 4 End-Sections)** — ~8-12h
+- MT-1: `modul-page.tsx` mit fokussiertem Wheel-Segment (computeWheelPaths(scores, focusIdx)) + 3-Sektionen-Text (worum_es_geht + was_es_bedeutet + unsere_empfehlung)
+- MT-2: 9 Modul-Pages via Loop (Page 4-12), Stufen-Lookup-Resolution via stufenMapping aus Snapshot
+- MT-3: `hausaufgaben.tsx` Page 13 mit Modul-0-Findings (Status nein/teilweise) + Alternative-Gratulation
+- MT-4: `hebel.tsx` Page 14 mit 3 Hebel-Bloecken
+- MT-5: `reflexion.tsx` Page 15 mit Zitat-Sammlung + Alternative-Pitch
+- MT-6: `cta.tsx` Page 16-17 mit StB-Kontakt + Strategaize-Footer
+- MT-7: Tonalitaets-Audit-Skript (Grep "Ihr Steuerberater" / "der Berater" / "wir empfehlen" in gerenderten Strings)
+- MT-8: Records + /qa SLC-151 + Founder-Visual-Akzeptanz End-to-End
+
+**SLC-152 — Integration + Email-Versand-Branch + Telemetrie + Live-Smoke** — ~3-5h
+- MT-1: `sendDiagnoseReportByEmail`-Branch auf template.metadata.report_renderer (V2 vs. V1)
+- MT-2: Telemetrie-Event-Hooks fuer V8-Session-Lifecycle (FEAT-058-Reuse, `template_slug`-Filter)
+- MT-3: Founder-Eigen-Test: Komplette Diagnose End-to-End (47 Fragen, Bericht generieren, Email versenden, PDF auf Mobile + Desktop oeffnen, visuell + inhaltlich validieren)
+- MT-4: Records + /qa Slice-Schluss + Gesamt-/qa V8 + Live-Smoke-Bericht (RPT-XXX)
+- MT-5: Master-Merge-Sequenz + User-Coolify-Redeploy + /post-launch V8 (18-24h Window)
+
+### Open Technical Questions (zu klaeren in /slice-planning oder in den Slices)
+
+- **SLC-148 Pre-MT-1 Tonalitaets-Migration Workflow**: Founder schreibt die 90+ Texte selbst in Markdown-File (`docs/curriculum/v2/EXIT_READINESS_LEVELS_MANDANT.md` NEU) ODER direkt in einer Migration-SQL-Datei (`102_v8_*.sql`) ODER ueber ein Skript das LEVELS.md liest + Search&Replace anwendet + manual review? Empfehlung: separate `LEVELS_MANDANT.md`-Datei (Founder schreibt in Markdown-Editor mit Live-Preview) + Build-Time-Skript das die Datei in Migration-Seed konvertiert. Entscheidung in /slice-planning SLC-148.
+- **SLC-149 Visual-Differenzierung 5-Stufen-Skala**: Farb-Gradient rot-amber-gruen ODER neutrale Grauskala? Style-Guide-V2-Entscheidung — Founder-Verdict in MT-2. Bezug: Mandant darf "Stufe 1" antworten ohne sich beschaemt zu fuehlen (UX-Tonalitaet).
+- **SLC-150 MT-1 Spike-Pivot-Trigger**: Konkrete Akzeptanz-Kriterien fuer "Founder-Visual-Akzeptanz" — Pixel-Diff-Threshold? Subjektives Verdict mit Notiz? Empfehlung: Side-by-Side-Vergleich-PNG (Prototyp-HTML-Screenshot vs. @react-pdf-PDF-Render) + Founder-Verdict pro Page-Element (Wheel + SUI-Hero + Cover). Pivot wenn 2+ Elemente "nicht akzeptabel" sind.
+- **SLC-150 Custom-Font-Sourcing**: Fraunces + JetBrains Mono lokal in `public/fonts/` ablegen ODER Google Fonts CDN nutzen? `@react-pdf` Font.register() unterstuetzt URLs. Lokal = +150KB Repo, kein CDN-Risiko. CDN = kein Repo-Bloat, aber Build-Time-Pflicht-Network-Access. Empfehlung: lokal in `public/fonts/`.
+- **SLC-151 Cover-Logo-Slot StB-Branding**: V8.0 = "out-of-scope" per FEAT-066 Out-of-Scope. Aber Cover-Page hat einen "Logo-Slot" — was kommt rein? Strategaize-Default-Logo (PNG)? Empfehlung: Strategaize-Logo unten + Mandant-Name oben. StB-Logo-Slot = V8.1+ Reuse V6 Partner-Branding-Pattern.
+- **SLC-152 Telemetrie-Filter `template_slug` in Analytics-Page**: V7.2 SLC-139 Analytics-Page hat Filter fuer is_test + Partner-Org. Brauchen wir explizit `template_slug`-Filter um V6.3 vs. V8-Sessions auseinanderzuhalten? Empfehlung: ja, additive Filter-Erweiterung in /admin/diagnose-funnel-analytics — KEIN Slice-Scope-Drift (15min Quick-Win in SLC-152 MT-2).
+
+### V8 vs V7.x Architektur-Kontext
+
+V8 setzt auf der V6.3-Light-Pipeline-Architektur auf (DEC-126 `template.metadata.usage_kind`-Worker-Branch, DEC-127 deterministische Score-Logik). Es ist ein **paralleler Use-Case** zu V6.3 (`partner_diagnostic_v1`, 24-Frage-Workshop-Variante) und V1 (`exit-readiness-v1.0.0`, 6-Block-Voll-Diagnose). Diese drei Templates koexistieren ohne Replace.
+
+Pattern-Reuse-Quote ueber Strategaize-Repos (per `feedback_strategaize_pattern_reuse`):
+- V6.3 DEC-126 `usage_kind`-Branch (Worker-Pipeline) — voll uebernommen
+- V7.2 FEAT-060 PDF-Versand-Pfad — Renderer-Branch additiv
+- V7.1 FEAT-056 EditableText + FEAT-057 HelperTextModal — als Frage-UI-Konsumenten
+- V6.4 DEC-XXX UNIQUE(slug, version) — fuer Template-Versionierung
+- V1 capture_session + capture_response + block_checkpoint — voll genutzt
+
+**Naechster Schritt: /slice-planning V8** — SLC-148..152 Slice-Files anlegen mit Micro-Task-Decomposition + Acceptance-Criteria-Matrizen + Aufwand-Schaetzung pro MT. Pre-Conditions fuer V8-Code-Start: V7.7 /post-launch STABLE-Bestaetigung (~2026-05-29 16:30 UTC Window-Ende).

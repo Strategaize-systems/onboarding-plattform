@@ -804,6 +804,26 @@ Polish-Iteration nach V7.5-Release. Zwei dokumentierte Low-Severity-Issues aus K
 |----|-------|---------|--------|----------|---------|
 | SLC-147 | [V7.7 Polish-Sammler (Verify-Signup-Pages + Evidence-Route-Helper-Extraction)](SLC-147-v77-polish-sammler.md) | ISSUE-082 + ISSUE-077 | done | Low | 2026-05-28 |
 
+## V8 Slices (Mandanten-Report-Port — 10-Prinzipien-Teaser-Diagnose)
+
+Mandanten-Report-Port nach Prototyp-Freigabe 2026-05-28. /requirements done 2026-05-28 (RPT-348). /architecture done 2026-05-28 (RPT-349, DEC-157..164). 5 Slices SLC-148..152 geplant, geschaetzt ~5-8 Sessions ueber 2-3 Wochen. Pre-Condition fuer Code-Start: V7.7 /post-launch STABLE-Bestaetigung (~2026-05-29 16:30 UTC Window-Ende). Worktree-Pflicht (SaaS-Mode) pro Slice.
+
+| ID | Slice | Feature | Status | Priority | Created |
+|----|-------|---------|--------|----------|---------|
+| SLC-148 | Template-Daten + Stufen-Lookup + SUI-Score-Engine Backend | FEAT-063 + FEAT-065 | planned | High | 2026-05-28 |
+| SLC-149 | Fragebogen-UI Components (Hygiene + Skala + Reflexion) Frontend | FEAT-064 | planned | High | 2026-05-28 |
+| SLC-150 | Renderer Phase A (Foundation + Wheel + Cover + SUI-Hero + Modul-Profil) | FEAT-066 Phase A | planned | High | 2026-05-28 |
+| SLC-151 | Renderer Phase B (9 Modul-Pages + Hausaufgaben + Hebel + Reflexion + CTA) | FEAT-066 Phase B | planned | High | 2026-05-28 |
+| SLC-152 | Integration + Email-Versand-Branch + Telemetrie + Live-Smoke Founder-Test | FEAT-066 + FEAT-058-Reuse + FEAT-060-Reuse | planned | High | 2026-05-28 |
+
+### V8 Execution Order (strikt sequentiell, Begruendung)
+- **SLC-148** muss zuerst (FEAT-063 Template-Daten + FEAT-065 Score-Engine sind Pre-Condition fuer alle nachfolgenden)
+- **SLC-149** kann parallel zu SLC-150 (Renderer braucht keine UI-Components, UI braucht keinen Renderer)
+- **SLC-150 -> SLC-151** strikt sequentiell (Phase B baut auf Phase-A-Foundation auf, [[feedback-slice-phase-a-b-split-for-large-slices]])
+- **SLC-152** zuletzt (End-to-End-Integration + Live-Smoke nach allen Code-Slices)
+- Empfohlene Reihenfolge: 148 -> 149+150 (parallel) -> 151 -> 152
+- **Spike-Klausel in SLC-150 MT-1** (DEC-157): Pivot-Trigger zu Hybrid-Engine (satori+sharp) wenn @react-pdf-Wheel-Visual-Akzeptanz fail
+
 ### V7.1/V7.2/V7.3/V7.4 Worktree-Pflicht (SaaS-Mode)
 
 Alle Slices nutzen Worktree-Isolation:

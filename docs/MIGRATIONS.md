@@ -4,6 +4,23 @@ Die aktuelle DB-Struktur entspricht dem Stand von Blueprint V3.4 (Migration 020)
 
 Der uebernommene Blueprint-Stand ist noch nicht auf einer Onboarding-Plattform-Instanz ausgefuehrt worden — die erste Hetzner-Migration geschieht mit SLC-001 (Schema-Fundament).
 
+### MIG-047 — V8 SLC-148 Template-Seed `exit-readiness-teaser-v1` + Stufen-Lookup + Hausaufgaben-Lookup (Migration 102, geplant)
+- Date: 2026-05-28 (geplant, Apply waehrend SLC-148 /backend)
+- Scope:
+  - `102_v8_exit_readiness_teaser_template.sql` — additiver Template-Seed via `INSERT ... ON CONFLICT (slug, version) DO UPDATE`:
+    - Row in `public.template`: `slug='exit-readiness-teaser-v1'`, `version=1`, `name='Strategaize Uebergabefaehigkeits-Diagnose (Mandanten-Report Teaser)'`
+    - `metadata.usage_kind='mandanten_report_teaser_v1'` (Worker-Branch-Trigger, analog DEC-126)
+    - `metadata.scoring_kind='sui_weighted'` (Score-Engine-Trigger, FEAT-065)
+    - `metadata.report_renderer='mandanten_report_v2'` (Renderer-Branch-Trigger, FEAT-066)
+    - `blocks` JSONB mit 11 Modulen (Modul 0..10) + 47 Fragen total (5 Hygiene + 37 Skala + 5 Reflexion)
+    - `metadata.stufen_lookup` JSONB: 9 Module x 5 Stufen mit `was_es_bedeutet` + `unsere_empfehlung` Markdown-Texte (~150-200KB total) — Tonalitaets-migriert aus EXIT_READINESS_LEVELS.md
+    - `metadata.hausaufgaben_lookup` JSONB: 5 Hygiene-Frage-IDs x 3 Status (nein/teilweise/ja) mit fix-formulierten `was_zu_tun`-Texten
+    - `metadata.worum_es_geht` JSONB: 9 Modul-Level-Texte aus EXIT_READINESS_PRINZIPIEN.md "Botschaft an den Unternehmer"
+- Reason: V8 Mandanten-Report-Teaser braucht neues Template parallel zur V6.3-Variante. Pattern-Reuse aus V6.3 MIG-037 (`093_partner_diagnostic_template.sql`) — additiv + idempotent. KEIN Replace bestehender Templates. Stufen-Lookup + Hausaufgaben-Lookup im selben Template-Row gehalten per DEC-164 (Versionierung gratis, Single-Query-Read).
+- Affected Areas: `public.template` (1 neue Row mit JSONB-Substanz), Worker-Branch (`runLightPipeline` erweitert via `usage_kind`-Switch in SLC-148 — KEIN Migration-Schritt, Code-Pfad), Renderer-Branch (`sendDiagnoseReportByEmail` erweitert via `report_renderer`-Switch in SLC-152 — KEIN Migration-Schritt). KEINE neue Tabelle, KEINE neue Spalte. **Idempotenz**: `ON CONFLICT (slug, version) DO UPDATE` erlaubt spaetere Content-Korrekturen ohne Drop+Re-create.
+- Risk: L — additivum. 0 Auswirkung auf V1 + V6.3 + V7.x Templates. **JSONB-Size-Risiko**: Stufen-Lookup ist ~150KB, knapp unter Postgres TOAST-Schwelle (~2KB inline, dann TOAST-Out-Of-Line) — TOAST-Performance ist O(1) bei Read mit Index, kein Performance-Bedenken bei <10MB pro Row. **Tonalitaets-Migration-Risiko**: 90+ Texte LEVELS.md → Mandant-Adressat ist manueller Schreib-Prozess in SLC-148 Pre-MT-1 (~30-45min Founder-Pflicht oder Founder-Review). Per DEC-159 KEIN LLM-Pass.
+- Rollback Notes: `DELETE FROM public.template WHERE slug='exit-readiness-teaser-v1' AND version=1` ist additivum-rueckwaerts. Bestehende V6.3 + V1 Templates bleiben unberuehrt. capture_session-Rows die das Template referenzieren mussten vorher invalidiert werden (foreign-key, aber in V8.0 Pre-Live keine Real-Sessions existent).
+
 ### MIG-001 — Geplante Baseline-Migrationen fuer V1
 - Date: 2026-04-14
 - Scope:
