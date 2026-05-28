@@ -4,7 +4,6 @@
  * Re-Send-Button in V7 per Slice Out-of-Scope, V8+ UX-Erweiterung).
  */
 
-import Link from "next/link";
 import {
   Card,
   CardContent,
@@ -39,14 +38,6 @@ export function ExpiredLinkPage() {
             und starten Sie den Signup-Prozess von vorne. Sie erhalten dann
             eine neue Bestätigungsmail mit gültigem Link.
           </p>
-          <div className="flex justify-center gap-4 pt-4 text-xs text-slate-500">
-            <Link href="/datenschutz" className="hover:underline">
-              Datenschutz
-            </Link>
-            <Link href="/impressum" className="hover:underline">
-              Impressum
-            </Link>
-          </div>
         </CardContent>
       </Card>
     </div>

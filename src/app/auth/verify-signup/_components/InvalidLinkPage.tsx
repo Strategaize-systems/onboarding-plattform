@@ -5,6 +5,7 @@
  */
 
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -40,20 +41,9 @@ export function InvalidLinkPage() {
             wenden Sie sich an Ihre Partner-Kanzlei für einen neuen Link.
           </p>
           <div className="flex flex-col gap-2 pt-2">
-            <Link
-              href="/login"
-              className="rounded-md bg-brand-success px-4 py-2 text-center text-sm font-medium text-white hover:bg-brand-success-dark"
-            >
-              Zur Anmeldung
-            </Link>
-          </div>
-          <div className="flex justify-center gap-4 pt-4 text-xs text-slate-500">
-            <Link href="/datenschutz" className="hover:underline">
-              Datenschutz
-            </Link>
-            <Link href="/impressum" className="hover:underline">
-              Impressum
-            </Link>
+            <Button asChild className="w-full">
+              <Link href="/login">Zur Anmeldung</Link>
+            </Button>
           </div>
         </CardContent>
       </Card>
