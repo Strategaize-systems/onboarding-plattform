@@ -1,7 +1,7 @@
 {
   "items": [
     {
-      "id": "BL-126",
+      "id": "BL-131",
       "title": "V8 FEAT-066: 17-Seiten-Premium-Mandanten-Report-Renderer V2 (Cover + Wheel + 9 Modul-Pages + Hausaufgaben + Hebel + Reflexion + CTA)",
       "type": "feature",
       "priority": "high",
@@ -11,7 +11,7 @@
       "createdAt": "2026-05-28"
     },
     {
-      "id": "BL-125",
+      "id": "BL-130",
       "title": "V8 FEAT-065: SUI-Score-Engine (gewichtetes Mittel Module 1-9, Modul 9 doppelt, 3-Stufen-Klassifizierung)",
       "type": "feature",
       "priority": "high",
@@ -21,7 +21,7 @@
       "createdAt": "2026-05-28"
     },
     {
-      "id": "BL-124",
+      "id": "BL-129",
       "title": "V8 FEAT-064: Fragebogen-UI-Komponenten (Hygiene-Trichotomie + 5-Punkt-Reife-Skala + Reflexion-Textareas)",
       "type": "feature",
       "priority": "high",
@@ -31,7 +31,7 @@
       "createdAt": "2026-05-28"
     },
     {
-      "id": "BL-123",
+      "id": "BL-128",
       "title": "V8 FEAT-063: 10-Prinzipien-Teaser-Template + Stufen-Lookup-Daten (47 Fragen, 90+ Inhalts-Bloecke)",
       "type": "feature",
       "priority": "high",
