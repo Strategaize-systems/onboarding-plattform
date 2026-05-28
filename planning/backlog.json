@@ -15,7 +15,7 @@
       "title": "V8 FEAT-065: SUI-Score-Engine (gewichtetes Mittel Module 1-9, Modul 9 doppelt, 3-Stufen-Klassifizierung)",
       "type": "feature",
       "priority": "high",
-      "status": "open",
+      "status": "in_progress",
       "version": "V8",
       "description": "Deterministische SUI-Score-Berechnung fuer V8 Mandanten-Report-Teaser-Diagnose. Pure-Functions: computeModuleScores (Module 1-9, Durchschnitt Frage-Scores), computeSui (gewichtetes Mittel, Modul 9 doppelt = 20%), classifySui (0-30 Strukturluecke rot, 31-55 Teil-Reife amber, 56-100 Tragbar gruen), mapModuleScoreToStufe (0-10 Modul-Score zu 1-5 Stufe), aggregateHausaufgaben (Modul 0 Nein/Teilweise-Items), aggregateReflexion (Modul 10 Antworten als Zitate), 3-Strategie-Hebel-Auswahl (Default: 3 Module mit niedrigstem Score). Server-Action `finalizeMandantenReport` mit Worker-Pipeline-Branch ueber template.metadata.usage_kind='mandanten_report_teaser_v1' (Reuse V6.3 SLC-105 runLightPipeline-Pattern). Q-V8-C entscheidet Hybrid-LLM vs. rein deterministisch. Q-V8-D entscheidet Hebel-Auswahl deterministisch vs. LLM. Q-V8-G entscheidet Persistenz-Strategie (knowledge_unit vs. block_checkpoint vs. neue Tabelle). Aufwand ~6-8h Pure-Functions + Vitest + Worker-Branch + Persistenz. Pre-Condition: FEAT-063 done. Siehe FEAT-065-sui-score-engine.md.",
       "createdAt": "2026-05-28"
@@ -25,7 +25,7 @@
       "title": "V8 FEAT-064: Fragebogen-UI-Komponenten (Hygiene-Trichotomie + 5-Punkt-Reife-Skala + Reflexion-Textareas)",
       "type": "feature",
       "priority": "high",
-      "status": "open",
+      "status": "in_progress",
       "version": "V8",
       "description": "Drei neue Antwort-Schema-UI-Komponenten fuer V8 Teaser-Diagnose im bestehenden QuestionFlow.tsx-Flow. (1) HygieneAnswerPills (3 Pills Ja/Teilweise/Nein) fuer Modul 0. (2) ReifeSkalaAnswer (5-Punkt-Skala mit klaren Stufen-Labels 'Noch gar nicht vorhanden..Vollstaendig etabliert + belastbar') fuer Module 1-9. (3) ReflexionTextarea (Freitext mit Zeichen-Counter + Auto-Save) fuer Modul 10. QuestionFlow.tsx Switch-Logik ueber `question.answer_schema_kind` (hygiene_yes_partial_no / reife_skala_5 / reflexion_freitext / choice_5 V6.3-Bestand). EditableText-Pflicht (FEAT-056 Reuse), HelperTextModal-Reuse (FEAT-057), Telemetrie-Integration (FEAT-058). Mobile-Layout >=44px Touch-Target Pflicht (DEC-151). AnswerOptionCard bleibt unveraendert fuer V6.3-Co-Existenz. Aufwand ~6-10h Code + Playwright-Snapshot fuer 5 Schluessel-Fragen-Typen. Pre-Condition: FEAT-063 done (Template-Daten geben answer_schema_kind vor). Siehe FEAT-064-mandanten-report-fragebogen-ui.md.",
       "createdAt": "2026-05-28"
@@ -35,7 +35,7 @@
       "title": "V8 FEAT-063: 10-Prinzipien-Teaser-Template + Stufen-Lookup-Daten (47 Fragen, 90+ Inhalts-Bloecke)",
       "type": "feature",
       "priority": "high",
-      "status": "open",
+      "status": "in_progress",
       "version": "V8",
       "description": "Neues Template-Objekt `exit-readiness-teaser-v1` in `public.template` mit 47 Fragen (5 Hygiene Ja/Teilweise/Nein + 37 Skala 1-5 + 5 Reflexion-Freitext) ueber 11 Module (Modul 0 Hygiene + Module 1-9 Skala + Modul 10 Reflexion). Score-Mapping pro Skala-Frage (1=0/2=2/3=5/4=8/5=10). Stufen-Lookup-Daten 9 Module x 5 Stufen = 45 Eintraege mit `was_es_bedeutet` + `unsere_empfehlung` (Markdown). Plus 9 'Worum es geht'-Modul-Texte. Quelle 1:1 aus `c:/strategaize/strategaize-dev-system/docs/curriculum/v2/EXIT_READINESS_PRINZIPIEN.md` + `EXIT_READINESS_LEVELS.md`. Tonalitaet-Migration Pflicht (von LEVELS.md StB-Adressat auf Mandanten-Adressat 'Sie'-Form mit Strategaize-Sicht). Q-V8-H entscheidet Daten-Quelle (statisches JSON-File vs. Template-Row-metadata vs. neue Daten-Tabelle). Migrations-Pattern Reuse aus V6.3 MIG-037 (idempotent ON CONFLICT (slug, version) DO UPDATE). Co-Existenz mit V6.3 partner_diagnostic_v1 + V1 exit-readiness-v1.0.0 strict garantiert. Aufwand ~8-12h (~4-6h Daten-Migration + Tonalitaets-Transformation, ~4-6h Migrations-Code + Vitest). Siehe FEAT-063-mandanten-report-teaser-template.md.",
       "createdAt": "2026-05-28"

@@ -806,12 +806,12 @@ Polish-Iteration nach V7.5-Release. Zwei dokumentierte Low-Severity-Issues aus K
 
 ## V8 Slices (Mandanten-Report-Port — 10-Prinzipien-Teaser-Diagnose)
 
-Mandanten-Report-Port nach Prototyp-Freigabe 2026-05-28. /requirements done 2026-05-28 (RPT-348). /architecture done 2026-05-28 (RPT-349, DEC-157..164). 5 Slices SLC-148..152 geplant, geschaetzt ~5-8 Sessions ueber 2-3 Wochen. Pre-Condition fuer Code-Start: V7.7 /post-launch STABLE-Bestaetigung (~2026-05-29 16:30 UTC Window-Ende). Worktree-Pflicht (SaaS-Mode) pro Slice.
+Mandanten-Report-Port nach Prototyp-Freigabe 2026-05-28. /requirements done 2026-05-28 (RPT-348). /architecture done 2026-05-28 (RPT-349, DEC-157..164). 5 Slices SLC-148..152 geplant, geschaetzt ~5-8 Sessions ueber 2-3 Wochen. V7.7 /post-launch STABLE bestaetigt 2026-05-28 17:00 UTC (RPT-350). /slice-planning V8 Teil 1 done 2026-05-28 (RPT-351): SLC-148 + SLC-149 Slice-Files mit Micro-Task-Decomposition angelegt. **Branch-Strategie: Cumulative-Single-Branch-Worktree `v8-mandanten-report`** ueber alle 5 V8-Slices (per [[feedback-cumulative-single-branch-pattern]]). **OQ-1 entschieden**: Tonalitaets-Migration via separate `EXIT_READINESS_LEVELS_MANDANT.md` im Dev-System + Build-Time-Skript. **OQ-2 entschieden**: ReifeSkalaAnswer-Visual als neutrale Grauskala (UX-Tonalitaet: Mandant darf "Stufe 1" antworten ohne Scham). SLC-150/151/152 Slice-Files in /slice-planning V8 Teil 2 (separate Session). Pre-MT-1 Founder-Pflicht (~30-45min Tonalitaets-Migration) vor /backend SLC-148.
 
 | ID | Slice | Feature | Status | Priority | Created |
 |----|-------|---------|--------|----------|---------|
-| SLC-148 | Template-Daten + Stufen-Lookup + SUI-Score-Engine Backend | FEAT-063 + FEAT-065 | planned | High | 2026-05-28 |
-| SLC-149 | Fragebogen-UI Components (Hygiene + Skala + Reflexion) Frontend | FEAT-064 | planned | High | 2026-05-28 |
+| SLC-148 | [Template-Daten + Stufen-Lookup + SUI-Score-Engine Backend](SLC-148-template-daten-sui-score-engine.md) | FEAT-063 + FEAT-065 | planned | High | 2026-05-28 |
+| SLC-149 | [Fragebogen-UI Components (Hygiene + Skala + Reflexion) Frontend](SLC-149-fragebogen-ui-components.md) | FEAT-064 | planned | High | 2026-05-28 |
 | SLC-150 | Renderer Phase A (Foundation + Wheel + Cover + SUI-Hero + Modul-Profil) | FEAT-066 Phase A | planned | High | 2026-05-28 |
 | SLC-151 | Renderer Phase B (9 Modul-Pages + Hausaufgaben + Hebel + Reflexion + CTA) | FEAT-066 Phase B | planned | High | 2026-05-28 |
 | SLC-152 | Integration + Email-Versand-Branch + Telemetrie + Live-Smoke Founder-Test | FEAT-066 + FEAT-058-Reuse + FEAT-060-Reuse | planned | High | 2026-05-28 |
