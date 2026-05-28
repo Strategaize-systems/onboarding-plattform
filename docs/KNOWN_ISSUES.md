@@ -12,14 +12,14 @@
 - Related: BL-122, V6 SLC-103, V6 SLC-104 (Partner-Branding), feedback_user_facing_scope_edit_capability_required.md (User-Direktive 2026-05-20: User-Facing-Features brauchen vollstaendige UX schon in V1).
 
 ### ISSUE-082 — Verify-Signup-ErrorPage rendert eigenes Inline-Footer + Custom-styled "Zur Anmeldung"-Link h=36 (Touch-Target-Violation Mobile)
-- Status: open
+- Status: resolved
+- Resolution Date: 2026-05-28
+- Resolution Slice: V7.7 SLC-147 MT-1
 - Severity: Low
-- Area: V7 / Auth / src/app/auth/verify-signup/page.tsx
+- Area: V7 / Auth / src/app/auth/verify-signup/_components/
+- Resolution: V7.7 SLC-147 MT-1 (2026-05-28). Pre-Audit-Korrektur: nicht nur ErrorPage, auch InvalidLinkPage hatte das Custom-Link-Pattern + alle 3 ErrorPage-Komponenten (ErrorPage, InvalidLinkPage, ExpiredLinkPage) hatten den Inline-Footer-Duplikat. Fix: (a) Custom-styled `<Link>` durch `<Button asChild className="w-full"><Link>` ersetzt in ErrorPage.tsx + InvalidLinkPage.tsx — shadcn-Button-Default-Size = h-11 (44px DEC-151), Default-Variant = brand-primary-Gradient konsistent zu Login-Submit-Button. (b) Inline-Footer-Div (Datenschutz + Impressum) entfernt in allen 3 Components — StrategaizePoweredFooter rendert ohnehin global via app/layout.tsx. (c) ExpiredLinkPage.tsx: nicht mehr benoetigter `Link`-Import entfernt. Commit: e77edca auf branch slc-147-v77-polish. Quality-Gates: tsc + ESLint EXIT=0.
 - Summary: V7.4 SLC-143 MT-1 Pre-Audit (RPT-342) hat aufgedeckt, dass `/auth/verify-signup`-ErrorPage-State (z.B. bei dummy-token-Render) zwei Probleme zeigt: (1) ein Custom-styled `<a href="/login">Zur Anmeldung</a>` mit Tailwind-Klassen die wie shadcn-Button aussehen, h=36px Mobile, sub-44px-Tap-Area; (2) eigener Inline-Footer mit "Datenschutz" + "Impressum"-Links h=16 — Duplikat zum globalen StrategaizePoweredFooter (insgesamt 2x Datenschutz-Link sichtbar).
-- Impact: Mobile-WCAG-2.1-AA-Violation auf "Zur Anmeldung"-Tap-Target. Visual-Doppelung (2x Footer) wirkt unprofessional. NICHT Auth-Flow-bruchend — beide Probleme sind nur kosmetisch + Accessibility.
-- Out-of-Scope V7.4: Per Slice-Spec AC-2/AC-3 (Scope: nur shadcn-`<Button>`-Default + StrategaizePoweredFooter). DEC-151 + DEC-152-Mitigation-Pfad fasst Custom-styled-Anchors bewusst NICHT an.
-- Next Action: Optionales BL-Item fuer V7.5+ oder spaetere Polish-Iteration: (a) Custom-`<a>` durch shadcn-`<Button asChild><Link>...`-Pattern ersetzen (gewinnt automatisch DEC-151 Default-Anhebung), (b) Inline-Footer in verify-signup/page.tsx entfernen (StrategaizePoweredFooter rendert global via app/layout.tsx, doppelte Rendering ist Redundanz). Aufwand ~30min.
-- Related: RPT-342, FEAT-062, IMP-774 (Dev-System Skill-Improvement zu Audit-Coverage-Erweiterung)
+- Related: RPT-342, FEAT-062, IMP-774 (Dev-System Skill-Improvement zu Audit-Coverage-Erweiterung), SLC-147 (Resolution-Slice)
 
 ### ISSUE-081 — V6 Migration 090 Architecture-Drift: 4 in ARCHITECTURE.md vorausgesetzte Helper-Objekte wurden nie erstellt
 - Status: resolved
@@ -70,14 +70,14 @@
 - Related: RPT-309 F-2 (Bug-Discovery), RPT-310 (Resolution), V7 OP RPT-300+302+304+306+308 (Slice-Vitest-Bias-Limitation), V4.3 SLC-053 RPT-134 (middleware.ts→proxy.ts Rename), Dev-System IMP-651 (Live-Endpoint-Smoke in Slice-/qa)
 
 ### ISSUE-077 — Webpack-Build-Fail durch route.ts-Helper-Exports in evidence/upload (Next 16 strict-validation)
-- Status: open
+- Status: resolved
+- Resolution Date: 2026-05-28
+- Resolution Slice: V7.7 SLC-147 MT-2
 - Severity: Low
-- Area: V7.1-Polish / Next 16 / route.ts-Validation
+- Area: V7.7-Polish / Next 16 / route.ts-Validation
+- Resolution: V7.7 SLC-147 MT-2 (2026-05-28). 5 Helper-Symbole (ALLOWED_MIME_TYPES, MAX_FILE_SIZE, validateMimeType, validateFileSize, sanitizeFilename) aus `src/app/api/capture/[sessionId]/evidence/upload/route.ts` in neue `src/app/api/capture/[sessionId]/evidence/upload/validation.ts` ausgelagert. `route.ts` importiert ueber `./validation`. POST-Handler unveraendert. Test-File `__tests__/upload-validation.test.ts` Import-Pfad auf `../upload/validation` umgestellt. Quality-Gates: tsc + ESLint EXIT=0, Vitest upload-validation 23/23 PASS. Commit: 147a66e auf branch slc-147-v77-polish. **Production-Verhalten unveraendert** — Coolify nutzt weiter Turbopack-Default-Build; Aenderung schliesst lokalen Webpack-Build-Gate.
 - Summary: `src/app/api/capture/[sessionId]/evidence/upload/route.ts` (SLC-019, Commit 23deb56) exportiert Helper-Functions `validateMimeType`, `validateFileSize` + Constants `ALLOWED_MIME_TYPES`, `MAX_FILE_SIZE` aus einem Next.js-route.ts-File. Next 16 Webpack-Build strict-validiert route.ts-Exports und reject diese: `"validateMimeType" is not a valid Route export field. Next.js build worker exited with code: 1`. Default-Turbopack-Build (was Coolify-Production nutzt) ignoriert das und PASSES. Lokaler `next build --webpack` failt damit zuverlaessig — keine SLC-bezogene Regression, sondern pre-existing seit SLC-019. Entdeckt 2026-05-19 in OP V7 SLC-135 /backend RPT-307 F-1.
-- Impact: **Kein Production-Block** — Coolify nutzt Turbopack-Default-Build. Webpack-Build ist lokal nicht zuverlaessig als Build-Gate. Build-Probe via `--webpack` kann pre-existing-Fails treffen, was Slice-Bewertung verfaelscht. Workaround: Build-Gate ueber Hetzner-Test-Repo mit Default-Turbopack durchfuehren (siehe IMP-643).
-- Workaround: Helper-Functions + Constants aus `route.ts` in eigenes `validation.ts`-Modul auslagern + Re-Import in `route.ts`. ~5min Fix.
-- Next Action: V7.1-Polish-Slice (nicht release-blockierend fuer V7).
-- Related: OP V7 SLC-135 RPT-307 F-1, Dev-System IMP-643 (Turbopack-Junction), Original-Commit 23deb56 (SLC-019).
+- Related: OP V7 SLC-135 RPT-307 F-1, Dev-System IMP-643 (Turbopack-Junction), Original-Commit 23deb56 (SLC-019), SLC-147 (Resolution-Slice).
 
 ### ISSUE-076 — V6.3 SLC-105 ai_cost_ledger Silent INSERT-Fail (role='light_pipeline_block' nicht in CHECK-Constraint)
 - Status: resolved
