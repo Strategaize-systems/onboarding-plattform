@@ -1,5 +1,15 @@
 # Decisions
 
+## DEC-156 — MandantHeader-Component fuer alle Mandanten-Pages mit Logout, NICHT-Render fuer strategaize_admin
+- Status: accepted
+- Reason: V7.5 SLC-146 (BL-122 / ISSUE-083): Partner-Mandanten unter Steuerberatern hatten keinen Logout — die schlanke Welcome-Page + Diagnose-Funnel rendern ohne Layout-Wrapper, sodass die existierende DashboardSidebar-Logout-Action unzugaenglich war. ISO27001-/DSGVO-relevant. Eine eigene Sidebar fuer Partner-Mandanten wuerde dem "schlankes Welcome-Konzept" widersprechen — ein minimaler User-Header (Email + Logout-Button, sticky-top) erfuellt die Compliance-Pflicht ohne Layout-Bruch. Fuer strategaize_admin im Demo-Mode (DEC-155) wird AdminDemoBanner mit "Zurueck-Link" gerendert, das ersetzt den Mandanten-Logout funktional (Demo-Mode-Verlassen != Auth-Ende).
+- Consequence: Neuer Component `src/components/dashboard/MandantHeader.tsx` rendert sticky-top auf 5 Mandanten-Pages (/dashboard partner_client-Branch + 4 Diagnose-Pages). Touch-Target >=44px konsistent zu V7.4 DEC-151. Pattern aus `dashboard-sidebar.tsx:197-209` (logout-Action via useTransition) 1:1 portiert. NICHT-Render-Check `if (role === "strategaize_admin") return null` inside Component.
+
+## DEC-155 — Admin-Demo-Mode via tenant_id-Verortung statt View-As-Impersonation-Mechanik
+- Status: accepted
+- Reason: V7.5 SLC-145: strategaize_admin soll die Mandanten-Funnel-Sicht inkl. EditableText-Pencils direkt testen koennen, ohne separate Login-Sequenz als Mandant. Drei Loesungs-Optionen waren auf dem Tisch: (A) Echte Impersonation mit Session-Override via Query-Param + Audit-Log — komplex, eigenes Permission-Modell; (B) Demo-Tenant unter strategaize_admin per `tenant_id`-Verortung — einfach, nutzt bestehende RLS-Helper-Functions; (C) Separater Demo-Diagnose-Page als Admin-Tab — bedeutet Code-Duplication vom echten Mandanten-Funnel. Option B gewaehlt: einmaliges DB-Update setzt `profiles.tenant_id` auf den Privat-Tenant fuer admin@strategaize.de. Code-Gate-Erweiterung in /dashboard/page.tsx + /dashboard/diagnose/start/page.tsx laesst admin durch wenn tenant_id gesetzt.
+- Consequence: admin@strategaize.de sitzt jetzt im Privat-Tenant (57f5a6af-1e84-4640-a8c7-91d0a7147fb6, partner_client). Login redirected zu /dashboard mit PartnerClientWelcomeBlock + AdminDemoBanner (sticky-top, amber, Zurueck-zum-Admin-Link). Sidebar-Link `Mandanten-Demo` in AdminSidebar fuer schnellen Wechsel. Demo-Sessions vom Admin landen real in der `diagnose_event`-Telemetrie — bekannte Nebenwirkung, optional in V7.6+ via `is_test=true`-Flag mitigierbar. KEINE separate Impersonation-Mechanik noetig.
+
 ## DEC-001 — Code-Basis aus Blueprint V3.4 uebernommen
 - Status: accepted
 - Reason: Blueprint V3.4 ist produktiv, erprobt und bringt vollstaendigen Stack mit (Auth, Supabase, Docker, UI-Bibliothek, Deployment). Neu-Bau von Infrastruktur waere Zeitverschwendung.
