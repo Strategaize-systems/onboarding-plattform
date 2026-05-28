@@ -1857,3 +1857,174 @@ Geschaetzt **~3-5h Code-Side** ueber 1 Slice. Realistische Session-Anzahl: 1 Min
 
 ### Detail-Spec
 V7.4-Requirements-Completion-Report wird in dieser Session erstellt als RPT-339. Feature-Spec unter `/features/FEAT-062-app-shell-auth-pages-touch-target-polish.md`. /architecture-Schritt klaert Q-V7.4-A..D und definiert /slice-planning-Vorbereitung.
+
+---
+
+## V8 — Mandanten-Report-Port (10-Prinzipien-Teaser-Diagnose fuer StB-Mandanten)
+
+**Requirements-DONE 2026-05-28.** Versions-Shift dabei: Diary-Mode rutscht von V8 auf V9, Process-Mining-Cluster von V9 auf V10. V8-Slot neu belegt fuer Mandanten-Report-Port.
+
+### Problem Statement
+
+Aktuell laufen in der Onboarding-Plattform zwei Diagnose-Werkzeuge im Vertriebs-Stack:
+
+1. **Exit-Readiness 6-Block-Variante** (FEAT-002 + FEAT-016 LIVE seit V1) — die ausfuehrliche, voll-versionierte Diagnose fuer bestehende Strategaize-Kunden im Mandats-Verhaeltnis. Funktioniert, ist intern marktreif, bleibt erhalten.
+2. **Diagnose-Werkzeug 6-Block-Light-Variante** (FEAT-045 LIVE seit V6.3) — Self-Service-Diagnose ueber Steuerberater-Partner-Trichter. Live seit 2026-05-17. Inhalt aus Workshop 2026-05-16, nicht aus Strategaize-Methodik-Vorlage.
+
+**Was fehlt:** Eine Teaser-Diagnose, die die **Strategaize-Methodik (10 Prinzipien der Uebergabefaehigkeit)** abbildet — als greifbare Substanz-Demo gegenueber Steuerberatern und deren Mandanten. Die 10 Prinzipien sind im Dev-System final dokumentiert (`docs/curriculum/v2/EXIT_READINESS_PRINZIPIEN.md`), der finale Mandanten-Report-Prototyp (PDF 17 Seiten + Web-Variante) ist 2026-05-28 freigegeben (`docs/curriculum/v2/MANDANTEN_REPORT_PROTOTYP.html`), und die Stufen-Definitionen pro Modul x 5 Stufen liegen in `docs/curriculum/v2/EXIT_READINESS_LEVELS.md`. Diese Substanz muss in die Onboarding-Plattform portiert werden, damit StB-Mandanten in der Co-Hosting-Plattform einen sichtbaren Strategaize-Wert erleben — nicht eine generische Workshop-Output-Variante.
+
+Die bestehende FEAT-045 V6.3-Variante (24 Fragen + 6 Blocks) ist **nicht** durch die neue 10-Prinzipien-Variante zu ersetzen. Sie deckt einen **anderen** Use-Case ab: knapper Co-Hosting-Entry-Point fuer Partner ohne Strategaize-Branding-Investition. Die V8-Variante ist **substanz-stark** (47 Fragen, Premium-Renderer, Strategaize-Methodik), gedacht fuer:
+- StB **selbst** als Eigen-Diagnose (StB als Mandanten-Vertreter — Partner-Erlebnis)
+- StB-Mandanten via Co-Hosting-Plattform mit voller Strategaize-Tonalitaet
+
+### Goal / Intended Outcome
+
+Eine zweite vollwertige Teaser-Diagnose in der Onboarding-Plattform, die die Strategaize-10-Prinzipien-Methodik abbildet und mit einem 17-Seiten-Premium-PDF endet. Der Mandant kann den Fragebogen selbststaendig in ~40-55 Minuten beantworten (5 Hygiene-Fragen Ja/Teilweise/Nein + 37 Skala-Fragen 1-5 + 5 Reflexions-Textfelder), erhaelt automatisch einen SUI-Score (Strategaize Uebergabefaehigkeits-Index 0-100) mit Klassifizierung (Strukturluecke / Teil-Reife / Tragbar), und sieht im Bericht pro Modul "Worum es geht / Was es in Ihrer Firma bedeutet / Unsere Empfehlung". Der StB erhaelt automatisch eine Kopie des Berichts (Email-Versand-Pattern aus V7.2 wiederverwendbar). Bestehende V6.3-Variante laeuft parallel weiter, ohne Konflikt.
+
+### Target Users
+
+**Primaer (V8)**
+- **StB-Mandant (tenant_admin unter partner_client)** — beantwortet 10-Prinzipien-Teaser-Fragebogen selbststaendig, erhaelt SUI-Bericht als Premium-PDF
+- **Steuerberater (partner_admin)** — laedt Mandanten ueber Co-Hosting-Plattform ein, erhaelt Bericht-Kopie, nutzt Bericht als Folgegespraechs-Anker
+- **Steuerberater selbst (partner_admin in Eigen-Tenant)** — macht die Eigen-Diagnose um Partner-Erlebnis zu kennen
+
+**Sekundaer (deferred)**
+- Verlaufsbeobachtung ueber 6-12 Monate (Re-Erhebung des SUI) — out of scope V8, V8.1+ moegliche Erweiterung
+
+### Scope
+
+#### V8 In Scope
+
+1. **Neuer Template-Datensatz `exit-readiness-teaser-v1`** — eigenes Template-Objekt mit slug + version, 47 Fragen aufgeteilt in Modul 0 (5 Hygiene-Fragen Ja/Teilweise/Nein), Module 1-9 (3-6 Skala-Fragen pro Modul mit 5-Punkt-Reife-Skala 1-5 = Score 0/2/5/8/10), Modul 10 (5 Reflexions-Textfelder, ohne Score). Stufen-Lookup-Inhalt pro Modul x 5 Stufen aus `docs/curriculum/v2/EXIT_READINESS_LEVELS.md` als strukturierte Daten. **Modul 9 doppelt gewichtet (20%)** in SUI-Berechnung — Module 1-8 je 10%. (FEAT-063)
+
+2. **Neue Fragebogen-UI-Komponenten** — drei Antwort-Schemata sauber gerendert: (a) Hygiene-Trichotomie Ja/Teilweise/Nein als Pill-Group fuer Modul 0, (b) 5-Punkt-Reife-Skala mit klaren Labels "Noch gar nicht vorhanden / Erste Ansaetze / Teilweise implementiert / Weitgehend etabliert / Vollstaendig etabliert + belastbar" fuer Module 1-9, (c) Freitext-Reflexion Textareas fuer Modul 10. Reuse: bestehende QuestionFlow.tsx + EditableText (FEAT-056) + HelperTextModal (FEAT-057). (FEAT-064)
+
+3. **Neuer SUI-Score-Engine** — deterministische Berechnung (analog V6.3 DGN-A): Modul-Score = Durchschnitt Fragen-Score (0-10), SUI-Gesamt = gewichtetes Mittel Module 1-9 (Modul 9 doppelt), Klassifizierung in drei Stufen (0-30 Strukturluecke rot, 31-55 Teil-Reife amber, 56-100 Tragbar gruen). Modul 0 (Hausaufgaben) und Modul 10 (Reflexion) fliessen NICHT in den SUI ein, werden separat ausgewiesen. Bestehender Worker-Pipeline-Pfad aus V6.3 (`src/workers/condensation/`) wird ggf. erweitert um Teaser-Variante via `template.metadata.usage_kind=mandanten_report_teaser_v1`. (FEAT-065)
+
+4. **Neuer 17-Seiten-Premium-PDF-Renderer V2** — exakte Layout-Replikation der Master-Vorlage `docs/curriculum/v2/MANDANTEN_REPORT_PROTOTYP.html`: Cover-Page (Titel-Pitch + Wheel-Hintergrund) → SUI-Hero-Page (Score + Klassifizierung + Pitch-Text) → Modul-Profil-Page (Wheel + Legende 9 Module) → 9 Modul-Pages (je 1 A4-Seite mit fokussiertem Wheel-Segment-scale-1.14 links + Text rechts: "Worum es geht / Was es in Ihrer Firma bedeutet / Unsere Empfehlung") → Hausaufgaben-Page (Modul 0 Findings) → 3-Strategie-Hebel-Page → Reflexion-Page (Modul 10 Antworten als Zitat) → CTA-Folgegespraech-Page. Tonalitaet "Unsere Empfehlung" durchgaengig (NICHT "Empfehlung Ihres Steuerberaters", siehe [[feedback-mandanten-empfehlung-unsere-nicht-stb]]). Premium-Look Pflicht ([[feedback-design-premium-look-pflicht]]). (FEAT-066)
+
+5. **Bericht-Email-Versand mit Empfaenger-Auswahl** — Mandant + Partner-StB + optionale Zusatz-Empfaenger. Reuse: bestehende V7.2 `sendDiagnoseReportByEmail` Server-Action + `SendReportByEmailModal` (FEAT-060 LIVE) — nur Template-spezifische Erweiterung, kein Neubau.
+
+6. **Diagnose-Funnel-Telemetrie auch fuer Teaser-Variante** — Reuse bestehende `diagnose_event`-Tabelle aus V7.2 (FEAT-058 LIVE), mit `template_slug='exit-readiness-teaser-v1'` als Filter-Dimension. Admin-Analytics-Page liefert Drop-off + Helper-Hits + TOQ pro Frage auch fuer V8.
+
+#### V8 Out of Scope (explizit)
+
+- **Web-Variante des Reports** (Dashboard mit Hash-URL-Switcher analog `MANDANTEN_REPORT_WEB.html`) — V8.1+, separate Iteration nach PDF-Renderer-Erfolg
+- **Replace der V6.3-Variante** — beide Templates laufen parallel, kein Migrations-Pfad fuer bestehende `partner_diagnostic_v1`-Sessions
+- **Replace der V1-6-Block-exit-readiness-v1.0.0.json** — bleibt komplett liegen fuer spaetere Voll-Diagnose-Variante (User-Direktive 2026-05-28)
+- **StB-Partner-Branding im PDF** (Logo/Farben pro Partner-Organisation) — V8.1+, Reuse Pattern aus V6 Partner-Branding (FEAT-044)
+- **Mehrsprachige Reports** (NL/EN) — V8.1+, vorher Pilot-Distribution-Validierung
+- **Verlaufsbeobachtung / Re-Erhebung** (2 SUI-Erhebungen vergleichen) — V8.2+
+- **PDF-Anpassung im Admin-UI** (EditableText auf Bericht-Inhalt) — nicht in V8, V8.1+ erste Iteration nur fuer Headline-Texte
+- **3-Strategie-Hebel-Logik via LLM** — V8 nutzt deterministische Regel (3 Module mit niedrigstem Score), LLM-augmentation V8.1+
+- **Pilot-Distribution-Mechanik** (Partner-Org-Setup, Mandant-Einladung) — existiert bereits via V6 Partner-Onboarding + V7 Self-Signup, wird wiederverwendet, kein V8-Scope
+- **Migration der Diagnose-Daten in Knowledge-Architektur** (V7.6 SLC-354 Knowledge-Aggregation) — V8 stellt Teaser-Variante bereit, Aggregation-Pfad wird V7.6 / V10+ separat angegangen
+- **Diary-Mode** (war V8-alt) — verschoben auf V9
+
+### Core Features (V8)
+
+| ID | Feature | Zweck |
+|----|---------|-------|
+| FEAT-063 | 10-Prinzipien-Teaser-Template + Stufen-Lookup-Daten | Template-Objekt `exit-readiness-teaser-v1` mit 47 Fragen + Stufen-Inhalt pro Modul x 5 Stufen als strukturierte JSON-Daten (aus EXIT_READINESS_PRINZIPIEN.md + EXIT_READINESS_LEVELS.md) |
+| FEAT-064 | Fragebogen-UI-Komponenten (3 Antwort-Schemata) | Hygiene-Trichotomie + 5-Punkt-Reife-Skala + Reflexion-Textareas auf bestehender QuestionFlow.tsx-Basis |
+| FEAT-065 | SUI-Score-Engine mit gewichtetem Mittel + Stufen-Klassifizierung | Deterministische Score-Berechnung Module 1-9 mit Modul 9 doppelt gewichtet, Klassifizierung in 3 Stufen, Hausaufgaben + Reflexion separat |
+| FEAT-066 | 17-Seiten-Premium-Mandanten-Report-Renderer V2 | Exakte Layout-Replikation Master-Vorlage mit Wheel + 9 Modul-Pages + Hausaufgaben + Hebel + Reflexion + CTA, Tonalitaet "Unsere Empfehlung" |
+
+Detail-Specs pro Feature unter `/features/FEAT-063..066-*.md`.
+
+### Constraints
+
+#### Pflicht-Reuse (kein Neubau)
+- **Template-Switcher-UI** (FEAT-014 LIVE seit V2) — neue Template-Variante wird einfach als zweite Auswahl gerendert
+- **Capture-Session + Block-Submit-Pattern** (FEAT-003 LIVE seit V1) — Fragebogen-Flow unveraendert
+- **Partner-Branding-Infrastructure** (FEAT-044 LIVE seit V6) — minimal CSS-Custom-Properties-Setup bleibt vorbereitet fuer V8.1+
+- **Bericht-Email-Versand-Pattern** (FEAT-060 LIVE seit V7.2) — nur Template-Erweiterung
+- **Diagnose-Funnel-Telemetrie** (FEAT-058 LIVE seit V7.2) — Reuse via `template_slug`-Dimension
+- **Worker-Pipeline-Architektur** (`src/workers/condensation/` aus V1, erweitert V6.3) — Branching ueber `template.metadata.usage_kind`
+- **Bedrock-LLM-Adapter** (DEC-006) — falls LLM-Augmentation noetig, EU-Region Pflicht
+- **EditableText-Komponente** (FEAT-056 LIVE seit V7.1) — fuer kuenftige Bericht-Text-Anpassbarkeit vorbereitet
+- **HelperTextModal** (FEAT-057 LIVE seit V7.1) — fuer Fragen-Tooltips wenn Helper-Texts gefuellt
+- **Style-Guide-V2** ([[feedback-style-guide-v2-mandatory]]) + V2-Sidebar-Layout ([[feedback-v2-sidebar-pflicht]]) Pflicht
+- **"Unsere Empfehlung"-Tonalitaet** ([[feedback-mandanten-empfehlung-unsere-nicht-stb]])
+- **Premium-Look** ([[feedback-design-premium-look-pflicht]])
+- **Cumulative-Single-Branch-Pattern** ([[feedback-cumulative-single-branch-pattern]]) bei strikt-abhaengigen Slice-Sequenzen
+- **Master-Merge nur am Slice-Ende** ([[feedback-slice-merge-at-end]])
+- **Live-Smoke vor /qa-PASS** bei Output-aendernden Slices ([[feedback-deferred-live-smoke-completion]])
+
+#### Technische Constraints
+- **Data-Residency:** alle LLM-Calls ueber Bedrock eu-central-1 (Frankfurt), kein OpenAI-Direkt (DEC-006, `.claude/rules/data-residency.md`)
+- **PDF-Renderer-Wahl:** offene Frage (Q-V8-A), Wechsel von `@react-pdf/renderer` auf Puppeteer/Playwright HTML-zu-PDF ist substanzielle Architektur-Entscheidung
+- **DB-Schema:** moeglichst additiv — neue Template-Row in `public.template` + JSONB-Blocks-Erweiterung + neuer Renderer-Endpunkt
+- **Bedrock-Kosten-Kontrolle** ([[feedback-bedrock-cost-control]]): KI-Features on-click oder Block-Submit-getriggert, nicht auto-load
+- **Auto-Deploy OFF, manueller Deploy ueber Coolify** ([[feedback-manual-deploy]])
+- **Coolify-Cron via node:22-Sidecar oder Coolify-Scheduled-Task** ([[feedback-async-always-coolify-cron]])
+
+#### Inhaltliche Constraints
+- **Tonalitaet:** "Unsere Empfehlung" durchgaengig, NICHT "Empfehlung Ihres Steuerberaters"
+- **Strategaize-Branding:** Strategaize-Name NICHT namentlich im Mandanten-Output (StB-Branding hat Vorrang im Cover-Footer); Strategaize-Sicht-Position aber stark sichtbar in "Unsere Empfehlung"-Sektionen
+- **Stufen-Inhalt:** Die Stufen-Definitionen pro Modul x 5 Stufen sind verbindliche Strategaize-Substanz, KEIN LLM-Generierung — werden 1:1 aus `EXIT_READINESS_LEVELS.md` als Daten gespiegelt
+
+### Risks / Assumptions
+
+#### Risiken
+- **R1 — PDF-Renderer-Komplexitaet bei 17 Seiten + Wheel-SVG:** `@react-pdf/renderer` hat eingeschraenkte SVG-Unterstuetzung, Wheel-Rendering nicht trivial. Mitigation: in /architecture Q-V8-A entscheiden (Reuse vs. Puppeteer/Playwright-HTML-zu-PDF). Bei Puppeteer: neuer Dependency, hoehere Bundle-Size, aber Wheel-SVG aus HTML-Prototyp direkt portierbar.
+- **R2 — Inhaltlich-Datenpflege Stufen-Lookup:** 9 Module x 5 Stufen x 2 Perspektiven ("Was es in Ihrer Firma bedeutet" + "Unsere Empfehlung") = 90 Inhalts-Bloecke aus `EXIT_READINESS_LEVELS.md`. Zusaetzlich 9 "Worum es geht"-Texte. Migration-Aufwand: substantiell, aber liegt als strukturierter Markdown bereits vor — Parser/Import-Skript faktisch ein Datentransformations-Job.
+- **R3 — Template-Switcher-Konflikt:** FEAT-014 ist live aber wurde nie unter Last mit zwei aktiven Templates getestet. Mitigation: in /architecture pruefen, ob Switcher-UI auf Start-Page eine Auswahl zwischen V6.3 Template (24 Fragen, 6 Blocks) und V8 Template (47 Fragen, 11 Module + SUI) ermoeglicht.
+- **R4 — Score-Engine-Plausibilitaet:** Modul 9 doppelt gewichtet ist eine inhaltliche Strategaize-Festlegung (nicht trivial nachvollziehbar). User-Review nach erster End-to-End-Diagnose zwingend.
+- **R5 — Tonalitaets-Drift:** "Unsere Empfehlung" muss in 90+ Texten konsistent sein, nicht "wir empfehlen" oder "der Berater empfiehlt". Lint-Skript / Audit-Skript fuer Content-Validierung sinnvoll.
+
+#### Annahmen
+- StB-Pilot-Partner ist parallel zum V8-Bau aktiv (V6 Partner-Onboarding existiert seit V6 RELEASED 2026-05-14)
+- Die 4 Pflicht-Vorlagen (HTML-Prototyp + PRINZIPIEN.md + LEVELS.md + bestehender V7.2-Renderer als Reuse-Basis) bleiben stabil
+- Bedrock-Kosten fuer ~50 Wheel-Renders pro Bericht (falls Wheel ueber LLM-augmented Text generiert wird) liegen unter $0.10/Bericht — vermutlich aber Wheel ist SVG-statisch, kein LLM-Call
+- Erste echte Diagnose-Erhebung kommt vom Founder selbst als Test-Mandant
+
+### Success Criteria (V8)
+
+**SC-V8-1 — End-to-End-Flow funktioniert (Teaser-Mandant)**
+Ein neu eingeladener tenant_admin unter einem partner_client kann den Teaser-Fragebogen `exit-readiness-teaser-v1` selbststaendig durchlaufen: alle 5 Hygiene-Fragen Ja/Teilweise/Nein, alle 37 Skala-Fragen 1-5, alle 5 Reflexions-Textfelder. Per Block-Submit-Pattern werden Antworten gespeichert. Sessionende loest Score-Berechnung aus.
+
+**SC-V8-2 — SUI-Score-Engine berechnet plausibel**
+Aus 37 Skala-Antworten + Gewichtungs-Logik (Module 1-8 je 10%, Modul 9 zu 20%) entsteht ein SUI-Gesamt-Score 0-100 mit Klassifizierung Strukturluecke / Teil-Reife / Tragbar. Pro Modul wird ein Modul-Score 0-100 berechnet und korrekt der Stufe 1-5 zugeordnet. Hausaufgaben aus Modul 0 (Status Nein/Teilweise) werden als separate Liste aufbereitet. Modul 10 Reflexionen werden als Zitat-Sammlung gespeichert.
+
+**SC-V8-3 — 17-Seiten-Premium-PDF wird gerendert**
+Nach Session-Finalize entsteht ein 17-Seiten-PDF mit Cover + SUI-Hero + Modul-Profil-Wheel + 9 Modul-Pages (fokussiertes Wheel-Segment + 3-Sektionen-Text) + Hausaufgaben + 3-Hebel + Reflexion + CTA. Layout visuell identisch mit HTML-Prototyp `MANDANTEN_REPORT_PROTOTYP.html`. Tonalitaet "Unsere Empfehlung" durchgaengig.
+
+**SC-V8-4 — Parallel-Coexistenz zur V6.3-Variante haelt**
+Bestehende `partner_diagnostic_v1`-Sessions (V6.3-Variante) laufen unberuehrt weiter. Neue Sessions mit `exit-readiness-teaser-v1`-Template laufen ueber den V8-Pfad. Keine Schema-Aenderung in bestehenden Tabellen, die V6.3 brechen wuerde.
+
+**SC-V8-5 — Email-Versand funktioniert (mit Empfaenger-Auswahl)**
+Bericht-Email-Modal aus V7.2 (FEAT-060) zeigt fuer V8-Template-Berichte das neue 17-Seiten-PDF als Attachment. Mandant + Partner-StB + optionale Zusatz-Empfaenger werden zuverlaessig erreicht.
+
+**SC-V8-6 — Telemetrie liefert Funnel-Daten fuer V8-Template**
+Admin-Analytics-Page (FEAT-058) zeigt Drop-off + Helper-Hits + TOQ pro Frage fuer V8-Template separat von V6.3-Template (Filter via `template_slug`).
+
+### Open Questions fuer /architecture V8
+
+- **Q-V8-A — PDF-Renderer-Architektur:** `@react-pdf/renderer` beibehalten (V7.2-Bestand, SVG-eingeschraenkt) oder Wechsel auf Puppeteer/Playwright HTML-zu-PDF (HTML-Prototyp direkt portierbar, Wheel-SVG trivial, aber neue Dependency + Bundle-Risiko)?
+- **Q-V8-B — Template-Switcher-Sichtbarkeit:** Bietet die Start-Page dem Mandanten eine Wahl zwischen V6.3-Variante und V8-Variante, oder wird via partner_organization.metadata oder URL-Parameter fest welche Variante ausgespielt?
+- **Q-V8-C — Score-Engine-Hybrid-LLM oder rein deterministisch:** SUI + Modul-Scores rein deterministisch (analog V6.3 DGN-A) oder mit LLM-augmentation fuer "Was es in Ihrer Firma bedeutet"-Text-Anpassung pro Modul x Stufe?
+- **Q-V8-D — 3-Strategie-Hebel-Auswahl:** Deterministische Regel (3 Module mit niedrigstem Score = 3 Hebel) oder LLM waehlt aus 10 Prinzipien basierend auf Score-Profil + Reflexions-Antworten?
+- **Q-V8-E — Hausaufgaben-Block (Modul 0):** Direkt aus Modul-0-Antworten (Nein/Teilweise als Hausaufgabe) gerendert oder LLM-formuliert mit Mandant-spezifischem Kontext?
+- **Q-V8-F — Modul-Profil-Wheel-Render-Strategie:** Inline-SVG im PDF (technisch komplex bei @react-pdf/renderer) oder server-side-PNG-Pre-Render via puppeteer/satori oder Wheel direkt in HTML-zu-PDF-Pipeline (impliziert Q-V8-A=Puppeteer)?
+- **Q-V8-G — Bericht-Persistenz:** Bericht als generiertes PDF-Asset im Supabase-Storage (analog FEAT-060) oder als strukturierte Daten in DB (knowledge_unit-Records mit metadata.report_type='sui_teaser_v1') oder beides?
+- **Q-V8-H — Stufen-Lookup-Daten-Quelle:** Stufen-Inhalt (90+ Texte) als statische JSON-Datei im Repo committed oder als seedbarer DB-Datensatz mit Migration oder als template.metadata-JSONB-Erweiterung im exit-readiness-teaser-v1-Template-Row?
+
+### Delivery Mode
+
+**SaaS Product** — entspricht der bestehenden Onboarding-Plattform-Klassifizierung. Strengste TDD-Disziplin (Tests fuer Score-Engine, Template-Daten-Validierung, Email-Versand-Pfad). Mandatory atomic commits pro Micro-Task ([[git-release]] Rule).
+
+### Slice-Sketch (vorlaeufig, /architecture + /slice-planning entscheiden)
+
+Geschaetzt **3-5 Slices, ~5-8 Sessions** ueber 2-3 Wochen Implementations-Zeit:
+
+- **SLC-148 (geplant) — FEAT-063 + FEAT-065:** Template-Daten + Score-Engine. Migration (additiv) + Template-Seed mit 47 Fragen + Stufen-Lookup-Daten + Pure-Function-Score-Berechnung + Vitest. Backend-only.
+- **SLC-149 (geplant) — FEAT-064:** Fragebogen-UI-Komponenten. Hygiene-Trichotomie + 5-Punkt-Skala + Reflexion-Textareas in QuestionFlow.tsx integriert. Frontend.
+- **SLC-150 (geplant) — FEAT-066 Phase A:** Renderer-Foundation. PDF-Engine-Wahl (Q-V8-A), Cover + SUI-Hero + Modul-Profil + Wheel-Komponente. Backend + leichte Frontend-Integration (Download-Link).
+- **SLC-151 (geplant) — FEAT-066 Phase B:** Modul-Pages (9) + Hausaufgaben + Hebel + Reflexion + CTA. Stufen-Lookup-Render-Logik. Backend.
+- **SLC-152 (geplant) — Integration + Telemetrie + Email-Versand-Adapter:** End-to-End Smoke. V7.2-Pattern-Erweiterung fuer Email-Modal. Telemetrie-Filter via template_slug. Live-Smoke + Founder-Test-Diagnose.
+
+Realistische Sessions: 1 Setup-Session (FEAT-063 Template-Seed) + 1-2 Score+UI-Sessions + 2-3 Renderer-Sessions + 1 Integration-Session.
+
+### Detail-Spec
+V8-Requirements-Completion-Report wird in dieser Session erstellt als RPT-348 (RPT-347 ist V7.7 Live-Smoke). Feature-Specs unter `/features/FEAT-063..066-*.md`. /architecture-Schritt klaert Q-V8-A..H und definiert /slice-planning-Vorbereitung.

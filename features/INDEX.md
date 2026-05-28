@@ -175,3 +175,14 @@ V7-Scope (User-Entscheidung 2026-05-18 nach V6.4 STABLE-Bestaetigung RPT-295): B
 | ID | Feature | Status | Spec | Created |
 |----|---------|--------|------|---------|
 | FEAT-062 | App-Shell Touch-Target + Auth-Pages-Polish (Footer + shadcn-Button + 4 Auth-Pages) | deployed | [Spec](FEAT-062-app-shell-auth-pages-touch-target-polish.md) | 2026-05-23 |
+
+## V8 Features (Mandanten-Report-Port — 10-Prinzipien-Teaser-Diagnose)
+
+V8-Scope (User-Entscheidung 2026-05-28 nach Mandanten-Report-Prototyp-Freigabe): 10-Prinzipien-Teaser-Diagnose fuer StB-Mandanten via Co-Hosting-Plattform sowie StB-Eigen-Diagnose. Parallel zur bestehenden 6-Block-Variante (FEAT-002+FEAT-016 LIVE) und V6.3-Workshop-Variante (FEAT-045 LIVE) — keine Replace, drei nebeneinander laufende Diagnose-Templates fuer unterschiedliche Use-Cases. Pflicht-Vorlagen: Dev-System `docs/curriculum/v2/MANDANTEN_REPORT_PROTOTYP.html` (Layout-Master), `EXIT_READINESS_PRINZIPIEN.md` (Fragebogen + Score + SUI), `EXIT_READINESS_LEVELS.md` (Stufen-Lookup). Versions-Shift: Diary-Mode (alt V8) -> V9, Process-Mining (alt V9) -> V10.
+
+| ID | Feature | Status | Spec | Created |
+|----|---------|--------|------|---------|
+| FEAT-063 | 10-Prinzipien-Teaser-Template + Stufen-Lookup-Daten (47 Fragen, 90+ Stufen-Inhalts-Bloecke) | planned | [Spec](FEAT-063-mandanten-report-teaser-template.md) | 2026-05-28 |
+| FEAT-064 | Fragebogen-UI-Komponenten (Hygiene-Trichotomie + 5-Punkt-Reife-Skala + Reflexion-Textareas) | planned | [Spec](FEAT-064-mandanten-report-fragebogen-ui.md) | 2026-05-28 |
+| FEAT-065 | SUI-Score-Engine (Module 1-9 gewichtetes Mittel, Modul 9 doppelt, 3-Stufen-Klassifizierung) | planned | [Spec](FEAT-065-sui-score-engine.md) | 2026-05-28 |
+| FEAT-066 | 17-Seiten-Premium-Mandanten-Report-Renderer V2 (Cover + Wheel + 9 Modul-Pages + Hausaufgaben + Hebel + Reflexion + CTA) | planned | [Spec](FEAT-066-mandanten-report-renderer-v2.md) | 2026-05-28 |

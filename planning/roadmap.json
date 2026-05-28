@@ -164,16 +164,23 @@
     {
       "id": "v8",
       "name": "V8",
-      "status": "planned",
-      "summary": "Diary-Mode als zusaetzlicher Capture-Modus (zeitlich verteilte In-Situ-Aufnahmen, Mobile/PWA). Architektur-Hooks wurden in V4 vorbereitet (FEAT-025 Capture-Mode-Extension). Versionsnummer ehemals V5 (vor 2026-04-23 Re-Numerierung), dann V6, jetzt V8 nach Multiplikator-Layer-Priorisierung (NL-Investor-Substanz Q4 2026). Diary-Mode adressiert das Erfassen von seltenem, situativem Wissen (z.B. nur monatlich auftretende Ausnahmen), das in Questionnaire/Walkthrough/Dialogue-Modi nicht praktikabel ist. V7.1-Polish-Sammler (BL-113..117) laeuft vorher als kompakter Cycle (siehe DEC-139).",
+      "status": "active",
+      "summary": "**Mandanten-Report-Port — 10-Prinzipien-Teaser-Diagnose fuer StB-Mandanten via Co-Hosting-Plattform.** Neuer Fragebogen-Template (47 Fragen: 5 Hygiene + 37 Skala + 5 Reflexion) entlang 10 Strategaize-Uebergabefaehigkeits-Prinzipien (Modul 0..10) mit SUI-Score (Strategaize Uebergabefaehigkeits-Index 0-100, gewichtetes Mittel Module 1-9, Modul 9 doppelt). 17-Seiten-Premium-PDF-Renderer nach Master-Vorlage (`docs/curriculum/v2/MANDANTEN_REPORT_PROTOTYP.html` im Dev-System) mit Cover + SUI-Hero + Modul-Profil-Wheel + 9 Modul-Pages mit fokussiertem Wheel-Segment + Hausaufgaben (Modul 0) + 3 Strategie-Hebel + Reflexion (Modul 10) + CTA Folgegespraech. Stufen-Lookup-Tabelle pro Modul x 5 Stufen aus `docs/curriculum/v2/EXIT_READINESS_LEVELS.md` als Inhalt fuer 'Was es in Ihrer Firma bedeutet' + 'Unsere Empfehlung'. Tonalitaet 'Unsere Empfehlung' (Strategaize-Sicht, NICHT 'Empfehlung Ihres Steuerberaters'). Distribution-Use-Case: StB Mandant-Einladung via Co-Hosting-Plattform (Mandant beantwortet in Ruhe, Beratungs-Protokoll als Output) + StB-eigene-Diagnose. Parallel zur bestehenden 6-Block-Variante (exit-readiness-v1.0.0.json, FEAT-002+FEAT-016 LIVE) — keine Replace, zwei klar getrennte Use-Cases (Teaser vs. Voll-Diagnose fuer bestehende Strategaize-Kunden). Diary-Mode (DEC-101) verschoben auf V9. Pilot-Empfaenger: StB selbst (Eigen-Diagnose) + StB-Mandanten via Co-Hosting-Plattform.",
       "order": 18
     },
     {
       "id": "v9",
-      "name": "V9+",
+      "name": "V9",
       "status": "planned",
-      "summary": "Queroptionen: Process-Mining-Connector, kollaborative Annotation, Anomalie-Flagging, Prozess-Simulation. Versionsnummer ehemals V6+ (vor 2026-04-23 Re-Numerierung), dann V7+, jetzt V9+ nach Multiplikator-Layer-Priorisierung. Falls kunden-getrieben gewollt: Browser-Extension fuer strukturierte Klick-Erfassung + DOM-Snapshots (V5+ baut nur Web-only Capture, Klick-Tracking ist V9+).",
+      "summary": "Diary-Mode als zusaetzlicher Capture-Modus (zeitlich verteilte In-Situ-Aufnahmen, Mobile/PWA). Architektur-Hooks wurden in V4 vorbereitet (FEAT-025 Capture-Mode-Extension). Versionsnummer ehemals V5 (vor 2026-04-23 Re-Numerierung), dann V6, dann V8, jetzt V9 nach 2026-05-28 Versions-Shift (V8 wurde Mandanten-Report-Port). Diary-Mode adressiert das Erfassen von seltenem, situativem Wissen (z.B. nur monatlich auftretende Ausnahmen), das in Questionnaire/Walkthrough/Dialogue-Modi nicht praktikabel ist. V7.1-Polish-Sammler (BL-113..117) laeuft vorher als kompakter Cycle (siehe DEC-139).",
       "order": 19
+    },
+    {
+      "id": "v10",
+      "name": "V10+",
+      "status": "planned",
+      "summary": "Queroptionen: Process-Mining-Connector, kollaborative Annotation, Anomalie-Flagging, Prozess-Simulation. Versionsnummer ehemals V6+ (vor 2026-04-23 Re-Numerierung), dann V7+, dann V9+, jetzt V10+ nach 2026-05-28 Versions-Shift (V8 wurde Mandanten-Report-Port, Diary-Mode rutschte auf V9). Falls kunden-getrieben gewollt: Browser-Extension fuer strukturierte Klick-Erfassung + DOM-Snapshots (V5+ baut nur Web-only Capture, Klick-Tracking ist V10+).",
+      "order": 20
     },
     {
       "id": "v7-7",
