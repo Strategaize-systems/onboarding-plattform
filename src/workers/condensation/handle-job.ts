@@ -19,6 +19,11 @@ import {
   type LightPipelineSession,
   type LightPipelineTemplate,
 } from "./light-pipeline";
+import {
+  runV8MandantenReportPipeline,
+  type V8PipelineSession,
+  type V8PipelineTemplate,
+} from "./v8-pipeline";
 import type {
   BlockAnswer,
   BlockDefinition,
@@ -37,13 +42,24 @@ export async function handleCondensationJob(job: ClaimedJob): Promise<void> {
 
   // V6.3 NEU — Branch fuer Light-Pipeline (DGN-A) wenn Job auf capture_session_id zeigt
   // und Template.metadata.usage_kind=self_service_partner_diagnostic. Sonst Standard-Pipeline.
+  //
+  // V8 SLC-148 MT-6 — Zweiter Branch fuer V8 Mandanten-Report-Pipeline wenn
+  // Template.metadata.usage_kind=mandanten_report_teaser_v1. Diese Branch ist
+  // deterministisch (kein Bedrock) und wird primaer von der Server-Action
+  // finalizeMandantenReport direkt gerufen; der Dispatcher-Path existiert fuer
+  // queued Jobs als Forward-Compat (z.B. wenn submitDiagnoseRun-aequivalent
+  // spaeter ai_jobs queued).
   const captureSessionId = job.payload.capture_session_id as string | undefined;
   if (captureSessionId) {
-    const handled = await tryDispatchLightPipeline(adminClient, job, captureSessionId);
+    const handled = await tryDispatchSessionPipeline(
+      adminClient,
+      job,
+      captureSessionId,
+    );
     if (handled) {
       const duration = Date.now() - startTime;
       console.log(
-        `[handle-job] Light-Pipeline finalized session ${captureSessionId} in ${duration}ms`,
+        `[handle-job] Session-Pipeline finalized session ${captureSessionId} in ${duration}ms`,
       );
       const { error: completeError } = await adminClient.rpc(
         "rpc_complete_ai_job",
@@ -278,15 +294,17 @@ export async function handleCondensationJob(job: ClaimedJob): Promise<void> {
 }
 
 /**
- * V6.3 Light-Pipeline Dispatch (SLC-105 / FEAT-045).
+ * Session-Pipeline Dispatch.
  *
- * Versucht den Job ueber `runLightPipeline` zu finalisieren, wenn
- * `template.metadata.usage_kind === "self_service_partner_diagnostic"`.
+ * Loads capture_session + template once, then routes by template.metadata.usage_kind:
+ *   - "self_service_partner_diagnostic" -> V6.3 runLightPipeline (DGN-A, Bedrock-Verdichtung)
+ *   - "mandanten_report_teaser_v1"      -> V8 runV8MandantenReportPipeline (deterministisch)
+ *   - other / undefined                  -> fall through to Standard-Pipeline
  *
- * @returns true wenn Light-Pipeline gerufen wurde (Caller markiert Job als completed).
- *          false wenn keine Light-Pipeline-Auspraegung — Caller faellt auf Standard-Pipeline zurueck.
+ * @returns true if a session-specific pipeline handled the job (caller marks completed),
+ *          false if no usage_kind match (caller falls through to block_checkpoint Standard).
  */
-async function tryDispatchLightPipeline(
+async function tryDispatchSessionPipeline(
   adminClient: ReturnType<typeof createAdminClient>,
   job: ClaimedJob,
   captureSessionId: string,
@@ -331,31 +349,54 @@ async function tryDispatchLightPipeline(
 
   const usageKind =
     (templateRow.metadata as { usage_kind?: string } | null)?.usage_kind ?? null;
-  if (usageKind !== "self_service_partner_diagnostic") {
-    return false;
+
+  if (usageKind === "self_service_partner_diagnostic") {
+    const lightSession: LightPipelineSession = {
+      id: sessionRow.id,
+      tenant_id: sessionRow.tenant_id,
+      template_id: sessionRow.template_id,
+      owner_user_id: sessionRow.owner_user_id,
+      answers: sessionRow.answers ?? {},
+    };
+    const lightTemplate: LightPipelineTemplate = {
+      id: templateRow.id,
+      version: templateRow.version,
+      blocks: templateRow.blocks as LightPipelineTemplate["blocks"],
+      metadata: templateRow.metadata as LightPipelineTemplate["metadata"],
+    };
+    await runLightPipeline({
+      session: lightSession,
+      template: lightTemplate,
+      adminClient,
+      jobId: job.id,
+    });
+    return true;
   }
 
-  const lightSession: LightPipelineSession = {
-    id: sessionRow.id,
-    tenant_id: sessionRow.tenant_id,
-    template_id: sessionRow.template_id,
-    owner_user_id: sessionRow.owner_user_id,
-    answers: sessionRow.answers ?? {},
-  };
-  const lightTemplate: LightPipelineTemplate = {
-    id: templateRow.id,
-    version: templateRow.version,
-    blocks: templateRow.blocks as LightPipelineTemplate["blocks"],
-    metadata: templateRow.metadata as LightPipelineTemplate["metadata"],
-  };
+  if (usageKind === "mandanten_report_teaser_v1") {
+    const v8Session: V8PipelineSession = {
+      id: sessionRow.id,
+      tenant_id: sessionRow.tenant_id,
+      template_id: sessionRow.template_id,
+      owner_user_id: sessionRow.owner_user_id,
+      answers: sessionRow.answers ?? {},
+    };
+    const v8Template: V8PipelineTemplate = {
+      id: templateRow.id,
+      version: templateRow.version,
+      blocks: templateRow.blocks,
+      metadata: templateRow.metadata,
+    };
+    await runV8MandantenReportPipeline({
+      session: v8Session,
+      template: v8Template,
+      adminClient,
+      jobId: job.id,
+    });
+    return true;
+  }
 
-  await runLightPipeline({
-    session: lightSession,
-    template: lightTemplate,
-    adminClient,
-    jobId: job.id,
-  });
-  return true;
+  return false;
 }
 
 /**

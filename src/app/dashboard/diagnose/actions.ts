@@ -1,6 +1,7 @@
 "use server";
 
 // V6.3 SLC-105 MT-6 — Mandanten-Run-Flow Server-Actions fuer Diagnose-Werkzeug.
+// V8 SLC-148 MT-6 — Zusaetzlich: finalizeMandantenReport fuer V8-Template.
 //
 // Drei Actions:
 //   - startDiagnoseRun()  → INSERT capture_session(status='open'), redirect /run/[id].
@@ -23,8 +24,14 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  runV8MandantenReportPipeline,
+  type V8PipelineResult,
+} from "@/workers/condensation/v8-pipeline";
 
 const PARTNER_DIAGNOSTIC_SLUG = "partner_diagnostic";
+const V8_TEMPLATE_SLUG = "exit-readiness-teaser-v1";
+const V8_USAGE_KIND = "mandanten_report_teaser_v1";
 // V6.4 SLC-130: Template-Lookup auf "newest version pro slug" umgestellt.
 // PARTNER_DIAGNOSTIC_VERSION-Konstante entfernt — Migration 096 fuehrt
 // UNIQUE(slug, version) ein, neue capture_sessions referenzieren immer
@@ -245,7 +252,7 @@ export async function saveDiagnoseDraft(
  * Setzt capture_session.status='submitted' und enqueuet einen
  * knowledge_unit_condensation-Job mit payload.capture_session_id. Der
  * Worker dispatched ueber template.metadata.usage_kind zur Light-Pipeline
- * (siehe handle-job.ts:tryDispatchLightPipeline, MT-5).
+ * (siehe handle-job.ts:tryDispatchSessionPipeline, V6.3 MT-5 + V8 MT-6).
  *
  * Setzt status='pending' damit rpc_claim_next_ai_job_for_type greift.
  * scheduled_at bleibt auf DB-DEFAULT now() (siehe Migration 031 ai_jobs),
@@ -314,4 +321,139 @@ export async function submitDiagnoseRun(
   }
 
   redirect(`/dashboard/diagnose/${sessionId}/bericht-pending`);
+}
+
+/**
+ * V8 SLC-148 MT-6 — finalizeMandantenReport.
+ *
+ * Vollstaendig synchrone (kein Bedrock / kein LLM) Server-Action, die fuer
+ * eine capture_session vom V8-Template `exit-readiness-teaser-v1` den
+ * deterministischen Bericht-Snapshot rechnet und in
+ * `capture_session.metadata.v8_report_snapshot` persistiert.
+ *
+ * Per [[feedback-synchronous-llm-no-ai-jobs-insert]]: KEIN ai_jobs-INSERT,
+ * KEIN ai_cost_ledger — der gesamte Pfad ist deterministisch und kann direkt
+ * im Request-Cycle laufen (~ms statt s). Worker-Path existiert parallel im
+ * handle-job-Dispatcher als Forward-Compat.
+ *
+ * Pre-Conditions:
+ *  - Session existiert
+ *  - Session.tenant_id == mandant.tenant_id (Auth-Gate, via authorizeMandant)
+ *  - Session.status in ('in_progress', 'submitted')  (offene Session, noch
+ *    nicht finalized — finalized = bereits durchgelaufen, Re-Run noch erlaubt)
+ *  - Template.slug = 'exit-readiness-teaser-v1' UND
+ *    Template.metadata.usage_kind = 'mandanten_report_teaser_v1'
+ *
+ * Setzt KEIN released_for_strategaize_review-Flag (DEC-163-Erweiterung,
+ * AC-SLC-148-6) — das passiert ausschliesslich von der V8.1 Lead-Conversion-CTA
+ * (BL-134).
+ *
+ * Setzt capture_session.status='finalized' NACH erfolgreichem Snapshot-Write.
+ *
+ * @returns { snapshot } bei Erfolg, { error } bei Fehler.
+ */
+export async function finalizeMandantenReport(
+  sessionId: string,
+): Promise<
+  | { snapshot: V8PipelineResult["snapshot"]; durationMs: number }
+  | { error: string }
+> {
+  const auth = await authorizeMandant();
+  if ("error" in auth) return { error: auth.error };
+  const { mandant } = auth;
+
+  const admin = createAdminClient();
+
+  const { data: session, error: sessError } = await admin
+    .from("capture_session")
+    .select(
+      "id, tenant_id, template_id, template_version, owner_user_id, status, answers",
+    )
+    .eq("id", sessionId)
+    .single();
+  if (sessError || !session) {
+    return { error: "Session nicht gefunden" };
+  }
+  if (session.tenant_id !== mandant.tenantId) {
+    return { error: "Kein Zugriff" };
+  }
+  if (
+    session.status !== "in_progress" &&
+    session.status !== "submitted" &&
+    session.status !== "finalized"
+  ) {
+    return {
+      error: `Diagnose-Status '${session.status as string}' nicht finalisierbar`,
+    };
+  }
+
+  // Template laden + Usage-Kind verifizieren.
+  const { data: template, error: tmplError } = await admin
+    .from("template")
+    .select("id, slug, version, blocks, metadata")
+    .eq("id", session.template_id)
+    .single();
+  if (tmplError || !template) {
+    return {
+      error: `Template ${session.template_id as string} nicht gefunden`,
+    };
+  }
+  if (template.slug !== V8_TEMPLATE_SLUG) {
+    return {
+      error: `finalizeMandantenReport nur fuer Template '${V8_TEMPLATE_SLUG}', erhalten '${template.slug as string}'`,
+    };
+  }
+  const usageKind = (template.metadata as { usage_kind?: string } | null)
+    ?.usage_kind;
+  if (usageKind !== V8_USAGE_KIND) {
+    return {
+      error: `Template usage_kind muss '${V8_USAGE_KIND}' sein, erhalten '${usageKind ?? "undefined"}'`,
+    };
+  }
+
+  // Pipeline ausfuehren — wirft bei Compute- oder Write-Fehler.
+  let result: V8PipelineResult;
+  try {
+    result = await runV8MandantenReportPipeline({
+      session: {
+        id: session.id as string,
+        tenant_id: session.tenant_id as string,
+        template_id: session.template_id as string,
+        owner_user_id: session.owner_user_id as string,
+        answers: (session.answers as Record<string, string> | null) ?? {},
+      },
+      template: {
+        id: template.id as string,
+        version: template.version as string,
+        blocks: template.blocks,
+        metadata: template.metadata as Record<string, unknown> | null,
+      },
+      adminClient: admin,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return { error: `Bericht-Berechnung fehlgeschlagen: ${message}` };
+  }
+
+  // capture_session.status → 'finalized' (idempotent — Re-Run aus 'finalized'
+  // ist erlaubt, ueberschreibt Snapshot mit neuem finalizedAt).
+  if (session.status !== "finalized") {
+    const { error: statusError } = await admin
+      .from("capture_session")
+      .update({ status: "finalized", updated_at: new Date().toISOString() })
+      .eq("id", sessionId);
+    if (statusError) {
+      // Snapshot ist persistiert, nur Status-Flip fehlte. Nicht-fatal —
+      // Caller sieht Snapshot trotzdem.
+      return {
+        snapshot: result.snapshot,
+        durationMs: result.duration_ms,
+      };
+    }
+  }
+
+  return {
+    snapshot: result.snapshot,
+    durationMs: result.duration_ms,
+  };
 }

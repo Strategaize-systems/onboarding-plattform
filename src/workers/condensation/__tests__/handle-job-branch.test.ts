@@ -11,6 +11,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // --- Module-Mocks ------------------------------------------------------------
 
 const runLightPipelineMock = vi.fn();
+const runV8MandantenReportPipelineMock = vi.fn();
 const runIterationLoopMock = vi.fn();
 const embedKnowledgeUnitsMock = vi.fn();
 const runOrchestratorAssessmentMock = vi.fn();
@@ -18,6 +19,11 @@ const createAdminClientMock = vi.fn();
 
 vi.mock("../light-pipeline", () => ({
   runLightPipeline: (...args: unknown[]) => runLightPipelineMock(...args),
+}));
+
+vi.mock("../v8-pipeline", () => ({
+  runV8MandantenReportPipeline: (...args: unknown[]) =>
+    runV8MandantenReportPipelineMock(...args),
 }));
 
 vi.mock("../iteration-loop", () => ({
@@ -88,6 +94,22 @@ const exitReadinessTemplate = {
   metadata: {}, // KEIN usage_kind
 };
 
+// V8 SLC-148 MT-6 — Template-Fixture mit V8 usage_kind fuer Dispatcher-Test.
+const v8MandantenReportTemplate = {
+  id: TEMPLATE,
+  version: "1",
+  blocks: [
+    {
+      modul_id: "M1",
+      name: "Geschaeftsmodell",
+      answer_schema_kind: "reife_skala_5",
+      score_mapping: { "1": 0, "2": 2, "3": 5, "4": 8, "5": 10 },
+      questions: [{ frage_id: "m1_q1", text: "M1?" }],
+    },
+  ],
+  metadata: { usage_kind: "mandanten_report_teaser_v1" },
+};
+
 const sessionRow = {
   id: SESSION,
   tenant_id: TENANT,
@@ -150,6 +172,11 @@ beforeEach(() => {
     total_score_avg: 50,
     cost_usd: 0.001,
     duration_ms: 100,
+  });
+  runV8MandantenReportPipelineMock.mockResolvedValue({
+    capture_session_id: SESSION,
+    snapshot: { schemaVersion: 1, finalizedAt: "2026-05-29T00:00:00Z", sui: 50 },
+    duration_ms: 50,
   });
   runIterationLoopMock.mockResolvedValue({
     block_key: "A",
@@ -288,5 +315,40 @@ describe("handleCondensationJob — V6.3 Worker-Branch Dispatch", () => {
 
     expect(runLightPipelineMock).not.toHaveBeenCalled();
     expect(runIterationLoopMock).toHaveBeenCalledTimes(1);
+  });
+
+  // V8 SLC-148 MT-6 — Dispatcher routet usage_kind=mandanten_report_teaser_v1
+  // auf runV8MandantenReportPipeline. V6.3 Co-Existenz wird durch die obigen
+  // partner_diagnostic-Tests sichergestellt (Regression-Schutz).
+
+  it("ruft runV8MandantenReportPipeline bei usage_kind=mandanten_report_teaser_v1, NICHT runLightPipeline oder runIterationLoop", async () => {
+    const adminClient = buildAdminClient({
+      session: sessionRow,
+      template: v8MandantenReportTemplate,
+    });
+    createAdminClientMock.mockReturnValue(adminClient);
+
+    const job: ClaimedJob = {
+      id: JOB_ID,
+      tenant_id: TENANT,
+      job_type: "knowledge_unit_condensation",
+      payload: { capture_session_id: SESSION, source_kind: "diagnose" },
+      created_at: "2026-05-29T00:00:00Z",
+    };
+
+    await handleCondensationJob(job);
+
+    expect(runV8MandantenReportPipelineMock).toHaveBeenCalledTimes(1);
+    expect(runLightPipelineMock).not.toHaveBeenCalled();
+    expect(runIterationLoopMock).not.toHaveBeenCalled();
+
+    const callArgs = runV8MandantenReportPipelineMock.mock.calls[0][0];
+    expect(callArgs.session.id).toBe(SESSION);
+    expect(callArgs.template.metadata.usage_kind).toBe("mandanten_report_teaser_v1");
+    expect(callArgs.jobId).toBe(JOB_ID);
+    // rpc_complete_ai_job muss am Ende gerufen worden sein
+    expect(adminClient.rpc).toHaveBeenCalledWith("rpc_complete_ai_job", {
+      p_job_id: JOB_ID,
+    });
   });
 });

@@ -4,6 +4,16 @@ Die aktuelle DB-Struktur entspricht dem Stand von Blueprint V3.4 (Migration 020)
 
 Der uebernommene Blueprint-Stand ist noch nicht auf einer Onboarding-Plattform-Instanz ausgefuehrt worden — die erste Hetzner-Migration geschieht mit SLC-001 (Schema-Fundament).
 
+### MIG-048 — V8 SLC-148 MT-6 `capture_session.metadata` JSONB-Spalte (Migration 103, live)
+- Date: 2026-05-29 (live, applied via ssh+base64+psql -U postgres auf 159.69.207.29 supabase-db-bwkg80w04wgccos48gcws8cs-150827246647)
+- Scope:
+  - `103_v8_capture_session_metadata.sql` — `ALTER TABLE public.capture_session ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;`
+  - `COMMENT ON COLUMN ...metadata IS '...'` Dokumentation fuer Use-Intent (V8 generic JSONB slot fuer system-computed Snapshots, separate von answers)
+- Reason: Spec-Implementation-Gap detected — Spec SLC-148 MT-6 schreibt nach `capture_session.metadata.v8_report_snapshot`, aber Spalte fehlt nach MT-1/MT-2. Decision per [[feedback-slice-spec-db-schema-drift]] / AskUserQuestion (Option B): neue generische metadata-Spalte JSONB statt v8-spezifischer Spalte oder Snapshot-in-answers. Generic → wiederverwendbar fuer kuenftige Snapshot-Types (V9+). Separate von `answers` (mandant-provided responses) → keine Vermischung Mandant-Input + System-Output.
+- Affected Areas: `public.capture_session` (1 neue Spalte). Existing RESTRICTIVE-Policy `capture_session_strategaize_admin_snapshot_gated` (MIG-047 / MT-2) gated WHOLE row by `released_for_strategaize_review` — neue Spalte erbt RLS-Gate ohne weitere Policy-Aenderung. **Idempotenz** via `ADD COLUMN IF NOT EXISTS` — 2nd-Apply safe. KEINE Backfill-Notwendigkeit (DEFAULT '{}' deckt alle pre-existing Rows).
+- Risk: S — additive Spalte mit DEFAULT, KEINE Datenmigration, KEIN Policy-Change. 0 Auswirkung auf V6.3 + V7.x + andere Templates die metadata nicht nutzen.
+- Rollback Notes: `ALTER TABLE public.capture_session DROP COLUMN IF EXISTS metadata;` ist additivum-rueckwaerts. Wuerde alle V8-Report-Snapshots zerstoeren — Rollback nur sinnvoll wenn V8 vollstaendig zurueckgenommen wird.
+
 ### MIG-047 — V8 SLC-148 Template-Seed `exit-readiness-teaser-v1` + Privacy-Flag + RESTRICTIVE-RLS-Policy (Migration 102, live)
 - Date: 2026-05-29 (live, applied 2x via ssh+base64+psql -U postgres auf 159.69.207.29 supabase-db-bwkg80w04wgccos48gcws8cs-150827246647; 2nd Apply idempotent verified)
 - Scope:
