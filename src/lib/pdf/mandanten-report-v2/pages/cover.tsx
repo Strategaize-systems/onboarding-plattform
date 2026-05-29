@@ -8,12 +8,22 @@
 
 import React from "react";
 import path from "node:path";
+import { readFileSync } from "node:fs";
 import { Page, View, Text, Image, StyleSheet } from "@react-pdf/renderer";
 
 import { COLOR, PAGE, SPACING } from "../theme";
 import type { RendererInput } from "../types";
 
-const LOGO_PATH = path.join(process.cwd(), "public", "brand", "logo-full.png");
+// Lazy-load Logo-PNG as Buffer (@react-pdf v4 Image-src accepts Buffer
+// reliably; relative paths via process.cwd() drift between dev/test/prod).
+let LOGO_BUFFER_CACHE: Buffer | null = null;
+function getLogoBuffer(): Buffer {
+  if (LOGO_BUFFER_CACHE === null) {
+    const logoPath = path.join(process.cwd(), "public", "brand", "logo-full.png");
+    LOGO_BUFFER_CACHE = readFileSync(logoPath);
+  }
+  return LOGO_BUFFER_CACHE;
+}
 
 interface CoverPageProps {
   input: RendererInput;
@@ -177,7 +187,7 @@ export function CoverPage({ input }: CoverPageProps) {
     <Page size="A4" style={styles.page}>
       <View style={styles.brand}>
         <View style={styles.brandPill}>
-          <Image src={LOGO_PATH} style={styles.brandLogo} />
+          <Image src={getLogoBuffer()} style={styles.brandLogo} />
         </View>
       </View>
 

@@ -72,7 +72,7 @@ const INPUT: RendererInput = {
   moduleNames: MOCK_MODULE_NAMES,
 };
 
-const OUTPUT_PATH = resolve(__dirname, "..", "temp", "v8-mandanten-report-phase-a-smoke-v3.pdf");
+const OUTPUT_PATH = resolve(__dirname, "..", "temp", "v8-mandanten-report-phase-a-smoke-v4.pdf");
 
 async function main() {
   console.log("[smoke] Rendering V8 Mandanten-Report-V2 Phase-A PDF...");
