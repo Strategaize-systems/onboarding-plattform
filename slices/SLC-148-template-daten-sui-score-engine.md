@@ -248,20 +248,21 @@ Erst nach Pre-MT-1 Acceptance startet MT-1.
   - error_log post-Apply 0 Errors
 - **Dependencies**: MT-2
 
-### MT-4: Pure-Function-Library `sui-engine.ts` + Vitest
+### MT-4: Pure-Function-Library `sui-engine.ts` + Vitest [DONE 2026-05-29]
 - **Goal**: Neue Datei `src/lib/diagnose/sui-engine.ts` mit 7 Pure-Functions deterministisch + 15+ Vitest-Cases.
 - **Files**:
-  - `src/lib/diagnose/sui-engine.ts` (NEU)
-  - `src/lib/diagnose/__tests__/sui-engine.test.ts` (NEU)
-  - `src/lib/diagnose/types.ts` (NEU oder additiv) — Type-Definitionen fuer Answer, Template, Snapshot
+  - `src/lib/diagnose/sui-engine.ts` (NEU) — 7 Pure-Functions + Convenience-Helper `mapAllModuleScoresToStufen` fuer MT-6
+  - `src/lib/diagnose/__tests__/sui-engine.test.ts` (NEU) — 34 Tests (alle PASS)
+  - `src/lib/diagnose/types.ts` (NEU) — Type-Definitionen fuer Answer, V8Template, V8StufenLookup, ModuleScores, SuiClassification, HebelItem, V8ReportSnapshot u.a.
 - **Expected Behavior** (per FEAT-065 + RPT-349):
-  - `computeModuleScores(answers: Answer[], template: Template): { m1: number, ..., m9: number }` — Iteriert Module 1-9, Durchschnitt Frage-Scores, ignoriert Modul 0 + 10
-  - `computeSui(moduleScores): number` — Gewichtetes Mittel `(m1*10 + ... + m8*10 + m9*20) / 100`, Returns 0-100
-  - `classifySui(sui): { kind, color, label, meaning }` — 0-30 strukturluecke/rot, 31-55 teil_reife/amber, 56-100 tragbar/gruen
-  - `mapModuleScoreToStufe(score): number` — Score 0-10 -> Stufe 1-5 (Bereichs-Mitten als Schwellen: 0-1 -> 1, 1.01-3 -> 2, 3.01-6 -> 3, 6.01-9 -> 4, 9.01-10 -> 5)
-  - `aggregateHausaufgaben(answers, template): Array<{ frage_id, frage_text, status }>` — Filter auf Modul 0 + status in (nein, teilweise)
-  - `aggregateReflexion(answers, template): Array<{ frage_id, frage_text, antwort_text }>` — Filter auf Modul 10 + non-empty text
-  - `selectThreeHebel(moduleScores, stufenLookup): Array<{ modul_id, modul_name, score, stufe, empfehlung }>` — 3 Module mit niedrigstem Score (ties: m1 < m2 < m3 als Tie-Breaker fuer Determinismus), zieht Empfehlung aus stufen_lookup[modul_id][stufe].unsere_empfehlung
+  - `computeModuleScores(answers: Answer[], template: V8Template): ModuleScores` — Iteriert Module M1..M9 ueber Block-Lookup per `answer_schema_kind === 'reife_skala_5'`, Durchschnitt der antwort-vorhandenen Frage-Scores via `block.score_mapping`, ignoriert M0 + M10. Module ohne Antworten -> 0.
+  - `computeSui(moduleScores): number` — **Korrigierte Formel**: `sum(m1..m8) + m9*2`. Direkt 0-100. Spec-Original `(m1*10 + ... + m9*20) / 100` hatte Scale-Bug (ergibt 0-10 statt 0-100 bei Module-Scores 0-10). Algebraisch aequivalent: weighted_mean * 10 / 100 * 10.
+  - `classifySui(sui): SuiClassification` — Per PRINZIPIEN.md Z. 498-500: 0-30 strukturluecke/rot, 31-55 teil_reife/amber, 56-100 tragbar/gruen (Label + Meaning-Text aus Curriculum-Tabelle).
+  - `mapModuleScoreToStufe(score): number` — **Implementierte Grenzen**: `<1 -> 1`, `[1, 3] -> 2`, `(3, 6] -> 3`, `(6, 9] -> 4`, `>9 -> 5`. Erfuellt AC-4 (0/2/5/8/10 -> 1/2/3/4/5 + 1/4/7 -> 2/3/4 Midpoint-Tie-Up). Spec-Description "0-1 -> 1" war off-by-one gegen AC-Test "1 -> 2"; AC ist Ground Truth.
+  - `aggregateHausaufgaben(answers, template): HausaufgabeItem[]` — Filtert M0-Block (per `answer_schema_kind === 'hygiene_yes_partial_no'`), status in `("nein", "teilweise")`. Reihenfolge folgt Template-Question-Order, nicht Answer-Eingabe-Order.
+  - `aggregateReflexion(answers, template): ReflexionItem[]` — Filtert M10-Block (per `answer_schema_kind === 'reflexion_freitext'`), non-empty text (Whitespace-trim). Reihenfolge folgt Template-Question-Order.
+  - `selectThreeHebel(moduleScores, stufenLookup, modulNames): HebelItem[]` — **Signatur-Erweiterung**: 3. Arg `modulNames: Record<ModulKey, string>` zwingend, weil Output `modul_name` aus Template-Block-Name kommt aber nicht im `stufen_lookup` enthalten ist. Spec hatte 2 Args; in MT-6 wird Caller `modulNames` aus `template.blocks[].name` extrahieren. 3 Module mit niedrigstem Score, Tie-Break m1 < m2 < ... < m9.
+  - `mapAllModuleScoresToStufen(moduleScores): ModuleStufen` — Convenience-Helper fuer MT-6-Snapshot (mappt alle 9 Module-Scores auf Stufen).
 - **Verification** (Vitest):
   - Alles Stufe 1 (37 Antworten Score=0) -> SUI=0, Klassifizierung strukturluecke
   - Alles Stufe 3 (37 Antworten Score=5) -> SUI=50, Klassifizierung teil_reife
