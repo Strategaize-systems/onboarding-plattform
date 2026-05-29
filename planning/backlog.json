@@ -1,6 +1,46 @@
 {
   "items": [
     {
+      "id": "BL-135",
+      "title": "Discovery: Strategaize-internes Bedarfs-Mapping pro Modul x Stufe (Aufwand-Skala + KI-vs-Operativ-Klassifikation + Mandats-Vorschlag)",
+      "type": "feature",
+      "priority": "medium",
+      "status": "open",
+      "version": null,
+      "description": "Parallele Discovery zu V8.0-Build. Liefert: (1) Aufwand-Skala pro Modul x Stufe (z.B. Modul-1-Stufe-1 = 12-18 Monate gross, Modul-3-Stufe-3 = 6-Monate klein). (2) KI-Optimierungs-Bedarfs-Klassifikation (Operativ-Beratungs-Mandat vs. KI-Strategie-Mandat). (3) Mandats-Vorschlag-Logik: 1 Mandat (Exit-Readiness) vs. 2 parallele Mandate (Exit-Readiness + KI-Strategie). (4) Beleg-Tiefe-Bedarf (wo muss Strategaize tief rein, wo reicht Kunden-Beleg in Stufe 2). Audience: Strategaize-Berater intern, NICHT Mandant-Bericht. Output: Spec-Dokument das V8.x / V9 Implementierung vorbereitet. Code-Implementierung NICHT Teil dieses Items. Founder-Direktive 2026-05-29: 'Wir wissen, was sehr aufwendig ist und was schnell geht. Dann kriegt er bei Uebergabe eine ganz klare Vorstellung.' Pricing-Range-Logik NICHT Teil davon (kommt nach ersten Live-Mandanten-Reports). Entstanden 2026-05-29.",
+      "createdAt": "2026-05-29"
+    },
+    {
+      "id": "BL-134",
+      "title": "V8.1 Lead-Conversion-Outro im PDF + Strategaize-Freigabe-CTA + Trigger-E-Mail",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V8.1",
+      "description": "Erweitert V8.0-Mandanten-Bericht um Lead-Conversion-Outro-Section am Ende: (a) Strategaize-Vorstellung 2-3 Absaetze ('Wir holen Sie ab'-Trust-Building), (b) personalisierte Empfehlungs-Vorschlaege auf Basis der drei niedrigsten Modul-Stufen (selectThreeHebel-Reuse), (c) Video-Block-Platzhalter (Video kommt spaeter), (d) klarer Kontakt-CTA-Button 'Mit Strategaize sprechen'. Bei CTA-Klick: setzt `capture_session.released_for_strategaize_review = true` Flag + Trigger-E-Mail an Strategaize-Vertrieb (per V8-Privacy-Flow Option A). KEINE Pricing-Hinweise im Bericht (kommt erst nach persoenlichem Gespraech). LLM-Augmentation der Empfehlungs-Texte als optionale V8.1+-Erweiterung (rein deterministisch ist V8.0-Standard). Pre-Conditions: V8.0 live + 5-10 Mandanten-Reports erzeugt fuer Realitaets-Kalibrierung. Founder-Direktive 2026-05-29: 'Vertrauen in uns und Bereitschaft mit uns zu reden steigern.' Entstanden 2026-05-29.",
+      "createdAt": "2026-05-29"
+    },
+    {
+      "id": "BL-133",
+      "title": "V8 Berichts-Versand zweistufig: Mandant per E-Mail + (mit Consent) Steuerberater-Weiterleitung",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V8",
+      "description": "V8.0-Berichts-Versand muss explizit zwei Pfade unterstuetzen: (Pfad A) PDF-Versand an Mandant per E-Mail (immer), (Pfad B) Mandant kann den Bericht an Steuerberater weiterleiten (Default-Empfehlung im E-Mail-Body 'Sie koennen diesen Bericht an Ihren Steuerberater weiterleiten — er kennt Ihre steuerlichen Strukturen und kann Modul 0 + Modul 10 mit Ihnen besprechen'). Strategaize-Freigabe-Pfad (= V8.1 Lead-Conversion-CTA, BL-134) ist explizit getrennt. Aktueller Plan in SLC-152 nimmt nur 1 Versand-Branch an — muss erweitert werden. Email-Template-Anpassung: Versand-Body erklaert Mandant explizit, dass er Eigentuemer des Berichts ist und entscheidet, wer ihn sieht. Founder-Direktive 2026-05-29: 'Er kann den Bericht per E-Mail kriegen und den auch den Steuerberater mitnehmen. Die Offenheit muss da sein, sonst haette er das nicht gemacht.' Pre-Conditions: SLC-148 done (Privacy-Flow-Pattern etabliert).",
+      "createdAt": "2026-05-29"
+    },
+    {
+      "id": "BL-132",
+      "title": "V8 Privacy-Flow: Snapshot-Eigentum + Strategaize-Admin-View-Gate via released_for_strategaize_review Flag",
+      "type": "feature",
+      "priority": "high",
+      "status": "in_progress",
+      "version": "V8",
+      "description": "Founder-Direktive 2026-05-29: 'Die Daten sind vertraulich. Die gehen erst, wenn der Kunde das will, zu uns rueber. Ansonsten sehen wir nur, ob was ausgefuellt ist.' Konflikt mit DEC-163 (Snapshot in capture_session.metadata = sofort fuer Strategaize-Admin lesbar). Mini-Discovery in `docs/V8_PRIVACY_FLOW_DISCOVERY.md` mit 3 Optionen (A: Admin-View-Gate via Flag + RLS, B: Snapshot ausserhalb Strategaize-DB, C: Verschluesselter Snapshot). Empfehlung Option A: BOOLEAN-Field `released_for_strategaize_review` (Default false) + `released_for_strategaize_review_at` Timestamp auf capture_session, RLS-Policy-Erweiterung (strategaize_admin sieht Snapshot nur wenn Flag=true), Berater-Dashboard-Code-Gate, AV-Vertrag im Co-Hosting-Pattern. ~1h Aufwand. Slice-Edit SLC-148 MT-2: Migration 102 erweitern. Slice-Edit SLC-148 MT-2 RLS-Policy. DEC-163 ergaenzen mit Admin-View-Gate-Note. Founder-Entscheidung pending zu Option A/B/C. Entstanden 2026-05-29.",
+      "createdAt": "2026-05-29"
+    },
+    {
       "id": "BL-131",
       "title": "V8 FEAT-066: 17-Seiten-Premium-Mandanten-Report-Renderer V2 (Cover + Wheel + 9 Modul-Pages + Hausaufgaben + Hebel + Reflexion + CTA)",
       "type": "feature",

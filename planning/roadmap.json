@@ -169,6 +169,13 @@
       "order": 18
     },
     {
+      "id": "v8-1",
+      "name": "V8.1",
+      "status": "planned",
+      "summary": "**V8.1 Lead-Conversion-Outro + Berater-Workflow** — Anschluss an V8.0 (Mandanten-Report-Teaser). 3 geplante Slices: **Lead-Conversion-Outro im PDF** mit Strategaize-Vorstellung (Trust-Building 'Wir holen Sie ab'), personalisierten Empfehlungs-Vorschlaegen auf Basis der drei niedrigsten Modul-Stufen (Top-3-Hebel), generischer Video-Block-Platzhalter (Video kommt spaeter) und klarem Kontakt-CTA. **Strategaize-Freigabe-CTA**: bei Klick wird `capture_session.released_for_strategaize_review` Flag gesetzt + Trigger-E-Mail an Strategaize-Vertrieb (per V8-Privacy-Flow-Discovery Option A). **LLM-Augmentation (optional V8.1+)** fuer personalisierte Empfehlungs-Text-Generierung statt rein deterministischer Stufen-Lookup-Texte. **Pre-Conditions:** V8.0 live + Lebensbeobachtung (mind. 5-10 Mandanten-Reports erzeugt). **Out of Scope V8.1:** Interner Bedarfs-Mapping-Adminbericht (eigene Discovery in BL-135). Entstanden 2026-05-29 nach Founder-Direktive zu Lead-Conversion-Erwartungen.",
+      "order": 18.5
+    },
+    {
       "id": "v9",
       "name": "V9",
       "status": "planned",
