@@ -40,33 +40,42 @@ const styles = StyleSheet.create({
   },
   item: {
     width: "33.3%",
-    paddingVertical: SPACING.xs,
-    paddingRight: SPACING.sm,
+    paddingVertical: SPACING.sm,
+    paddingRight: SPACING.md,
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
   },
   dot: {
     width: 8,
     height: 8,
     borderRadius: 4,
     marginRight: SPACING.sm,
+    marginTop: 4,
   },
   itemBody: {
     flexDirection: "column",
+    flex: 1,
   },
   modulKey: {
     fontSize: 7,
     color: COLOR.textLight,
-    letterSpacing: 1,
+    letterSpacing: 1.2,
+    fontFamily: "JetBrains Mono",
+    marginBottom: 1,
   },
   modulName: {
-    fontSize: TYPOGRAPHY.smallSize,
-    fontFamily: "Helvetica-Bold",
+    fontSize: TYPOGRAPHY.smallSize + 1,
+    fontFamily: "Fraunces",
+    fontWeight: 700,
     color: COLOR.textDark,
+    lineHeight: 1.2,
+    marginBottom: 1,
   },
   modulScore: {
     fontSize: TYPOGRAPHY.smallSize,
     color: COLOR.textMuted,
+    fontFamily: "JetBrains Mono",
+    letterSpacing: 0.5,
   },
 });
 
