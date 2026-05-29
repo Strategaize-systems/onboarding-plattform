@@ -275,13 +275,17 @@ Erst nach Pre-MT-1 Acceptance startet MT-1.
   - Hebel-Auswahl: Score-Profil m1=8/m2=2/m3=5/m4=2/m5=9/m6=3/m7=7/m8=4/m9=6 -> [m2, m4, m6] mit Tie-Break-Regel (AC-7)
 - **Dependencies**: MT-2 (Template-JSONB-Schema fuer Type-Definitionen). MT-4 kann **parallel zu MT-2/MT-3 entwickelt** werden — Pure-TypeScript-Funktionen brauchen kein Live-DB-Apply, Stufen-Lookup wird in Vitest gemockt. Blocking-Edge nur fuer MT-6 (Server-Action konsumiert MT-4 + MT-5).
 
-### MT-5: Pure-Function `computeWheelPaths` + Vitest (FEAT-066 Pre-Pflicht)
+### MT-5: Pure-Function `computeWheelPaths` + Vitest (FEAT-066 Pre-Pflicht) [DONE 2026-05-29]
 - **Goal**: Pure-Function-Library `src/lib/diagnose/wheel-paths.ts` mit `computeWheelPaths(moduleScores, options): WheelPath[]` und Vitest. Wird in SLC-150 (Renderer) konsumiert, hier vorgezogen fuer Determinismus + Vitest-Coverage.
 - **Files**:
-  - `src/lib/diagnose/wheel-paths.ts` (NEU)
-  - `src/lib/diagnose/__tests__/wheel-paths.test.ts` (NEU)
+  - `src/lib/diagnose/wheel-paths.ts` (NEU) — `computeWheelPaths` + interne Helper `classifyScoreColor` + `scoreToRadiusFactor`. Output-Type `WheelPath` exportiert.
+  - `src/lib/diagnose/__tests__/wheel-paths.test.ts` (NEU) — 17 Vitest (alle PASS in 492ms)
 - **Expected Behavior** (per DEC-162 Wheel-Render + RPT-349):
-  - `computeWheelPaths(moduleScores: { m1..m9 }, options: { focusIdx?: number, radius?: number, centerX?: number, centerY?: number }): Array<{ modulId, pathD, fillColor, label }>`
+  - `computeWheelPaths(moduleScores: ModuleScores, options?: ComputeWheelPathsOptions): WheelPath[]` — Returns 9 Sectoren (1 pro Modul M1..M9)
+  - Output-Felder pro WheelPath: `modulId, pathD, fillColor, label, radiusFactor` (5 statt 4 — `radiusFactor` als bonus fuer Renderer-Animation + Vitest-Asserts, DEC-162 erwaehnt `textX/textY` die wir hier weglassen weil SLC-150-Renderer sie selbst berechnen kann)
+  - Tailwind-RGB-Farben: rot=`rgb(220, 38, 38)` (red-600), amber=`rgb(245, 158, 11)` (amber-500), gruen=`rgb(16, 185, 129)` (emerald-500). Bei focusIdx-Dimming: `rgba(..., 0.3)` Variante.
+  - Angle-Konvention: 0° = 12 Uhr (Top), clockwise positive. Sector M1 spannt 0°-40°, M9 spannt 320°-360°. SVG y-Achse invertiert (cy - r*cos statt cy + r*cos).
+  - pathD-Format: `"M cx cy L startX.xx startY.xx A r.xx r.xx 0 0 1 endX.xx endY.xx Z"` mit toFixed(2) auf Arc-Koordinaten + Radius, Integer-Center.
   - Berechnet 9 Sector-Pfade (1/9-tel Kreis-Segmente) basierend auf Modul-Scores (Score 0-10 -> Sector-Radius-Faktor 0.2-1.0)
   - Color-Mapping: Score 0-3.99 -> rot, 4-6.99 -> amber, 7-10 -> gruen (3-Stufen-Klassifizierung visuell)
   - `focusIdx`-Option: 0-8 (0-indiziert m1..m9) -> nicht-focus-Sectoren bekommen `fillColor` mit Alpha 0.3, focus-Sector bleibt full-Alpha
