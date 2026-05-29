@@ -1,141 +1,158 @@
-// V8 SLC-150 MT-3 — Cover-Page (Page 1) gemaess
-// docs/curriculum/v2/MANDANTEN_REPORT_PROTOTYP.html Page 1.
+// V8 SLC-150 Polish-Round-1 — Cover-Page (Page 1) als 1:1-Port der HTML-
+// Master-Vorlage MANDANTEN_REPORT_PROTOTYP.html Zeile 51-71 + 360-390.
 //
-// Layout:
-// - Vollflaechiger brand-primary Hintergrund mit dezentem Wheel-Watermark
-// - Eyebrow (UEBERGABEFAEHIGKEITS-DIAGNOSE)
-// - Hero-Title (Fraunces Bold) mit Akzent-Italic auf "heute steht"
-// - Sub-Text (Fraunces Regular)
-// - Mandant-Card (transparent border, Fraunces Bold Name)
-// - Footer mit Diagnose-Datum (links) + Empfohlen durch (rechts)
+// Background: brand-deep Solid (#0a0641) — Master nutzt Gradient
+// (#0a0641 → #120774 → #4454b8), @react-pdf rendert das nicht direkt,
+// brand-deep als visuelles Anker-Setting.
+// Accent: brand-accent gruen (#4dcb8b) durchgehend (NICHT amber).
 
 import React from "react";
 import { Page, View, Text, StyleSheet } from "@react-pdf/renderer";
 
-import { COLOR, PAGE, SPACING, TYPOGRAPHY } from "../theme";
-import { WatermarkWheel } from "../components/watermark-wheel";
+import { COLOR, PAGE, SPACING } from "../theme";
 import type { RendererInput } from "../types";
 
 interface CoverPageProps {
   input: RendererInput;
 }
 
-const ACCENT = "#F59E0B"; // amber-500 — entspricht prototype --brand-accent
-
 const styles = StyleSheet.create({
   page: {
-    padding: PAGE.marginPt,
-    backgroundColor: COLOR.brandPrimaryDark,
+    paddingTop: 56,
+    paddingHorizontal: 48,
+    paddingBottom: 48,
+    backgroundColor: COLOR.brandDeep,
     color: COLOR.bgWhite,
     fontFamily: "Fraunces",
     fontWeight: 400,
-    position: "relative",
   },
-  content: {
+  brand: {
+    alignItems: "center",
+    marginBottom: SPACING.xxl,
+  },
+  brandPill: {
+    backgroundColor: COLOR.bgWhite,
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+  },
+  brandPillText: {
+    fontFamily: "Fraunces",
+    fontWeight: 700,
+    fontSize: 14,
+    color: COLOR.brandDeep,
+    letterSpacing: 1,
+  },
+  contentBlock: {
     flex: 1,
-    justifyContent: "center",
-    position: "relative",
-    zIndex: 2,
   },
   eyebrow: {
-    fontSize: TYPOGRAPHY.smallSize,
-    letterSpacing: 2,
+    fontSize: 9,
+    letterSpacing: 2.5,
     marginBottom: SPACING.lg,
     color: COLOR.bgWhite,
     opacity: 0.75,
     fontFamily: "JetBrains Mono",
+    fontWeight: 400,
   },
   title: {
-    fontSize: TYPOGRAPHY.heroTitleSize,
+    fontSize: 38,
     fontFamily: "Fraunces",
     fontWeight: 700,
     lineHeight: 1.08,
+    letterSpacing: -0.5,
     marginBottom: SPACING.lg,
-    maxWidth: 460,
+    maxWidth: 480,
   },
   titleAccent: {
-    color: ACCENT,
+    color: COLOR.brandAccent,
     fontWeight: 400,
   },
   sub: {
-    fontSize: TYPOGRAPHY.heroSubtitleSize + 2,
+    fontSize: 13,
     lineHeight: 1.55,
     marginBottom: SPACING.xl,
     opacity: 0.92,
+    fontWeight: 400,
     maxWidth: 460,
   },
   divider: {
-    width: 56,
-    height: 2,
-    backgroundColor: ACCENT,
-    marginVertical: SPACING.lg,
+    width: 60,
+    height: 3,
+    backgroundColor: COLOR.brandAccent,
+    borderRadius: 2,
+    marginTop: SPACING.lg,
+    marginBottom: SPACING.lg,
   },
   mandantCard: {
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.18)",
+    borderColor: "rgba(255, 255, 255, 0.14)",
     borderStyle: "solid",
-    borderRadius: 6,
-    padding: SPACING.lg,
-    marginTop: SPACING.sm,
-    maxWidth: 360,
+    borderRadius: 14,
+    paddingTop: SPACING.lg,
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: SPACING.lg,
+    backgroundColor: "rgba(255, 255, 255, 0.06)",
+    maxWidth: 460,
   },
   mandantLabel: {
     fontSize: 8,
-    letterSpacing: 1.5,
-    marginBottom: 6,
+    letterSpacing: 1.8,
+    marginBottom: SPACING.sm,
     opacity: 0.7,
     fontFamily: "JetBrains Mono",
+    fontWeight: 700,
   },
   mandantName: {
-    fontSize: 20,
+    fontSize: 24,
     fontFamily: "Fraunces",
     fontWeight: 700,
-    marginBottom: SPACING.sm,
+    marginBottom: SPACING.md,
+    letterSpacing: -0.25,
   },
   mandantMetaRow: {
     flexDirection: "row",
-    gap: SPACING.lg,
-    marginTop: SPACING.xs,
+    gap: SPACING.xl,
+    marginTop: SPACING.sm,
   },
   mandantMetaCell: {
     flexDirection: "column",
   },
   mandantMetaLabel: {
     fontSize: 7,
-    letterSpacing: 1.2,
-    color: ACCENT,
-    marginBottom: 2,
+    letterSpacing: 1.5,
+    color: COLOR.brandAccent,
+    marginBottom: 3,
     fontFamily: "JetBrains Mono",
+    fontWeight: 700,
   },
   mandantMetaValue: {
-    fontSize: TYPOGRAPHY.bodySize,
+    fontSize: 12,
     opacity: 0.88,
+    fontFamily: "Fraunces",
+    fontWeight: 400,
   },
   footer: {
-    position: "absolute",
-    bottom: PAGE.marginPt,
-    left: PAGE.marginPt,
-    right: PAGE.marginPt,
     flexDirection: "row",
     justifyContent: "space-between",
-    fontSize: TYPOGRAPHY.smallSize,
-    opacity: 0.92,
-    zIndex: 2,
+    marginTop: SPACING.xl,
   },
   footerCellRight: {
-    flexDirection: "column",
     alignItems: "flex-end",
   },
   footerLabel: {
     fontSize: 7,
     letterSpacing: 1.5,
-    marginBottom: 3,
-    color: ACCENT,
+    marginBottom: 4,
+    color: COLOR.brandAccent,
     fontFamily: "JetBrains Mono",
+    fontWeight: 700,
   },
   footerValue: {
+    fontSize: 11,
     fontFamily: "Fraunces",
-    fontWeight: 700,
+    fontWeight: 400,
+    opacity: 0.92,
   },
 });
 
@@ -150,23 +167,25 @@ function formatGermanDate(iso: string): string {
 }
 
 export function CoverPage({ input }: CoverPageProps) {
-  const { mandant, stb, snapshot, options } = input;
-  const includeWatermark = options?.includeWatermark !== false;
+  const { mandant, stb } = input;
   const stbLabel = stb
     ? `${stb.firma}${stb.standort ? ` · ${stb.standort}` : ""}`
     : "StrategAIze";
   return (
     <Page size="A4" style={styles.page}>
-      {includeWatermark && (
-        <WatermarkWheel moduleScores={snapshot.moduleScores} />
-      )}
-      <View style={styles.content}>
+      <View style={styles.brand}>
+        <View style={styles.brandPill}>
+          <Text style={styles.brandPillText}>STRATEGAIZE</Text>
+        </View>
+      </View>
+
+      <View style={styles.contentBlock}>
         <Text style={styles.eyebrow}>
           UEBERGABEFAEHIGKEITS-DIAGNOSE · SUI
         </Text>
         <Text style={styles.title}>
-          Wo Ihre Firma <Text style={styles.titleAccent}>heute steht</Text> —
-          {"\n"}und was als Naechstes zaehlt.
+          Wo Ihre Firma <Text style={styles.titleAccent}>heute steht</Text> —{"\n"}
+          und was als Naechstes zaehlt.
         </Text>
         <Text style={styles.sub}>
           Eine strukturierte Diagnose entlang der 10 Strategaize-Prinzipien.
@@ -195,6 +214,7 @@ export function CoverPage({ input }: CoverPageProps) {
           )}
         </View>
       </View>
+
       <View style={styles.footer}>
         <View>
           <Text style={styles.footerLabel}>DIAGNOSE-DATUM</Text>
