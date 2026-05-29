@@ -810,7 +810,7 @@ Mandanten-Report-Port nach Prototyp-Freigabe 2026-05-28. /requirements done 2026
 
 | ID | Slice | Feature | Status | Priority | Created |
 |----|-------|---------|--------|----------|---------|
-| SLC-148 | [Template-Daten + Stufen-Lookup + SUI-Score-Engine Backend](SLC-148-template-daten-sui-score-engine.md) | FEAT-063 + FEAT-065 | planned | High | 2026-05-28 |
+| SLC-148 | [Template-Daten + Stufen-Lookup + SUI-Score-Engine Backend](SLC-148-template-daten-sui-score-engine.md) | FEAT-063 + FEAT-065 | in_progress | High | 2026-05-28 |
 | SLC-149 | [Fragebogen-UI Components (Hygiene + Skala + Reflexion) Frontend](SLC-149-fragebogen-ui-components.md) | FEAT-064 | planned | High | 2026-05-28 |
 | SLC-150 | Renderer Phase A (Foundation + Wheel + Cover + SUI-Hero + Modul-Profil) | FEAT-066 Phase A | planned | High | 2026-05-28 |
 | SLC-151 | Renderer Phase B (9 Modul-Pages + Hausaufgaben + Hebel + Reflexion + CTA) | FEAT-066 Phase B | planned | High | 2026-05-28 |
