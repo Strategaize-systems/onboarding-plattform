@@ -3,7 +3,7 @@
 **Version:** V8
 **Feature:** FEAT-063 (Template-Daten) + FEAT-065 (SUI-Score-Engine)
 **Backlog:** BL-128 (FEAT-063) + BL-130 (FEAT-065)
-**Status:** planned
+**Status:** done
 **Created:** 2026-05-28
 **Priority:** High
 **Estimate:** ~6-10h Code-Side + ~30-45min Founder-Pflicht (Pre-MT-1 Tonalitaets-Migration)
@@ -14,7 +14,7 @@
 Liefert die **Daten-Foundation + Score-Engine** fuer die V8 Mandanten-Report-Teaser-Diagnose. Nach diesem Slice existiert:
 
 1. Eine neue Template-Row `exit-readiness-teaser-v1.v1` in `public.template` LIVE auf Coolify-DB mit:
-   - 47 Fragen ueber 11 Module (5 Hygiene + 37 Skala + 5 Reflexion)
+   - 53 Fragen ueber 11 Module (5 Hygiene + 43 Skala inkl. 6 KI-Erweiterungen + 5 Reflexion)
    - 45 Stufen-Lookup-Eintraege (9 Module x 5 Stufen) mit `was_es_bedeutet` + `unsere_empfehlung` Markdown
    - 9 "Worum es geht"-Modul-Texte
    - Hausaufgaben-Lookup fuer 5 Modul-0-Fragen (Nein/Teilweise-Texte)
@@ -178,7 +178,7 @@ Erst nach Pre-MT-1 Acceptance startet MT-1.
 - **Dependencies**: Pre-MT-1 (LEVELS_MANDANT.md Founder-Pflicht durch)
 
 ### MT-2: Migration 102 schreiben (Frage-Struktur + Score-Mapping + Gewichtung + Privacy-Flag)
-- **Goal**: Migration-SQL-Datei `102_v8_exit_readiness_teaser_template.sql` enthaelt vollstaendige Template-INSERT mit 47 Fragen, 45 Stufen-Lookup-Eintraegen, 9 Worum-es-geht-Texten, Hausaufgaben-Lookup, Gewichtungs-Config. Idempotent via `ON CONFLICT (slug, version) DO UPDATE`. **+ ALTER TABLE capture_session** um Privacy-Flag (per DEC-163-Erweiterung 2026-05-29, BL-132 Option A).
+- **Goal**: Migration-SQL-Datei `102_v8_exit_readiness_teaser_template.sql` enthaelt vollstaendige Template-INSERT mit 53 Fragen, 45 Stufen-Lookup-Eintraegen, 9 Worum-es-geht-Texten, Hausaufgaben-Lookup, Gewichtungs-Config. Idempotent via `ON CONFLICT (slug, version) DO UPDATE`. **+ ALTER TABLE capture_session** um Privacy-Flag (per DEC-163-Erweiterung 2026-05-29, BL-132 Option A).
 - **Pre-Step (DB-Schema-Inspect, ~5min)** per [[feedback-slice-spec-db-schema-drift]]:
   - SSH 159.69.207.29: `docker exec <db> psql -U postgres -d postgres -c "SELECT slug, version, jsonb_object_keys(metadata) AS k FROM template ORDER BY slug, version;"` -> Liste aller derzeit verwendeten `template.metadata`-Keys dokumentieren
   - Verifikation: keine Kollision der V8-Keys (`usage_kind`, `scoring_kind`, `report_renderer`, `stufen_lookup`, `worum_es_geht`, `hausaufgaben_lookup`, `gewichtung`) mit bestehenden Templates (`partner_diagnostic_v1`, `exit-readiness-v1.0.0`)
@@ -361,7 +361,7 @@ Erst nach Pre-MT-1 Acceptance startet MT-1.
 ## Acceptance Criteria (zusammengefuegt aus FEAT-063 + FEAT-065)
 
 - **AC-1 Template-Seed lebt**: `public.template` Row `slug='exit-readiness-teaser-v1'`, `version=1` LIVE auf Coolify-DB (FEAT-063 AC-1)
-- **AC-2 47 Fragen vollstaendig**: `template.blocks` enthaelt 11 Module mit 5+37+5=47 Fragen, Vitest verifiziert IDs (FEAT-063 AC-2)
+- **AC-2 53 Fragen vollstaendig**: `template.blocks` enthaelt 11 Module mit 5+43+5=53 Fragen (inkl. 6 KI-Erweiterungen F4.4/F6.5/F6.6/F8.7/F9.4/F9.5), Vitest verifiziert IDs (FEAT-063 AC-2)
 - **AC-3 Score-Mapping korrekt**: Jede Skala-Frage hat `score_mapping: {1:0, 2:2, 3:5, 4:8, 5:10}`. Hygiene + Reflexion: `score_mapping`-Feld NICHT im Frage-Objekt gesetzt (undefined, NICHT null und NICHT `{}`). Filter in `computeModuleScores` via `Object.hasOwn(question, 'score_mapping') === false` (FEAT-063 AC-3)
 - **AC-4 Stufen-Lookup vollstaendig**: 45 Eintraege + 9 Worum-es-geht-Texte als JSONB im Template-Metadata (FEAT-063 AC-4)
 - **AC-5 Tonalitaets-Transformation durchgefuehrt**: Stichprobe 5+ "Unsere Empfehlung"-Texte clean (FEAT-063 AC-5)
