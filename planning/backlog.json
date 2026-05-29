@@ -35,9 +35,9 @@
       "title": "V8 Privacy-Flow: Snapshot-Eigentum + Strategaize-Admin-View-Gate via released_for_strategaize_review Flag",
       "type": "feature",
       "priority": "high",
-      "status": "in_progress",
+      "status": "done",
       "version": "V8",
-      "description": "Founder-Direktive 2026-05-29: 'Die Daten sind vertraulich. Die gehen erst, wenn der Kunde das will, zu uns rueber. Ansonsten sehen wir nur, ob was ausgefuellt ist.' Konflikt mit DEC-163 (Snapshot in capture_session.metadata = sofort fuer Strategaize-Admin lesbar). Mini-Discovery in `docs/V8_PRIVACY_FLOW_DISCOVERY.md` mit 3 Optionen (A: Admin-View-Gate via Flag + RLS, B: Snapshot ausserhalb Strategaize-DB, C: Verschluesselter Snapshot). Empfehlung Option A: BOOLEAN-Field `released_for_strategaize_review` (Default false) + `released_for_strategaize_review_at` Timestamp auf capture_session, RLS-Policy-Erweiterung (strategaize_admin sieht Snapshot nur wenn Flag=true), Berater-Dashboard-Code-Gate, AV-Vertrag im Co-Hosting-Pattern. ~1h Aufwand. Slice-Edit SLC-148 MT-2: Migration 102 erweitern. Slice-Edit SLC-148 MT-2 RLS-Policy. DEC-163 ergaenzen mit Admin-View-Gate-Note. Founder-Entscheidung pending zu Option A/B/C. Entstanden 2026-05-29.",
+      "description": "Founder-Direktive 2026-05-29: 'Die Daten sind vertraulich. Die gehen erst, wenn der Kunde das will, zu uns rueber. Ansonsten sehen wir nur, ob was ausgefuellt ist.' Konflikt mit DEC-163 (Snapshot in capture_session.metadata = sofort fuer Strategaize-Admin lesbar). Mini-Discovery in `docs/V8_PRIVACY_FLOW_DISCOVERY.md` mit 3 Optionen (A: Admin-View-Gate via Flag + RLS, B: Snapshot ausserhalb Strategaize-DB, C: Verschluesselter Snapshot). Founder-Entscheidung 2026-05-29: Option A gewaehlt. Done: DEC-163 erweitert um Admin-View-Gate, SLC-148 MT-2 erweitert um ALTER TABLE capture_session (Flag + Timestamp) + RLS-Policy-Erweiterung, AC-Matrix um AC-SLC-148-4/5/6 erweitert (Default, RLS-Snapshot-Gate, Server-Action-Default false). Implementation passiert in /backend SLC-148 MT-2. Entstanden 2026-05-29.",
       "createdAt": "2026-05-29"
     },
     {

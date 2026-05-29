@@ -177,8 +177,8 @@ Erst nach Pre-MT-1 Acceptance startet MT-1.
   - Bash: `node scripts/build-v8-template-seed.mjs` erzeugt Datei ohne Fehler
 - **Dependencies**: Pre-MT-1 (LEVELS_MANDANT.md Founder-Pflicht durch)
 
-### MT-2: Migration 102 schreiben (Frage-Struktur + Score-Mapping + Gewichtung)
-- **Goal**: Migration-SQL-Datei `102_v8_exit_readiness_teaser_template.sql` enthaelt vollstaendige Template-INSERT mit 47 Fragen, 45 Stufen-Lookup-Eintraegen, 9 Worum-es-geht-Texten, Hausaufgaben-Lookup, Gewichtungs-Config. Idempotent via `ON CONFLICT (slug, version) DO UPDATE`.
+### MT-2: Migration 102 schreiben (Frage-Struktur + Score-Mapping + Gewichtung + Privacy-Flag)
+- **Goal**: Migration-SQL-Datei `102_v8_exit_readiness_teaser_template.sql` enthaelt vollstaendige Template-INSERT mit 47 Fragen, 45 Stufen-Lookup-Eintraegen, 9 Worum-es-geht-Texten, Hausaufgaben-Lookup, Gewichtungs-Config. Idempotent via `ON CONFLICT (slug, version) DO UPDATE`. **+ ALTER TABLE capture_session** um Privacy-Flag (per DEC-163-Erweiterung 2026-05-29, BL-132 Option A).
 - **Pre-Step (DB-Schema-Inspect, ~5min)** per [[feedback-slice-spec-db-schema-drift]]:
   - SSH 159.69.207.29: `docker exec <db> psql -U postgres -d postgres -c "SELECT slug, version, jsonb_object_keys(metadata) AS k FROM template ORDER BY slug, version;"` -> Liste aller derzeit verwendeten `template.metadata`-Keys dokumentieren
   - Verifikation: keine Kollision der V8-Keys (`usage_kind`, `scoring_kind`, `report_renderer`, `stufen_lookup`, `worum_es_geht`, `hausaufgaben_lookup`, `gewichtung`) mit bestehenden Templates (`partner_diagnostic_v1`, `exit-readiness-v1.0.0`)
@@ -196,12 +196,28 @@ Erst nach Pre-MT-1 Acceptance startet MT-1.
   - `metadata.scoring_kind = 'sui_weighted'`
   - `metadata.report_renderer = 'mandanten_report_v2'`
   - `metadata.gewichtung = { m1: 10, ..., m8: 10, m9: 20 }`
+- **Privacy-Flag-Erweiterung** (per [[V8_PRIVACY_FLOW_DISCOVERY]] Option A, DEC-163-Erweiterung 2026-05-29):
+  ```sql
+  ALTER TABLE public.capture_session
+    ADD COLUMN IF NOT EXISTS released_for_strategaize_review BOOLEAN NOT NULL DEFAULT false,
+    ADD COLUMN IF NOT EXISTS released_for_strategaize_review_at TIMESTAMPTZ;
+  ```
+- **RLS-Policy-Erweiterung** in derselben Migration (additivum zu bestehenden capture_session-Policies):
+  - Neue Policy `capture_session_strategaize_admin_snapshot_gated`: `strategaize_admin`-Role darf `metadata->'v8_report_snapshot'` NUR lesen wenn `released_for_strategaize_review = true`
+  - Bestehende Policies fuer Owner-Steuerberater (`partner_organization.owner_id`) + Mandant-Self (`participant_id = auth.uid()`) bleiben UNVERAENDERT (volle Lesezugriff)
+  - Implementierung: SELECT-Policy mit `USING ((SELECT role FROM user_profile WHERE id = auth.uid()) != 'strategaize_admin' OR released_for_strategaize_review = true)`
+  - Berater-Dashboard-Code-Gate auf `released_for_strategaize_review`-Field zusaetzlich (defense-in-depth, NICHT nur RLS)
 - **Verification**:
   - Vitest gegen Coolify-DB (via node:22 Docker-Pattern aus [[coolify-test-setup]]):
     - Migration apply 1x -> Row exists, `version=1`
     - Migration apply 2x (idempotent) -> Keine Fehler, gleiche Row
     - `SELECT blocks` -> 11 Module, exact count je Modul
     - `SELECT metadata->>'usage_kind'` -> `'mandanten_report_teaser_v1'`
+    - **Privacy-Flag**: `SELECT released_for_strategaize_review, released_for_strategaize_review_at FROM capture_session LIMIT 1` -> NOT NULL, Default `false`, Timestamp NULL
+    - **RLS-Test** mit SAVEPOINT-Pattern (per [[coolify-test-setup]]): strategaize_admin-Rolle versucht `SELECT metadata->'v8_report_snapshot' FROM capture_session WHERE released_for_strategaize_review = false` -> Snapshot-Feld leer/NULL (oder Row nicht sichtbar je nach Policy-Implementierung)
+    - **RLS-Test**: strategaize_admin-Rolle liest `metadata->'v8_report_snapshot'` von Session mit Flag=true -> Snapshot vollstaendig sichtbar
+    - **RLS-Test**: partner_organization.owner (Steuerberater) liest Snapshot UNGEACHTET Flag -> vollstaendig sichtbar (Vertrauter)
+    - **RLS-Test**: Mandant (participant) liest eigene Session UNGEACHTET Flag -> vollstaendig sichtbar
   - Migration-SQL lokal `psql -d postgres` Smoke-Test (Linting per DEC-067 SQL-Format)
 - **Dependencies**: MT-1
 
@@ -344,6 +360,9 @@ Erst nach Pre-MT-1 Acceptance startet MT-1.
 - **AC-SLC-148-1 Migration-Idempotenz**: Migration 102 2x apply funktioniert ohne Fehler (Pattern-Reuse V6.3 MIG-037)
 - **AC-SLC-148-2 Quality-Gates**: tsc EXIT=0, ESLint EXIT=0, Vitest 30+/30+ SLC-148-Scope PASS
 - **AC-SLC-148-3 Worktree-Setup**: `v8-mandanten-report`-Branch existiert, Junction node_modules funktional
+- **AC-SLC-148-4 Privacy-Flag-Default**: Nach Migration 102 alle bestehenden capture_session-Rows haben `released_for_strategaize_review = false` und `released_for_strategaize_review_at IS NULL` (per DEC-163-Erweiterung + BL-132)
+- **AC-SLC-148-5 RLS-Snapshot-Gate**: strategaize_admin sieht `metadata.v8_report_snapshot` NUR wenn Flag=true; Steuerberater (partner_organization.owner) sieht IMMER; Mandant (participant) sieht eigene Session IMMER (4 Vitest-Cases gegen Coolify-DB mit SAVEPOINT-Pattern)
+- **AC-SLC-148-6 finalizeMandantenReport-Defaults**: Server-Action schreibt Snapshot, setzt Flag NICHT (bleibt false) — Flag wird ausschliesslich von V8.1 Lead-Conversion-CTA (BL-134) gesetzt
 
 ## Wiring-Verification-Liste
 
@@ -398,6 +417,9 @@ Erst nach Pre-MT-1 Acceptance startet MT-1.
   - V6.3 `computeBlockScores`-Pure-Function (Pattern-Reuse fuer sui-engine)
   - V6.3 `runLightPipeline`-Worker-Branch via template.metadata (DEC-126 Reuse)
   - V6.4 UNIQUE(slug, version) Template-Versionierung (FEAT-049)
+- **Privacy-Flow** (BL-132, 2026-05-29):
+  - `docs/V8_PRIVACY_FLOW_DISCOVERY.md` — Discovery mit 3 Optionen, Empfehlung A
+  - DEC-163-Erweiterung 2026-05-29 — Admin-View-Gate `released_for_strategaize_review` Flag + RLS-Policy
 - **Memory**:
   - [[feedback-cumulative-single-branch-pattern]] — Branch-Strategie
   - [[feedback-mandanten-empfehlung-unsere-nicht-stb]] — Tonalitaet
