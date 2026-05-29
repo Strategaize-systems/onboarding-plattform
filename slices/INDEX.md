@@ -806,23 +806,24 @@ Polish-Iteration nach V7.5-Release. Zwei dokumentierte Low-Severity-Issues aus K
 
 ## V8 Slices (Mandanten-Report-Port — 10-Prinzipien-Teaser-Diagnose)
 
-Mandanten-Report-Port nach Prototyp-Freigabe 2026-05-28. /requirements done 2026-05-28 (RPT-348). /architecture done 2026-05-28 (RPT-349, DEC-157..164). 5 Slices SLC-148..152 geplant, geschaetzt ~5-8 Sessions ueber 2-3 Wochen. V7.7 /post-launch STABLE bestaetigt 2026-05-28 17:00 UTC (RPT-350). /slice-planning V8 Teil 1 done 2026-05-28 (RPT-351): SLC-148 + SLC-149 Slice-Files mit Micro-Task-Decomposition angelegt. **Branch-Strategie: Cumulative-Single-Branch-Worktree `v8-mandanten-report`** ueber alle 5 V8-Slices (per [[feedback-cumulative-single-branch-pattern]]). **OQ-1 entschieden**: Tonalitaets-Migration via separate `EXIT_READINESS_LEVELS_MANDANT.md` im Dev-System + Build-Time-Skript. **OQ-2 entschieden**: ReifeSkalaAnswer-Visual als neutrale Grauskala (UX-Tonalitaet: Mandant darf "Stufe 1" antworten ohne Scham). SLC-150/151/152 Slice-Files in /slice-planning V8 Teil 2 (separate Session). Pre-MT-1 Founder-Pflicht (~30-45min Tonalitaets-Migration) vor /backend SLC-148.
+Mandanten-Report-Port nach Prototyp-Freigabe 2026-05-28. /requirements done 2026-05-28 (RPT-348). /architecture done 2026-05-28 (RPT-349, DEC-157..164). 5 Slices SLC-148..152 geplant, geschaetzt ~5-8 Sessions ueber 2-3 Wochen. V7.7 /post-launch STABLE bestaetigt 2026-05-28 17:00 UTC (RPT-350). **/slice-planning V8 Teil 1 done 2026-05-28** (RPT-351): SLC-148 + SLC-149 Slice-Files. **/slice-planning V8 Teil 2 done 2026-05-29**: SLC-150 + SLC-151 + SLC-152 Slice-Files mit Micro-Task-Decomposition angelegt — SLC-150 (7 MTs inkl. Spike-Klausel MT-1), SLC-151 (7 MTs), SLC-152 (6 MTs inkl. Live-Smoke + Master-Merge + /post-launch). **Branch-Strategie: Cumulative-Single-Branch-Worktree `v8-mandanten-report`** ueber alle 5 V8-Slices (per [[feedback-cumulative-single-branch-pattern]]). **OQ-1 entschieden**: Tonalitaets-Migration via separate `EXIT_READINESS_LEVELS_MANDANT.md` im Dev-System + Build-Time-Skript. **OQ-2 entschieden**: ReifeSkalaAnswer-Visual als neutrale Grauskala (UX-Tonalitaet: Mandant darf "Stufe 1" antworten ohne Scham). **SLC-148 + SLC-149 done 2026-05-29** (RPT-357 + RPT-358).
 
 | ID | Slice | Feature | Status | Priority | Created |
 |----|-------|---------|--------|----------|---------|
 | SLC-148 | [Template-Daten + Stufen-Lookup + SUI-Score-Engine Backend](SLC-148-template-daten-sui-score-engine.md) | FEAT-063 + FEAT-065 | done | High | 2026-05-28 |
 | SLC-149 | [Fragebogen-UI Components (Hygiene + Skala + Reflexion) Frontend](SLC-149-fragebogen-ui-components.md) | FEAT-064 | done | High | 2026-05-28 |
-| SLC-150 | Renderer Phase A (Foundation + Wheel + Cover + SUI-Hero + Modul-Profil) | FEAT-066 Phase A | planned | High | 2026-05-28 |
-| SLC-151 | Renderer Phase B (9 Modul-Pages + Hausaufgaben + Hebel + Reflexion + CTA) | FEAT-066 Phase B | planned | High | 2026-05-28 |
-| SLC-152 | Integration + Email-Versand-Branch + Telemetrie + Live-Smoke Founder-Test | FEAT-066 + FEAT-058-Reuse + FEAT-060-Reuse | planned | High | 2026-05-28 |
+| SLC-150 | [Renderer Phase A (Foundation + Wheel + Cover + SUI-Hero + Modul-Profil)](SLC-150-renderer-phase-a-foundation-wheel-cover.md) | FEAT-066 Phase A | planned | High | 2026-05-29 |
+| SLC-151 | [Renderer Phase B (9 Modul-Pages + Hausaufgaben + Hebel + Reflexion + CTA)](SLC-151-renderer-phase-b-modul-pages-end-sections.md) | FEAT-066 Phase B | planned | High | 2026-05-29 |
+| SLC-152 | [Integration + Email-Versand-Branch + Telemetrie + Live-Smoke Founder-Test](SLC-152-integration-email-telemetrie-live-smoke.md) | FEAT-066 + FEAT-058-Reuse + FEAT-060-Reuse | planned | High | 2026-05-29 |
 
 ### V8 Execution Order (strikt sequentiell, Begruendung)
-- **SLC-148** muss zuerst (FEAT-063 Template-Daten + FEAT-065 Score-Engine sind Pre-Condition fuer alle nachfolgenden)
-- **SLC-149** kann parallel zu SLC-150 (Renderer braucht keine UI-Components, UI braucht keinen Renderer)
+- **SLC-148** muss zuerst (FEAT-063 Template-Daten + FEAT-065 Score-Engine sind Pre-Condition fuer alle nachfolgenden) — DONE 2026-05-29
+- **SLC-149** kann parallel zu SLC-150 (Renderer braucht keine UI-Components, UI braucht keinen Renderer) — DONE 2026-05-29 (vor SLC-150 gewaehlt, weil Context-effizient)
 - **SLC-150 -> SLC-151** strikt sequentiell (Phase B baut auf Phase-A-Foundation auf, [[feedback-slice-phase-a-b-split-for-large-slices]])
-- **SLC-152** zuletzt (End-to-End-Integration + Live-Smoke nach allen Code-Slices)
-- Empfohlene Reihenfolge: 148 -> 149+150 (parallel) -> 151 -> 152
-- **Spike-Klausel in SLC-150 MT-1** (DEC-157): Pivot-Trigger zu Hybrid-Engine (satori+sharp) wenn @react-pdf-Wheel-Visual-Akzeptanz fail
+- **SLC-152** zuletzt (End-to-End-Integration + Live-Smoke nach allen Code-Slices + Master-Merge + /post-launch)
+- Realisierte Reihenfolge: 148 -> 149 -> 150 -> 151 -> 152
+- **Spike-Klausel in SLC-150 MT-1** (DEC-157): Pivot-Trigger zu Hybrid-Engine (satori+sharp) wenn @react-pdf-Wheel-Visual-Akzeptanz fail. NICHT-Trigger: "etwas anders" / "nicht pixel-perfect".
+- **Master-Merge** `v8-mandanten-report` -> `main` erst in SLC-152 MT-5 nach Gesamt-V8-/qa PASS und Founder-Live-Smoke PASS.
 
 ### V7.1/V7.2/V7.3/V7.4 Worktree-Pflicht (SaaS-Mode)
 
