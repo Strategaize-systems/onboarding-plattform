@@ -9,7 +9,7 @@
 
 Liefert die **Daten-Grundlage** fuer die V8 Mandanten-Report-Teaser-Diagnose:
 
-1. Ein neues Template-Objekt `exit-readiness-teaser-v1` in `public.template`, das die 10 Strategaize-Prinzipien der Uebergabefaehigkeit als strukturierten Fragebogen abbildet (47 Fragen ueber 11 Module).
+1. Ein neues Template-Objekt `exit-readiness-teaser-v1` in `public.template`, das die 10 Strategaize-Prinzipien der Uebergabefaehigkeit als strukturierten Fragebogen abbildet (53 Fragen ueber 11 Module, inkl. der 6 KI-Erweiterungen aus PRINZIPIEN.md — User-Direktive 2026-05-29 SLC-148 MT-2).
 2. Die Stufen-Lookup-Tabelle (9 Module x 5 Stufen x 2 Perspektiven = 90+ Inhalts-Bloecke) als strukturierte Daten — Quelle: `c:/strategaize/strategaize-dev-system/docs/curriculum/v2/EXIT_READINESS_LEVELS.md`.
 
 Diese Daten sind die nicht-LLM-Grundlage fuer FEAT-064 (UI-Render), FEAT-065 (Score-Engine) und FEAT-066 (Bericht-Renderer). Strategaize-Methodik-Substanz wird hier 1:1 ins Repo gespiegelt — keine LLM-Generierung, keine Interpretation.
@@ -76,7 +76,7 @@ Diese Daten sind die nicht-LLM-Grundlage fuer FEAT-064 (UI-Render), FEAT-065 (Sc
 ## Acceptance Criteria
 
 - **AC-1 Template-Seed lebt**: Eine Row in `public.template` mit `slug='exit-readiness-teaser-v1'` und `version=1` existiert auf Coolify-DB. Idempotenter Migrations-Pfad (`ON CONFLICT (slug, version) DO UPDATE`) reusable fuer kuenftige Content-Updates.
-- **AC-2 47 Fragen vollstaendig**: `template.blocks` enthaelt exakt 11 Module mit zusammen 47 Fragen (5 Hygiene + 37 Skala + 5 Reflexion). Vitest-Smoke pruefte Modul-IDs (M0..M10) + Frage-IDs (M0.1..M0.5 + F1.1..F9.5 + R10.1.1..R10.2.2).
+- **AC-2 53 Fragen vollstaendig**: `template.blocks` enthaelt exakt 11 Module mit zusammen 53 Fragen (5 Hygiene + 43 Skala + 5 Reflexion). Vitest-Smoke pruefte Modul-IDs (M0..M10) + Frage-IDs (M0.1..M0.5 + F1.1..F9.5 inkl. KI-Erweiterungen F4.4/F6.5/F6.6/F8.7/F9.4/F9.5 + R10.1.1..R10.2.2). Per User-Direktive 2026-05-29 in SLC-148 MT-2: PRINZIPIEN.md-Sections sind Source-of-Truth (43 Skala, nicht die stale 37-Skala-Summary-Table).
 - **AC-3 Score-Mapping korrekt**: Jede Skala-Frage hat `score_mapping: {1:0, 2:2, 3:5, 4:8, 5:10}`. Hygiene-Fragen ohne Score (Hausaufgaben-Logik). Reflexions-Fragen ohne Score.
 - **AC-4 Stufen-Lookup vollstaendig**: 45 Stufen-Eintraege (9 Module x 5 Stufen) + 9 "Worum es geht"-Modul-Texte. Pro Stufen-Eintrag: `was_es_bedeutet` + `unsere_empfehlung` als Markdown-Strings.
 - **AC-5 Tonalitaets-Transformation durchgefuehrt**: Stichproben-Pruefung von 5+ "Unsere Empfehlung"-Texten zeigt: kein "Wir sollten" ohne Strategaize-Sicht, kein "Ihr Steuerberater", kein "der Berater". Direkter Mandanten-Adressat ("Sie"-Form).

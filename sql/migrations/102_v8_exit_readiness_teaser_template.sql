@@ -6,9 +6,18 @@
 --   node scripts/build-v8-template-seed.mjs
 --
 -- MT-2 extends this file with:
---   * blocks JSONB (47 questions across 11 modules M0..M10)
+--   * blocks JSONB (53 questions across 11 modules M0..M10:
+--       5 Hygiene + 43 Skala (incl. 6 KI-Erweiterungen) + 5 Reflexion)
 --   * ALTER TABLE public.capture_session for released_for_strategaize_review
---   * RLS-policy gate for strategaize_admin snapshot access
+--   * RESTRICTIVE RLS-policy gate for strategaize_admin SELECT (Privacy-Flow Option A,
+--     DEC-163 extension 2026-05-29). Coexists with existing PERMISSIVE policies
+--     via AND-combination — no modification of capture_session_admin_full required.
+--
+-- Question texts are sourced from
+--   ../strategaize-dev-system/docs/curriculum/v2/EXIT_READINESS_PRINZIPIEN.md
+--   (Z. 354-449, "Der Diagnose-Fragebogen" sections).
+-- Per User-Direktive 2026-05-29: 53 Fragen-Set (43 Skala incl. KI-Erweiterungen),
+-- not the stale 47-Fragen-Summary-Table.
 
 BEGIN;
 
@@ -27,12 +36,133 @@ VALUES (
     'worum_es_geht',       '{"m1":"Eine Firma wird verkaufbar, wenn ihre Kernleistung wiederholbar ist — von anderen Menschen, in anderen Situationen, ohne den Inhaber. Ein massgeschneidertes Genie-Produkt, das nur der Inhaber selbst liefern kann, ist keine verkaufbare Firma, sondern ein schwer uebergebbarer Job. Wer eine Firma kauft, kauft die Faehigkeit, das Produkt **in Zukunft** zu liefern — nicht die Vergangenheit des Inhabers.","m2":"Nicht jeder Kunde ist ein guter Kunde. Wer alle Anfragen annimmt, baut Komplexitaet, die das skalierbare Modell zerstoert. Margenschwache Kunden, Schluesselkunden mit Sonderwuenschen, „schon-immer-Kunden\" mit eingewachsenen Sonder-Konditionen — sie alle ziehen die Firma in Richtungen, die ein Kaeufer als Risiko bewertet. Ein konsequenter Kunden-Fokus ist die Voraussetzung dafuer, dass die Firma wirklich skalierbar bleibt und Sie als Inhaber Spielraum zurueck bekommen.","m3":"Liquiditaet ist King. Wer seine Zahlen nicht aktiv steuert, kann nicht uebergeben — weil der Nachfolger blind in eine Black Box steigen muesste. Ein Kaeufer will sehen: kurze Zahlungsziele, transparente Kennzahlen, frueh erkannte Schwierigkeiten, klare Margen pro Bereich. Wer diese Substanz nicht hat, verliert nicht nur beim Verkauf — er steuert seine Firma jeden Tag mit dem Risiko, dass ein kleiner Schluck (verzoegerte Zahlung, ausgefallener Kunde) gleich zum Problem wird.","m4":"Wenn Sie persoenlich verkaufen muessen, ist die Firma nicht uebergebbar. Top-Kunden bestehen auf Inhaber-Kontakt, Preise haengen an Ihrem Bauchgefuehl, Verhandlungen werden von Ihnen gefuehrt — bei einer Uebergabe geht all das mit Ihnen weg. Vertrieb muss strukturierter, dokumentierter und delegierbarer Prozess werden. Plus heute, im KI-Zeitalter: ein moderner Vertrieb nutzt KI-Tools in der Lead-Recherche, der Angebots-Erstellung und der Auswertung — wer das nicht tut, verschenkt Hebel und wirkt fuer einen Kaeufer veraltet.","m5":"Wiederkehrende Umsaetze (Wartung, Subscription, Lizenz, Service-Vertraege, regelmaessige Lieferungen) sind der staerkste Bewertungs-Multiplikator. Ein Kaeufer zahlt fuer einen Euro Recurring-Revenue typischerweise 3-5x mehr als fuer einen Euro Projekt-Umsatz. Das ist nicht Theorie — es ist die direkteste Stellschraube zwischen heute und einem deutlich hoeheren Verkaufspreis. Plus: wiederkehrende Umsaetze geben Ihnen Planungssicherheit, machen die Firma weniger anfaellig fuer Marktschwankungen, und sie erlauben es, in Wachstum zu investieren statt bei jedem Quartalsende zu hoffen.","m6":"Eine Firma wird in den naechsten 5-10 Jahren nicht mehr nach „laeuft sie?\" bewertet, sondern nach „kann sie KI sinnvoll einsetzen?\". Die Antwort darauf haengt nicht primaer an installierter KI-Software, sondern an der Voraussetzung davor: **strukturierte Daten und sauber organisierte Prozesse, mit denen Sie KI ueberhaupt anstossen koennen.** Plus die zweite Schicht: welche KI-Tools sind heute schon produktiv im Einsatz, in welchen Bereichen, und wie zufrieden sind Sie damit. Wer hier weit hinten ist, wird beim Verkauf abgewertet, weil der Kaeufer den Aufholbedarf direkt einkalkuliert.","m7":"Strategaize-Kernstaerke und gleichzeitig der Punkt, an dem die meisten Inhaber-gefuehrten Firmen wirklich verlieren wuerden. Das Tagesgeschaefts-Wissen — warum bestellen Sie bei diesem Lieferanten, wie reagieren Sie auf diese typische Kundenanfrage, was tun Sie wenn dieser Maschinen-Typ ausfaellt, warum haben Sie diesem Kunden vor 5 Jahren Sonder-Konditionen gegeben — lebt in Ihrem Kopf. Wenn Sie morgen ausfallen oder die Firma uebergeben, geht dieses Wissen mit. Ein Kaeufer kauft eine Firma ohne diese Substanz nicht — oder zahlt deutlich weniger.","m8":"Der gesamte Betrieb muss ohne Sie laufen — nicht nur Vertrieb. Das umfasst Entscheidungswege, Mitarbeiter-Aufbau, Konflikt-Loesung, interne Kommunikation und Stellvertreter-Strukturen. Plus heute eine neue Dimension: wer im Team treibt das Thema KI? Wenn KI bei Ihnen haengen bleibt und Sie das nebenbei machen, faellt es bei der ersten Belastung weg. Wer KI-Verantwortung im Team verankert, hat eine andere Substanz.","m9":"Eine Firma verkaufsbereit zu machen ist kein Drei-Monats-Projekt. Die 8 vorherigen Module beschreiben, **was** veraendert werden sollte. Modul 9 misst, ob Sie die Veraenderungen, die Sie als notwendig erkennen, auch **tatsaechlich umsetzen — und ob diese Umsetzungen ueber 6+ Monate stabil halten.** Plus zwei spezifische KI-Dimensionen, die hier zusammenkommen: die strategische Position zum Thema KI fuer die zukuenftige Wettbewerbsfaehigkeit der Firma, und die Konkretheit des 12-Monats-KI-Plans."}'::jsonb,
     'hausaufgaben_lookup', '{"M0.1":{"teilweise":"Ein paar zentrale Vertraege liegen weiter als physische Akten oder sind seit Jahren nicht angepasst. Setzen Sie sich in den naechsten 90 Tagen einen Termin: alle Top-20-Vertraege durchgehen, fehlende digital erfassen, abgelaufene Klauseln aktualisieren. Das ist nicht teuer, aber es braucht einen Anwalt-Termin und 1-2 strukturierte Tage interner Aufwand.","nein":"Das ist die kritischste Baustelle in diesem Block. Bei einer Due Diligence wuerde ein Kaeufer hier sofort einen Bewertungs-Abschlag setzen. Bevor Sie ueber operative Verbesserungen oder Verkauf nachdenken, muss diese strukturelle Hausaufgabe gemacht werden — sonst ist der spaetere Aufwand Schall und Rauch. Konkreter Plan: Anwalt-Mandat fuer Vertrags-Inventur in den naechsten 30 Tagen anstossen, 12-18 Monate Bearbeitungs-Zeitraum einplanen."},"M0.2":{"teilweise":"Einiges ist sauber registriert, aber 1-2 wichtige Positionen haengen noch privat oder sind unklar zugeordnet. Klaeren Sie das in den naechsten 6 Monaten: welche Marken/Patente/Domains muessen ueberschrieben werden, welche Lizenzen umgemeldet. Das ist meistens ein 2-3-Termin-Vorgang mit einem IP-Anwalt — nicht teuer, aber notwendig.","nein":"Wenn geistiges Eigentum nicht auf der Firma liegt, ist die Firma im Verkaufs-Fall faktisch unvollstaendig. Ein Kaeufer kauft, was er nicht uebernehmen kann. Das muss vor allen anderen strukturellen Verbesserungen geklaert werden. Konkreter Plan: IP-Anwalt-Mandat in den naechsten 30 Tagen, vollstaendige Uebertragung in 6-12 Monaten — mit klaren steuerlichen Konsequenzen, die ein Berater begleiten muss."},"M0.3":{"teilweise":"Die meisten Vertraege bestehen, aber Klauseln sind veraltet oder fehlen bei 1-2 wichtigen Positionen. Ueberpruefen Sie in den naechsten 90 Tagen, welche 3-5 Schluessel-Mitarbeiter aktualisierte Vertraege brauchen, und sprechen Sie die Nachverhandlung als Routine-Update an — nicht als Krisen-Signal.","nein":"Ohne aktuelle Vertraege mit Wettbewerbs- und Kunden-Schutz-Klauseln kann ein Schluessel-Mitarbeiter die Firma jederzeit mit Kunden, Wissen und Know-How verlassen. Ein Kaeufer sieht das sofort als zentrales Risiko. Konkreter Plan: Anwalt-Vorlagen erstellen lassen, Reihenfolge nach Risiko-Hoehe priorisieren (welcher Mitarbeiter koennte den groessten Schaden anrichten), in 12 Monaten alle Top-5-Positionen abgeschlossen."},"M0.4":{"teilweise":"Sie haben einen Ueberblick, aber 1-2 Altverpflichtungen sind seit Jahren nicht ueberprueft worden. Setzen Sie sich in den naechsten 3 Monaten mit Ihrer Bank zusammen, alle laufenden Buergschaften auflisten, pruefen welche reduziert oder abgeloest werden koennen. Vor jedem Verkaufs-Szenario muss klar sein, welche persoenlichen Risiken bestehen — und ob sie zwingend persoenlich bleiben muessen.","nein":"Persoenliche Buergschaften, die nicht aktiv gesteuert werden, sind das groesste persoenliche Risiko fuer einen Inhaber 50+. Im Verkaufs-Fall hindern sie ausserdem die saubere Trennung Inhaber–Firma. Konkreter Plan: Bank-Termin zur vollstaendigen Inventur in den naechsten 30 Tagen, Reduktions-Plan ueber 12-24 Monate, ggf. Umstellung auf gewerbliche Sicherheiten anstelle privater Buergschaft."},"M0.5":{"teilweise":"Die meisten Pflichten werden erfuellt, aber die Dokumentation ist unvollstaendig oder veraltet. Setzen Sie in den naechsten 6 Monaten einen einmaligen Compliance-Aufraeum-Termin: Datenschutz-Konzept aktualisieren, Branchen-Vorgaben-Liste pruefen, Aufzeichnungs-Pflichten klaeren. Das ist meistens 2-3 Tage Aufwand mit einem Fachberater — kein Drama, aber notwendig.","nein":"Compliance-Luecken sind in der Due Diligence besonders teuer: jeder Mangel wird vom Kaeufer mit einem Bewertungs-Abschlag und einem Garantie-Vorbehalt belegt. Konkreter Plan: Compliance-Beratungs-Termin in den naechsten 60 Tagen anstossen, vollstaendige Bestandsaufnahme, 12-Monats-Hausaufgaben-Plan — meist parallel zu anderen rechtlichen Themen abzuarbeiten."}}'::jsonb
   ),
-  '[]'::jsonb  -- TODO MT-2: 11 module blocks with 47 questions
+  $blocks_jsonb$[
+    {"modul_id":"M0","name":"Vor-Verkauf-Hygiene (rechtliche Struktur)","answer_schema_kind":"hygiene_yes_partial_no","questions":[
+      {"frage_id":"M0.1","text":"Kennen Sie die fuer Ihr Unternehmen wirtschaftlich kritischen Vertraege (Kunden, Lieferanten, Lizenzen, Miete) und sind diese aktuell, gepflegt und uebertragbar?"},
+      {"frage_id":"M0.2","text":"Gibt es rechtliche Konstrukte oder persoenliche Buergschaften, die stark an Ihnen persoenlich haengen und nicht uebertragbar sind?"},
+      {"frage_id":"M0.3","text":"Ist geistiges Eigentum (Marken, Patente, Designs, geschuetzte Methoden) sauber dokumentiert und auf das Unternehmen — nicht auf Sie privat — registriert?"},
+      {"frage_id":"M0.4","text":"Sind Anstellungs-Vertraege Ihrer Schluessel-Mitarbeiter aktuell, mit klaren Wettbewerbs- oder Bindungs-Klauseln wo noetig, und uebertragbar?"},
+      {"frage_id":"M0.5","text":"Sind interne Regelwerke (Compliance, Datenschutz, branchen-spezifische Vorgaben) auf einem Stand, der einer externen Pruefung standhalten wuerde?"}
+    ]},
+    {"modul_id":"M1","name":"Skalierbares, lehrbares Produkt","answer_schema_kind":"reife_skala_5","score_mapping":{"1":0,"2":2,"3":5,"4":8,"5":10},"questions":[
+      {"frage_id":"F1.1","text":"Wie standardisiert und wiederholbar ist Ihre Kernleistung? (Wieviel Anteil ist Standard, wieviel ist Einzelfall-Anpassung?)"},
+      {"frage_id":"F1.2","text":"Wie klar und einheitlich ist Ihr Leistungsversprechen nach aussen — auf der Webseite, im Verkaufsgespraech, in Angeboten?"},
+      {"frage_id":"F1.3","text":"Wie schnell koennte ein neuer Mitarbeiter selbststaendig liefern, was Sie heute liefern? (Zeitraum bis zur eigenverantwortlichen Lieferung)"},
+      {"frage_id":"F1.4","text":"Wie klar unterscheidet sich Ihr Unternehmen von Wettbewerbern? Gibt es 1-2 Alleinstellungs-Merkmale, die Kunden erkennen und benennen koennen?"}
+    ]},
+    {"modul_id":"M2","name":"Bewusster Kunden-Fokus","answer_schema_kind":"reife_skala_5","score_mapping":{"1":0,"2":2,"3":5,"4":8,"5":10},"questions":[
+      {"frage_id":"F2.1","text":"Wie gut kennen Sie Ihre wirtschaftlich starken vs. schwachen Kundensegmente? (Marge je Kunde, Aufwand je Kunde)"},
+      {"frage_id":"F2.2","text":"Wie konsequent trennen Sie sich von Kunden, die nicht passen — die zu klein, zu schwierig oder zu margenschwach sind?"},
+      {"frage_id":"F2.3","text":"Wie klar ist Ihr Ideal-Kundenprofil definiert und in der Akquise verankert?"},
+      {"frage_id":"F2.4","text":"Wie ausgeglichen ist Ihre Kunden-Verteilung? Wie hoch ist der Umsatz-Anteil Ihres groessten Kunden bzw. Ihrer 3 groessten Kunden?"}
+    ]},
+    {"modul_id":"M3","name":"Liquiditaet und Zahlen-Steuerung","answer_schema_kind":"reife_skala_5","score_mapping":{"1":0,"2":2,"3":5,"4":8,"5":10},"questions":[
+      {"frage_id":"F3.1","text":"Wie stabil und vorhersehbar ist Ihr monatlicher Geld-Eingang? (Schwankungen, Saisonalitaet, Ueberraschungen)"},
+      {"frage_id":"F3.2","text":"Wie schnell wandeln Sie Auftraege in Geld auf dem Konto? (Zahlungsziele, Anzahlungen, Forderungs-Management)"},
+      {"frage_id":"F3.3","text":"Wie viele Monate koennten Sie ohne Neuumsatz weiterzahlen — bei aktuellen Reserven?"},
+      {"frage_id":"F3.4","text":"Welche 3-5 Kennzahlen verfolgen Sie aktiv und regelmaessig? Wie schnell koennen Sie diese ohne Aufwand abrufen?"},
+      {"frage_id":"F3.5","text":"Wissen Sie pro Produkt oder Leistungsbereich, welche Marge dabei tatsaechlich rauskommt? Oder rechnen Sie auf Gesamt-Ergebnis?"},
+      {"frage_id":"F3.6","text":"Wie frueh erkennen Sie wirtschaftliche Schwierigkeiten? Vorlaufend an Fruehindikatoren oder rueckblickend am Monatsabschluss?"}
+    ]},
+    {"modul_id":"M4","name":"Vertrieb ohne den Inhaber","answer_schema_kind":"reife_skala_5","score_mapping":{"1":0,"2":2,"3":5,"4":8,"5":10},"questions":[
+      {"frage_id":"F4.1","text":"Wie stark haengt Ihr Vertrieb noch von Ihrer persoenlichen Praesenz ab? (Wie viele Geschaeftsabschluesse der letzten 12 Monate sind ohne Sie gelaufen?)"},
+      {"frage_id":"F4.2","text":"Wie gut funktionieren die Vertriebs-Prozesse ohne Sie? (Lead-Pflege, Angebote, Verhandlungen)"},
+      {"frage_id":"F4.3","text":"Wie standardisiert sind Vertriebs-Preisgestaltungs-Entscheidungen — gibt es eine Logik, an die sich alle halten?"},
+      {"frage_id":"F4.4","text":"Wie umfassend ist Ihr Vertriebs-Prozess heute schon mit KI-Tools unterstuetzt? (Lead-Recherche, Angebots-Erstellung, Kunden-Kommunikation, Auswertungen)"}
+    ]},
+    {"modul_id":"M5","name":"Wiederkehrende Umsaetze","answer_schema_kind":"reife_skala_5","score_mapping":{"1":0,"2":2,"3":5,"4":8,"5":10},"questions":[
+      {"frage_id":"F5.1","text":"Welcher Anteil Ihres Umsatzes wiederholt sich automatisch — ohne dass jemand neu verkaufen muss? (Abonnement, Wartung, Lizenz)"},
+      {"frage_id":"F5.2","text":"Wie aktiv verkaufen Sie Service- oder Wartungs-Vertraege beim Neukunden-Abschluss?"},
+      {"frage_id":"F5.3","text":"Wie klar ist Ihre Preisgestaltung fuer wiederkehrende Modelle (Abonnements, Wartungsstufen)?"}
+    ]},
+    {"modul_id":"M6","name":"Datenbasis und Struktur","answer_schema_kind":"reife_skala_5","score_mapping":{"1":0,"2":2,"3":5,"4":8,"5":10},"questions":[
+      {"frage_id":"F6.1","text":"Wie sauber und konsistent sind Ihre Kunden- und Auftragsdaten gepflegt? (Stammdaten, Doppel-Eintraege, Vollstaendigkeit)"},
+      {"frage_id":"F6.2","text":"Wie schnell koennen Sie operative Kennzahlen aus Ihren Systemen ziehen — ohne dass jemand 3 Tage Excel macht?"},
+      {"frage_id":"F6.3","text":"Wie KI-ready ist Ihre Datenlandschaft heute? (Strukturiert, dokumentiert, exportierbar, zugriffsklar)"},
+      {"frage_id":"F6.4","text":"Wie viele Behelfsloesungen (Excel-Tabellen, manuelle Schritte, parallel laufende Listen) haben sich neben Ihren eigentlichen Systemen aufgebaut?"},
+      {"frage_id":"F6.5","text":"Wie breit ist KI heute in Ihrem Unternehmen produktiv im Einsatz — ueber wie viele Bereiche (Vertrieb, Buchhaltung, Marketing, Operations, Reporting, Kunden-Kommunikation etc.)?"},
+      {"frage_id":"F6.6","text":"Wie zufrieden sind Sie heute mit Funktionalitaet und Effektivitaet der eingesetzten KI-Tools? (Falls noch keine im produktiven Einsatz: Stufe 1)"}
+    ]},
+    {"modul_id":"M7","name":"Eigenes Wissenssystem mit Unternehmerhandbuch","answer_schema_kind":"reife_skala_5","score_mapping":{"1":0,"2":2,"3":5,"4":8,"5":10},"questions":[
+      {"frage_id":"F7.1","text":"Wie gut ist Ihr Tagesgeschaefts-Wissen dokumentiert und abrufbar? (Prozesse, Heuristiken, Ausnahmen, Lieferanten-Begruendungen)"},
+      {"frage_id":"F7.2","text":"Wie gut koennte ein Vertreter typische Kundenfragen beantworten, ohne Sie anzurufen?"},
+      {"frage_id":"F7.3","text":"Wie schnell kommt ein neuer Mitarbeiter ins selbststaendige Arbeiten — durch dokumentierte Hilfen, nicht durch persoenliche Anleitung durch Sie?"},
+      {"frage_id":"F7.4","text":"Wie aktuell ist Ihre Dokumentation tatsaechlich? Wann wurde sie zuletzt ueberprueft oder erweitert?"}
+    ]},
+    {"modul_id":"M8","name":"Fuehrung, Team und interne Kommunikation","answer_schema_kind":"reife_skala_5","score_mapping":{"1":0,"2":2,"3":5,"4":8,"5":10},"questions":[
+      {"frage_id":"F8.1","text":"Wie stark haengt der operative Tagesbetrieb noch von Ihren persoenlichen Entscheidungen ab? (Frequenz von \"Frag den Chef\"-Momenten)"},
+      {"frage_id":"F8.2","text":"Wie gut sind kritische Rollen mit Vertretern abgedeckt? (Krankheit, Kuendigung, Urlaub)"},
+      {"frage_id":"F8.3","text":"Wie funktional ist Ihr Fuehrungs-Team bei strategischen Entscheidungen — ohne Ihre permanente Praesenz?"},
+      {"frage_id":"F8.4","text":"Wie klar sind Entscheidungswege und Verantwortlichkeiten in Ihrer Organisation? Wissen Mitarbeiter, wer worueber entscheidet?"},
+      {"frage_id":"F8.5","text":"Wie laufen interne Informationen in Ihrem Unternehmen? Wo finden Mitarbeiter, was sie wissen muessen?"},
+      {"frage_id":"F8.6","text":"Wie gut bekommen Sie passende neue Mitarbeiter eingestellt und eingearbeitet? Wie lange dauert es, bis ein neuer Mitarbeiter wirklich produktiv ist?"},
+      {"frage_id":"F8.7","text":"Wie klar ist die KI-Verantwortlichkeit in Ihrem Team verankert? (Eigener KI-Verantwortlicher oder dedizierte Rolle/Teilfunktion — oder bleibt das Thema informell beim Inhaber haengen?)"}
+    ]},
+    {"modul_id":"M9","name":"Strukturiertes Wertschaffen ueber Zeit","answer_schema_kind":"reife_skala_5","score_mapping":{"1":0,"2":2,"3":5,"4":8,"5":10},"questions":[
+      {"frage_id":"F9.1","text":"Wie viele der Veraenderungen aus den Prinzipien 1-8 sind tatsaechlich umgesetzt und seit 6+ Monaten in Kraft?"},
+      {"frage_id":"F9.2","text":"Wie konsequent messen und kommunizieren Sie Resultate Ihrer operativen Verbesserungen? (Monatliche Berichte, klare Vorher-Nachher-Daten)"},
+      {"frage_id":"F9.3","text":"Wie aktiv handhaben Sie Personal-Veraenderungen, die durch Umstrukturierungen noetig werden? (Mitarbeiter, die nicht in die neue Struktur passen, werden begleitet oder ausgetauscht)"},
+      {"frage_id":"F9.4","text":"Wie strategisch reflektiert ist Ihre Position zum Thema KI fuer die zukuenftige Wettbewerbsfaehigkeit Ihrer Firma? (Von \"noch nicht reflektiert\" bis \"KI ist existenzielles Strategie-Thema mit klaren Konsequenzen fuer Investitionen, Mitarbeiter, Geschaeftsmodell\")"},
+      {"frage_id":"F9.5","text":"Wie konkret ist Ihre KI-Roadmap fuer die naechsten 12 Monate? (Konkrete Projekte mit verantwortlichen Menschen und naechsten Meilensteinen — oder eher als Idee notiert?)"}
+    ]},
+    {"modul_id":"M10","name":"Vermaechtnis und persoenliche Uebergabe-Reife","answer_schema_kind":"reflexion_freitext","questions":[
+      {"frage_id":"R10.1.1","subsection":"10.1 — Was moechten Sie hinterlassen?","text":"Wie soll die Aussenwelt auf Ihre Firma blicken in 5 Jahren — wenn Sie nicht mehr da sind? (Reputation, Marktposition, Charakter)"},
+      {"frage_id":"R10.1.2","subsection":"10.1 — Was moechten Sie hinterlassen?","text":"Welche Mitarbeiter, Werte oder Charakteristika Ihrer Firma muessen Ihrer Meinung nach erhalten bleiben? Welche Veraenderungen waeren fuer Sie OK, welche nicht?"},
+      {"frage_id":"R10.1.3","subsection":"10.1 — Was moechten Sie hinterlassen?","text":"Was waere fuer Sie ein Verkauf, bei dem Sie sich in 5 Jahren noch im Spiegel ansehen koennen — und einer, bei dem Sie es nicht koennten?"},
+      {"frage_id":"R10.2.1","subsection":"10.2 — Wie geht es fuer Sie persoenlich weiter?","text":"Was ist Ihnen nach dem Verkauf wichtig? Was wollen Sie tun, mit wem, wie? Sind Familie, Reisen, Ehrenamt, eine neue kleinere Taetigkeit Themen fuer Sie?"},
+      {"frage_id":"R10.2.2","subsection":"10.2 — Wie geht es fuer Sie persoenlich weiter?","text":"Stellen Sie sich vor: morgen ist verkauft, Geld auf dem Konto, Firma weg. Wie sieht Ihr Dienstag in 6 Monaten aus — von 7:00 bis 22:00?"}
+    ]}
+  ]$blocks_jsonb$::jsonb
 )
 ON CONFLICT (slug, version) DO UPDATE
   SET name        = EXCLUDED.name,
       description = EXCLUDED.description,
       metadata    = EXCLUDED.metadata,
       blocks      = EXCLUDED.blocks;
+
+-- MT-2 ALTER capture_session: Privacy-Flags fuer Strategaize-Admin-Snapshot-Gate
+-- (per V8_PRIVACY_FLOW_DISCOVERY Option A, DEC-163 Erweiterung 2026-05-29).
+-- Default `false` ist sicher: existierende V6.3-Sessions sind nicht V8 und werden
+-- von der RESTRICTIVE-Policy unten nicht gefiltert (USING-Klausel laesst sie durch
+-- weil der Snapshot-Gate nur strategaize_admin-Reads betrifft und alle anderen Rollen
+-- unveraendert bleiben).
+ALTER TABLE public.capture_session
+  ADD COLUMN IF NOT EXISTS released_for_strategaize_review BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS released_for_strategaize_review_at TIMESTAMPTZ;
+
+-- MT-2 Backfill: existierende non-V8-Sessions (V6.3 partner_diagnostic, exit_readiness,
+-- mitarbeiter_wissenserhebung etc.) bekommen released=true, damit strategaize_admin
+-- ihre Sichtbarkeit unveraendert behaelt. Nur neue V8-Sessions starten mit released=false
+-- und unterliegen damit dem Snapshot-Gate.
+-- Idempotent: WHERE-Filter laesst bereits released=true-Rows in Ruhe.
+UPDATE public.capture_session
+   SET released_for_strategaize_review = true
+ WHERE released_for_strategaize_review = false
+   AND template_id IN (
+     SELECT id FROM public.template
+      WHERE slug <> 'exit-readiness-teaser-v1'
+   );
+
+-- MT-2 RLS: RESTRICTIVE policy zur Snapshot-Gating.
+-- Postgres kombiniert RESTRICTIVE policies mit PERMISSIVE policies via AND.
+-- Bedeutung: die bestehende `capture_session_admin_full` (PERMISSIVE) ist
+-- gleichzeitig erlaubend UND wird durch diese Policy zusaetzlich eingeschraenkt:
+-- strategaize_admin sieht eine Row nur, wenn released_for_strategaize_review=true.
+-- Andere Rollen (employee, tenant_admin, tenant_member, partner_admin)
+-- werden NICHT gefiltert (USING liefert true wenn role <> 'strategaize_admin').
+--
+-- Idempotent: DROP IF EXISTS schuetzt vor "policy already exists" beim Re-Apply.
+DROP POLICY IF EXISTS capture_session_strategaize_admin_snapshot_gated
+  ON public.capture_session;
+
+CREATE POLICY capture_session_strategaize_admin_snapshot_gated
+  ON public.capture_session
+  AS RESTRICTIVE
+  FOR SELECT
+  TO authenticated
+  USING (
+    auth.user_role() <> 'strategaize_admin'
+    OR released_for_strategaize_review = true
+  );
 
 COMMIT;

@@ -184,14 +184,14 @@ Erst nach Pre-MT-1 Acceptance startet MT-1.
   - Verifikation: keine Kollision der V8-Keys (`usage_kind`, `scoring_kind`, `report_renderer`, `stufen_lookup`, `worum_es_geht`, `hausaufgaben_lookup`, `gewichtung`) mit bestehenden Templates (`partner_diagnostic_v1`, `exit-readiness-v1.0.0`)
   - Bei Kollision: MT-2 stoppen + DECISIONS.md-Eintrag wie konsolidieren (z.B. `usage_kind`-Domain pruefen vs. V6.3-Bestand)
 - **Files**:
-  - `sql/migrations/102_v8_exit_readiness_teaser_template.sql` (NEU, vom MT-1-Build-Skript erzeugt + manuelle Erweiterung um 47 Fragen-Struktur)
-  - `__tests__/migrations/102-template-seed.test.ts` (NEU) — Vitest gegen Coolify-DB
+  - `sql/migrations/102_v8_exit_readiness_teaser_template.sql` (NEU, vom MT-1-Build-Skript erzeugt + manuelle Erweiterung um 53 Fragen-Struktur)
+  - `src/__tests__/migrations/102-template-seed.test.ts` (NEU) — Vitest gegen Coolify-DB
 - **Expected Behavior**:
   - `INSERT INTO public.template (slug, version, ..., metadata, blocks) VALUES ('exit-readiness-teaser-v1', 1, ...) ON CONFLICT (slug, version) DO UPDATE SET ...`
-  - `blocks` JSONB = Array mit 11 Module-Objekten, jedes mit `modul_id` (M0..M10), `name`, `questions[]`
-  - Modul 0: 5 Fragen `answer_schema_kind='hygiene_yes_partial_no'`
-  - Module 1-9: 37 Fragen `answer_schema_kind='reife_skala_5'`, je mit `score_mapping: {1:0, 2:2, 3:5, 4:8, 5:10}`
-  - Modul 10: 5 Fragen `answer_schema_kind='reflexion_freitext'`
+  - `blocks` JSONB = Array mit 11 Module-Objekten, jedes mit `modul_id` (M0..M10), `name`, `answer_schema_kind`, `questions[]`
+  - Modul 0: 5 Fragen, `answer_schema_kind='hygiene_yes_partial_no'`
+  - Module 1-9: 43 Fragen (Per User-Direktive 2026-05-29 inkl. der 6 KI-Erweiterungen F4.4/F6.5/F6.6/F8.7/F9.4/F9.5 aus PRINZIPIEN.md Z. 364-434), `answer_schema_kind='reife_skala_5'`, plus `score_mapping: {1:0, 2:2, 3:5, 4:8, 5:10}` am Block-Level
+  - Modul 10: 5 Fragen `answer_schema_kind='reflexion_freitext'` (mit `subsection` 10.1/10.2 pro Frage)
   - `metadata.usage_kind = 'mandanten_report_teaser_v1'`
   - `metadata.scoring_kind = 'sui_weighted'`
   - `metadata.report_renderer = 'mandanten_report_v2'`
@@ -202,22 +202,35 @@ Erst nach Pre-MT-1 Acceptance startet MT-1.
     ADD COLUMN IF NOT EXISTS released_for_strategaize_review BOOLEAN NOT NULL DEFAULT false,
     ADD COLUMN IF NOT EXISTS released_for_strategaize_review_at TIMESTAMPTZ;
   ```
-- **RLS-Policy-Erweiterung** in derselben Migration (additivum zu bestehenden capture_session-Policies):
-  - Neue Policy `capture_session_strategaize_admin_snapshot_gated`: `strategaize_admin`-Role darf `metadata->'v8_report_snapshot'` NUR lesen wenn `released_for_strategaize_review = true`
-  - Bestehende Policies fuer Owner-Steuerberater (`partner_organization.owner_id`) + Mandant-Self (`participant_id = auth.uid()`) bleiben UNVERAENDERT (volle Lesezugriff)
-  - Implementierung: SELECT-Policy mit `USING ((SELECT role FROM user_profile WHERE id = auth.uid()) != 'strategaize_admin' OR released_for_strategaize_review = true)`
+- **Backfill-Pattern** (in derselben Migration, MT-2 ergaenzt nach IMP-Lehre):
+  - Existierende non-V8-Sessions (V6.3 partner_diagnostic, exit_readiness, mitarbeiter_wissenserhebung) werden auf `released_for_strategaize_review = true` gesetzt
+  - Begruendung: RESTRICTIVE-Policy unten gilt fuer ALLE capture_session-Rows, sonst entstuende ein V6.3-Regression-Risk (strategaize_admin verliert Zugriff auf bestehende Sessions)
+  - Nur neue V8-Sessions (template_id auf `exit-readiness-teaser-v1`) starten mit `released=false` und unterliegen dem Snapshot-Gate
+- **RLS-Policy-Erweiterung** in derselben Migration (additivum via RESTRICTIVE-Pattern):
+  - Neue Policy `capture_session_strategaize_admin_snapshot_gated`: SELECT-Filter fuer strategaize_admin
+  - Implementierung: `AS RESTRICTIVE` Policy mit `USING (auth.user_role() <> 'strategaize_admin' OR released_for_strategaize_review = true)`
+  - Postgres kombiniert RESTRICTIVE policies mit PERMISSIVE via AND — die bestehende `capture_session_admin_full` bleibt UNVERAENDERT erlaubend, wird aber zusaetzlich vom Gate eingeschraenkt
+  - Andere Rollen (employee, tenant_admin, tenant_member, partner_admin) werden NICHT gefiltert (USING liefert true wenn role <> 'strategaize_admin')
+  - Idempotent via `DROP POLICY IF EXISTS ... CREATE POLICY ...`
   - Berater-Dashboard-Code-Gate auf `released_for_strategaize_review`-Field zusaetzlich (defense-in-depth, NICHT nur RLS)
 - **Verification**:
   - Vitest gegen Coolify-DB (via node:22 Docker-Pattern aus [[coolify-test-setup]]):
-    - Migration apply 1x -> Row exists, `version=1`
+    - Migration apply 1x -> Row exists, `version=1`, metadata-Keys vollstaendig
     - Migration apply 2x (idempotent) -> Keine Fehler, gleiche Row
-    - `SELECT blocks` -> 11 Module, exact count je Modul
-    - `SELECT metadata->>'usage_kind'` -> `'mandanten_report_teaser_v1'`
-    - **Privacy-Flag**: `SELECT released_for_strategaize_review, released_for_strategaize_review_at FROM capture_session LIMIT 1` -> NOT NULL, Default `false`, Timestamp NULL
-    - **RLS-Test** mit SAVEPOINT-Pattern (per [[coolify-test-setup]]): strategaize_admin-Rolle versucht `SELECT metadata->'v8_report_snapshot' FROM capture_session WHERE released_for_strategaize_review = false` -> Snapshot-Feld leer/NULL (oder Row nicht sichtbar je nach Policy-Implementierung)
-    - **RLS-Test**: strategaize_admin-Rolle liest `metadata->'v8_report_snapshot'` von Session mit Flag=true -> Snapshot vollstaendig sichtbar
-    - **RLS-Test**: partner_organization.owner (Steuerberater) liest Snapshot UNGEACHTET Flag -> vollstaendig sichtbar (Vertrauter)
-    - **RLS-Test**: Mandant (participant) liest eigene Session UNGEACHTET Flag -> vollstaendig sichtbar
+    - `SELECT blocks` -> 11 Module mit modul_ids M0..M10 in Reihenfolge
+    - Frage-Counts: total=53, hygiene=5, skala=43, reflexion=5
+    - Jeder Skala-Block hat score_mapping `{1:0,2:2,3:5,4:8,5:10}` am Block-Level
+    - KI-Erweiterungs-Frage-IDs vorhanden: F4.4, F6.5, F6.6, F8.7, F9.4, F9.5
+    - `metadata->>'usage_kind'` = `'mandanten_report_teaser_v1'`, `scoring_kind` = `'sui_weighted'`, `report_renderer` = `'mandanten_report_v2'`
+    - `metadata.gewichtung.m9` = 20
+    - **Privacy-Flag**: `released_for_strategaize_review` BOOLEAN NOT NULL DEFAULT false; `released_for_strategaize_review_at` TIMESTAMPTZ NULLABLE
+    - **Backfill**: Pre-existing non-V8-Sessions haben `released=true` nach Migration-Apply
+    - **Policy-Existenz**: `capture_session_strategaize_admin_snapshot_gated` existiert als RESTRICTIVE-SELECT-Policy
+    - **RLS-Cases** mit `withJwtContext` (4 Rollen-Pfade):
+      - strategaize_admin + flag=true -> Session sichtbar
+      - strategaize_admin + flag=false -> Session NICHT sichtbar (RESTRICTIVE filtert)
+      - tenant_admin (own tenant) + flag=any -> Session sichtbar
+      - employee (own session) + flag=any -> Session sichtbar
   - Migration-SQL lokal `psql -d postgres` Smoke-Test (Linting per DEC-067 SQL-Format)
 - **Dependencies**: MT-1
 
