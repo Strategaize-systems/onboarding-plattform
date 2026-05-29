@@ -19,7 +19,15 @@ export interface WheelPath {
   modulId: ModulKey;
   /** SVG `d`-Attribut fuer @react-pdf <Path d={pathD} />. */
   pathD: string;
-  /** "rgb(r, g, b)" wenn focus oder kein focusIdx, sonst "rgba(r, g, b, 0.3)". */
+  /**
+   * Immer "rgb(r, g, b)" — kein Alpha-Channel.
+   *
+   * Wenn focusIdx gesetzt und der Pfad nicht der focus ist, wird ein
+   * pre-multiplied-Alpha-Pastel verwendet (gegen weissen Hintergrund).
+   * Grund: @react-pdf v4 parst `rgba(..., 0.3)` nicht zuverlaessig — der
+   * Dim-Effekt zeigt unerwartete Sekundaer-Farben statt der Original-Farbe
+   * mit 30% Opazitaet (SLC-150 MT-1 Spike-Befund 2026-05-29).
+   */
   fillColor: string;
   /** "M1".."M9" Kurz-Label fuer Wheel-Text. */
   label: string;
@@ -52,15 +60,17 @@ const MODUL_KEYS: ModulKey[] = [
 
 const SECTOR_DEG = 360 / 9; // 40°
 
-// 3-Stufen-Klassifizierung visuell. Werte als RGB-Strings damit Alpha-Variante
-// in einem konsistenten Format gebaut werden kann.
-const COLOR_RGB = {
-  rot: "220, 38, 38", // #dc2626 Tailwind red-600
-  amber: "245, 158, 11", // #f59e0b Tailwind amber-500
-  gruen: "16, 185, 129", // #10b981 Tailwind emerald-500
+// 3-Stufen-Klassifizierung visuell. Full-Color + pre-multiplied-Alpha-Pastel
+// (gegen weissen Hintergrund @ alpha=0.3) als separate Konstanten, weil
+// @react-pdf v4 `rgba(..., 0.3)` nicht zuverlaessig rendert (SLC-150 MT-1
+// Spike-Befund 2026-05-29). Pastel-Werte: r' = r*0.3 + 255*0.7.
+const COLOR = {
+  rot: { full: "rgb(220, 38, 38)", pastel: "rgb(244, 190, 190)" }, // red-600
+  amber: { full: "rgb(245, 158, 11)", pastel: "rgb(252, 226, 182)" }, // amber-500
+  gruen: { full: "rgb(16, 185, 129)", pastel: "rgb(183, 234, 217)" }, // emerald-500
 } as const;
 
-function classifyScoreColor(score: number): keyof typeof COLOR_RGB {
+function classifyScoreColor(score: number): keyof typeof COLOR {
   if (score < 4) return "rot";
   if (score < 7) return "amber";
   return "gruen";
@@ -108,9 +118,8 @@ export function computeWheelPaths(
     ].join(" ");
 
     const colorKey = classifyScoreColor(score);
-    const rgb = COLOR_RGB[colorKey];
     const isDimmed = focusIdx !== undefined && focusIdx !== i;
-    const fillColor = isDimmed ? `rgba(${rgb}, 0.3)` : `rgb(${rgb})`;
+    const fillColor = isDimmed ? COLOR[colorKey].pastel : COLOR[colorKey].full;
 
     return {
       modulId: key,

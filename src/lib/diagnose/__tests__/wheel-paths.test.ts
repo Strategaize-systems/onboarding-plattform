@@ -114,43 +114,65 @@ describe("computeWheelPaths", () => {
     expect(paths[3]?.fillColor).toBe("rgb(16, 185, 129)"); // 7.0 gruen
   });
 
-  it("AC-Verification: focusIdx=4 -> 8/9 Pfade haben Alpha 0.3, m5 full-Alpha", () => {
+  it("AC-Verification: focusIdx=4 -> 8/9 Pfade dimmed (pastel), m5 full-color", () => {
+    // Pre-multiplied alpha fix (SLC-150 MT-1 Spike): kein rgba() mehr,
+    // dimmed-Pfade sind pre-multiplied Pastel-Variante gegen weiss.
     const paths = computeWheelPaths(uniformScores(5), { focusIdx: 4 });
+    const fullAmber = "rgb(245, 158, 11)";
+    const pastelAmber = "rgb(252, 226, 182)";
     paths.forEach((p, i) => {
       if (i === 4) {
-        expect(p.fillColor).toMatch(/^rgb\(/);
-        expect(p.fillColor).not.toMatch(/^rgba\(/);
+        expect(p.fillColor).toBe(fullAmber);
       } else {
-        expect(p.fillColor).toMatch(/^rgba\(/);
-        expect(p.fillColor).toContain("0.3");
+        expect(p.fillColor).toBe(pastelAmber);
       }
     });
   });
 
-  it("focusIdx=0 (Boundary): erster Pfad full-Alpha, restliche dimmed", () => {
+  it("focusIdx=0 (Boundary): erster Pfad full-color, restliche pastel", () => {
     const paths = computeWheelPaths(uniformScores(5), { focusIdx: 0 });
-    expect(paths[0]?.fillColor).toMatch(/^rgb\(/);
-    expect(paths[0]?.fillColor).not.toMatch(/^rgba\(/);
+    expect(paths[0]?.fillColor).toBe("rgb(245, 158, 11)");
     for (let i = 1; i < 9; i++) {
-      expect(paths[i]?.fillColor).toMatch(/^rgba\(/);
+      expect(paths[i]?.fillColor).toBe("rgb(252, 226, 182)");
     }
   });
 
-  it("focusIdx=8 (oberer Boundary): letzter Pfad full-Alpha, restliche dimmed", () => {
+  it("focusIdx=8 (oberer Boundary): letzter Pfad full-color, restliche pastel", () => {
     const paths = computeWheelPaths(uniformScores(5), { focusIdx: 8 });
-    expect(paths[8]?.fillColor).toMatch(/^rgb\(/);
-    expect(paths[8]?.fillColor).not.toMatch(/^rgba\(/);
+    expect(paths[8]?.fillColor).toBe("rgb(245, 158, 11)");
     for (let i = 0; i < 8; i++) {
-      expect(paths[i]?.fillColor).toMatch(/^rgba\(/);
+      expect(paths[i]?.fillColor).toBe("rgb(252, 226, 182)");
     }
   });
 
-  it("Kein focusIdx -> alle Pfade full-Alpha", () => {
+  it("Kein focusIdx -> alle Pfade full-color (kein Pastel)", () => {
     const paths = computeWheelPaths(uniformScores(5));
     for (const p of paths) {
-      expect(p.fillColor).toMatch(/^rgb\(/);
-      expect(p.fillColor).not.toMatch(/^rgba\(/);
+      expect(p.fillColor).toBe("rgb(245, 158, 11)");
     }
+  });
+
+  it("Pre-multiplied Pastel: jede Klassifizierungs-Stufe hat eigenes Pastel", () => {
+    // rot/amber/gruen Score-Profil mit focusIdx auf gruen-Item.
+    const paths = computeWheelPaths(
+      {
+        m1: 2, // rot
+        m2: 5, // amber
+        m3: 9, // gruen (focus)
+        m4: 2, // rot
+        m5: 5, // amber
+        m6: 9, // gruen
+        m7: 2, // rot
+        m8: 5, // amber
+        m9: 9, // gruen
+      },
+      { focusIdx: 2 },
+    );
+    expect(paths[0]?.fillColor).toBe("rgb(244, 190, 190)"); // rot-pastel
+    expect(paths[1]?.fillColor).toBe("rgb(252, 226, 182)"); // amber-pastel
+    expect(paths[2]?.fillColor).toBe("rgb(16, 185, 129)"); // gruen-full (focus)
+    expect(paths[3]?.fillColor).toBe("rgb(244, 190, 190)"); // rot-pastel
+    expect(paths[5]?.fillColor).toBe("rgb(183, 234, 217)"); // gruen-pastel
   });
 
   it("AC-Verification: Path-D-String beginnt mit 'M ' und enthaelt ' A '", () => {

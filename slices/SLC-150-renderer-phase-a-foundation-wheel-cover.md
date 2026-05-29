@@ -95,8 +95,9 @@ Der Founder hat in /architecture V8 zwei Pfade dokumentiert:
 
 ## Micro-Tasks
 
-### MT-1: PDF-Engine-Spike — Wheel-Demo-PDF + Founder-Visual-Verdict
+### MT-1: PDF-Engine-Spike — Wheel-Demo-PDF + Founder-Visual-Verdict [DONE 2026-05-29]
 - **Goal**: Erste minimale @react-pdf-Implementation der Wheel-Komponente. PDF mit nur Wheel-Page erzeugen, lokal oeffnen, Founder-Visual-Vergleich gegen `MANDANTEN_REPORT_PROTOTYP.html` Seite 3 (Modul-Profil-Wheel).
+- **Decision (2026-05-29 Founder-Verdict)**: **Plan A continue.** Engine ist verifiziert. Variante 1 rendert sauber mit korrekter Score-abhaengiger Geometrie + 3-Farb-Klassifizierung. Variante 2 hatte Alpha-Rendering-Bug (`rgba(..., 0.3)` rendert in @react-pdf v4 als unerwartete Sekundaer-Farben statt Pastel) — **In MT-1 selbst gefixt** via pre-multiplied Alpha in `wheel-paths.ts` (`rgba(r, g, b, 0.3)` -> `rgb(r*0.3+255*0.7, ...)` Pastel-Konstanten). 18/18 wheel-paths Vitest GREEN nach Fix. Custom-Fonts entkoppelt zu MT-2/MT-3 (Default-Helvetica fuer Spike ausreichend).
 - **Files**:
   - `src/lib/pdf/mandanten-report-v2/wheel.tsx` (NEU) — Wheel-Komponente als @react-pdf `<Svg>` mit `<Path d={pathD} fill={fillColor} />` pro WheelPath
   - `src/lib/pdf/mandanten-report-v2/theme.ts` (NEU) — Color-Konstanten (rot/amber/gruen Hex/RGB, Background, Text-Farben) als @react-pdf-kompatible Strings
