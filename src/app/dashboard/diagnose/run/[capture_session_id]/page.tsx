@@ -12,6 +12,7 @@ import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { QuestionFlow } from "@/components/diagnose/QuestionFlow";
+import { V8QuestionFlow } from "@/components/diagnose/V8QuestionFlow";
 import { DiagnoseTelemetryProvider } from "@/components/diagnose/DiagnoseTelemetryProvider";
 import { TextOverrideProvider } from "@/components/text-override/Provider";
 import { AdminDemoBanner } from "@/components/admin/AdminDemoBanner";
@@ -21,6 +22,7 @@ import { EditableText } from "@/components/text-override/EditableText";
 import type {
   TemplateBlock,
 } from "@/workers/condensation/light-pipeline";
+import type { V8TemplateBlock } from "@/lib/diagnose/types";
 
 interface PageProps {
   params: Promise<{ capture_session_id: string }>;
@@ -77,13 +79,20 @@ export default async function DiagnoseRunPage(props: PageProps) {
 
   const { data: template } = await admin
     .from("template")
-    .select("id, name, blocks, metadata")
+    .select("id, slug, name, blocks, metadata")
     .eq("id", session.template_id)
     .single();
   if (!template) notFound();
 
-  const blocks = template.blocks as TemplateBlock[];
   const answers = (session.answers as Record<string, string>) ?? {};
+
+  // V8 SLC-149 MT-4 — Switch auf `metadata.usage_kind`. V8-Templates rendern
+  // via V8QuestionFlow (3 neue Antwort-Schemata). V6.3-Bestand bleibt strict
+  // auf bestehender QuestionFlow + AnswerOptionCard (Co-Existenz, [[feedback-cumulative-single-branch-pattern]]).
+  const templateMetadata =
+    (template.metadata as { usage_kind?: string } | null) ?? null;
+  const isV8MandantenReport =
+    templateMetadata?.usage_kind === "mandanten_report_teaser_v1";
 
   const partnerOrgId = await resolvePartnerOrgIdForTenant(
     supabase,
@@ -112,11 +121,20 @@ export default async function DiagnoseRunPage(props: PageProps) {
             </p>
           </header>
 
-          <QuestionFlow
-            sessionId={sessionId}
-            blocks={blocks}
-            initialAnswers={answers}
-          />
+          {isV8MandantenReport ? (
+            <V8QuestionFlow
+              sessionId={sessionId}
+              templateSlug={template.slug as string}
+              blocks={template.blocks as V8TemplateBlock[]}
+              initialAnswers={answers}
+            />
+          ) : (
+            <QuestionFlow
+              sessionId={sessionId}
+              blocks={template.blocks as TemplateBlock[]}
+              initialAnswers={answers}
+            />
+          )}
         </main>
       </DiagnoseTelemetryProvider>
     </TextOverrideProvider>

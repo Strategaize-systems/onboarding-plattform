@@ -3,7 +3,7 @@
 **Version:** V8
 **Feature:** FEAT-064 (Fragebogen-UI-Komponenten)
 **Backlog:** BL-129
-**Status:** planned
+**Status:** done
 **Created:** 2026-05-28
 **Priority:** High
 **Estimate:** ~4-6h Code-Side

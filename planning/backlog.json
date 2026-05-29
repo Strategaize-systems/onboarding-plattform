@@ -65,7 +65,7 @@
       "title": "V8 FEAT-064: Fragebogen-UI-Komponenten (Hygiene-Trichotomie + 5-Punkt-Reife-Skala + Reflexion-Textareas)",
       "type": "feature",
       "priority": "high",
-      "status": "in_progress",
+      "status": "done",
       "version": "V8",
       "description": "Drei neue Antwort-Schema-UI-Komponenten fuer V8 Teaser-Diagnose im bestehenden QuestionFlow.tsx-Flow. (1) HygieneAnswerPills (3 Pills Ja/Teilweise/Nein) fuer Modul 0. (2) ReifeSkalaAnswer (5-Punkt-Skala mit klaren Stufen-Labels 'Noch gar nicht vorhanden..Vollstaendig etabliert + belastbar') fuer Module 1-9. (3) ReflexionTextarea (Freitext mit Zeichen-Counter + Auto-Save) fuer Modul 10. QuestionFlow.tsx Switch-Logik ueber `question.answer_schema_kind` (hygiene_yes_partial_no / reife_skala_5 / reflexion_freitext / choice_5 V6.3-Bestand). EditableText-Pflicht (FEAT-056 Reuse), HelperTextModal-Reuse (FEAT-057), Telemetrie-Integration (FEAT-058). Mobile-Layout >=44px Touch-Target Pflicht (DEC-151). AnswerOptionCard bleibt unveraendert fuer V6.3-Co-Existenz. Aufwand ~6-10h Code + Playwright-Snapshot fuer 5 Schluessel-Fragen-Typen. Pre-Condition: FEAT-063 done (Template-Daten geben answer_schema_kind vor). Siehe FEAT-064-mandanten-report-fragebogen-ui.md.",
       "createdAt": "2026-05-28"
