@@ -82,6 +82,11 @@ const config: Config = {
   			md: 'calc(var(--radius) - 2px)',
   			sm: 'calc(var(--radius) - 4px)'
   		},
+  		fontFamily: {
+  			sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],
+  			mono: ['var(--font-mono)', 'ui-monospace', 'monospace'],
+  			heading: ['var(--font-heading)', 'system-ui', 'sans-serif']
+  		},
   		keyframes: {
   			'accordion-down': {
   				from: {

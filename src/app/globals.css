@@ -25,6 +25,13 @@
     --ring: 233 87% 24%;
     --radius: 0.75rem;
 
+    /* Font Stack — 1:1 portiert aus strategaize-business-system
+       (cockpit/src/app/globals.css Z. 10-12). Pure OS-System-Stack,
+       kein Webfont-Download. Cross-Repo-Konsistenz. */
+    --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+    --font-heading: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+
     /* StrategAIze Brand Gradients */
     --gradient-primary: linear-gradient(to right, #120774, #4454b8);
     --gradient-success: linear-gradient(to right, #00a84f, #4dcb8b);
@@ -92,6 +99,9 @@
 @layer base {
   * {
     @apply border-border;
+  }
+  html {
+    font-family: var(--font-sans);
   }
   body {
     @apply bg-background text-foreground;
