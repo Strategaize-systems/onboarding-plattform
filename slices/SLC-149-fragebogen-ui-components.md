@@ -74,6 +74,7 @@ Nach diesem Slice kann der Founder die **47 V8-Fragen** im Browser durchklicken 
   - `src/components/diagnose/HygieneAnswerPills.tsx` (NEU) — React-Komponente
   - `src/components/diagnose/hygiene-answer-pills-logic.ts` (NEU) — Pure-Logic-Helpers
   - `src/components/diagnose/__tests__/hygiene-answer-pills-logic.test.ts` (NEU) — Vitest
+- **Style-Note** (Custom-Tailwind statt shadcn-Button): Pill-Style mit selective-Highlight (`bg-brand-primary-50 border-brand-primary`) braucht 2 visuelle States (default-neutral + selected-highlight) die shadcn-Button-Variants nicht direkt liefern. Custom-Tailwind-Button mit explizitem `min-h-[44px]` ist konformer als shadcn-Variant-Hack. Pattern reused aus V6.3-`AnswerOptionCard` (selber Approach). DEC-151-h-11-Cascade greift hier NICHT, da kein shadcn-`<Button>`.
 - **Expected Behavior**:
   - Props: `{ questionId: string, helperText?: string, examplesMd?: string, currentValue?: 'ja' | 'teilweise' | 'nein', onChange: (value) => void, disabled?: boolean }`
   - 3 Pills nebeneinander auf Desktop / vertikal auf Mobile (375px)
@@ -99,6 +100,7 @@ Nach diesem Slice kann der Founder die **47 V8-Fragen** im Browser durchklicken 
   - `src/components/diagnose/ReifeSkalaAnswer.tsx` (NEU) — React-Komponente
   - `src/components/diagnose/reife-skala-answer-logic.ts` (NEU) — Pure-Logic-Helpers
   - `src/components/diagnose/__tests__/reife-skala-answer-logic.test.ts` (NEU) — Vitest
+- **Style-Note** (Custom-Tailwind statt shadcn-Button): Selbe Begruendung wie MT-1 — 5-Stufen-Button-Reihe braucht 3 visuelle States (default + hover + selected) die shadcn-Button-Variants nicht direkt liefern. Custom-Tailwind mit `min-h-[44px] min-w-[60px]` + neutrale Grauskala (OQ-2). DEC-151-Cascade greift hier NICHT.
 - **Expected Behavior**:
   - Props: `{ questionId: string, helperText?: string, examplesMd?: string, currentValue?: number, scoreMapping: { 1: 0, 2: 2, 3: 5, 4: 8, 5: 10 }, onChange: (score: number, stufe: number) => void, disabled?: boolean }`
   - 5 Stufen-Buttons horizontal auf Desktop / vertikal auf Mobile

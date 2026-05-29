@@ -141,6 +141,22 @@ Erst nach Pre-MT-1 Acceptance startet MT-1.
 
 ## Micro-Tasks
 
+### MT-0: Worktree-Setup `v8-mandanten-report` (Cumulative-Single-Branch)
+- **Goal**: Worktree fuer alle 5 V8-Slices anlegen (siehe Branch-Strategie oben).
+- **Commands**:
+  ```powershell
+  cd c:\strategaize\strategaize-onboarding-plattform
+  git worktree add -b v8-mandanten-report c:\strategaize\strategaize-onboarding-plattform-v8 main
+  cd c:\strategaize\strategaize-onboarding-plattform-v8
+  cmd /c mklink /J node_modules ..\strategaize-onboarding-plattform\node_modules
+  ```
+- **Verification**:
+  - `git worktree list` zeigt `v8-mandanten-report`
+  - `cd c:\strategaize\strategaize-onboarding-plattform-v8 && npm run lint -- --max-warnings=999` startet sauber (Junction funktioniert)
+  - `git branch --show-current` -> `v8-mandanten-report`
+- **Dependencies**: Pre-MT-1 (Tonalitaets-Migration), V7.7 STABLE (✓ RPT-350)
+- **Reuse-Pattern**: [[feedback-branch-strategy-section-first-slice]] (IMP-836)
+
 ### MT-1: Build-Time-Skript fuer LEVELS_MANDANT.md -> SQL-Seed
 - **Goal**: Skript `scripts/build-v8-template-seed.mjs` (Node) liest `EXIT_READINESS_LEVELS_MANDANT.md` aus dem Dev-System, parsed die Markdown-Struktur, baut ein JSONB-Objekt `metadata.stufen_lookup` + `metadata.worum_es_geht` + `metadata.hausaufgaben_lookup`, schreibt es als idempotenter `INSERT INTO template ... ON CONFLICT DO UPDATE`-SQL-Snippet in eine neue Migration-Datei.
 - **Files**:
@@ -163,6 +179,10 @@ Erst nach Pre-MT-1 Acceptance startet MT-1.
 
 ### MT-2: Migration 102 schreiben (Frage-Struktur + Score-Mapping + Gewichtung)
 - **Goal**: Migration-SQL-Datei `102_v8_exit_readiness_teaser_template.sql` enthaelt vollstaendige Template-INSERT mit 47 Fragen, 45 Stufen-Lookup-Eintraegen, 9 Worum-es-geht-Texten, Hausaufgaben-Lookup, Gewichtungs-Config. Idempotent via `ON CONFLICT (slug, version) DO UPDATE`.
+- **Pre-Step (DB-Schema-Inspect, ~5min)** per [[feedback-slice-spec-db-schema-drift]]:
+  - SSH 159.69.207.29: `docker exec <db> psql -U postgres -d postgres -c "SELECT slug, version, jsonb_object_keys(metadata) AS k FROM template ORDER BY slug, version;"` -> Liste aller derzeit verwendeten `template.metadata`-Keys dokumentieren
+  - Verifikation: keine Kollision der V8-Keys (`usage_kind`, `scoring_kind`, `report_renderer`, `stufen_lookup`, `worum_es_geht`, `hausaufgaben_lookup`, `gewichtung`) mit bestehenden Templates (`partner_diagnostic_v1`, `exit-readiness-v1.0.0`)
+  - Bei Kollision: MT-2 stoppen + DECISIONS.md-Eintrag wie konsolidieren (z.B. `usage_kind`-Domain pruefen vs. V6.3-Bestand)
 - **Files**:
   - `sql/migrations/102_v8_exit_readiness_teaser_template.sql` (NEU, vom MT-1-Build-Skript erzeugt + manuelle Erweiterung um 47 Fragen-Struktur)
   - `__tests__/migrations/102-template-seed.test.ts` (NEU) — Vitest gegen Coolify-DB
@@ -223,7 +243,7 @@ Erst nach Pre-MT-1 Acceptance startet MT-1.
   - Hausaufgaben: 5 Antworten (2 ja + 2 nein + 1 teilweise) -> 3 Items (AC-5)
   - Reflexion: 5 Antworten (3 ausgefuellt + 2 leer) -> 3 Items (AC-6)
   - Hebel-Auswahl: Score-Profil m1=8/m2=2/m3=5/m4=2/m5=9/m6=3/m7=7/m8=4/m9=6 -> [m2, m4, m6] mit Tie-Break-Regel (AC-7)
-- **Dependencies**: MT-3 (Template-Daten muessen lesbar sein fuer Type-Inferenz)
+- **Dependencies**: MT-2 (Template-JSONB-Schema fuer Type-Definitionen). MT-4 kann **parallel zu MT-2/MT-3 entwickelt** werden — Pure-TypeScript-Funktionen brauchen kein Live-DB-Apply, Stufen-Lookup wird in Vitest gemockt. Blocking-Edge nur fuer MT-6 (Server-Action konsumiert MT-4 + MT-5).
 
 ### MT-5: Pure-Function `computeWheelPaths` + Vitest (FEAT-066 Pre-Pflicht)
 - **Goal**: Pure-Function-Library `src/lib/diagnose/wheel-paths.ts` mit `computeWheelPaths(moduleScores, options): WheelPath[]` und Vitest. Wird in SLC-150 (Renderer) konsumiert, hier vorgezogen fuer Determinismus + Vitest-Coverage.
@@ -273,11 +293,20 @@ Erst nach Pre-MT-1 Acceptance startet MT-1.
   - Worker-Pipeline-Branch wird getriggert (Mock-Test mit V8-template_slug)
   - V6.3 Co-Existenz: `runLightPipeline` mit `partner_diagnostic_v1`-Template fuehrt weiter V6.3-Pfad aus
   - error_log Worker-Run 0 Errors
+- **Caller-Audit-Pflicht** per [[feedback-caller-site-traversal-test]] (BS V8.4 ISSUE-083):
+  - 5 Caller-Sites von `runLightPipeline` (per Grep verifiziert RPT-352):
+    1. `src/workers/condensation/light-pipeline.ts` — die Funktion selbst (MT-6 Edit-Ziel)
+    2. `src/workers/condensation/handle-job.ts` — Worker-Trigger, transparent durchgereicht (keine Aenderung erwartet)
+    3. `src/workers/condensation/__tests__/handle-job-branch.test.ts` — existierender V6.3-Branch-Test, MUSS weiter GREEN nach MT-6 (Regression-Schutz) + neuer V8-template_slug-Test als zusaetzlicher GREEN-Case
+    4. `src/workers/condensation/__tests__/light-pipeline-run.test.ts` — existierender V6.3-Pipeline-Test, MUSS weiter GREEN nach MT-6
+    5. `src/app/dashboard/diagnose/[capture_session_id]/bericht-pending/page.tsx` — UI-Consumer; liest derzeit nur V6.3-Snapshot-Felder, V8-Snapshot-Reader kommt in SLC-150 (kein Edit in MT-6, aber explizit als Out-of-Scope-Hinweis dokumentieren)
+  - Caller-Audit-Output: Code-Comment im PR-Diff-Header von MT-6 mit Caller-Liste + Audit-Verdict
 - **Dependencies**: MT-4, MT-5
 
 ### MT-7: Records-Update + /qa SLC-148 + Live-Test Founder-Session
 - **Goal**: Project-Records updaten + /qa fuer Code-Side + Live-Test einer Test-Mandant-Session ohne UI.
 - **Files**:
+  - `scripts/tonalitaet-audit-v8.mjs` (NEU) — Grep-Skript gegen gerenderten Snapshot-Strings (`v8_report_snapshot`-JSONB nach finalizeMandantenReport), fehlt-Schwelle 0 fuer Blacklist `['Ihr Steuerberater', 'wir empfehlen', 'der Berater', 'Wir sollten']`. Exit-Code 1 bei Treffer.
   - `docs/MIGRATIONS.md` — MIG-047 Status `(live)`
   - `docs/STATE.md` — Current-Focus auf SLC-148 done
   - `slices/INDEX.md` — SLC-148 status `done`
@@ -299,7 +328,7 @@ Erst nach Pre-MT-1 Acceptance startet MT-1.
 
 - **AC-1 Template-Seed lebt**: `public.template` Row `slug='exit-readiness-teaser-v1'`, `version=1` LIVE auf Coolify-DB (FEAT-063 AC-1)
 - **AC-2 47 Fragen vollstaendig**: `template.blocks` enthaelt 11 Module mit 5+37+5=47 Fragen, Vitest verifiziert IDs (FEAT-063 AC-2)
-- **AC-3 Score-Mapping korrekt**: Jede Skala-Frage hat `score_mapping: {1:0, 2:2, 3:5, 4:8, 5:10}`, Hygiene + Reflexion ohne Score (FEAT-063 AC-3)
+- **AC-3 Score-Mapping korrekt**: Jede Skala-Frage hat `score_mapping: {1:0, 2:2, 3:5, 4:8, 5:10}`. Hygiene + Reflexion: `score_mapping`-Feld NICHT im Frage-Objekt gesetzt (undefined, NICHT null und NICHT `{}`). Filter in `computeModuleScores` via `Object.hasOwn(question, 'score_mapping') === false` (FEAT-063 AC-3)
 - **AC-4 Stufen-Lookup vollstaendig**: 45 Eintraege + 9 Worum-es-geht-Texte als JSONB im Template-Metadata (FEAT-063 AC-4)
 - **AC-5 Tonalitaets-Transformation durchgefuehrt**: Stichprobe 5+ "Unsere Empfehlung"-Texte clean (FEAT-063 AC-5)
 - **AC-6 Co-Existenz**: V6.3 `partner_diagnostic_v1` + V1 `exit-readiness-v1.0.0` unveraendert (FEAT-063 AC-6, FEAT-065 AC-9)
