@@ -7,10 +7,13 @@
 // Accent: brand-accent gruen (#4dcb8b) durchgehend (NICHT amber).
 
 import React from "react";
-import { Page, View, Text, StyleSheet } from "@react-pdf/renderer";
+import path from "node:path";
+import { Page, View, Text, Image, StyleSheet } from "@react-pdf/renderer";
 
 import { COLOR, PAGE, SPACING } from "../theme";
 import type { RendererInput } from "../types";
+
+const LOGO_PATH = path.join(process.cwd(), "public", "brand", "logo-full.png");
 
 interface CoverPageProps {
   input: RendererInput;
@@ -32,16 +35,15 @@ const styles = StyleSheet.create({
   },
   brandPill: {
     backgroundColor: COLOR.bgWhite,
-    borderRadius: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 22,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  brandPillText: {
-    fontFamily: "Fraunces",
-    fontWeight: 700,
-    fontSize: 14,
-    color: COLOR.brandDeep,
-    letterSpacing: 1,
+  brandLogo: {
+    height: 36,
+    width: "auto",
   },
   contentBlock: {
     flex: 1,
@@ -175,7 +177,7 @@ export function CoverPage({ input }: CoverPageProps) {
     <Page size="A4" style={styles.page}>
       <View style={styles.brand}>
         <View style={styles.brandPill}>
-          <Text style={styles.brandPillText}>STRATEGAIZE</Text>
+          <Image src={LOGO_PATH} style={styles.brandLogo} />
         </View>
       </View>
 
