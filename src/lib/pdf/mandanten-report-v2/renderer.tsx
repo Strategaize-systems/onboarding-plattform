@@ -13,6 +13,7 @@
 import React from "react";
 import { Document, renderToBuffer } from "@react-pdf/renderer";
 
+import "./fonts"; // Side-Effect: registriert Fraunces + JetBrains Mono fuer @react-pdf
 import { CoverPage } from "./pages/cover";
 import { SuiHeroPage } from "./pages/sui-hero";
 import { ModulProfilPage } from "./pages/modul-profil";
