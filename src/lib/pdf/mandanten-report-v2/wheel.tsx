@@ -79,7 +79,6 @@ export function Wheel({
                 fill: lp.isDimmed ? "rgba(255, 255, 255, 0.4)" : "#FFFFFF",
                 fontFamily: "Helvetica-Bold",
               }}
-              // @ts-expect-error — @react-pdf SVG Text accepts textAnchor at runtime
               textAnchor="middle"
             >
               {lp.label}

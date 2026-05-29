@@ -123,7 +123,6 @@ function SpikeDocument({ scores }: SpikeDocumentProps) {
 async function main() {
   console.log("[spike] Rendering V8 wheel demo PDF...");
   const element = SpikeDocument({ scores: MOCK_SCORES });
-  // @ts-expect-error — renderToBuffer types expect a DocumentElement; runtime accepts our wrapper
   const buffer = await renderToBuffer(element);
 
   mkdirSync(dirname(OUTPUT_PATH), { recursive: true });
