@@ -4,22 +4,26 @@ Die aktuelle DB-Struktur entspricht dem Stand von Blueprint V3.4 (Migration 020)
 
 Der uebernommene Blueprint-Stand ist noch nicht auf einer Onboarding-Plattform-Instanz ausgefuehrt worden — die erste Hetzner-Migration geschieht mit SLC-001 (Schema-Fundament).
 
-### MIG-047 — V8 SLC-148 Template-Seed `exit-readiness-teaser-v1` + Stufen-Lookup + Hausaufgaben-Lookup (Migration 102, geplant)
-- Date: 2026-05-28 (geplant, Apply waehrend SLC-148 /backend)
+### MIG-047 — V8 SLC-148 Template-Seed `exit-readiness-teaser-v1` + Privacy-Flag + RESTRICTIVE-RLS-Policy (Migration 102, live)
+- Date: 2026-05-29 (live, applied 2x via ssh+base64+psql -U postgres auf 159.69.207.29 supabase-db-bwkg80w04wgccos48gcws8cs-150827246647; 2nd Apply idempotent verified)
 - Scope:
-  - `102_v8_exit_readiness_teaser_template.sql` — additiver Template-Seed via `INSERT ... ON CONFLICT (slug, version) DO UPDATE`:
-    - Row in `public.template`: `slug='exit-readiness-teaser-v1'`, `version=1`, `name='Strategaize Uebergabefaehigkeits-Diagnose (Mandanten-Report Teaser)'`
+  - `102_v8_exit_readiness_teaser_template.sql` — additiver Template-Seed + ALTER + Backfill + RESTRICTIVE Policy via `INSERT ... ON CONFLICT DO UPDATE` + `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` + `UPDATE WHERE` + `DROP POLICY IF EXISTS ... CREATE POLICY`:
+    - Row in `public.template`: `slug='exit-readiness-teaser-v1'`, `version=1`, `name='Exit Readiness Teaser (Mandanten-Report)'`
     - `metadata.usage_kind='mandanten_report_teaser_v1'` (Worker-Branch-Trigger, analog DEC-126)
     - `metadata.scoring_kind='sui_weighted'` (Score-Engine-Trigger, FEAT-065)
     - `metadata.report_renderer='mandanten_report_v2'` (Renderer-Branch-Trigger, FEAT-066)
-    - `blocks` JSONB mit 11 Modulen (Modul 0..10) + 47 Fragen total (5 Hygiene + 37 Skala + 5 Reflexion)
-    - `metadata.stufen_lookup` JSONB: 9 Module x 5 Stufen mit `was_es_bedeutet` + `unsere_empfehlung` Markdown-Texte (~150-200KB total) — Tonalitaets-migriert aus EXIT_READINESS_LEVELS.md
-    - `metadata.hausaufgaben_lookup` JSONB: 5 Hygiene-Frage-IDs x 3 Status (nein/teilweise/ja) mit fix-formulierten `was_zu_tun`-Texten
-    - `metadata.worum_es_geht` JSONB: 9 Modul-Level-Texte aus EXIT_READINESS_PRINZIPIEN.md "Botschaft an den Unternehmer"
-- Reason: V8 Mandanten-Report-Teaser braucht neues Template parallel zur V6.3-Variante. Pattern-Reuse aus V6.3 MIG-037 (`093_partner_diagnostic_template.sql`) — additiv + idempotent. KEIN Replace bestehender Templates. Stufen-Lookup + Hausaufgaben-Lookup im selben Template-Row gehalten per DEC-164 (Versionierung gratis, Single-Query-Read).
-- Affected Areas: `public.template` (1 neue Row mit JSONB-Substanz), Worker-Branch (`runLightPipeline` erweitert via `usage_kind`-Switch in SLC-148 — KEIN Migration-Schritt, Code-Pfad), Renderer-Branch (`sendDiagnoseReportByEmail` erweitert via `report_renderer`-Switch in SLC-152 — KEIN Migration-Schritt). KEINE neue Tabelle, KEINE neue Spalte. **Idempotenz**: `ON CONFLICT (slug, version) DO UPDATE` erlaubt spaetere Content-Korrekturen ohne Drop+Re-create.
-- Risk: L — additivum. 0 Auswirkung auf V1 + V6.3 + V7.x Templates. **JSONB-Size-Risiko**: Stufen-Lookup ist ~150KB, knapp unter Postgres TOAST-Schwelle (~2KB inline, dann TOAST-Out-Of-Line) — TOAST-Performance ist O(1) bei Read mit Index, kein Performance-Bedenken bei <10MB pro Row. **Tonalitaets-Migration-Risiko**: 90+ Texte LEVELS.md → Mandant-Adressat ist manueller Schreib-Prozess in SLC-148 Pre-MT-1 (~30-45min Founder-Pflicht oder Founder-Review). Per DEC-159 KEIN LLM-Pass.
-- Rollback Notes: `DELETE FROM public.template WHERE slug='exit-readiness-teaser-v1' AND version=1` ist additivum-rueckwaerts. Bestehende V6.3 + V1 Templates bleiben unberuehrt. capture_session-Rows die das Template referenzieren mussten vorher invalidiert werden (foreign-key, aber in V8.0 Pre-Live keine Real-Sessions existent).
+    - `metadata.gewichtung` JSONB: m1-m8 je 10%, m9 doppelt mit 20%, m0+m10 ungewichtet
+    - `blocks` JSONB mit 11 Modulen (Modul 0..10) + **53 Fragen total** (5 Hygiene + 43 Skala inkl. 6 KI-Erweiterungen F4.4/F6.5/F6.6/F8.7/F9.4/F9.5 + 5 Reflexion) — User-Direktive 2026-05-29 MT-2 per PRINZIPIEN.md-Sections als Source-of-Truth
+    - `metadata.stufen_lookup` JSONB: 9 Module x 5 Stufen mit `was_es_bedeutet` + `unsere_empfehlung` Markdown-Texte (~46KB inline, vom MT-1 Build-Skript erzeugt)
+    - `metadata.hausaufgaben_lookup` JSONB: 5 Hygiene-Frage-IDs x 2 Status (nein/teilweise) mit fix-formulierten Texten
+    - `metadata.worum_es_geht` JSONB: 9 Modul-Level-Texte
+    - **ALTER capture_session** ADD COLUMN IF NOT EXISTS `released_for_strategaize_review` BOOLEAN NOT NULL DEFAULT false + `released_for_strategaize_review_at` TIMESTAMPTZ NULLABLE (Privacy-Flow Option A per DEC-163 Erweiterung 2026-05-29)
+    - **Backfill UPDATE**: alle existierenden non-V8 capture_sessions (template_id <> exit-readiness-teaser-v1) auf `released=true` setzen — 6/6 pre-existing Sessions backfilled (V6.3 partner_diagnostic + V1 exit_readiness + V4 mitarbeiter_wissenserhebung), Regression-Schutz fuer strategaize_admin-Sichtbarkeit
+    - **RESTRICTIVE Policy** `capture_session_strategaize_admin_snapshot_gated` FOR SELECT TO authenticated USING `auth.user_role() <> 'strategaize_admin' OR released_for_strategaize_review = true` — AND-kombiniert mit existing PERMISSIVE-Policies, gated strategaize_admin SELECT auf released-Flag. Idempotent via DROP POLICY IF EXISTS
+- Reason: V8 Mandanten-Report-Teaser braucht neues Template parallel zur V6.3-Variante. Pattern-Reuse aus V6.3 MIG-037 (`093_partner_diagnostic_template.sql`) — additiv + idempotent. KEIN Replace bestehender Templates. Stufen-Lookup + Hausaufgaben-Lookup im selben Template-Row gehalten per DEC-164 (Versionierung gratis, Single-Query-Read). Privacy-Flag-Erweiterung schuetzt Mandanten-Snapshot-Privacy vor Strategaize-Admin bis explizite Freigabe.
+- Affected Areas: `public.template` (1 neue Row mit JSONB-Substanz), `public.capture_session` (2 neue Spalten + 1 RESTRICTIVE-Policy), Worker-Branch (`runLightPipeline` erweitert via `usage_kind`-Switch in SLC-148 MT-6 — KEIN Migration-Schritt, Code-Pfad), Renderer-Branch (`sendDiagnoseReportByEmail` erweitert via `report_renderer`-Switch in SLC-152 — KEIN Migration-Schritt). KEINE neue Tabelle. **Idempotenz**: `ON CONFLICT (slug, version) DO UPDATE` + `ADD COLUMN IF NOT EXISTS` + `WHERE released=false AND template_id NOT V8` + `DROP POLICY IF EXISTS` — 2nd Apply verified clean (UPDATE 0, NOTICE: column already exists, skipping).
+- Risk: L-M — additivum + 1 RESTRICTIVE Policy. 0 Auswirkung auf V1 + V6.3 + V7.x Templates. **Privacy-Flag-Risk eliminiert** durch Backfill-UPDATE: 6 pre-existing Sessions automatic auf released=true gesetzt, strategaize_admin-Zugriff unverändert. JSONB-Size ~46KB Stufen-Lookup, knapp unter TOAST-Schwelle, kein Performance-Bedenken. Tonalitaets-Migration ist Substanz aus MT-1 (Founder-Pflicht durch in LEVELS_MANDANT.md), per DEC-159 KEIN LLM-Pass.
+- Rollback Notes: `DELETE FROM public.template WHERE slug='exit-readiness-teaser-v1' AND version=1; DROP POLICY capture_session_strategaize_admin_snapshot_gated ON public.capture_session; ALTER TABLE public.capture_session DROP COLUMN released_for_strategaize_review, DROP COLUMN released_for_strategaize_review_at;` ist additivum-rueckwaerts. Bestehende V6.3 + V1 Templates bleiben unberuehrt. capture_session-Rows die das V8-Template referenzieren mussten vorher invalidiert werden (foreign-key, aber Pre-Live keine V8-Real-Sessions existent).
 
 ### MIG-001 — Geplante Baseline-Migrationen fuer V1
 - Date: 2026-04-14
