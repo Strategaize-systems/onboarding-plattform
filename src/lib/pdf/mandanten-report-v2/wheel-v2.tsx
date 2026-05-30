@@ -16,6 +16,20 @@ import { computeWheelPathsV2 } from "./wheel-paths-v2";
 import { COLOR, WHEEL_V2 } from "./theme";
 import type { ModuleScores } from "@/lib/diagnose/types";
 
+/**
+ * Optional Override fuer Center-Hole-Display. Wenn gesetzt, wird statt
+ * SUI-Hero ein Modul-Label + Score gerendert (fuer Modul-Page-Variante,
+ * SLC-151 MT-1).
+ */
+export interface WheelV2CenterOverride {
+  /** Top-Label (z.B. "Modul 3"). */
+  topLabel: string;
+  /** Hero-Zahl (z.B. 5). */
+  score: number;
+  /** Sub-Label (z.B. "von 10"). */
+  subLabel: string;
+}
+
 export interface WheelV2Props {
   moduleScores: ModuleScores;
   /** Pixel-Width des SVG-Outputs (Hoehe = Breite). Default 320. */
@@ -32,6 +46,8 @@ export interface WheelV2Props {
   showLabels?: boolean;
   /** Center-Hole + SUI-Display rendern? Default true (false fuer Watermark). */
   showCenter?: boolean;
+  /** Override fuer Center-Hole — wenn gesetzt, ersetzt SUI-Hero-Display. */
+  centerOverride?: WheelV2CenterOverride;
 }
 
 export function WheelV2({
@@ -43,6 +59,7 @@ export function WheelV2({
   showScores = true,
   showLabels = true,
   showCenter = true,
+  centerOverride,
 }: WheelV2Props) {
   const paths = computeWheelPathsV2(moduleScores, { focusIdx });
   const { centerX, centerY, innerRadius, outerCircleRadius, gridRings } = WHEEL_V2;
@@ -128,7 +145,7 @@ export function WheelV2({
         </G>
       )}
 
-      {/* Center-Hole (white) mit SUI-Hero + Klassifizierungs-Label */}
+      {/* Center-Hole (white) mit Hero-Display: SUI-Standard ODER Override (Modul-Page) */}
       {showCenter && (
         <G>
           <Circle
@@ -150,7 +167,7 @@ export function WheelV2({
             }}
             textAnchor="middle"
           >
-            SUI
+            {centerOverride ? centerOverride.topLabel : "SUI"}
           </PdfText>
           <PdfText
             x={centerX}
@@ -163,9 +180,13 @@ export function WheelV2({
             }}
             textAnchor="middle"
           >
-            {sui !== undefined ? Math.round(sui).toString() : "—"}
+            {centerOverride
+              ? centerOverride.score.toString()
+              : sui !== undefined
+                ? Math.round(sui).toString()
+                : "—"}
           </PdfText>
-          {classificationLabel && (
+          {(centerOverride?.subLabel || classificationLabel) && (
             <PdfText
               x={centerX}
               y={centerY + 48}
@@ -177,7 +198,7 @@ export function WheelV2({
               }}
               textAnchor="middle"
             >
-              {classificationLabel}
+              {centerOverride ? centerOverride.subLabel : classificationLabel}
             </PdfText>
           )}
         </G>
