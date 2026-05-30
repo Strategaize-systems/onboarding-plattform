@@ -2,42 +2,42 @@
   "items": [
     {
       "id": "BL-140",
-      "title": "V8.0.3 Logger-Redaction-Lib + LLM-Cost-Cap (NICE-TO-HAVE vor Live) — Sprint 4 OP-Anteil",
+      "title": "V22 Security Sprint 3 — Logger-Redaction-Lib + LLM-Cost-Cap",
       "type": "improvement",
-      "priority": "medium",
+      "priority": "low",
       "status": "open",
-      "version": "V8.0.3",
-      "description": "**NICE-TO-HAVE vor Live, NICHT blockierend (DSGVO + Cost-Protection).** **Teil 1 — Logger-Redaction-Lib:** OP-Logs enthalten Klartext: Mandanten-Email-Adressen (Pitch-Lead-Captures), Whisper-Transcript-Snippets in Cron-Logs, Bedrock-Cost-Logs mit Customer-Strings, Cal.com-Webhook-Payloads. Coolify-Container-Logs gehen an Hetzner-Log-Aggregation ohne Redaction → Admin-User mit Coolify-Zugang sieht Klartext-PII. Fix: src/lib/logger/redact.ts Helper mit redactSecrets(obj) der Keys matching /password|token|secret|api_key|email|bearer/i auf [REDACTED] setzt, plus Values matching Email-Regex/Bearer-Token-Regex maskiert. Wrapper logSafe(level, ...args) der die Helper vor JSON.stringify ruft. Existing console.log/console.error-Calls in critical Files (cron-loops, webhook-handlers, Bedrock-Adapter) auf logSafe umstellen. Vitest mit Mock-Patterns. Aufwand ~3-4h. **Teil 2 — LLM-Cost-Cap:** Pre-flight in src/adapters/bedrock/client.ts: SELECT SUM(cost_eur) FROM ai_cost_ledger WHERE created_at >= NOW() - INTERVAL '1 day' — wenn > DAILY_LLM_CAP (default 5 EUR) → throw Error('LLM Daily Cap Exceeded'). Job/Cron faengt ab. Optional Slack-Webhook-Alert. ENV: DAILY_LLM_CAP_EUR, MONTHLY_LLM_CAP_EUR. Aufwand ~3h. **Gesamt: ~6-7h, 2 Mini-Slices oder gebundelt.** Cross-Repo-Hinweis: identisches Pattern in BS BL-503+504 + IS BL-117. **Ideal als Dev-System-Lib mit Pattern-Reuse-Pflicht.** Audit-Quelle: docs/SECURITY_AUDIT_2026-05-30.md SEC-013 + Cross-Repo-Pattern.",
+      "version": "V22",
+      "description": "**V22 Security Sprint 3 — am Ende des Baus per Founder-Direktive 2026-05-30** (war V8.0.3, Defense-in-Depth). **Teil 1 — Logger-Redaction-Lib:** OP-Logs enthalten Klartext: Mandanten-Email-Adressen (Pitch-Lead-Captures), Whisper-Transcript-Snippets in Cron-Logs, Bedrock-Cost-Logs mit Customer-Strings, Cal.com-Webhook-Payloads. Coolify-Container-Logs gehen an Hetzner-Log-Aggregation ohne Redaction → Admin-User mit Coolify-Zugang sieht Klartext-PII. Fix: src/lib/logger/redact.ts Helper mit redactSecrets(obj) der Keys matching /password|token|secret|api_key|email|bearer/i auf [REDACTED] setzt, plus Values matching Email-Regex/Bearer-Token-Regex maskiert. Wrapper logSafe(level, ...args) der die Helper vor JSON.stringify ruft. Existing console.log/console.error-Calls in critical Files (cron-loops, webhook-handlers, Bedrock-Adapter) auf logSafe umstellen. Vitest mit Mock-Patterns. Aufwand ~3-4h. **Teil 2 — LLM-Cost-Cap:** Pre-flight in src/adapters/bedrock/client.ts: SELECT SUM(cost_eur) FROM ai_cost_ledger WHERE created_at >= NOW() - INTERVAL '1 day' — wenn > DAILY_LLM_CAP (default 5 EUR) → throw Error('LLM Daily Cap Exceeded'). Job/Cron faengt ab. Optional Slack-Webhook-Alert. ENV: DAILY_LLM_CAP_EUR, MONTHLY_LLM_CAP_EUR. Aufwand ~3h. **Gesamt: ~6-7h, 2 Mini-Slices oder gebundelt.** Cross-Repo-Hinweis: identisches Pattern in BS BL-503+504 + IS BL-117. **Ideal als Dev-System-Lib mit Pattern-Reuse-Pflicht.** Audit-Quelle: docs/SECURITY_AUDIT_2026-05-30.md SEC-013 + Cross-Repo-Pattern.",
       "createdAt": "2026-05-30"
     },
     {
       "id": "BL-139",
-      "title": "V8.0.3 Passwort-Policy 12+ Zeichen + zxcvbn (NICE-TO-HAVE vor Live) — Sprint 4 OP-Anteil",
+      "title": "V22 Security Sprint 3 — Passwort-Policy 12+ Zeichen + zxcvbn",
       "type": "improvement",
-      "priority": "medium",
+      "priority": "low",
       "status": "open",
-      "version": "V8.0.3",
-      "description": "**NICE-TO-HAVE vor Live, NICHT blockierend.** Aktuell akzeptieren OP set-password/actions.ts + accept-invitation Passwoerter ab 6 Zeichen (Supabase-Default). Risiko: Brute-Force-Attack auf Mandanten-Accounts. Fix-Pattern (identisch zu BS BL-502 + IS BL-116): (1) zxcvbn-Dependency hinzufuegen, (2) Server-Action validatePasswordStrength: min 12 chars + zxcvbn-Score >= 3, (3) Client-Side Visual-Indicator (Progress-Bar), (4) Reject mit deutscher Fehlermeldung. **Aufwand ~S (~1-2h Code + 30 Min /qa).** Audit-Quelle: docs/SECURITY_AUDIT_2026-05-30.md + Cross-Repo Sprint-4-Pattern. Cross-Repo-Hinweis: identisches Pattern in BS BL-502 + IS BL-116. **Ideal als Dev-System-Helper-Lib.**",
+      "version": "V22",
+      "description": "**V22 Security Sprint 3 — am Ende des Baus per Founder-Direktive 2026-05-30** (war V8.0.3). Aktuell akzeptieren OP set-password/actions.ts + accept-invitation Passwoerter ab 6 Zeichen (Supabase-Default). Risiko: Brute-Force-Attack auf Mandanten-Accounts. Fix-Pattern (identisch zu BS BL-502 + IS BL-116): (1) zxcvbn-Dependency hinzufuegen, (2) Server-Action validatePasswordStrength: min 12 chars + zxcvbn-Score >= 3, (3) Client-Side Visual-Indicator (Progress-Bar), (4) Reject mit deutscher Fehlermeldung. **Aufwand ~S (~1-2h Code + 30 Min /qa).** Audit-Quelle: docs/SECURITY_AUDIT_2026-05-30.md + Cross-Repo Sprint-4-Pattern. Cross-Repo-Hinweis: identisches Pattern in BS BL-502 + IS BL-116. **Ideal als Dev-System-Helper-Lib.**",
       "createdAt": "2026-05-30"
     },
     {
       "id": "BL-138",
-      "title": "V8.0.3 CSP-Headers (NICE-TO-HAVE vor Live) — Sprint 4 OP-Anteil",
+      "title": "V22 Security Sprint 3 — CSP-Headers",
       "type": "improvement",
-      "priority": "medium",
+      "priority": "low",
       "status": "open",
-      "version": "V8.0.3",
-      "description": "**NICE-TO-HAVE vor Live, NICHT blockierend.** Content-Security-Policy-Layer in next.config.ts ergaenzen. Aktuell: keine CSP. Mit CSP: strikte Whitelist fuer script-src (self + 'nonce-'), img-src (self + data: + Supabase-Storage), connect-src (self + Bedrock + Supabase + Coolify), style-src (self + 'unsafe-inline'). **Mitigiert strukturell:** Stored-XSS (Defense-in-Depth zu V8.0.1 SEC-004 SVG-Block), DOM-XSS, Clickjacking. **Aufwand: ~M (iterativer Smoke-Test pflicht).** Kritisch: alle OP-Routes inkl. Capture-Sessions + Pitch-Render + Dialogue-Recording-UI + Cal.com-Webhook + Supabase-Auth-Callback. Erfahrungswert aus BS: 3-5 iter-Fixes wegen Inline-Scripts erwartbar. Aufwand: ~2-3h Code + ~2-3h iter-Smoke. Cross-Repo-Hinweis: identisches Pattern in BS BL-501 + IS BL-115. Audit-Quelle: docs/SECURITY_AUDIT_2026-05-30.md (Cross-Repo Sprint-4-Pattern).",
+      "version": "V22",
+      "description": "**V22 Security Sprint 3 — am Ende des Baus per Founder-Direktive 2026-05-30** (war V8.0.3). Content-Security-Policy-Layer in next.config.ts ergaenzen. Aktuell: keine CSP. Mit CSP: strikte Whitelist fuer script-src (self + 'nonce-'), img-src (self + data: + Supabase-Storage), connect-src (self + Bedrock + Supabase + Coolify), style-src (self + 'unsafe-inline'). **Mitigiert strukturell:** Stored-XSS (Defense-in-Depth zu V8.0.1 SEC-004 SVG-Block), DOM-XSS, Clickjacking. **Aufwand: ~M (iterativer Smoke-Test pflicht).** Kritisch: alle OP-Routes inkl. Capture-Sessions + Pitch-Render + Dialogue-Recording-UI + Cal.com-Webhook + Supabase-Auth-Callback. Erfahrungswert aus BS: 3-5 iter-Fixes wegen Inline-Scripts erwartbar. Aufwand: ~2-3h Code + ~2-3h iter-Smoke. Cross-Repo-Hinweis: identisches Pattern in BS BL-501 + IS BL-115. Audit-Quelle: docs/SECURITY_AUDIT_2026-05-30.md (Cross-Repo Sprint-4-Pattern).",
       "createdAt": "2026-05-30"
     },
     {
       "id": "BL-137",
-      "title": "V8.0.2 SEC-003 Recording-Webhook Path-Traversal Fix (PRE-AKTIVIERUNGS-PFLICHT) — Sprint 2 OP",
+      "title": "V21 Security Sprint 2 — SEC-003 Recording-Webhook Path-Traversal Fix",
       "type": "fix",
-      "priority": "high",
+      "priority": "medium",
       "status": "open",
-      "version": "V8.0.2",
-      "description": "**PRE-AKTIVIERUNGS-PFLICHT — Aktuell durch Middleware-Redirect extern unerreichbar (ISSUE-028), aber PFLICHT-FIX vor Re-Aktivierung.** /api/dialogue/recording-ready reicht User-controlled `file_path` an readFile() weiter ohne Validation. Attacker mit Endpoint-Zugang kann beliebige Server-Files lesen, im schlimmsten Fall: (a) /proc/self/environ → Service-Role-Key + Bedrock-Credentials + Postgres-Passwort, (b) /app/.next/server/app/.../*.js → Server-Code mit Hardcoded-Secrets, (c) /etc/passwd, /root/.ssh/* etc. **Risiko-Status aktuell: entschaerft durch ISSUE-028 Middleware-Redirect, aber HARD-GATE vor Re-Aktivierung** (z.B. wenn SLC-110 Network-Refactor den Endpoint wieder freischaltet, oder wenn Webhook-Receiver-Pattern fuer Recording-Pipeline neu aktiviert wird). Fix-Pattern: (a) Allowed-Prefix-Check (z.B. /tmp/recordings/<uuid>/ oder Coolify-Volume-Mount-Path) als String-Prefix-Test BEVOR readFile, (b) fs.realpath() um Symlinks aufzuloesen und Prefix nochmal pruefen (verhindert Symlink-Bypass), (c) BESSER: file_path nicht mehr von User akzeptieren sondern serverseitig aus room_name ableiten (Trust-Boundary verschieben), (d) Test-Suite mit Path-Traversal-Vectors (../../etc/passwd, /proc/self/environ, symlinked-paths). Aufwand: ~2-4h Code + ~1h /qa. **Gate-Logik:** wenn ein Slice SLC-110+ den Endpoint re-aktiviert, MUSS V8.0.2 vorher live sein. Audit-Quelle: docs/SECURITY_AUDIT_2026-05-30.md SEC-003. Slice-Empfehlung: SLC-161 (Sprint 2 OP).",
+      "version": "V21",
+      "description": "**V21 Security Sprint 2 — am Ende des Baus per Founder-Direktive 2026-05-30** (war V8.0.2 'Pre-Aktivierungs-Pflicht'). Aktuell durch Middleware-Redirect extern unerreichbar (ISSUE-028) — risk entschaerft. Lokales Gate: wenn ein Slice SLC-110+ den Recording-Endpoint je re-aktiviert, MUSS V21 vorher live sein (sonst Path-Traversal-Exploit). Sonst defensiv parken bis V21-Sprint-Zeitpunkt. /api/dialogue/recording-ready reicht User-controlled `file_path` an readFile() weiter ohne Validation. Attacker mit Endpoint-Zugang koennte (a) /proc/self/environ → Service-Role-Key + Bedrock-Credentials + Postgres-Passwort lesen, (b) /app/.next/server/app/.../*.js → Server-Code mit Hardcoded-Secrets, (c) /etc/passwd, /root/.ssh/* etc. Fix-Pattern: (a) Allowed-Prefix-Check (/tmp/recordings/<uuid>/ oder Coolify-Volume-Mount-Path) als String-Prefix-Test BEVOR readFile, (b) fs.realpath() Symlink-Resolve + Prefix-Re-Check, (c) BESSER: file_path nicht mehr von User akzeptieren sondern serverseitig aus room_name ableiten (Trust-Boundary verschieben), (d) Test-Suite mit Path-Traversal-Vectors. Aufwand: ~2-4h Code + ~1h /qa. Audit-Quelle: docs/SECURITY_AUDIT_2026-05-30.md SEC-003. Slice-Empfehlung: SLC-161.",
       "createdAt": "2026-05-30"
     },
     {
@@ -1372,12 +1372,12 @@
     },
     {
       "id": "BL-141",
-      "title": "V8.0.1 Security Quick-Wins — search_path-Hardening + timing-safe Cron-Secret + SVG-Block (SLC-160)",
+      "title": "V20 Security Sprint 1 — search_path-Hardening + timing-safe Cron-Secret + SVG-Block (SLC-160)",
       "type": "fix",
-      "priority": "high",
+      "priority": "medium",
       "status": "open",
-      "version": "V8.0.1",
-      "description": "Schliesst 3 hoechst-priorisierte Security-Findings aus Cross-Repo-Audit 2026-05-30 (docs/SECURITY_AUDIT_2026-05-30.md). SEC-001 (High, DSGVO, search_path-Hijack): 12 SECURITY DEFINER Funktionen in sql/migrations/047_rpc_orchestrator_and_gaps.sql + 054_rpc_evidence.sql + 062_rpc_dialogue.sql ohne SET search_path. Idempotente Patch-Migration 103 mit CREATE OR REPLACE + SET search_path = public, pg_catalog (Body identisch). SEC-002 (High, Timing-Side-Channel): 4 Endpoints (capture-reminders, pending-signup-cleanup, walkthrough-cleanup, dialogue/recording-ready) nutzen '!==' statt crypto.timingSafeEqual. Neuer Helper src/lib/auth/cron-secret.ts analog zu verifyServiceKey (Pattern-Reuse aus src/lib/auth/service-key.ts V7 Self-Signup). SEC-004 (High, Stored-XSS): partner-branding-Bucket erlaubt 'image/svg+xml' (sql/migrations/091:289). Migration 104 setzt allowed_mime_types = {png, jpeg, webp}. 5 MTs, ~2-3h Code + ~1h /qa + Coolify-Redeploy. Worktree slc-160-security-quick-wins-op (SaaS-Mode-Pflicht), V8-Worktree v8-mandanten-report bleibt unangefasst. Out-of-Scope SEC-003 (Recording-Webhook Path-Traversal) → Sprint 2 (Pre-Aktivierungs-Pflicht-Fix vor SLC-110 Network-Refactor). SLC-160. Audit-Quelle: c:/strategaize/strategaize-dev-system/docs/SECURITY_AUDIT_SUMMARY_2026-05-30.md.",
+      "version": "V20",
+      "description": "**V20 Security Sprint 1 — am Ende des Baus per Founder-Direktive 2026-05-30** (Sprints komplett aus V8.0.1/V8.0.2/V8.0.3 nach V20/V21/V22 verschoben). Bei Sprint-Start Diff-Re-Audit pflicht — Findings koennen durch zwischenzeitliche Refactors obsolet geworden sein. Migration-Nummern 103+104 unten beziehen sich auf den Ur-Plan und kollidieren jetzt mit MIG-048+049 — beim Sprint-Start umnummerieren (z.B. Migration 199+200). Scope: SEC-001 (High, DSGVO, search_path-Hijack): 12 SECURITY DEFINER Funktionen in sql/migrations/047_rpc_orchestrator_and_gaps.sql + 054_rpc_evidence.sql + 062_rpc_dialogue.sql ohne SET search_path. Idempotente Patch-Migration mit CREATE OR REPLACE + SET search_path = public, pg_catalog (Body identisch). SEC-002 (High, Timing-Side-Channel): 4 Endpoints (capture-reminders, pending-signup-cleanup, walkthrough-cleanup, dialogue/recording-ready) nutzen '!==' statt crypto.timingSafeEqual. Neuer Helper src/lib/auth/cron-secret.ts analog zu verifyServiceKey. SEC-004 (High, Stored-XSS): partner-branding-Bucket erlaubt 'image/svg+xml' (sql/migrations/091:289). Migration setzt allowed_mime_types = {png, jpeg, webp}. 5 MTs, ~2-3h Code + ~1h /qa + Coolify-Redeploy. Worktree slc-160-security-quick-wins-op (SaaS-Mode-Pflicht). Out-of-Scope SEC-003 (Recording-Webhook Path-Traversal) → V21 (BL-137). SLC-160. Audit-Quelle: docs/SECURITY_AUDIT_2026-05-30.md + c:/strategaize/strategaize-dev-system/docs/SECURITY_AUDIT_SUMMARY_2026-05-30.md.",
       "createdAt": "2026-05-30"
     },
     {

@@ -1,6 +1,6 @@
 # SLC-160 — OP Security Quick-Wins
 
-- **Version**: V8.0.1 (Security-Hotfix, parallel zur laufenden V8 Mandanten-Report-Implementation)
+- **Version**: V20 (Security Sprint 1 — am Ende des Baus per Founder-Direktive 2026-05-30, vormals als V8.0.1 / "Pre-Live-Pflicht" gefuehrt)
 - **Feature**: FEAT-160 / BL-141 (war BL-128, 2026-05-30 renamed wegen Duplikat-Kollision mit V8-Mandanten-Report-BL-128)
 - **Created**: 2026-05-30
 - **Status**: planned
@@ -19,7 +19,7 @@ Schliesst die 3 hoechst-priorisierten Security-Findings aus dem Cross-Repo-Audit
 
 - OP SEC-003 (Recording-Webhook Path-Traversal `/proc/self/environ`) → eigener Slice Sprint 2 weil M-Aufwand + per Middleware-Redirect aktuell extern unerreichbar (ISSUE-028). Pre-Aktivierungs-Pflicht-Fix, aber nicht Sprint 1.
 - OP SEC-005..SEC-019 → Sprint 2-4 oder V8.1+.
-- Spec-Reuse fuer SEC-001-Pattern (CI-Check via `pg_proc.proconfig`) → optional V8.0.2 Hygiene-Slice.
+- Spec-Reuse fuer SEC-001-Pattern (CI-Check via `pg_proc.proconfig`) → optional V21 Hygiene-Slice.
 
 ## Pre-Conditions
 
@@ -85,8 +85,8 @@ Schliesst die 3 hoechst-priorisierten Security-Findings aus dem Cross-Repo-Audit
 
 ### MT-5: Quality-Gates + Apply-Live + Records
 - **Goal**: TSC + Lint + Build + Migrations live auf Coolify-DB + Records-Update.
-- **Files**: `docs/MIGRATIONS.md`, `docs/RELEASES.md` (NEU REL-027 — REL-026 ist V8.0 Mandanten-Report-Port belegt), `docs/STATE.md` (Current Focus + Last Stable Version), `slices/INDEX.md` (SLC-160 → done), `planning/backlog.json` (BL-141 → done), `planning/roadmap.json` (V8.0.1 → released).
-- **Expected behavior**: TSC EXIT=0. Lint 0/0. Build PASS. Migrations live appliziert per `.claude/rules/sql-migration-hetzner.md` base64-Pattern (User-SSH-Action oder Agent-SSH per OP-Server-Memory `reference_op_ssh_alias`). Records auf REL-027 / V8.0.1 / SLC-160 done.
+- **Files**: `docs/MIGRATIONS.md`, `docs/RELEASES.md` (REL-Nummer dynamisch zur Sprint-Start-Zeit vergeben, REL-026 ist V8.0 belegt), `docs/STATE.md` (Current Focus + Last Stable Version), `slices/INDEX.md` (SLC-160 → done), `planning/backlog.json` (BL-141 → done), `planning/roadmap.json` (V20 → released).
+- **Expected behavior**: TSC EXIT=0. Lint 0/0. Build PASS. Migrations live appliziert per `.claude/rules/sql-migration-hetzner.md` base64-Pattern (User-SSH-Action oder Agent-SSH per OP-Server-Memory `reference_op_ssh_alias`). Records auf REL-X / V20 / SLC-160 done.
 - **Verification**: Cockpit-Records-Format-Check + Counts.
 - **Dependencies**: MT-2 + MT-3 + MT-4 done + /qa PASS.
 
