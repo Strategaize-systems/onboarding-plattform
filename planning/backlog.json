@@ -1,6 +1,16 @@
 {
   "items": [
     {
+      "id": "BL-136",
+      "title": "OP Brand-Guide-Onboarding-Fragebogen-Generator (generische Cross-Product-Foundation, ImSch ist erster Pilot-Kunde)",
+      "type": "feature",
+      "priority": "medium",
+      "status": "open",
+      "version": null,
+      "description": "Generische Brand-Guide-Capability in der OP. Schliesst eine Strategie-Luecke die in mehreren Strategaize-Projekten parallel auftaucht (ImSch V3.2 SLC-316 brand_profile-Seed, IS V1.0 brand_profile, zukuenftige Brand-Projekte). Aktuell wird das Brand-Profile in jedem Projekt manuell als SQL-Seed oder UI-Form gepflegt — Inkonsistenz + Doppelarbeit. Vision: Ein Onboarding-Plattform-Template 'Brand-Guide V1' nach IS-13-Sektionen-Schema (productOverview, targetAudience, personas, painPoints, competitiveLandscape, differentiation, objections, switchingDynamics, customerLanguage, brandVoice, proofPoints, goals, impressum) + ImSch-Erweiterung um channel_overrides. Erweiterte Fragen erlauben Brand-Material-Upload (Brand-Guide-PDF, Landingpage-URL, bestehendes Marketing-Material) zur Tonalitaets-Extraktion via Bedrock-LLM. Output: vollstaendiger Brand-Guide-JSON als Export. Re-Import-Adapter pro Ziel-Repo (ImSch, IS, andere Brand-Projekte). Mandant fuellt Fragebogen aus, OP exportiert validierten Brand-Guide, Ziel-Repo macht UPSERT auf brand_profile-Singleton. ImSch ist erster Pilot: Mini-Brand-Seed-V3.2 (SLC-316 MT-0, 2026-05-29) wird spaeter durch OP-Pipeline-Output ersetzt via Re-Import-Slice in ImSch V3.3 oder V4. Founder-Direktive 2026-05-29: 'Das ist ein perfekter Test Case fuer die Onboarding-Plattform. Diese 13 Fragen als Fragebogen abfragen + Dokumente hochladen + Brand-Guides extrahieren + exportieren in ImSch, BS, IS oder zukuenftige Brand-Projekte.' Aufwand-Skizze ohne Discovery: ~6-10 Slices (Template-Definition + Brand-Material-Upload + LLM-Extraktion + Validation + Export-Format + Re-Import-Adapter ImSch + Re-Import-Adapter IS + Re-Import-Adapter Generic + Multi-Tenant-Brand-Profile-Support). version=null da nicht versions-gebunden — wird nach V8/V8.1 in Roadmap-Slot eingeplant (V9+ wahrscheinlich, gleicher Slot wie BL-135 Bedarfs-Mapping). Out of Scope ohne Discovery: Konkrete Sektionen-Anpassungen pro Ziel-Repo (Diff-Liste), Versionierung von Brand-Guides, Multi-Brand-pro-Tenant. Pre-Conditions: V8.0 live + erste Erfahrungswerte mit Mandanten-Report-Template-System (FEAT-066 bringt Renderer-Pattern), V8.1 Lead-Conversion-Flow live. Entstanden 2026-05-29 nach ImSch V3.2 SLC-316 Pre-MT-0-Strategie-Diskussion.",
+      "createdAt": "2026-05-29"
+    },
+    {
       "id": "BL-135",
       "title": "Discovery: Strategaize-internes Bedarfs-Mapping pro Modul x Stufe (Aufwand-Skala + KI-vs-Operativ-Klassifikation + Mandats-Vorschlag)",
       "type": "feature",
@@ -1319,6 +1329,16 @@
       "version": "V7.7",
       "description": "ISSUE-077 (Low) resolved via SLC-147 MT-2. Aus V7-SLC-135-/backend (RPT-307 F-1) bekannt: route.ts in src/app/api/capture/[sessionId]/evidence/upload/ exportiert 5 Helper-Symbole (ALLOWED_MIME_TYPES, MAX_FILE_SIZE, validateMimeType, validateFileSize, sanitizeFilename) — Next 16 Webpack-strict-validation rejected diese (nur POST/GET/dynamic etc. sind valid Route-Exports). Production-Coolify nutzt Turbopack (default), wo es passt — kein Production-Block. Aber Webpack-Build-Gate lokal pre-existing kaputt. Fix: 5 Symbole in validation.ts auslagern, route.ts importiert von ./validation, upload-validation.test.ts Import-Pfad anpassen. Aufwand ~5-10min. Quality-Gates: tsc + ESLint + Vitest upload-validation gruen.",
       "createdAt": "2026-05-28"
+    },
+    {
+      "id": "BL-128",
+      "title": "V8.0.1 Security Quick-Wins — search_path-Hardening + timing-safe Cron-Secret + SVG-Block (SLC-160)",
+      "type": "fix",
+      "priority": "high",
+      "status": "open",
+      "version": "V8.0.1",
+      "description": "Schliesst 3 hoechst-priorisierte Security-Findings aus Cross-Repo-Audit 2026-05-30 (docs/SECURITY_AUDIT_2026-05-30.md). SEC-001 (High, DSGVO, search_path-Hijack): 12 SECURITY DEFINER Funktionen in sql/migrations/047_rpc_orchestrator_and_gaps.sql + 054_rpc_evidence.sql + 062_rpc_dialogue.sql ohne SET search_path. Idempotente Patch-Migration 103 mit CREATE OR REPLACE + SET search_path = public, pg_catalog (Body identisch). SEC-002 (High, Timing-Side-Channel): 4 Endpoints (capture-reminders, pending-signup-cleanup, walkthrough-cleanup, dialogue/recording-ready) nutzen '!==' statt crypto.timingSafeEqual. Neuer Helper src/lib/auth/cron-secret.ts analog zu verifyServiceKey (Pattern-Reuse aus src/lib/auth/service-key.ts V7 Self-Signup). SEC-004 (High, Stored-XSS): partner-branding-Bucket erlaubt 'image/svg+xml' (sql/migrations/091:289). Migration 104 setzt allowed_mime_types = {png, jpeg, webp}. 5 MTs, ~2-3h Code + ~1h /qa + Coolify-Redeploy. Worktree slc-160-security-quick-wins-op (SaaS-Mode-Pflicht), V8-Worktree v8-mandanten-report bleibt unangefasst. Out-of-Scope SEC-003 (Recording-Webhook Path-Traversal) → Sprint 2 (Pre-Aktivierungs-Pflicht-Fix vor SLC-110 Network-Refactor). SLC-160. Audit-Quelle: c:/strategaize/strategaize-dev-system/docs/SECURITY_AUDIT_SUMMARY_2026-05-30.md.",
+      "createdAt": "2026-05-30"
     },
     {
       "id": "BL-127",
