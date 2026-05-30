@@ -38,13 +38,13 @@ function makeCache(modelId: string, promptVersion: string): CacheStructure {
 describe("cache JSONB roundtrip against Coolify-DB", () => {
   itDb("merge → write → read returns identical CacheStructure", async () => {
     await withTestDb(async (client) => {
-      const { tenantA, templateId, templateVersion } = await seedTestTenants(client);
+      const { tenantA, userA, templateId, templateVersion } = await seedTestTenants(client);
 
       const { rows } = await client.query<{ id: string }>(
-        `INSERT INTO capture_session (tenant_id, template_id, template_version, mode)
-         VALUES ($1, $2, $3, 'self_service')
+        `INSERT INTO capture_session (tenant_id, template_id, template_version, owner_user_id)
+         VALUES ($1, $2, $3, $4)
          RETURNING id`,
-        [tenantA, templateId, templateVersion]
+        [tenantA, templateId, templateVersion, userA]
       );
       const sessionId = rows[0].id;
 
@@ -71,16 +71,17 @@ describe("cache JSONB roundtrip against Coolify-DB", () => {
 
   itDb("merge preserves existing v8_report_snapshot key", async () => {
     await withTestDb(async (client) => {
-      const { tenantA, templateId, templateVersion } = await seedTestTenants(client);
+      const { tenantA, userA, templateId, templateVersion } = await seedTestTenants(client);
 
       const { rows } = await client.query<{ id: string }>(
-        `INSERT INTO capture_session (tenant_id, template_id, template_version, mode, metadata)
-         VALUES ($1, $2, $3, 'self_service', $4::jsonb)
+        `INSERT INTO capture_session (tenant_id, template_id, template_version, owner_user_id, metadata)
+         VALUES ($1, $2, $3, $4, $5::jsonb)
          RETURNING id`,
         [
           tenantA,
           templateId,
           templateVersion,
+          userA,
           JSON.stringify({
             v8_report_snapshot: {
               schemaVersion: "1.0",
@@ -120,13 +121,13 @@ describe("cache JSONB roundtrip against Coolify-DB", () => {
 
   itDb("read against empty metadata returns null", async () => {
     await withTestDb(async (client) => {
-      const { tenantA, templateId, templateVersion } = await seedTestTenants(client);
+      const { tenantA, userA, templateId, templateVersion } = await seedTestTenants(client);
 
       const { rows } = await client.query<{ id: string }>(
-        `INSERT INTO capture_session (tenant_id, template_id, template_version, mode)
-         VALUES ($1, $2, $3, 'self_service')
+        `INSERT INTO capture_session (tenant_id, template_id, template_version, owner_user_id)
+         VALUES ($1, $2, $3, $4)
          RETURNING id`,
-        [tenantA, templateId, templateVersion]
+        [tenantA, templateId, templateVersion, userA]
       );
       const sessionId = rows[0].id;
 
@@ -141,16 +142,17 @@ describe("cache JSONB roundtrip against Coolify-DB", () => {
 
   itDb("read against malformed cache JSONB returns null (defensive)", async () => {
     await withTestDb(async (client) => {
-      const { tenantA, templateId, templateVersion } = await seedTestTenants(client);
+      const { tenantA, userA, templateId, templateVersion } = await seedTestTenants(client);
 
       const { rows } = await client.query<{ id: string }>(
-        `INSERT INTO capture_session (tenant_id, template_id, template_version, mode, metadata)
-         VALUES ($1, $2, $3, 'self_service', $4::jsonb)
+        `INSERT INTO capture_session (tenant_id, template_id, template_version, owner_user_id, metadata)
+         VALUES ($1, $2, $3, $4, $5::jsonb)
          RETURNING id`,
         [
           tenantA,
           templateId,
           templateVersion,
+          userA,
           JSON.stringify({
             v8_1_llm_augmentation_cache: { cache_key: 42, broken: true },
           }),
