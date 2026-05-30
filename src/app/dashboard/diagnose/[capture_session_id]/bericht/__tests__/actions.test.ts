@@ -120,6 +120,10 @@ function buildAdminClient(opts: BuildOpts) {
       };
     }
     if (table === "capture_session") {
+      // V7.2 sendDiagnoseReportByEmail nutzt maybeSingle fuer die Session-
+      // Lookup (~Z. 96). V8 SLC-152 MT-1 fuegt einen Parallel-Query
+      // .select("metadata") + .single() im Promise.all hinzu. Mock muss beide
+      // Termina-Chains liefern.
       return {
         select: () => ({
           eq: () => ({
@@ -130,6 +134,15 @@ function buildAdminClient(opts: BuildOpts) {
                 template_id: TEMPLATE_ID,
                 status: opts.sessionStatus ?? "finalized",
                 updated_at: "2026-05-22T10:00:00.000Z",
+              },
+              error: null,
+            }),
+            single: async () => ({
+              data: {
+                // V7.2-Tests laufen gegen V6.3-Template (kein usage_kind), das
+                // metadata-Feld bleibt darum leer. V8-Path wird in
+                // SLC-152-Vitest separat abgedeckt (mandanten-report-v8.test).
+                metadata: {},
               },
               error: null,
             }),

@@ -4,6 +4,16 @@ Die aktuelle DB-Struktur entspricht dem Stand von Blueprint V3.4 (Migration 020)
 
 Der uebernommene Blueprint-Stand ist noch nicht auf einer Onboarding-Plattform-Instanz ausgefuehrt worden — die erste Hetzner-Migration geschieht mit SLC-001 (Schema-Fundament).
 
+### MIG-049 — V8 SLC-152 MT-2 `diagnose_event_event_type_check` erweitert um 3 V8-Event-Types (Migration 104, planned)
+- Date: 2026-05-30 (planned — LIVE-Apply via ssh+base64+psql -U postgres auf 159.69.207.29 noch ausstehend)
+- Scope:
+  - `104_v8_diagnose_event_v8_types.sql` — `DROP CONSTRAINT IF EXISTS diagnose_event_event_type_check` + `ADD CONSTRAINT ... CHECK (event_type IN (...9 V7.2-Werte + 3 V8-Werte))`
+  - 3 neue Event-Types: `v8_report_generated`, `v8_email_sent`, `v8_pdf_render_failed`
+- Reason: Migration 100 (MIG-046) hat diagnose_event mit hardcoded 9-Werte-CHECK-Constraint angelegt. SLC-152 MT-2 (`trackV8ReportGenerated` + `trackV8EmailSent` + `trackV8PdfRenderFailed`) wuerde ohne diese Erweiterung mit Constraint-Violation fehlschlagen. Spec-Erweiterung: Slice-Spec MT-2 hat den Schema-Drift nicht erwaehnt, dieser Migration-Step wurde als Pflicht erkannt.
+- Affected Areas: `public.diagnose_event` CHECK-Constraint (1 Constraint replaced). Bestehende V7.2-Rows bleiben valide (alle 9 V7.2-Werte sind in der neuen Liste enthalten). RLS-Policies unbetroffen.
+- Risk: S — additive Constraint-Erweiterung, kein Datenmigrations-Bedarf, keine Policy-Aenderung. 0 Auswirkung auf V7.2-Telemetrie.
+- Rollback Notes: Original-Constraint aus Migration 100 wiederherstellen (`DROP + ADD CONSTRAINT diagnose_event_event_type_check CHECK (event_type IN (9 V7.2-Werte))`) — wuerde V8-Events blockieren aber nicht zerstoeren (bestehende V8-Rows bleiben in Tabelle, neue INSERTs schlagen fehl).
+
 ### MIG-048 — V8 SLC-148 MT-6 `capture_session.metadata` JSONB-Spalte (Migration 103, live)
 - Date: 2026-05-29 (live, applied via ssh+base64+psql -U postgres auf 159.69.207.29 supabase-db-bwkg80w04wgccos48gcws8cs-150827246647)
 - Scope:

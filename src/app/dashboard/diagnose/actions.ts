@@ -28,6 +28,7 @@ import {
   runV8MandantenReportPipeline,
   type V8PipelineResult,
 } from "@/workers/condensation/v8-pipeline";
+import { trackV8ReportGenerated } from "@/lib/diagnose/telemetry-v8";
 
 const PARTNER_DIAGNOSTIC_SLUG = "partner_diagnostic";
 const V8_TEMPLATE_SLUG = "exit-readiness-teaser-v1";
@@ -451,6 +452,11 @@ export async function finalizeMandantenReport(
       };
     }
   }
+
+  // V8 SLC-152 MT-2 Telemetry-Event — fire-and-forget (fail-silent in der
+  // Tracker-Funktion). Erst NACH Snapshot-Persist + Status-Flip, damit das
+  // Event "ich habe einen Bericht generiert" semantisch korrekt ist.
+  trackV8ReportGenerated(admin, sessionId, session.tenant_id as string);
 
   return {
     snapshot: result.snapshot,

@@ -26,6 +26,8 @@ import { AdminDemoBanner } from "@/components/admin/AdminDemoBanner";
 import { MandantHeader } from "@/components/dashboard/MandantHeader";
 import { resolvePartnerOrgIdForTenant } from "@/lib/text-override/partner-org";
 import type { TemplateBlock } from "@/workers/condensation/light-pipeline";
+import type { ModulKey, V8ReportSnapshot } from "@/lib/diagnose/types";
+import { V8BerichtRenderer } from "./v8-bericht-renderer";
 
 interface PageProps {
   params: Promise<{ capture_session_id: string }>;
@@ -55,7 +57,7 @@ export default async function BerichtPage(props: PageProps) {
 
   const { data: session } = await admin
     .from("capture_session")
-    .select("id, tenant_id, template_id, status, updated_at")
+    .select("id, tenant_id, template_id, status, updated_at, metadata")
     .eq("id", sessionId)
     .single();
   if (!session) notFound();
@@ -88,7 +90,7 @@ export default async function BerichtPage(props: PageProps) {
   const [templateRes, kusRes, mandantTenantRes] = await Promise.all([
     admin
       .from("template")
-      .select("name, blocks, metadata")
+      .select("name, slug, version, blocks, metadata")
       .eq("id", session.template_id)
       .single(),
     admin
@@ -107,11 +109,64 @@ export default async function BerichtPage(props: PageProps) {
   const template = templateRes.data as
     | {
         name: string;
+        slug: string;
+        version: number;
         blocks: TemplateBlock[];
-        metadata: { required_closing_statement?: string } & Record<string, unknown>;
+        metadata: {
+          required_closing_statement?: string;
+          usage_kind?: string;
+        } & Record<string, unknown>;
       }
     | null;
   if (!template) notFound();
+
+  // V8-Branch-Switch per template.metadata.usage_kind.
+  // SLC-152 MT-3: V8-Bericht-Page mit Web-Variant + Download/Email-Actions.
+  // V6.3-Pfad (partner_diagnostic_v1 etc.) bleibt unten UNVERAENDERT.
+  const isV8Mandanten =
+    template.metadata.usage_kind === "mandanten_report_teaser_v1";
+
+  if (isV8Mandanten) {
+    const sessionMeta = (session.metadata ?? {}) as Record<string, unknown>;
+    const v8Snapshot = sessionMeta.v8_report_snapshot as
+      | V8ReportSnapshot
+      | undefined;
+    if (!v8Snapshot) {
+      // Snapshot fehlt — Pipeline-Race oder Migration-104-not-applied. User
+      // redirect zur Pending-Page; dort wird der Pipeline-Status angezeigt.
+      redirect(`/dashboard/diagnose/${sessionId}/bericht-pending`);
+    }
+
+    const moduleNames: Partial<Record<ModulKey, string>> = {};
+    for (const block of template.blocks as unknown as Array<{
+      modul_id?: string;
+      name?: string;
+    }>) {
+      if (typeof block.modul_id === "string" && typeof block.name === "string") {
+        const key = block.modul_id.toLowerCase() as ModulKey;
+        moduleNames[key] = block.name;
+      }
+    }
+
+    return (
+      <>
+        <AdminDemoBanner
+          role={profile.role}
+          tenantName={(mandantTenantRes.data?.name as string | undefined) ?? null}
+        />
+        <MandantHeader email={profile.email} role={profile.role} />
+        <DiagnoseSessionCompletedBeacon captureSessionId={sessionId} />
+        <V8BerichtRenderer
+          captureSessionId={sessionId}
+          mandantName={
+            (mandantTenantRes.data?.name as string) ?? "Ihr Unternehmen"
+          }
+          snapshot={v8Snapshot}
+          moduleNames={moduleNames as Record<ModulKey, string>}
+        />
+      </>
+    );
+  }
 
   const kus = (kusRes.data ?? []) as Array<{
     block_key: string;

@@ -31,6 +31,14 @@ import {
   type DiagnoseReportPdfData,
 } from "@/lib/pdf/diagnose-report";
 import { buildDiagnoseReportEmail } from "@/lib/email/templates/diagnose-report";
+import { buildMandantenReportV8Email } from "@/lib/email/templates/mandanten-report-v8";
+import { renderMandantenReportV2Pdf } from "@/lib/pdf/mandanten-report-v2";
+import type { RendererInput as V8RendererInput } from "@/lib/pdf/mandanten-report-v2";
+import type { ModulKey, V8ReportSnapshot, V8Template } from "@/lib/diagnose/types";
+import {
+  trackV8EmailSent,
+  trackV8PdfRenderFailed,
+} from "@/lib/diagnose/telemetry-v8";
 import type { TemplateBlock } from "@/workers/condensation/light-pipeline";
 
 const UUID_REGEX = /^[0-9a-f-]{36}$/i;
@@ -186,11 +194,14 @@ export async function sendDiagnoseReportByEmail(
   }
   const recipientsCount = toRecipients.length + ccRecipients.length;
 
-  // 6. Bericht-Daten laden
-  const [templateRes, kusRes, mandantTenantRes] = await Promise.all([
+  // 6. Bericht-Daten laden — Template wird ZUERST geladen, weil
+  //    metadata.usage_kind den Branch (V8 vs V7.2) entscheidet und V8 die
+  //    knowledge_unit-Liste NICHT braucht (V8 nutzt
+  //    capture_session.metadata.v8_report_snapshot).
+  const [templateRes, kusRes, mandantTenantRes, sessionMetaRes] = await Promise.all([
     admin
       .from("template")
-      .select("name, blocks, metadata")
+      .select("name, blocks, metadata, slug, version")
       .eq("id", session.template_id)
       .single(),
     admin
@@ -204,18 +215,32 @@ export async function sendDiagnoseReportByEmail(
       .select("name")
       .eq("id", session.tenant_id)
       .single(),
+    admin
+      .from("capture_session")
+      .select("metadata")
+      .eq("id", input.captureSessionId)
+      .single(),
   ]);
 
   const template = templateRes.data as
     | {
         name: string;
+        slug: string;
+        version: number;
         blocks: TemplateBlock[];
-        metadata: { required_closing_statement?: string } & Record<string, unknown>;
+        metadata: {
+          required_closing_statement?: string;
+          usage_kind?: string;
+        } & Record<string, unknown>;
       }
     | null;
   if (!template) {
     return { ok: false, error: "template_not_found" };
   }
+
+  // V8-Branch-Detection per Template-Metadata. usage_kind aus Migration 102.
+  const isV8Mandanten =
+    template.metadata.usage_kind === "mandanten_report_teaser_v1";
 
   const kus = (kusRes.data ?? []) as Array<{
     block_key: string;
@@ -240,50 +265,116 @@ export async function sendDiagnoseReportByEmail(
       ? branding.displayName
       : null;
 
-  const pdfData: DiagnoseReportPdfData = {
-    mandantName: (mandantTenantRes.data?.name as string) ?? "Ihr Unternehmen",
-    partnerDisplayName: partnerDisplayNameForPdf,
-    finalizedAt: (session.updated_at as string) ?? new Date().toISOString(),
-    blocks: template.blocks
-      .slice()
-      .sort((a, b) => a.order - b.order)
-      .map((block) => {
-        const ku = kuByBlock.get(block.key);
-        return {
-          key: block.key,
-          title: block.title,
-          intro: block.intro,
-          score: ku?.score ?? 0,
-          comment: ku?.comment ?? "Keine Verdichtung verfuegbar.",
-        };
-      }),
-    closingStatement: template.metadata.required_closing_statement ?? "",
-  };
-
-  // 7. PDF-Render
+  // 7. PDF-Render + 8. Email-Render — branched on isV8Mandanten.
+  //    V8-Branch (SLC-152 MT-1): renderMandantenReportV2Pdf +
+  //    buildMandantenReportV8Email. Snapshot kommt aus
+  //    capture_session.metadata.v8_report_snapshot (SLC-148 MT-6 DEC-163).
+  //    V7.2-Branch: bestehender renderDiagnoseReportPdf-Pfad UNVERAENDERT
+  //    (Co-Existenz-Pflicht per AC-SLC-152-4).
   let pdfBuffer: Buffer;
-  try {
-    pdfBuffer = await renderDiagnoseReportPdf(pdfData);
-  } catch (e) {
-    captureException(e, {
-      source: `${SOURCE}/render_pdf`,
-      userId: user.id,
-      metadata: { capture_session_id: input.captureSessionId },
-    });
-    return { ok: false, error: "pdf_render_failed" };
-  }
-
-  // 8. Email-Render
+  let emailContent: { subject: string; htmlBody: string; textBody: string };
+  let attachmentFilename: string;
+  let auditCategory: string;
   const overrides = await loadEmailOverridesMap("de");
-  const emailContent = await buildDiagnoseReportEmail(overrides, {
-    partnerDisplayName: partnerDisplayNameForEmail,
-    customMessage,
-  });
+  const filenameDate = new Date().toISOString().slice(0, 10);
+
+  if (isV8Mandanten) {
+    // V8-Branch — Snapshot-Reader + V8-Renderer + V8-Email-Template.
+    const sessionMeta = (sessionMetaRes.data?.metadata ?? {}) as Record<string, unknown>;
+    const v8Snapshot = sessionMeta.v8_report_snapshot as V8ReportSnapshot | undefined;
+    if (!v8Snapshot) {
+      return { ok: false, error: "v8_snapshot_missing" };
+    }
+
+    // moduleNames aus template.blocks (modul_id "M1".."M9" → lowercase key)
+    const moduleNames: Partial<Record<ModulKey, string>> = {};
+    for (const block of template.blocks as unknown as Array<{
+      modul_id?: string;
+      name?: string;
+    }>) {
+      if (typeof block.modul_id === "string" && typeof block.name === "string") {
+        const key = block.modul_id.toLowerCase() as ModulKey;
+        moduleNames[key] = block.name;
+      }
+    }
+
+    const v8Input: V8RendererInput = {
+      snapshot: v8Snapshot,
+      mandant: {
+        name: (mandantTenantRes.data?.name as string) ?? "Ihr Unternehmen",
+        datum:
+          (session.updated_at as string)?.slice(0, 10) ??
+          new Date().toISOString().slice(0, 10),
+      },
+      moduleNames: moduleNames as Record<ModulKey, string>,
+      template: template as unknown as V8Template,
+    };
+
+    try {
+      pdfBuffer = await renderMandantenReportV2Pdf(v8Input);
+    } catch (e) {
+      trackV8PdfRenderFailed(
+        admin,
+        input.captureSessionId,
+        profile.tenant_id,
+        e,
+      );
+      captureException(e, {
+        source: `${SOURCE}/render_pdf_v8`,
+        userId: user.id,
+        metadata: { capture_session_id: input.captureSessionId },
+      });
+      return { ok: false, error: "pdf_render_failed" };
+    }
+
+    emailContent = await buildMandantenReportV8Email(overrides, {
+      customMessage,
+    });
+    attachmentFilename = `Strategaize-Diagnose-${filenameDate}.pdf`;
+    auditCategory = "v8_mandanten_report_emailed";
+  } else {
+    // V7.2-Branch — bestehender Pfad UNVERAENDERT.
+    const pdfData: DiagnoseReportPdfData = {
+      mandantName: (mandantTenantRes.data?.name as string) ?? "Ihr Unternehmen",
+      partnerDisplayName: partnerDisplayNameForPdf,
+      finalizedAt: (session.updated_at as string) ?? new Date().toISOString(),
+      blocks: template.blocks
+        .slice()
+        .sort((a, b) => a.order - b.order)
+        .map((block) => {
+          const ku = kuByBlock.get(block.key);
+          return {
+            key: block.key,
+            title: block.title,
+            intro: block.intro,
+            score: ku?.score ?? 0,
+            comment: ku?.comment ?? "Keine Verdichtung verfuegbar.",
+          };
+        }),
+      closingStatement: template.metadata.required_closing_statement ?? "",
+    };
+
+    try {
+      pdfBuffer = await renderDiagnoseReportPdf(pdfData);
+    } catch (e) {
+      captureException(e, {
+        source: `${SOURCE}/render_pdf`,
+        userId: user.id,
+        metadata: { capture_session_id: input.captureSessionId },
+      });
+      return { ok: false, error: "pdf_render_failed" };
+    }
+
+    emailContent = await buildDiagnoseReportEmail(overrides, {
+      partnerDisplayName: partnerDisplayNameForEmail,
+      customMessage,
+    });
+    attachmentFilename = `diagnose-bericht-${filenameDate}.pdf`;
+    auditCategory = "diagnose_report_emailed";
+  }
 
   // 9. sendMail
   const from = `StrategAIze <${process.env.SMTP_FROM || process.env.SMTP_USER}>`;
-  const filenameDate = new Date().toISOString().slice(0, 10);
-  const attachmentFilename = `diagnose-bericht-${filenameDate}.pdf`;
 
   try {
     await sendMail({
@@ -313,23 +404,179 @@ export async function sendDiagnoseReportByEmail(
     return { ok: false, error: "smtp_send_failed" };
   }
 
-  // 10. Audit-Log
+  // 10. Audit-Log + V8-Telemetry-Event (nur im V8-Branch).
+  if (isV8Mandanten) {
+    trackV8EmailSent(
+      admin,
+      input.captureSessionId,
+      profile.tenant_id,
+      pdfBuffer.length,
+    );
+  }
+
   captureInfo(
     `Diagnose-Bericht versendet (capture ${input.captureSessionId}, ${recipientsCount} Empfaenger)`,
     {
       source: SOURCE,
       userId: user.id,
       metadata: {
-        category: "diagnose_report_emailed",
+        category: auditCategory,
         capture_session_id: input.captureSessionId,
         recipients_count: recipientsCount,
         recipient_to_self: input.recipientToSelf,
         recipient_to_partner: input.recipientToPartner,
         recipient_additional: Boolean(additional),
         attachment_filename: attachmentFilename,
+        pdf_size_bytes: pdfBuffer.length,
+        template_variant: isV8Mandanten ? "v8" : "v7_2",
       },
     },
   );
 
   return { ok: true, recipientsCount };
+}
+
+// ============================================================================
+// V8 SLC-152 MT-3 — downloadMandantenReportV2Pdf Server-Action
+// ============================================================================
+//
+// Browser-Download-Trigger fuer V8-Bericht-Page (V8BerichtActions Client-
+// Component). Rendert V8-PDF on-demand und returnt Base64-Encoded-Buffer
+// (statt direkt Buffer, weil Next.js Server-Action-Serialization keine
+// Buffer/Uint8Array-Roundtrips ueber die Wire unterstuetzt).
+//
+// Auth-Gates identisch zu sendDiagnoseReportByEmail: Mandant own-tenant ODER
+// Partner-Admin von Parent-Partner ODER strategaize_admin (cross-tenant).
+
+export type DownloadMandantenReportV2PdfResult =
+  | { ok: true; pdfBase64: string; filename: string }
+  | { ok: false; error: string };
+
+export async function downloadMandantenReportV2Pdf(
+  captureSessionId: string,
+): Promise<DownloadMandantenReportV2PdfResult> {
+  if (!captureSessionId || !UUID_REGEX.test(captureSessionId)) {
+    return { ok: false, error: "invalid_capture_session_id" };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "unauthenticated" };
+
+  const admin = createAdminClient();
+
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("id, tenant_id, role")
+    .eq("id", user.id)
+    .single();
+  if (!profile?.tenant_id) return { ok: false, error: "profile_not_found" };
+
+  const { data: session } = await admin
+    .from("capture_session")
+    .select("id, tenant_id, template_id, status, updated_at, metadata")
+    .eq("id", captureSessionId)
+    .maybeSingle();
+  if (!session) return { ok: false, error: "capture_session_not_found" };
+
+  // Auth-Matrix: Mandant + Partner-Admin + Strategaize-Admin (analog page.tsx).
+  let authorized = false;
+  if (profile.role === "strategaize_admin") {
+    authorized = true;
+  } else if (session.tenant_id === profile.tenant_id) {
+    authorized = true;
+  } else if (profile.role === "tenant_admin") {
+    const { data: ownerTenant } = await admin
+      .from("tenants")
+      .select("parent_partner_tenant_id")
+      .eq("id", session.tenant_id)
+      .single();
+    if (ownerTenant?.parent_partner_tenant_id === profile.tenant_id) {
+      authorized = true;
+    }
+  }
+  if (!authorized) return { ok: false, error: "forbidden" };
+
+  if (session.status !== "finalized") {
+    return { ok: false, error: "not_finalized" };
+  }
+
+  const [templateRes, mandantTenantRes] = await Promise.all([
+    admin
+      .from("template")
+      .select("name, slug, version, blocks, metadata")
+      .eq("id", session.template_id)
+      .single(),
+    admin
+      .from("tenants")
+      .select("name")
+      .eq("id", session.tenant_id)
+      .single(),
+  ]);
+
+  const template = templateRes.data as
+    | {
+        name: string;
+        slug: string;
+        version: number;
+        blocks: TemplateBlock[];
+        metadata: { usage_kind?: string } & Record<string, unknown>;
+      }
+    | null;
+  if (!template) return { ok: false, error: "template_not_found" };
+  if (template.metadata.usage_kind !== "mandanten_report_teaser_v1") {
+    return { ok: false, error: "not_v8_template" };
+  }
+
+  const sessionMeta = (session.metadata ?? {}) as Record<string, unknown>;
+  const v8Snapshot = sessionMeta.v8_report_snapshot as V8ReportSnapshot | undefined;
+  if (!v8Snapshot) {
+    return { ok: false, error: "v8_snapshot_missing" };
+  }
+
+  const moduleNames: Partial<Record<ModulKey, string>> = {};
+  for (const block of template.blocks as unknown as Array<{
+    modul_id?: string;
+    name?: string;
+  }>) {
+    if (typeof block.modul_id === "string" && typeof block.name === "string") {
+      const key = block.modul_id.toLowerCase() as ModulKey;
+      moduleNames[key] = block.name;
+    }
+  }
+
+  const v8Input: V8RendererInput = {
+    snapshot: v8Snapshot,
+    mandant: {
+      name: (mandantTenantRes.data?.name as string) ?? "Ihr Unternehmen",
+      datum:
+        (session.updated_at as string)?.slice(0, 10) ??
+        new Date().toISOString().slice(0, 10),
+    },
+    moduleNames: moduleNames as Record<ModulKey, string>,
+    template: template as unknown as V8Template,
+  };
+
+  let pdfBuffer: Buffer;
+  try {
+    pdfBuffer = await renderMandantenReportV2Pdf(v8Input);
+  } catch (e) {
+    trackV8PdfRenderFailed(admin, captureSessionId, profile.tenant_id, e);
+    captureException(e, {
+      source: `${SOURCE}/download_pdf_v8`,
+      userId: user.id,
+      metadata: { capture_session_id: captureSessionId },
+    });
+    return { ok: false, error: "pdf_render_failed" };
+  }
+
+  const filename = `Strategaize-Diagnose-${new Date().toISOString().slice(0, 10)}.pdf`;
+
+  return {
+    ok: true,
+    pdfBase64: pdfBuffer.toString("base64"),
+    filename,
+  };
 }
