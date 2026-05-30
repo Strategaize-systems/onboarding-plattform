@@ -21,6 +21,7 @@ import { renderMandantenReportV2Pdf } from "../src/lib/pdf/mandanten-report-v2";
 import type { RendererInput } from "../src/lib/pdf/mandanten-report-v2";
 import type {
   HausaufgabeItem,
+  HebelItem,
   ModulKey,
   V8ReportSnapshot,
   V8StufenLookup,
@@ -57,6 +58,33 @@ const MOCK_HAUSAUFGABEN: HausaufgabeItem[] = [
   },
 ];
 
+const MOCK_HEBEL: HebelItem[] = [
+  {
+    modul_id: "m4",
+    modul_name: "Finanzen & Controlling",
+    score: 2,
+    stufe: 2,
+    empfehlung:
+      "Cashflow-Forecasts als monatliches Routine-Pflichtprogramm wieder einfuehren, Margen-Verantwortung pro Bereich dezentralisieren und ein einfaches Reporting (max 5 Kennzahlen) implementieren. In 6 Monaten erste Steuerungs-Faehigkeit, in 12 Monaten belastbar fuer Uebergabe-Gespraeche.",
+  },
+  {
+    modul_id: "m2",
+    modul_name: "Fuehrung & Nachfolge",
+    score: 2,
+    stufe: 2,
+    empfehlung:
+      "Mind. 2 Schluessel-Personen-Briefings pro Monat starten — Inhaber-Wissen sichtbar machen. Schritt-fuer-Schritt-Verlagerung der Top-10-Entscheidungen auf das Team. In 12 Monaten klare Nachfolge-Optionen identifizierbar.",
+  },
+  {
+    modul_id: "m6",
+    modul_name: "Produkt & Innovation",
+    score: 3,
+    stufe: 2,
+    empfehlung:
+      "KI-Use-Cases inventarisieren (Lead-Recherche, Angebots-Drafts, internes Wissens-Management). 2 Pilot-Use-Cases in 90 Tagen produktiv. Verantwortlichkeit fuer Daten-Pipelines explizit im Team verankern.",
+  },
+];
+
 const MOCK_SNAPSHOT: V8ReportSnapshot = {
   schemaVersion: 1,
   finalizedAt: "2026-05-15T14:30:00Z",
@@ -82,7 +110,7 @@ const MOCK_SNAPSHOT: V8ReportSnapshot = {
   stufenMapping: { m1: 4, m2: 2, m3: 3, m4: 2, m5: 5, m6: 2, m7: 4, m8: 3, m9: 3 },
   hausaufgaben: MOCK_HAUSAUFGABEN,
   reflexionen: [],
-  hebel: [],
+  hebel: MOCK_HEBEL,
 };
 
 const MOCK_MODULE_NAMES: Record<ModulKey, string> = {
@@ -222,6 +250,7 @@ async function main() {
   console.log("  Page 3  (Modul-Profil):  Wheel + 3x3 Legende");
   console.log("  Page 4..12 (Modul-Pages): m1..m9 mit fokussiertem Wheel + 3 Text-Sektionen");
   console.log("  Page 13 (Hausaufgaben):   3 Cards (1 nein, 2 teilweise) + Footer");
+  console.log("  Page 14 (Hebel):          3 Cards (Prio 1 rot, 2 amber, 3 brand) + Footer");
   console.log("");
   console.log("[smoke] Compare against:");
   console.log("  c:/strategaize/strategaize-dev-system/docs/curriculum/v2/MANDANTEN_REPORT_PROTOTYP.html");
