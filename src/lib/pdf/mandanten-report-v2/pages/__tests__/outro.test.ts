@@ -94,8 +94,8 @@ function makeRendererInput(): RendererInput {
 
 // ─── Tests ───
 
-describe("OutroPage Page 16 — Smoke-Render", () => {
-  it("renders 1 Page (only Page 16, Page 17 kommt in MT-4) to valid PDF Buffer", async () => {
+describe("OutroPage Page 16 + Page 17 — Smoke-Render", () => {
+  it("renders 2 Pages (Page 16 + Page 17) to valid PDF Buffer", async () => {
     const element = React.createElement(
       Document,
       {},
@@ -111,14 +111,28 @@ describe("OutroPage Page 16 — Smoke-Render", () => {
     expect(buf.length).toBeGreaterThan(500);
     expect(buf.subarray(0, 5).toString("latin1")).toBe("%PDF-");
 
-    // Page-Count = 1 via /Type /Page-Occurrences (vereinfacht). /Type /Pages
+    // Page-Count = 2 via /Type /Page-Occurrences (vereinfacht). /Type /Pages
     // ist der Parent-Container, NICHT zaehlbar.
     const pdfText = buf.toString("latin1");
     const pageMatches = pdfText.match(/\/Type\s*\/Page(?!s)/g) || [];
-    expect(pageMatches.length).toBe(1);
+    expect(pageMatches.length).toBe(2);
   }, 15_000);
 
-  it("renders all 3 Modul-Namen + Stufe-Badges via pdf-parse text extraction", async () => {
+  /**
+   * pdf-parse extrahiert hohe `letterSpacing`-Werte (>= 1.6pt) als
+   * literale Einzel-Spaces zwischen Buchstaben ("P O W E R E D   B Y").
+   * Visual ist OK, Test-Assertions normalisieren single-letter-sequences.
+   */
+  function normalize(text: string): string {
+    // Sequenzen wie "P O W E R E D" → "POWERED" (jeder Single-Letter mit
+    // genau einem Space davor wird gemerged).
+    const merged = text.replace(/\b[A-Z](?: [A-Z])+\b/g, (m) =>
+      m.replace(/ /g, ""),
+    );
+    return merged.replace(/\s+/g, " ");
+  }
+
+  it("Page 16 renders Vorstellung + 3 Modul-Namen + Stufe-Badges (pdf-parse)", async () => {
     const element = React.createElement(
       Document,
       {},
@@ -130,7 +144,7 @@ describe("OutroPage Page 16 — Smoke-Render", () => {
 
     const buf = await renderToBuffer(element);
     const parsed = await pdfParse(buf);
-    const text = parsed.text;
+    const text = normalize(parsed.text);
 
     expect(text).toContain("UEBER STRATEGAIZE");
     expect(text).toContain("Wir holen Sie ab");
@@ -141,4 +155,39 @@ describe("OutroPage Page 16 — Smoke-Render", () => {
     expect(text).toContain("AKTUELLE STUFE: 2/5");
     expect(text).toContain("AKTUELLE STUFE: 3/5");
   }, 15_000);
+
+  it("Page 17 renders Video-Box + CTA-Hero + Strategaize-Footer (pdf-parse)", async () => {
+    const element = React.createElement(
+      Document,
+      {},
+      React.createElement(OutroPage, {
+        input: makeRendererInput(),
+        augmentedHebel: makeAugmentedHebel(),
+      }),
+    );
+
+    const buf = await renderToBuffer(element);
+    const parsed = await pdfParse(buf);
+    const text = normalize(parsed.text);
+
+    // Video-Box
+    expect(text).toContain("WIE WIR ARBEITEN");
+    expect(text).toContain("Video folgt in Kuerze");
+    // CTA-Hero-Card
+    expect(text).toContain("NAECHSTER SCHRITT");
+    expect(text).toContain("Lassen Sie uns reden");
+    expect(text).toContain("MIT STRATEGAIZE SPRECHEN");
+    expect(text).toContain("innerhalb von 2 Werktagen");
+    // Strategaize-Brand-Footer
+    expect(text).toContain("POWERED BY");
+    expect(text).toContain("Uebergabefaehigkeits-Diagnose V8.1");
+    expect(text).toContain("RECHTLICHES");
+    expect(text).toContain("Datenschutz");
+    expect(text).toContain("Vertraulich");
+  }, 15_000);
+
+  it("CTA-Magic-Link defaults to SLC-163-placeholder when not provided", async () => {
+    const { CTA_PLACEHOLDER_URL } = await import("../outro");
+    expect(CTA_PLACEHOLDER_URL).toBe("#cta-magic-link-token-replaced-in-slc163");
+  });
 });

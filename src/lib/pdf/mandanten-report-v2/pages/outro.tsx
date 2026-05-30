@@ -18,19 +18,30 @@
 // (Border-Bottom = Strategaize-Akzent, groessere Cards, mehr Padding).
 
 import React from "react";
-import { Page, View, Text, StyleSheet } from "@react-pdf/renderer";
+import { Page, View, Text, Link, StyleSheet } from "@react-pdf/renderer";
 
 import { COLOR, SPACING } from "../theme";
 import type { RendererInput } from "../types";
 import type { AugmentOutput } from "@/lib/llm/v8-1-augmentation";
 
+/**
+ * SLC-163 ersetzt diesen Default-Wert mit einer signierten HMAC-Magic-Link-URL.
+ * Bis dahin rendert die CTA mit dem Placeholder — keine externe Aktion moeglich.
+ */
+export const CTA_PLACEHOLDER_URL = "#cta-magic-link-token-replaced-in-slc163";
+
 interface OutroPageProps {
   input: RendererInput;
   /** 3 Hebel-Bloecke mit LLM-augmentiertem Text (aus augmentEmpfehlungsText im Renderer). */
   augmentedHebel: AugmentOutput[];
+  /**
+   * Magic-Link-URL fuer den CTA-Button. SLC-163 injiziert hier den HMAC-Token.
+   * Default = CTA_PLACEHOLDER_URL fuer V8.1-Pre-SLC-163-Smoke-Tests.
+   */
+  magicLinkUrl?: string;
   /** Page-Nummer Page 16 (Hero + Cards). Default 16. */
   pageNumberHero?: number;
-  /** Page-Nummer Page 17 (Video + CTA + Footer). Default 17. MT-4 implementiert. */
+  /** Page-Nummer Page 17 (Video + CTA + Footer). Default 17. */
   pageNumberFooter?: number;
 }
 
@@ -172,12 +183,209 @@ const styles = StyleSheet.create({
     fontFamily: "JetBrains Mono",
     letterSpacing: 1,
   },
+
+  // ============ PAGE 17 (Video-Platzhalter + CTA + Strategaize-Footer) ============
+  pageFooterContainer: {
+    paddingTop: 56,
+    paddingHorizontal: 48,
+    paddingBottom: 56,
+    backgroundColor: COLOR.bgWhite,
+    color: COLOR.neutral800,
+    fontFamily: "Fraunces",
+    fontWeight: 400,
+    flexDirection: "column",
+  },
+
+  // Video-Platzhalter-Box (Strategaize-Brand-Box analog cta.tsx brandBlock)
+  videoBox: {
+    backgroundColor: COLOR.outro.videoBoxBg,
+    borderRadius: 12,
+    paddingVertical: SPACING.xl,
+    paddingHorizontal: SPACING.xl,
+    flexDirection: "column",
+    alignItems: "flex-start",
+    marginBottom: SPACING.lg,
+  },
+  videoBoxLogoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: SPACING.md,
+  },
+  videoBoxLogoBox: {
+    backgroundColor: COLOR.bgWhite,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    marginRight: 12,
+  },
+  videoBoxLogoText: {
+    fontSize: 11,
+    fontFamily: "Fraunces",
+    fontWeight: 700,
+    color: COLOR.neutral900,
+    letterSpacing: -0.3,
+  },
+  videoBoxLabel: {
+    fontSize: 9,
+    fontFamily: "JetBrains Mono",
+    fontWeight: 700,
+    color: COLOR.brandAccent,
+    letterSpacing: 1.8,
+  },
+  videoBoxTagline: {
+    fontSize: 16,
+    fontFamily: "Fraunces",
+    fontWeight: 700,
+    color: COLOR.bgWhite,
+    lineHeight: 1.3,
+    letterSpacing: -0.3,
+  },
+  videoBoxSubline: {
+    fontSize: 10,
+    fontFamily: "Fraunces",
+    color: COLOR.neutral300,
+    marginTop: 4,
+    lineHeight: 1.5,
+  },
+
+  // CTA-Hero-Card (brandPrimaryDark, analog V8.0-CtaPage heroCard)
+  ctaHeroCard: {
+    backgroundColor: COLOR.brandPrimaryDark,
+    borderRadius: 12,
+    paddingTop: SPACING.xl,
+    paddingBottom: SPACING.xl,
+    paddingHorizontal: SPACING.xl,
+    marginBottom: SPACING.lg,
+  },
+  ctaEyebrow: {
+    fontSize: 8,
+    fontFamily: "JetBrains Mono",
+    fontWeight: 700,
+    letterSpacing: 2.2,
+    color: COLOR.brandAccent,
+    marginBottom: SPACING.sm,
+  },
+  ctaTitle: {
+    fontSize: 22,
+    fontFamily: "Fraunces",
+    fontWeight: 700,
+    color: COLOR.bgWhite,
+    marginBottom: SPACING.sm,
+    lineHeight: 1.2,
+    letterSpacing: -0.3,
+  },
+  ctaBody: {
+    fontSize: 11,
+    lineHeight: 1.6,
+    color: COLOR.bgWhite,
+    opacity: 0.92,
+    maxWidth: 460,
+    marginBottom: SPACING.md,
+  },
+  ctaButton: {
+    backgroundColor: COLOR.brandAccent,
+    color: COLOR.brandPrimaryDark,
+    borderRadius: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    fontSize: 11,
+    fontFamily: "JetBrains Mono",
+    fontWeight: 700,
+    letterSpacing: 1.4,
+    textDecoration: "none",
+    alignSelf: "flex-start",
+    marginTop: 4,
+  },
+  ctaBestaetigung: {
+    fontSize: 9,
+    color: COLOR.bgWhite,
+    opacity: 0.8,
+    marginTop: SPACING.md,
+    fontFamily: "Fraunces",
+  },
+
+  // Strategaize-Brand-Footer (Copy-Adapt aus cta.tsx Page 17 brandBlock — Default
+  // per slice-spec R2: Copy-Adapt statt Refactor zu shared Component).
+  brandFooterBlock: {
+    backgroundColor: COLOR.neutral900,
+    borderRadius: 12,
+    paddingVertical: SPACING.lg,
+    paddingHorizontal: SPACING.xl,
+    flexDirection: "column",
+    alignItems: "flex-start",
+  },
+  brandFooterRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: SPACING.sm,
+  },
+  brandFooterLogoBox: {
+    backgroundColor: COLOR.bgWhite,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    marginRight: 12,
+  },
+  brandFooterLogoText: {
+    fontSize: 11,
+    fontFamily: "Fraunces",
+    fontWeight: 700,
+    color: COLOR.neutral900,
+    letterSpacing: -0.3,
+  },
+  brandFooterLabel: {
+    fontSize: 9,
+    fontFamily: "JetBrains Mono",
+    fontWeight: 700,
+    color: COLOR.bgWhite,
+    letterSpacing: 1.8,
+  },
+  brandFooterTagline: {
+    fontSize: 14,
+    fontFamily: "Fraunces",
+    fontWeight: 700,
+    color: COLOR.bgWhite,
+    marginBottom: 4,
+    letterSpacing: -0.2,
+    lineHeight: 1.2,
+  },
+  brandFooterSubline: {
+    fontSize: 9,
+    fontFamily: "Fraunces",
+    color: COLOR.neutral300,
+    lineHeight: 1.5,
+    maxWidth: 420,
+  },
+  brandFooterLegalBlock: {
+    marginTop: SPACING.md,
+    paddingTop: SPACING.sm,
+    borderTopWidth: 1,
+    borderTopStyle: "solid",
+    borderTopColor: COLOR.neutral200,
+    flexDirection: "column",
+    gap: 4,
+  },
+  brandFooterLegalEyebrow: {
+    fontSize: 7,
+    fontFamily: "JetBrains Mono",
+    fontWeight: 700,
+    letterSpacing: 1.8,
+    color: COLOR.neutral500,
+    marginBottom: 4,
+  },
+  brandFooterLegalLine: {
+    fontSize: 8,
+    color: COLOR.neutral600,
+    lineHeight: 1.5,
+  },
 });
 
 export function OutroPage({
   input,
   augmentedHebel,
+  magicLinkUrl = CTA_PLACEHOLDER_URL,
   pageNumberHero = 16,
+  pageNumberFooter = 17,
 }: OutroPageProps) {
   if (augmentedHebel.length !== 3) {
     throw new Error(
@@ -229,9 +437,79 @@ export function OutroPage({
         </View>
       </Page>
 
-      {/* ============ PAGE 17 (Video + CTA + Footer) — MT-4 ============ */}
-      {/* MT-4 wird hier Page 17 ergaenzen (Video-Platzhalter + CTA-Hero-Card
-          + Strategaize-Footer). Bis MT-4 rendert OutroPage nur 1 Page. */}
+      {/* ============ PAGE 17 (Video-Platzhalter + CTA-Hero + Strategaize-Footer) ============ */}
+      <Page size="A4" style={styles.pageFooterContainer}>
+        {/* Video-Platzhalter mit Strategaize-Brand-Visual */}
+        <View style={styles.videoBox}>
+          <View style={styles.videoBoxLogoRow}>
+            <View style={styles.videoBoxLogoBox}>
+              <Text style={styles.videoBoxLogoText}>StrategAIze</Text>
+            </View>
+            <Text style={styles.videoBoxLabel}>WIE WIR ARBEITEN</Text>
+          </View>
+          <Text style={styles.videoBoxTagline}>
+            Video folgt in Kuerze
+          </Text>
+          <Text style={styles.videoBoxSubline}>
+            Wir zeigen Ihnen, wie Strategaize Unternehmer-Uebergaben
+            begleitet — ohne Pricing-Druck, ohne Verkaufs-Logik.
+          </Text>
+        </View>
+
+        {/* CTA-Hero-Card mit Magic-Link-Button */}
+        <View style={styles.ctaHeroCard}>
+          <Text style={styles.ctaEyebrow}>NAECHSTER SCHRITT</Text>
+          <Text style={styles.ctaTitle}>
+            Lassen Sie uns reden — unverbindlich, ohne Pricing-Druck
+          </Text>
+          <Text style={styles.ctaBody}>
+            Strategaize meldet sich nach Ihrer Anfrage und stimmt mit Ihnen
+            einen Termin ab, in dem wir Ihre Diagnose gemeinsam durchgehen.
+            Kein Verkaufs-Druck, keine Pauschal-Antworten.
+          </Text>
+          <Link src={magicLinkUrl} style={styles.ctaButton}>
+            MIT STRATEGAIZE SPRECHEN
+          </Link>
+          <Text style={styles.ctaBestaetigung}>
+            Strategaize meldet sich innerhalb von 2 Werktagen.
+          </Text>
+        </View>
+
+        {/* Strategaize-Brand-Footer (Copy-Adapt aus cta.tsx) */}
+        <View style={styles.brandFooterBlock}>
+          <View style={styles.brandFooterRow}>
+            <View style={styles.brandFooterLogoBox}>
+              <Text style={styles.brandFooterLogoText}>StrategAIze</Text>
+            </View>
+            <Text style={styles.brandFooterLabel}>POWERED BY</Text>
+          </View>
+          <Text style={styles.brandFooterTagline}>
+            Uebergabefaehigkeits-Diagnose V8.1
+          </Text>
+          <Text style={styles.brandFooterSubline}>
+            Wir helfen Unternehmern, ihre Firma uebergabefaehig zu machen —
+            ueber Strategie, Fuehrung, Strukturen und Finanzen hinweg.
+          </Text>
+
+          <View style={styles.brandFooterLegalBlock}>
+            <Text style={styles.brandFooterLegalEyebrow}>RECHTLICHES</Text>
+            <Text style={styles.brandFooterLegalLine}>
+              Datenschutz: strategaize.de/datenschutz · Impressum:
+              strategaize.de/impressum
+            </Text>
+            <Text style={styles.brandFooterLegalLine}>
+              Vertraulich. Nur fuer den Mandanten bestimmt.
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.footer}>
+          <Text>
+            Strategaize Uebergabefaehigkeits-Diagnose V8.1 · {mandant.datum}
+          </Text>
+          <Text>SEITE {pageNumberFooter} · STRATEGAIZE</Text>
+        </View>
+      </Page>
     </>
   );
 }
