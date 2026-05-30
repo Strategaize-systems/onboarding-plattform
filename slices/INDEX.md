@@ -845,3 +845,29 @@ V8.0.1 = 1 Slice SLC-160, 5 Micro-Tasks, ~2-3h Code + ~1h /qa + Coolify-Redeploy
 
 ### V8.0.1 Execution Order
 MT-1 (Pre-Check Migration-Nummern + Funktions-Liste) zuerst → MT-2 + MT-3 + MT-4 parallel-ausfuehrbar → MT-5 (Quality-Gates + Apply-Live + Records) zuletzt.
+
+## V8.1 Slices (Lead-Conversion-Outro + Strategaize-Freigabe-CTA + Dual-Email-Trigger)
+
+V8.1 = 3 Slices SLC-161 + SLC-162 + SLC-163 (insgesamt 23 Micro-Tasks + MT-0 Worktree-Setup), ~10-14h Code-Side. Lead-Conversion-Erweiterung auf V8.0 RELEASED 2026-05-30 (REL-026). Cumulative-Single-Branch-Worktree `v8-1-lead-conversion` analog V8.0-Pattern (SaaS-Mode-Pflicht). **0 neue Migrations**, **0 neue Tabellen**, **0 neue Container**, **0 neue Dependencies**, 4 neue ENV-Variablen (1 Pflicht `STRATEGAIZE_CTA_TOKEN_SECRET`). Founder-Direktive 2026-05-29: "Vertrauen in uns und Bereitschaft mit uns zu reden steigern." Architektur via RPT-365: DEC-167..DEC-175 alle 9 Open Questions Q-V8.1-A..I durch. 3 Features FEAT-067 (Outro-Renderer PDF+Web) + FEAT-068 (CTA-Mechanik + Dual-Email-Trigger BD+StB) + FEAT-069 (LLM-Augmentation Bedrock Sonnet eu-central-1).
+
+| ID | Slice | Feature | Status | Priority | Created |
+|----|-------|---------|--------|----------|---------|
+| SLC-161 | [LLM-Augmentation Backend (Bedrock + Cache + Fallback)](SLC-161-llm-augmentation-backend.md) | FEAT-069 / BL-143 | planned | High | 2026-05-30 |
+| SLC-162 | [Outro-Renderer + V8.0-CtaPage-Replacement (PDF + Web)](SLC-162-outro-renderer-replacement.md) | FEAT-067 / BL-134 | planned | High | 2026-05-30 |
+| SLC-163 | [CTA-Mechanik + Dual-Email-Trigger + Master-Merge](SLC-163-cta-mechanism-dual-email.md) | FEAT-068 / BL-142 | planned | High | 2026-05-30 |
+
+### V8.1 Execution Order (strikt sequentiell, Begruendung)
+- **SLC-161 zuerst** (LLM-Augmentation Pure-Function liefert `augmentEmpfehlungsText` — Pre-Condition fuer SLC-162 Outro-Renderer-Integration)
+- **SLC-162 nach SLC-161** (Outro-Renderer konsumiert LLM-Output, ersetzt V8.0-CtaPage per DEC-170)
+- **SLC-163 zuletzt** (CTA-Mechanik braucht OutroPage mit CTA-Slot aus SLC-162 + Master-Merge + Coolify-Redeploy + Live-Smoke)
+- Reihenfolge fix: 161 → 162 → 163 (Hard-Dependency-Kette via ARCHITECTURE.md V8.1 Section)
+- **Worktree-Setup `v8-1-lead-conversion`** als SLC-161 MT-0 (Pre-Slice)
+- **Master-Merge** `v8-1-lead-conversion` → `main` in SLC-163 MT-10 nach Gesamt-V8.1-/qa PASS
+
+### V8.1 Pre-Slice User-Pflichten
+
+| Pflicht | Blockiert | Aktion |
+|---|---|---|
+| Strategaize-Vorstellungs-Text-Freigabe | SLC-162 MT-3 | Founder schreibt 2-3 Absaetze in Strategaize-Wir-Voice |
+| StB-Notification-Wording-Freigabe | SLC-163 MT-4 | Founder freigibt 4-Saetze-Body fuer DEC-169 neutral-informativ |
+| `STRATEGAIZE_CTA_TOKEN_SECRET` Produktions-Generation | SLC-163 MT-1 | `openssl rand -hex 64` + in Coolify-Resource-ENV setzen |

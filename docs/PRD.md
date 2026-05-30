@@ -2028,3 +2028,179 @@ Realistische Sessions: 1 Setup-Session (FEAT-063 Template-Seed) + 1-2 Score+UI-S
 
 ### Detail-Spec
 V8-Requirements-Completion-Report wird in dieser Session erstellt als RPT-348 (RPT-347 ist V7.7 Live-Smoke). Feature-Specs unter `/features/FEAT-063..066-*.md`. /architecture-Schritt klaert Q-V8-A..H und definiert /slice-planning-Vorbereitung.
+
+---
+
+## V8.1 — Lead-Conversion-Outro + Strategaize-Freigabe-CTA + Dual-Email-Trigger
+
+**Requirements-DONE 2026-05-30.** Anschluss an V8.0 RELEASED 2026-05-30 (REL-026, main HEAD `875e47d`).
+
+### Problem Statement
+
+Der V8.0-Mandanten-Report endet aktuell mit einer generischen CTA-Page (`src/lib/pdf/mandanten-report-v2/pages/cta.tsx`), die ein 60-Minuten-Folgegespraech mit dem StB-Kontakt-Slot (Fallback Strategaize) anbietet. Das ist visuell intakt, aber strukturell **nicht conversion-optimiert**:
+
+- Es gibt **keine explizite Strategaize-Vorstellung** im Bericht. Mandanten, die ueber StB-Co-Hosting auf die Plattform kommen, kennen die Strategaize-Marke nicht zwingend.
+- Es gibt **keine personalisierten Empfehlungen** als Pre-Selling-Element. Die 3-Strategie-Hebel-Page (Page 14) zeigt deterministische Stufen-Lookup-Texte, die fuer Diagnose stark sind, aber fuer Lead-Generierung zu generisch.
+- Es gibt **keinen klaren "Mit Strategaize sprechen"-Pfad** mit funktionaler Click-Mechanik. Mandanten muessen Strategaize manuell per Email kontaktieren oder warten, bis der StB es aktiviert.
+- Es gibt **keinen Trust-Building-Block** ueber "Wie wir arbeiten" (Video kommt V8.2+, aber Layout-Slot soll bereits V8.1 stehen).
+
+Founder-Direktive 2026-05-29: **"Vertrauen in uns und Bereitschaft mit uns zu reden steigern."**
+
+### Goal / Intended Outcome
+
+Erweiterung des V8.0-Berichts um eine **Lead-Conversion-Outro-Section** mit:
+1. Strategaize-Vorstellung 2-3 Absaetze (Wir-Voice, Trust-Building, KEIN Pricing).
+2. Drei personalisierte Empfehlungs-Cards basierend auf den 3 niedrigsten Modul-Stufen (selectThreeHebel-Reuse aus V8.0 SLC-148 MT-4), LLM-augmentiert via Bedrock Claude Sonnet eu-central-1, deterministischer Fallback bei LLM-Fail.
+3. Video-Block-Platzhalter (statischer Block ohne echtes Video — V8.1 reserviert den Layout-Slot, V8.2+ liefert echtes Video).
+4. CTA "Mit Strategaize sprechen" mit funktionalem Click-Handler:
+   - **PDF-Pfad**: Magic-Link mit HMAC-SHA256-Token zu `/strategaize-anfrage?token=<signed>`
+   - **Web-Pfad**: Server-Action direkt im V8-Web-Bericht (Session-basiert, kein Token)
+
+Bei CTA-Klick:
+- `capture_session.released_for_strategaize_review = true` Flag wird gesetzt (DEC-163 Flag existiert seit V8.0).
+- **Lead-Email** an Strategaize-BD-Inbox `bd@strategaizetransition.de` (ENV `STRATEGAIZE_BD_EMAIL`) — strukturierte Lead-Daten, landet in der Business-System-Pipeline via Email (loose-coupling, kein BS-API-Call in V8.1).
+- **StB-Partner-Notification** an `partner_organization.contact_email` — neutral-informativ ("Ihr Mandant X hat Kontakt zu Strategaize aufgenommen"), kein Glueckwunsch-Wording, KEIN Pricing.
+- Mandant sieht Bestaetigungs-Page "Strategaize meldet sich innerhalb von 2 Werktagen".
+
+Idempotenz Pflicht: Mehrfach-Klick fuehrt nicht zu doppelten Emails (Flag-Check als Idempotenz-Token).
+
+### Target Users
+
+**Primaer (V8.1)**
+- **StB-Mandant (tenant_admin unter partner_client)** — empfaengt V8.1-erweiterten Bericht, klickt CTA, wird Lead.
+- **Strategaize-BD-Team (extern, ueber bd@strategaizetransition.de + Business-System-Pipeline)** — empfaengt Lead-Emails, kontaktiert Mandanten innerhalb 2 Werktagen.
+- **Steuerberater (partner_admin)** — empfaengt StB-Notification ueber Mandant-Kontaktaufnahme, behaelt Transparenz.
+
+**Sekundaer**
+- **Strategaize-Founder (Test-Mandant)** — Smoke-Test der Dual-Email-Mechanik nach Live-Schaltung.
+
+### Scope
+
+#### V8.1 In Scope
+
+1. **FEAT-067 Lead-Conversion-Outro-Renderer (PDF + Web-Bericht)** — 4-Block-Layout (Strategaize-Vorstellung + 3 Empfehlungs-Cards + Video-Platzhalter + CTA-Slot). Distribution in PDF (@react-pdf v4 Pages) und V8-Web-Bericht (React-Component). Pflicht-Reuse V8.0-Theme + selectThreeHebel-Output.
+
+2. **FEAT-068 Strategaize-Freigabe-CTA + Dual-Email-Trigger** — HTTP-GET `/strategaize-anfrage` Endpoint (Magic-Link-Eintritt mit HMAC-SHA256-Token-Validation) + Server-Action `triggerStrategaizeFreigabe` (Web-Pfad). Beide setzen Flag + senden Lead-Email an BD-Inbox + StB-Partner-Notification. Bestaetigungs-Page nach erfolgreichem Klick. Idempotenz ueber Flag-Check.
+
+3. **FEAT-069 LLM-Augmentation der 3 Empfehlungs-Texte** — Bedrock Claude Sonnet eu-central-1 (Pflicht via `.claude/rules/data-residency.md`). Caching pro `capture_session.metadata.v8_1_llm_augmentation_cache`. Deterministischer Fallback bei LLM-Fail (Timeout, Cost-Cap, Tonality-Drift). Cost-Cap ~$0.02/Session, Hard-Cap $0.05/Session. Audit-Trail via `ai_cost_ledger`.
+
+4. **Tonality-Audit-Erweiterung** — bestehendes Skript `scripts/tonalitaet-audit-v8.mjs` erweitert um V8.1-Outro-Scope (LLM-Output + statische Texte). Blacklist-Patterns: "ich" als Pronomen, "mein Team", "der Founder", Pricing-Begriffe, "Empfehlung Ihres Steuerberaters".
+
+5. **Neue ENV-Variablen**
+   - `STRATEGAIZE_BD_EMAIL` (Default `bd@strategaizetransition.de`)
+   - `STRATEGAIZE_CTA_TOKEN_SECRET` (Pflicht, Production-Generation, min 64 Zeichen)
+   - `STRATEGAIZE_CTA_TOKEN_EXPIRY_DAYS` (Default 90)
+   - `BEDROCK_V8_1_MODEL_ID` (optional, Default aktuelles Sonnet)
+
+6. **Audit-Trail** — Trigger-Events (Magic-Link vs Web-Action, Token-Validity, Email-Sent-Status BD + StB, Idempotency-Hit) werden geloggt fuer Founder-Sichtbarkeit + Post-Launch-Analyse.
+
+#### V8.1 Out of Scope (explizit)
+
+- **Echtes Video** — V8.1 reserviert den Layout-Slot mit Strategaize-Brand-Box, V8.2+ liefert das Video.
+- **Pricing-Hinweise im Bericht** — explizit nie, in keiner Variante. Pricing kommt erst nach persoenlichem Gespraech.
+- **Multi-Lead-Routing per Partner-Segment** (z.B. White-Label-Partner-Vertrieb statt Strategaize-BD) — V8.2+.
+- **Direkte BS-API-Integration** (HTTP-POST an BS-Lead-Endpoint statt Email-Inbox-Forwarding) — V8.2+. V8.1 nutzt loose-coupling via Email an `bd@strategaizetransition.de`, BS-Side parst.
+- **A/B-Testing der Outro-Variante** — V8.2+ (FEAT-058 Diagnose-Funnel-Telemetrie ist Daten-Foundation).
+- **Re-Send-Button** (Mandant kann CTA nicht doppelt triggern) — Idempotenz ueber Flag in V8.1, V8.2+ wenn Re-Send-Use-Case auftaucht.
+- **StB-Partner-Notification-Customization** (Tonalitaet pro Partner-Org) — V8.1 nutzt eine zentrale Tonalitaet.
+- **Mehrsprachige Outro-Variante** (NL/EN) — V8.2+.
+- **CAPTCHA / Anti-Spam** auf Magic-Link-Endpoint — V8.2+ wenn Spam-Welle.
+- **Calendar-Integration** (Folgegespraech-Termin direkt buchbar) — V8.2+, entspricht aktuell Founder-Direktive "kein Pricing-Druck".
+- **LLM-Augmentation der V8.0-Modul-Pages** (Pages 4-12) — bleibt deterministisch (DEC-159..161 V8.0).
+- **LLM-Augmentation der Strategaize-Vorstellungs-Absaetze** — statisch, redaktionell.
+- **LLM-Augmentation des CTA-Hero-Wordings** — statisch, redaktionell.
+- **LLM-Augmentation der StB-Notification + BD-Lead-Email-Bodies** — statisch, strukturiert.
+- **Interner Bedarfs-Mapping-Adminbericht** — eigene Discovery BL-135, kein V8.1-Scope.
+- **Founder-Voice-Variante** — Default Strategaize-Wir-Voice, kein Hybrid in V8.1.
+
+### Core Features (V8.1)
+
+| ID | Feature | Zweck |
+|----|---------|-------|
+| FEAT-067 | Lead-Conversion-Outro-Renderer (PDF + Web-Bericht) | 4-Block-Layout: Strategaize-Vorstellung + 3 Empfehlungs-Cards + Video-Platzhalter + CTA-Slot. Distribution in PDF (@react-pdf v4) und V8-Web-Bericht (React-Component). |
+| FEAT-068 | Strategaize-Freigabe-CTA + Dual-Email-Trigger | HMAC-SHA256-Magic-Link (PDF) + Server-Action (Web). Setzt Flag + sendet Lead-Email an BD-Inbox + StB-Partner-Notification. Idempotenz ueber Flag-Check. |
+| FEAT-069 | LLM-Augmentation der 3 Empfehlungs-Texte | Bedrock Claude Sonnet eu-central-1. Cache per capture_session. Deterministischer Fallback. Cost-Cap. Tonality-Validation. |
+
+Detail-Specs pro Feature unter `/features/FEAT-067..069-*.md`.
+
+### Constraints
+
+#### Pflicht-Reuse (kein Neubau)
+- **V8.0-Theme + Renderer-Foundation** (`src/lib/pdf/mandanten-report-v2/theme.ts` + bestehende Page-Components)
+- **selectThreeHebel Pure-Function** (existiert seit SLC-148 MT-4 in `src/lib/sui-engine`)
+- **Bedrock-Adapter eu-central-1** (etabliert seit V2, V6.3, bewaehrt)
+- **IONOS-SMTP-Adapter** (V4.2 + V7.2 `sendDiagnoseReportByEmail` Pattern)
+- **Magic-Link-Token-Pattern** (V7 Self-Signup-Verify-Endpoint nutzt aehnliches HMAC-Pattern — pruefen vor Neu-Implementierung)
+- **partner_organization.contact_email** (Pflicht-Feld seit V6 Migration 090)
+- **DEC-163 released_for_strategaize_review Flag** (existiert seit V8.0 SLC-148 MT-2)
+- **ai_cost_ledger Tabelle** (existiert seit V6, V6.3-Hotfix-Migration 095 hat Constraint-Erweiterung gemacht)
+- **Tonality-Audit-Skript** (existiert seit SLC-148 MT-7, V8.1 erweitert es)
+
+#### Pflicht-Tonalitaet
+- **Strategaize-Wir-Voice** durchgehend (Default V8-Tonalitaet, NICHT Founder-Voice).
+- **Neutral-informativ** fuer StB-Notification (KEIN Glueckwunsch, KEIN Pricing, KEIN Wettbewerb).
+- **Strukturiert** fuer BD-Lead-Email (BS-Pipeline-Parser-faehig).
+- **Verkaufsorientiert ohne Pricing-Druck** fuer 3 LLM-augmentierte Empfehlungen.
+
+#### Pflicht-Sicherheit
+- **HMAC-SHA256-Token** mit min 64-Zeichen-Secret + Expiry-Strict-Check.
+- **Idempotenz** ueber Flag-Check verhindert Email-Spam bei Mehrfach-Klick.
+- **DSGVO**: Lead-Email + StB-Notification enthalten PII — beide Empfaenger (bd@strategaizetransition.de + StB-Adresse) sind etablierte Strategaize-/Partner-Kanaele.
+- **Data-Residency**: Bedrock eu-central-1 Pflicht, IONOS-SMTP EU-DE Pflicht.
+
+### Risks / Assumptions
+
+- **R1** — Strategaize-Vorstellungs-Text muss redaktionell vom Founder freigegeben werden vor Render-Implementierung. Ohne freigegebenen Text kann kein Smoke-PDF generiert werden. (Pre-Slice-Aufgabe in /slice-planning V8.1.)
+- **R2** — BS-Inbox-Parser-Existenz unklar. V8.1 nutzt strukturierte Email-Body (HTML + Plain), falls BS-Parser noch nicht existiert: Email landet im BD-Posteingang und wird manuell prozessiert (akzeptabel als V8.1-Fallback).
+- **R3** — StB-Partner-Notification kann als unwillkommen wahrgenommen werden. Wording muss vom Founder freigegeben werden vor Live-Schaltung.
+- **R4** — PDF-Magic-Link-Token in einem PDF-Anhang ist nicht Single-Use. Mandant koennte Link an Wettbewerber weiterleiten. Risk-Akzeptanz fuer V8.1 (V8.2+ koennte Single-Use ergaenzen).
+- **R5** — LLM-Latency 3-8s pro Call x 3 Calls = potentiell 24s bei PDF-First-Render. Caching mitigates. /architecture entscheidet sync vs async-Render-Path.
+- **R6** — V8.0-CTA-Page-Position-Kollision (Co-Existenz vs Replacement) — /architecture Q-V8.1-E muss entscheiden.
+- **A1** — V8.0 LIVE und 18-24h-Beobachtungs-Window laeuft (bis ~2026-05-31 08:37 UTC). selectThreeHebel-Output ist im V8.0-`report_snapshot` cached und reusable.
+- **A2** — partner_organization.contact_email ist seit V6 Pflicht-Feld — Annahme: alle aktiven Partner haben es gesetzt.
+- **A3** — Bedrock Claude Sonnet eu-central-1-Adapter existiert seit V2 und ist V6.3-tested.
+- **A4** — IONOS-SMTP Adapter + V7.2 sendDiagnoseReportByEmail Pattern sind etabliert und V7.2 LIVE seit ~2 Wochen.
+
+### Success Criteria
+
+- SC-V8.1-1: V8.1-Outro rendert im PDF und V8-Web-Bericht mit allen 4 Bloecken (Strategaize-Vorstellung + 3 Empfehlungs-Cards + Video-Platzhalter + CTA-Slot).
+- SC-V8.1-2: Bei CTA-Klick (PDF-Magic-Link oder Web-Action) wird `released_for_strategaize_review = true` Flag gesetzt.
+- SC-V8.1-3: Lead-Email an `bd@strategaizetransition.de` wird gesendet mit strukturierten Lead-Daten.
+- SC-V8.1-4: StB-Partner-Notification an `partner_organization.contact_email` wird gesendet mit neutral-informativer Tonalitaet.
+- SC-V8.1-5: Mehrfach-Klick fuehrt zu keinem doppelten Email-Versand.
+- SC-V8.1-6: LLM-Augmentation der 3 Empfehlungs-Texte funktioniert via Bedrock Claude Sonnet eu-central-1 mit deterministischem Fallback bei Fail.
+- SC-V8.1-7: Tonality-Audit-Skript erweitert um V8.1-Scope: 0 Treffer auf Blacklist im Smoke-Run.
+- SC-V8.1-8: Strategaize-Founder-Smoke-Test (Founder-eigene Diagnose triggert CTA): BD-Email kommt an, StB-Notification kommt an, Bestaetigungs-Page rendert.
+- SC-V8.1-9: Smoke-PDF-Output-Pages stimmen mit /architecture-Plan-Decision Q-V8.1-E (Replacement vs Co-Existence) ueberein.
+- SC-V8.1-10: Audit-Trail-Eintraege existieren pro Trigger-Event.
+
+### Open Questions (fuer /architecture V8.1)
+
+- **Q-V8.1-A — LLM-Caching-Strategie**: pro capture_session (Default-Vorschlag, analog V8.0 report_snapshot) oder pro (capture_session + model_id + prompt_version)-Tuple? Cache-Invalidation-Strategy bei Modell-Update?
+- **Q-V8.1-B — PDF-Magic-Link-Token-Expiry**: 90 Tage (analog Diagnose-Bericht-Gueltigkeit) oder unbeschraenkt? Single-Use ja/nein in V8.1?
+- **Q-V8.1-C — Lead-Email-Format an BD-Inbox**: strukturierter JSON-Block im HTML-Comment (fuer BS-Parser-Maschinen-Lesbarkeit) oder rein semantisches HTML (BS parst per ML)?
+- **Q-V8.1-D — StB-Notification Tonalitaet + Fallback**: neutral-informativ wie spec oder Glueckwunsch-Voice? Default Empfehlung: neutral-informativ. Plus Fallback-Verhalten wenn `contact_email` leer (silent-skip oder Error?).
+- **Q-V8.1-E — Outro-Position im PDF**: vor V8.0-CtaPage (16-17), ersetzt CtaPage komplett, oder eingewoben in CtaPage? Wenn ersetzt: was passiert mit V8.0-Folgegespraech-CTA-Block?
+- **Q-V8.1-F — Empfehlungs-Block-Visual-Style**: analog V8.0-Hebel-Block (Page 14 Drei-Spalten/Cards) oder neuer Verkaufs-Style (groesseres Visual pro Card, prominenter CTA)?
+- **Q-V8.1-G — Token-State-Speicherung**: separate `cta_token` Tabelle oder Stateless via HMAC-Self-Validation (kein DB-Lookup)?
+- **Q-V8.1-H — LLM-Sync-vs-Async-Render**: synchron im PDF-Render-Path (User wartet 24s bei First-Render) oder asynchron via Worker-Job (PDF zeigt deterministische Fallbacks, Cache wird async populated, naechstes Render zeigt LLM-Output)?
+- **Q-V8.1-I — Modell-Version-Konfiguration**: hardcoded oder ENV-getrieben? Aktualisierungs-Path bei neuem Sonnet-Release?
+
+### Delivery Mode
+
+**SaaS Product** — unveraendert. Strengste TDD-Disziplin (Token-Generation + Email-Versand-Pfad). Mandatory atomic commits pro Micro-Task ([[git-release]] Rule).
+
+### Slice-Sketch (vorlaeufig, /architecture + /slice-planning entscheiden)
+
+Geschaetzt **3 Slices, ~2-3 Sessions** ueber 1-2 Wochen Implementations-Zeit. Cumulative-Single-Branch-Worktree analog V8.0-Pattern empfohlen.
+
+- **SLC-V8.1-A (geplant) — FEAT-067 + FEAT-069 Backend**: LLM-Adapter-Setup + augmentEmpfehlungsText Pure-Function + Caching-Schema in capture_session.metadata + Bedrock-Smoke-Test gegen Coolify-DB. Deterministischer Fallback. Audit-Trail via ai_cost_ledger.
+- **SLC-V8.1-B (geplant) — FEAT-067 Rendering (PDF + Web)**: Outro-Section in PDF (@react-pdf v4 Pages in `src/lib/pdf/mandanten-report-v2/pages/outro.tsx`) + V8-Web-Bericht-Section (`src/app/dashboard/diagnose/[id]/V8OutroSection.tsx`). Visual-Konsistenz beider Pfade. Tonality-Audit-Skript-Erweiterung.
+- **SLC-V8.1-C (geplant) — FEAT-068 CTA-Mechanik + Dual-Email**: Magic-Link-Token-Generierung + `/strategaize-anfrage` Endpoint + Web-Server-Action + Dual-Email-Versand BD + StB + Bestaetigungs-Page + Idempotenz + Audit-Trail. ENV-Variablen-Setup. Live-Smoke gegen Founder-Test-Diagnose.
+
+Reihenfolge SLC-V8.1-A vor SLC-V8.1-B (LLM-Output braucht es im Renderer), SLC-V8.1-B vor SLC-V8.1-C (CTA braucht funktionalen Renderer als Trigger-Slot).
+
+Realistische Sessions: 1 LLM-Backend-Session + 1 Renderer-Session + 1 CTA-Mechanik-Session.
+
+### Detail-Spec
+V8.1-Requirements-Completion-Report wird in dieser Session erstellt als RPT-364. Feature-Specs unter `/features/FEAT-067..069-*.md`. /architecture-Schritt klaert Q-V8.1-A..I und definiert /slice-planning V8.1-Vorbereitung.

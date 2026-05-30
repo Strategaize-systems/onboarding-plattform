@@ -7401,3 +7401,338 @@ Pattern-Reuse-Quote ueber Strategaize-Repos (per `feedback_strategaize_pattern_r
 - V1 capture_session + capture_response + block_checkpoint — voll genutzt
 
 **Naechster Schritt: /slice-planning V8** — SLC-148..152 Slice-Files anlegen mit Micro-Task-Decomposition + Acceptance-Criteria-Matrizen + Aufwand-Schaetzung pro MT. Pre-Conditions fuer V8-Code-Start: V7.7 /post-launch STABLE-Bestaetigung (~2026-05-29 16:30 UTC Window-Ende).
+
+---
+
+## V8.1 Architecture Addendum — Lead-Conversion-Outro + Strategaize-Freigabe-CTA + Dual-Email-Trigger (RPT-365, 2026-05-30)
+
+### Context
+
+V8.1 setzt auf V8.0 RELEASED 2026-05-30 (REL-026, main HEAD `875e47d`) auf. V8.1 ist keine neue Capture-Pipeline und kein neuer Template-Switch — V8.1 ist eine **Outro-Erweiterung** des V8.0-Mandanten-Report-Renders + neue **CTA-Click-Mechanik** + neue **LLM-Augmentation-Schicht**. Drei FEATures FEAT-067 (Outro-Renderer PDF + Web) + FEAT-068 (CTA-Mechanik + Dual-Email-Trigger) + FEAT-069 (LLM-Augmentation Bedrock eu-central-1).
+
+Alle 9 Open Questions Q-V8.1-A..I aus /requirements RPT-364 sind durch via DEC-167..DEC-175 entschieden.
+
+### Architecture Summary
+
+V8.1 fuegt drei Schichten zu V8.0 hinzu:
+
+1. **LLM-Augmentation-Adapter** (`src/lib/llm/v8-1-augmentation/`) — neuer Schicht ueber bestehendem Bedrock-Adapter. Pure-Function `augmentEmpfehlungsText(input)` + Cache-Layer + Tonality-Validation + ai_cost_ledger-Audit. Sync-Aufruf im PDF-Render-Path (DEC-174). Cache per Tuple `{capture_session_id + model_id + prompt_version}` (DEC-167) in `capture_session.metadata.v8_1_llm_augmentation_cache` JSONB-Slot (Schema bereits aus V8.0 DEC-165 vorhanden, **0 neue Migrations**).
+
+2. **Outro-Renderer** (`src/lib/pdf/mandanten-report-v2/pages/outro.tsx` + `src/app/dashboard/diagnose/[id]/V8OutroSection.tsx`) — ersetzt V8.0-CtaPage (DEC-170) komplett. PDF bleibt 17 Seiten total (Pages 1-15 V8.0 unveraendert, Pages 16-17 = V8.1-Outro-2-Page-Section). Vier Bloecke pro Outro: Strategaize-Vorstellung (statisch, redaktionell) + 3 Empfehlungs-Cards (Verkaufs-Style per DEC-171, LLM-augmentiert) + Video-Platzhalter (statisch) + CTA-Slot.
+
+3. **CTA-Trigger-Mechanik** (`src/app/strategaize-anfrage/route.ts` + `src/app/strategaize-anfrage/bestaetigung/page.tsx` + Server-Action `triggerStrategaizeFreigabe`) — HMAC-SHA256-Magic-Link (PDF) + Server-Action (Web). Stateless Token-Validation (DEC-173, **keine cta_token-Tabelle**). Idempotenz ueber `capture_session.released_for_strategaize_review`-Flag (DEC-163 existiert seit V8.0). Dual-Email-Versand: Lead an `bd@strategaizetransition.de` (JSON+HTML per DEC-168) + StB-Partner-Notification (neutral-informativ per DEC-169, silent-skip bei leerem contact_email).
+
+### Main Components
+
+#### Component-Diagram (textuell)
+
+```
++--------------------------------------------------------------+
+| V8.1 Outro-Section Renderer (Sync-Path)                      |
+|                                                              |
+|  +-------------------+    +---------------------------+      |
+|  | augmentEmpfehlungs|<-->| BEDROCK eu-central-1      |      |
+|  | Text (Pure-Fn)    |    | Claude Sonnet 3.5         |      |
+|  +-------------------+    +---------------------------+      |
+|         |   ^                                                |
+|         v   | Cache-Read/Write                               |
+|  +-------------------+                                       |
+|  | capture_session   |                                       |
+|  | .metadata.v8_1_   |                                       |
+|  | llm_augmentation_ |                                       |
+|  | cache (JSONB)     |                                       |
+|  +-------------------+                                       |
+|         |                                                    |
+|         v                                                    |
+|  +-------------------+    +---------------------------+      |
+|  | renderOutroSection|--->| @react-pdf v4 / Web-React |      |
+|  | (PDF + Web)       |    +---------------------------+      |
+|  +-------------------+                                       |
++--------------------------------------------------------------+
+                       |
+                       v Mandant erhaelt PDF
++--------------------------------------------------------------+
+| V8.1 CTA-Trigger-Mechanik                                    |
+|                                                              |
+|  PDF-Klick: GET /strategaize-anfrage?token=<HMAC>            |
+|  Web-Klick: Server-Action triggerStrategaizeFreigabe()       |
+|         |                                                    |
+|         v                                                    |
+|  +-------------------+                                       |
+|  | verifyToken (PDF) | -- HMAC-Check + Expiry                |
+|  | or auth.users (Web)|                                      |
+|  +-------------------+                                       |
+|         |                                                    |
+|         v                                                    |
+|  +-------------------+                                       |
+|  | Idempotency-Check |  flag==true?  --> Skip-Emails         |
+|  | (Flag-Check)      |                                       |
+|  +-------------------+                                       |
+|         |                                                    |
+|         v                                                    |
+|  +-------------------+                                       |
+|  | UPDATE flag=true  |                                       |
+|  +-------------------+                                       |
+|         |                                                    |
+|         +-->+----------------------+                         |
+|         |   | sendBdLeadEmail()    | --> bd@strategaize-     |
+|         |   | (JSON+HTML)          |     transition.de       |
+|         |   +----------------------+                         |
+|         |                                                    |
+|         +-->+----------------------+                         |
+|         |   | sendStbNotification()| --> partner.contact_    |
+|         |   | (neutral-informativ) |     email OR silent-skip|
+|         |   +----------------------+                         |
+|         |                                                    |
+|         v                                                    |
+|  +-------------------+                                       |
+|  | Redirect to       |                                       |
+|  | /strategaize-     |                                       |
+|  | anfrage/          |                                       |
+|  | bestaetigung      |                                       |
+|  +-------------------+                                       |
++--------------------------------------------------------------+
+```
+
+#### Component Responsibilities
+
+| Component | Path | Responsibility |
+|---|---|---|
+| `augmentEmpfehlungsText` Pure-Function | `src/lib/llm/v8-1-augmentation/augment.ts` | Bedrock-Call + Tonality-Post-Validation + Word-Count-Check + Fallback-Auswahl |
+| `v8-1-augmentation-cache` Module | `src/lib/llm/v8-1-augmentation/cache.ts` | Read/Write capture_session.metadata.v8_1_llm_augmentation_cache, Tuple-Key-Match |
+| `prompt.ts` Module | `src/lib/llm/v8-1-augmentation/prompt.ts` | System-Prompt + V8_1_PROMPT_VERSION-Konstante + Tonality-Vorgabe |
+| `OutroPage` PDF-Component | `src/lib/pdf/mandanten-report-v2/pages/outro.tsx` | 4-Block-Layout in @react-pdf v4: Strategaize-Vorstellung + 3 Empfehlungs-Cards + Video-Platzhalter + CTA-Slot |
+| `V8OutroSection` React-Component | `src/app/dashboard/diagnose/[id]/V8OutroSection.tsx` | Web-Bericht-Variante, Tailwind + shadcn/ui, Style Guide V2 konform |
+| `generateCtaMagicLinkToken` Pure-Function | `src/lib/cta/token.ts` | HMAC-SHA256 + Payload + Expiry (90 Tage Default per DEC-172) |
+| `verifyCtaMagicLinkToken` Pure-Function | `src/lib/cta/token.ts` | HMAC-Check + Expiry-Strict-Check |
+| `/strategaize-anfrage` Route Handler | `src/app/strategaize-anfrage/route.ts` | GET-Handler: Token-Verify + Flag-Set + Dual-Email + Redirect-to-Bestaetigung |
+| `triggerStrategaizeFreigabe` Server-Action | `src/app/dashboard/diagnose/[id]/actions.ts` | Web-Pfad: Auth-Check + Flag-Set + Dual-Email + Bestaetigungs-Redirect |
+| `sendBdLeadEmail` Function | `src/lib/email/v8-1/bd-lead.ts` | Email-Template + IONOS-SMTP-Send an `bd@strategaizetransition.de` |
+| `sendStbPartnerNotification` Function | `src/lib/email/v8-1/stb-notification.ts` | Email-Template (neutral-informativ DEC-169) + IONOS-SMTP-Send an `partner_organization.contact_email` |
+| `/strategaize-anfrage/bestaetigung` Page | `src/app/strategaize-anfrage/bestaetigung/page.tsx` | Statische Bestaetigungs-Page, Strategaize-Wir-Voice |
+
+### Data Model / Storage Direction
+
+**Keine neuen Tabellen, keine neuen Migrationen.** Reuse-Pattern:
+
+- `capture_session.metadata.v8_1_llm_augmentation_cache` JSONB-Slot (DEC-165-Schema aus V8.0 vorhanden)
+- `capture_session.released_for_strategaize_review` BOOL (DEC-163-Schema aus V8.0 vorhanden)
+- `partner_organization.contact_email` TEXT (V6 Migration 090 vorhanden)
+- `ai_cost_ledger` Tabelle (V6+, Constraint-Erweiterung V6.3 Migration 095 vorhanden — V8.1-Eintraege passen rein)
+- `error_log` Tabelle (V1.1 vorhanden, V8.1-Audit-Eintraege mit `category` in `cta_strategaize_freigabe`, `stb_notification_skipped_no_email`, `v8_1_llm_call`)
+
+**JSONB-Cache-Struktur**:
+
+```jsonc
+// capture_session.metadata.v8_1_llm_augmentation_cache
+{
+  "cache_key": "anthropic.claude-3-5-sonnet-20241022-v2:0|v1",
+  "augmented_at": "2026-05-30T08:37:00Z",
+  "hebel": [
+    {
+      "modul_name": "Modul 4 — Operative Skalierbarkeit",
+      "modul_id": 4,
+      "aktuelle_stufe": 2,
+      "text": "...",
+      "is_llm_augmented": true,
+      "token_count": { "input": 812, "output": 94 },
+      "cost_usd": 0.0067
+    }
+    // 2 weitere Hebel...
+  ]
+}
+```
+
+### Data Flow / Request Flow
+
+#### Flow 1: PDF-Erzeugung mit V8.1-Outro (Mandant klickt "Bericht herunterladen")
+
+1. User-Action triggert PDF-Render
+2. `renderMandantenReportV2Pdf(capture_session)` startet
+3. Pages 1-15 (V8.0) werden gerendert (deterministisch, unveraendert)
+4. **V8.1-Outro-Render startet** — Cache-Check: matched `cache_key` in `capture_session.metadata.v8_1_llm_augmentation_cache` mit aktuellem `BEDROCK_V8_1_MODEL_ID` + `V8_1_PROMPT_VERSION`?
+   - **Hit**: Cached Texte werden in Pages 16-17 gerendert. Instant.
+   - **Miss**: 3 sequentielle Bedrock-Calls (~24s Total) mit Tonality-Post-Validation. Erfolgreiche Texte werden gecached. Fail/Timeout → deterministischer Fallback aus V8.0-stufen_lookup. ai_cost_ledger-Entry pro Call.
+5. PDF-Output an Mandant + Token-Generierung fuer CTA-Magic-Link
+6. PDF-Buffer wird an Email-Adapter weitergereicht (V8.0-Pipeline) oder als Download geliefert
+
+#### Flow 2: CTA-Klick im PDF (Magic-Link)
+
+1. Mandant klickt CTA-Button "Mit Strategaize sprechen" in PDF
+2. Browser oeffnet `https://onboarding.strategaizetransition.com/strategaize-anfrage?token=<HMAC>`
+3. Route-Handler `route.ts` GET-Handler:
+   - `verifyCtaMagicLinkToken(token)` → Pure HMAC-Check + Expiry-Strict
+   - **Invalid/Expired**: Error-Page mit StB-Kontakt-Hinweis. Audit-Log mit category `cta_invalid_token`.
+   - **Valid**: weiter zu 4.
+4. DB-Read: `capture_session.released_for_strategaize_review` Status
+   - **Already true**: Idempotency-Hit. Audit-Log `cta_idempotent_skip`. Redirect to Bestaetigungs-Page.
+   - **False**: weiter zu 5.
+5. DB-Update: `released_for_strategaize_review = true`
+6. Parallel Email-Sends (Promise.allSettled):
+   - `sendBdLeadEmail()` → bd@strategaizetransition.de (JSON+HTML per DEC-168)
+   - `sendStbPartnerNotification()` → `partner.contact_email` ODER silent-skip
+7. Audit-Log mit category `cta_strategaize_freigabe` (Source `pdf_magic_link`, Token-Validity, BD-Sent, StB-Sent oder StB-Skipped-No-Email)
+8. Redirect zu `/strategaize-anfrage/bestaetigung`
+
+#### Flow 3: CTA-Klick im Web-Bericht (Server-Action)
+
+1. Mandant klickt CTA-Button im V8-Web-Bericht (`/dashboard/diagnose/[id]`)
+2. Server-Action `triggerStrategaizeFreigabe(capture_session_id)` startet
+3. Auth-Check: Session-User muss Mandant der capture_session sein ODER strategaize_admin
+4. Idempotency + Flag-Update + Dual-Email + Audit-Log (analog Flow 2 Schritte 4-7)
+5. Server-Side-Redirect zu `/strategaize-anfrage/bestaetigung`
+
+### External Dependencies / Integrations
+
+#### Strategaize-Pattern-Reuse Pflicht (alle existent)
+
+| Service | Reuse-Pfad | V8.1-Nutzung |
+|---|---|---|
+| AWS Bedrock (eu-central-1) | `src/lib/llm/bedrock-client.ts` | LLM-Augmentation 3 Calls pro First-Render |
+| IONOS-SMTP | `src/lib/email/smtp/ionos.ts` | Dual-Email-Versand BD + StB |
+| Supabase Postgres (Coolify) | `src/lib/supabase/server.ts` | capture_session-Read/Update + ai_cost_ledger + error_log |
+| HMAC-Token-Pattern | V7 Self-Signup-Verify-Endpoint | generateCtaMagicLinkToken/verifyCtaMagicLinkToken portieren |
+| Markdown→HTML | `remark` + `remark-html` (V7.2) | BD-Lead-Email JSON-Block + HTML-Body |
+
+**Keine neuen externen Dependencies.** Keine neuen npm-Pakete. 0 Bundle-Risk.
+
+#### Neue ENV-Variablen
+
+| ENV-Variable | Default | Pflicht | Zweck |
+|---|---|---|---|
+| `STRATEGAIZE_BD_EMAIL` | `bd@strategaizetransition.de` | Nein | BD-Lead-Email Empfaenger (Override pro Environment moeglich) |
+| `STRATEGAIZE_CTA_TOKEN_SECRET` | — | **Ja** | HMAC-Secret, min 64 Zeichen, kryptografisch stark |
+| `STRATEGAIZE_CTA_TOKEN_EXPIRY_DAYS` | `90` | Nein | Token-Expiry-Lifetime in Tagen (DEC-172) |
+| `BEDROCK_V8_1_MODEL_ID` | `anthropic.claude-3-5-sonnet-20241022-v2:0` | Nein | LLM-Modell-ID (DEC-175) |
+
+### Security / Privacy Considerations
+
+- **DSGVO**: Lead-Email + StB-Notification enthalten PII (Mandant-Name, Email, Firma, SUI-Score). Empfaenger `bd@strategaizetransition.de` (Strategaize-eigene Inbox) + StB-Adressen (Pflicht-Felder seit V6) sind etablierte rechtsgrundlage-konforme Strategaize/Partner-Kanaele. Keine Drittlands-Uebermittlung.
+- **Data-Residency**: Bedrock eu-central-1 Pflicht (data-residency.md). IONOS-SMTP EU-DE Hosting. Postgres Coolify-Hetzner DE.
+- **Token-Security**: HMAC-SHA256 mit min 64-Zeichen-Secret. Expiry-Strict-Check vor jedem Endpoint-Access. Brute-Force-Resistenz durch HMAC-Cryptographic-Hash garantiert.
+- **Idempotenz**: Flag-Check verhindert Email-Spam bei Mehrfach-Klick. Wichtig fuer Mandant-Trust + StB-Trust.
+- **Audit-Trail**: Jeder Trigger-Event geloggt mit Source + Token-Validity + Email-Sent-Status. Pflicht fuer Founder-Sichtbarkeit + DSGVO-Auskunfts-Pflicht.
+- **No-Pricing-Pflicht**: Keine Pricing-Hinweise im Bericht/PDF/Email/Notification. Festgelegt in Tonality-Audit-Skript (Blacklist-Pattern `Euro|EUR|Kosten|Preis`).
+- **Tonality-Wir-Voice-Pflicht**: Strategaize-Wir-Voice durchgehend. LLM-Output-Post-Validation Blacklist `ich|mein Team|der Founder|Founders`.
+
+### Constraints and Tradeoffs
+
+#### Pflicht-Reuse (per strategaize-pattern-reuse.md)
+- V8.0-Theme + Renderer-Foundation
+- Bedrock-Adapter eu-central-1
+- IONOS-SMTP-Adapter
+- HMAC-Magic-Link-Pattern aus V7
+- selectThreeHebel Pure-Function aus V8.0
+- capture_session.metadata-JSONB-Schema aus V8.0
+- ai_cost_ledger + error_log Tabellen
+
+#### Bewusste Tradeoffs
+
+| Decision | Trade-off |
+|---|---|
+| DEC-167 Tuple-Cache-Key | + Reproduzierbarkeit / − Cache-Miss bei jedem Modell-Update kostet 3 LLM-Calls pro Re-Render |
+| DEC-168 JSON+HTML-Format | + BS-Parser-Forward-Compat / − Mail-Size leicht groesser (~5%) |
+| DEC-170 V8.0-CtaPage ersetzt | + Saubere CTA-Hierarchie / − Visual-Drift von V8.0-Baseline |
+| DEC-171 Verkaufs-Style Cards | + Conversion-Intent klar / − Stilbruch zu V8.0-Hebel-Block (intentional) |
+| DEC-172 90 Tage Expiry, no Single-Use | + UX-friendly / − Token-Replay-Risk bleibt theoretisch |
+| DEC-173 Stateless HMAC | + Keine neue Tabelle, einfacher Code / − Keine Single-Use ohne V8.2+ Tabelle |
+| DEC-174 Sync-Render | + Einfache Architektur, kein Worker / − First-Render 24s |
+| DEC-175 ENV-Modell-ID | + A/B-Testing trivial / − Per-Environment Drift moeglich |
+
+### Open Technical Questions (alle resolved)
+
+| Q-ID | Frage | Resolution |
+|---|---|---|
+| Q-V8.1-A | LLM-Caching-Granularitaet | DEC-167 — Tuple {capture_session + model_id + prompt_version} |
+| Q-V8.1-B | Token-Expiry + Single-Use | DEC-172 — 90 Tage, kein Single-Use in V8.1 |
+| Q-V8.1-C | Lead-Email-Format an BD-Inbox | DEC-168 — JSON-Block im HTML-Comment + semantisches HTML |
+| Q-V8.1-D | StB-Notification + Fallback | DEC-169 — neutral-informativ, silent-skip bei leerem contact_email |
+| Q-V8.1-E | Outro-Position im PDF | DEC-170 — Ersetzt V8.0-CtaPage komplett |
+| Q-V8.1-F | Empfehlungs-Block-Visual-Style | DEC-171 — Verkaufs-Style mit groesseren Cards |
+| Q-V8.1-G | Token-State-Speicherung | DEC-173 — Stateless via HMAC, keine cta_token-Tabelle |
+| Q-V8.1-H | LLM-Sync-vs-Async-Render | DEC-174 — Synchron im PDF-Render-Path |
+| Q-V8.1-I | Modell-Version-Konfiguration | DEC-175 — ENV BEDROCK_V8_1_MODEL_ID mit Default |
+
+### Recommended Implementation Direction (Slice-Sketch fuer /slice-planning V8.1)
+
+**3 Slices, ~2-3 Sessions, Cumulative-Single-Branch-Worktree `v8-1-lead-conversion` empfohlen** (analog V8.0-Pattern, SaaS-Mode-Pflicht).
+
+#### SLC-V8.1-A — LLM-Augmentation-Backend (FEAT-069)
+- MT-1: Worktree-Setup `c:/strategaize/strategaize-onboarding-plattform-v8-1-lead-conversion` + Branch + npm install
+- MT-2: `src/lib/llm/v8-1-augmentation/prompt.ts` mit System-Prompt + `V8_1_PROMPT_VERSION = 'v1'`
+- MT-3: `src/lib/llm/v8-1-augmentation/cache.ts` Tuple-Key-Logik + JSONB-Read/Write
+- MT-4: `augmentEmpfehlungsText` Pure-Function inkl. Tonality-Post-Validation + Word-Count-Check + Fallback-Logik
+- MT-5: ai_cost_ledger-Audit-Integration + error_log-Eintraege fuer LLM-Calls
+- MT-6: Vitest gegen Coolify-DB: Cache-Hit/Miss + Modell-ID-Drift-Invalidation + Tonality-Drift-Fallback + Word-Count-Cap
+- Geschaetzt: ~2-3h
+
+#### SLC-V8.1-B — Outro-Renderer (FEAT-067) + V8.0-CtaPage-Replacement
+- MT-1: Pre-Slice Asset-Freigabe-Check (Strategaize-Vorstellungs-Text + StB-Notification-Wording-Freigabe Status)
+- MT-2: Theme-Erweiterung in `theme.ts` fuer Outro-Card-Tokens
+- MT-3: `src/lib/pdf/mandanten-report-v2/pages/outro.tsx` — 4-Block-PDF-Component
+- MT-4: V8.0-Renderer-Pipeline-Modifikation: CtaPage-Aufruf entfernen, Outro-Aufruf hinzufuegen
+- MT-5: `src/app/dashboard/diagnose/[id]/V8OutroSection.tsx` — Web-Bericht-Component
+- MT-6: Tonality-Audit-Skript-Erweiterung um V8.1-Outro-Scope
+- MT-7: Smoke-PDF-Test (17 Seiten verifizieren, KEIN Doppel-CTA) + Vitest
+- Geschaetzt: ~3-5h
+
+#### SLC-V8.1-C — CTA-Mechanik + Dual-Email-Trigger (FEAT-068)
+- MT-1: ENV-Variablen-Setup (`STRATEGAIZE_CTA_TOKEN_SECRET` generieren + in `.env.deploy.example` + Coolify-Resource)
+- MT-2: `src/lib/cta/token.ts` HMAC-SHA256 generate + verify Pure-Functions + Vitest
+- MT-3: `src/lib/email/v8-1/bd-lead.ts` Email-Template mit JSON-Block
+- MT-4: `src/lib/email/v8-1/stb-notification.ts` Email-Template (neutral-informativ)
+- MT-5: `src/app/strategaize-anfrage/route.ts` GET-Handler + Idempotency + Dual-Email + Redirect
+- MT-6: `src/app/strategaize-anfrage/bestaetigung/page.tsx` Statische Bestaetigungs-Page
+- MT-7: Server-Action `triggerStrategaizeFreigabe` im Web-Pfad
+- MT-8: Magic-Link-Token im PDF-CTA-Slot einbetten (Renderer-Integration)
+- MT-9: docs/INTEGRATION_BUSINESS_SYSTEM.md anlegen mit JSON-Schema-Doku
+- MT-10: Live-Smoke gegen Founder-Test-Diagnose: PDF-Magic-Link klicken, BD-Email-Inbox verifizieren, StB-Notification verifizieren, Bestaetigungs-Page rendert
+- Geschaetzt: ~4-6h
+
+#### Reihenfolge
+
+**A vor B vor C** (Hard-Dependency-Kette):
+- A liefert `augmentEmpfehlungsText` → B's Outro-Renderer braucht es
+- B liefert Outro-Renderer mit CTA-Slot → C's Magic-Link-Token muss in Slot embedded werden
+
+#### Pre-Slice User-Pflichten
+
+1. **Strategaize-Vorstellungs-Text-Freigabe** (R1 PRD): Founder schreibt 2-3 Absaetze in Wir-Voice. **Blockiert SLC-V8.1-B MT-3.**
+2. **StB-Notification-Wording-Freigabe** (R3 PRD): Founder freigibt 4-Saetze-Body fuer DEC-169 neutral-informativ. **Blockiert SLC-V8.1-C MT-4.**
+3. **`STRATEGAIZE_CTA_TOKEN_SECRET` Produktions-Generation**: 64-Zeichen kryptografisch stark, in Coolify-ENV setzen. **Blockiert SLC-V8.1-C MT-1.**
+
+#### Coolify-Apply-Plan
+
+- **Migrations**: 0
+- **Neue Container**: 0
+- **Neue Cron-Jobs**: 0
+- **Neue Dependencies**: 0 (alle Reuse)
+- **Neue ENV-Variablen**: 4 (1 Pflicht, 3 mit Default)
+- **Redeploy-Trigger**: Per Coolify-API analog V8.0-Pattern (Token + is_api_enabled)
+
+### V8.1 vs V8.0 Architektur-Kontext
+
+V8.1 ist eine **additive Schicht** auf V8.0. Es ist **keine** neue Capture-Pipeline (V8.0 bleibt aktiv), **kein** neuer Template-Switch (V8.0-Template-Pfad rendert ab V8.1-Deploy automatisch die neue Outro), **keine** neuen Tabellen oder Migrations.
+
+V8.0 LIVE auf main HEAD `875e47d` bleibt unveraendert. V8.1-Deploy aktiviert Outro automatisch fuer alle bestehenden V8-Template-Sessions, weil:
+- `renderMandantenReportV2Pdf` ruft im V8.1-Pfad neue `OutroPage` statt alter `CtaPage` auf
+- LLM-Augmentation startet beim ersten PDF-Render einer bestehenden V8.0-Session (Cache leer, voller Call)
+- Bestehende `report_snapshot`-Eintraege haben keinen `v8_1_llm_augmentation_cache` → erster Re-Render macht ihn
+
+Co-Existenz mit V1 + V6.3 + V4 bleibt unveraendert (V8.0-Co-Existenz-Tests gelten).
+
+### V8.1-Verifikations-Standard
+
+Eine Implementation ist regelkonform wenn:
+- LLM-Augmentation laeuft via Bedrock eu-central-1 (Audit via ai_cost_ledger)
+- Deterministischer Fallback ist Pflicht-getestet (Timeout-Simulation)
+- Cache-Tuple-Logik invalidiert korrekt bei Modell-ID-Change
+- Tonality-Audit-Skript findet 0 Treffer auf erweiterte Blacklist
+- HMAC-Token-Verify rejects expired + tampered Tokens (3 Vitest-Cases min)
+- Idempotenz verhindert doppelte Emails (Vitest + Live-Smoke)
+- StB-Notification silent-skipped bei leerem contact_email (Audit-Log-Entry verifiziert)
+- BD-Lead-Email enthaelt JSON-Block UND HTML-Body (Snapshot-Test)
+- PDF-Output bleibt 17 Seiten (kein Doppel-CTA)
+- Strategaize-Wir-Voice durchgehend (Tonality-Audit + Manuell)
+
+**Naechster Schritt: /slice-planning V8.1** — SLC-V8.1-A/B/C Slice-Files mit Micro-Task-Decomposition + AC-Matrizen + Aufwand-Schaetzung. Realistisch ~1h /slice-planning. Pre-Conditions fuer Code-Start: Strategaize-Vorstellungs-Text-Freigabe + StB-Notification-Wording-Freigabe + STRATEGAIZE_CTA_TOKEN_SECRET-Generation.

@@ -186,3 +186,13 @@ V8-Scope (User-Entscheidung 2026-05-28 nach Mandanten-Report-Prototyp-Freigabe):
 | FEAT-064 | Fragebogen-UI-Komponenten (Hygiene-Trichotomie + 5-Punkt-Reife-Skala + Reflexion-Textareas) | deployed | [Spec](FEAT-064-mandanten-report-fragebogen-ui.md) | 2026-05-28 |
 | FEAT-065 | SUI-Score-Engine (Module 1-9 gewichtetes Mittel, Modul 9 doppelt, 3-Stufen-Klassifizierung) | deployed | [Spec](FEAT-065-sui-score-engine.md) | 2026-05-28 |
 | FEAT-066 | 17-Seiten-Premium-Mandanten-Report-Renderer V2 (Cover + Wheel + 9 Modul-Pages + Hausaufgaben + Hebel + Reflexion + CTA) | deployed | [Spec](FEAT-066-mandanten-report-renderer-v2.md) | 2026-05-28 |
+
+## V8.1 Features (Lead-Conversion-Outro + Strategaize-Freigabe-CTA + Dual-Email-Trigger)
+
+V8.1-Scope (Requirements DONE 2026-05-30 via RPT-364, nach V8.0 RELEASED 2026-05-30 REL-026): Lead-Conversion-Erweiterung des V8.0-Mandanten-Berichts. 3 Features bauen den Conversion-Pfad vom Mandanten zum Strategaize-Folgegespraech auf. Founder-Direktive 2026-05-29: 'Vertrauen in uns und Bereitschaft mit uns zu reden steigern.' Distribution: Outro im PDF (Magic-Link-CTA) + V8-Web-Bericht (Server-Action). Lead-Empfaenger: bd@strategaizetransition.de (landet in BS-Pipeline via Email) plus StB-Partner-Notification an partner_organization.contact_email. KEINE Pricing-Hinweise im Bericht.
+
+| ID | Feature | Status | Spec | Created |
+|----|---------|--------|------|---------|
+| FEAT-067 | Lead-Conversion-Outro-Renderer (PDF + Web-Bericht, Strategaize-Vorstellung + 3 Empfehlungs-Slots + Video-Platzhalter + CTA-Slot) | in_progress | [Spec](FEAT-067-lead-conversion-outro-renderer.md) | 2026-05-30 |
+| FEAT-068 | Strategaize-Freigabe-CTA + Dual-Email-Trigger (BD-Lead-Email + StB-Partner-Notification + Magic-Link-Token + Server-Action) | in_progress | [Spec](FEAT-068-strategaize-freigabe-cta-dual-email.md) | 2026-05-30 |
+| FEAT-069 | LLM-Augmentation der 3 Empfehlungs-Texte (Bedrock Claude Sonnet eu-central-1, deterministischer Fallback, Caching, Cost-Cap) | in_progress | [Spec](FEAT-069-llm-augmentation-empfehlungs-texte.md) | 2026-05-30 |
