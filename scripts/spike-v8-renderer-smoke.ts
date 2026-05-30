@@ -1,11 +1,12 @@
 #!/usr/bin/env node
-// V8 SLC-150 + SLC-151 MT-2..MT-5 — Visual-Smoke-Skript fuer
-// Mandanten-Report-V2-Renderer (Pages 1-15 aktuell).
+// V8 SLC-150 + SLC-151 MT-2..MT-6 — Visual-Smoke-Skript fuer
+// Mandanten-Report-V2-Renderer (Pages 1-17 aktuell, Code-Side komplett).
 //
 // Aufruf-Pfad: `npx vite-node --config vitest.config.ts scripts/spike-v8-renderer-smoke.ts`
 // Output:
-//   - `temp/v8-mandanten-report-phase-a-smoke-v4.pdf`        — Happy-Path (6 Reflexionen)
+//   - `temp/v8-mandanten-report-phase-a-smoke-v4.pdf`        — Happy-Path (4 Reflexionen + StB)
 //   - `temp/v8-mandanten-report-phase-a-smoke-empty.pdf`     — Reflexion-Empty-State
+//   - `temp/v8-mandanten-report-phase-a-smoke-no-stb.pdf`    — Ohne StB-Kontakt (Strategaize-Default)
 //
 // Test-Fixture: SUI=44 ("Teil-Reife", amber) mit asymmetrischem 9-Modul-
 // Score-Profil. Mandant "Mueller Praezisionstechnik GmbH" analog
@@ -272,10 +273,16 @@ const INPUT: RendererInput = {
 
 const OUTPUT_PATH = resolve(__dirname, "..", "temp", "v8-mandanten-report-phase-a-smoke-v4.pdf");
 const OUTPUT_PATH_EMPTY = resolve(__dirname, "..", "temp", "v8-mandanten-report-phase-a-smoke-empty.pdf");
+const OUTPUT_PATH_NO_STB = resolve(__dirname, "..", "temp", "v8-mandanten-report-phase-a-smoke-no-stb.pdf");
 
 const INPUT_EMPTY: RendererInput = {
   ...INPUT,
   snapshot: MOCK_SNAPSHOT_EMPTY_REFLEXION,
+};
+
+const INPUT_NO_STB: RendererInput = {
+  ...INPUT,
+  stb: undefined,
 };
 
 async function renderSmoke(label: string, input: RendererInput, outputPath: string): Promise<void> {
@@ -296,17 +303,22 @@ async function renderSmoke(label: string, input: RendererInput, outputPath: stri
 }
 
 async function main() {
-  await renderSmoke("Happy-Path (6 Reflexionen)", INPUT, OUTPUT_PATH);
-  await renderSmoke("Reflexion-Empty-State", INPUT_EMPTY, OUTPUT_PATH_EMPTY);
+  await renderSmoke("Happy-Path (4 Reflexionen + StB Wagner)", INPUT, OUTPUT_PATH);
+  await renderSmoke("Reflexion-Empty-State (mit StB)", INPUT_EMPTY, OUTPUT_PATH_EMPTY);
+  await renderSmoke("No-StB-Fallback (Strategaize-Default-Kontakt)", INPUT_NO_STB, OUTPUT_PATH_NO_STB);
 
   console.log("[smoke] Founder-Verdict checklist:");
-  console.log("  Page 1  (Cover):         Fraunces Hero + Mandant-Card + Footer");
-  console.log("  Page 2  (SUI-Hero):      Score 44/100 + Teil-Reife Badge (amber)");
-  console.log("  Page 3  (Modul-Profil):  Wheel + 3x3 Legende");
-  console.log("  Page 4..12 (Modul-Pages): m1..m9 mit fokussiertem Wheel + 3 Text-Sektionen");
-  console.log("  Page 13 (Hausaufgaben):   3 Cards (1 nein, 2 teilweise) + Footer");
-  console.log("  Page 14 (Hebel):          3 Cards (Prio 1 rot, 2 amber, 3 brand) + Footer");
-  console.log("  Page 15 (Reflexion):      Happy: 4 Quote-Cards / Empty: Pitch-Karte 'Reflexion offen'");
+  console.log("  Page 1     (Cover):        Fraunces Hero + Mandant-Card + Footer");
+  console.log("  Page 2     (SUI-Hero):     Score 44/100 + Teil-Reife Badge (amber)");
+  console.log("  Page 3     (Modul-Profil): Wheel + 3x3 Legende");
+  console.log("  Page 4-12  (Modul-Pages):  m1..m9 mit fokussiertem Wheel + 3 Text-Sektionen");
+  console.log("  Page 13    (Hausaufgaben): 3 Cards (1 nein, 2 teilweise) + Footer");
+  console.log("  Page 14    (Hebel):        3 Cards (Prio 1 rot, 2 amber, 3 brand) + Footer");
+  console.log("  Page 15    (Reflexion):    Happy: 4 Quote-Cards / Empty: Pitch-Karte 'Reflexion offen'");
+  console.log("  Page 16    (CTA-Hero):     Hero-Pitch + Hero-Card (brandPrimaryDark) + Kontakt-Slot");
+  console.log("  Page 17    (Strategaize-Footer): Brand-Block (neutral900) + Datenschutz + Datum/Version");
+  console.log("");
+  console.log("[smoke] StB-Fallback-Check: no-stb.pdf zeigt 'StrategAIze · info@strategaize.de' auf Page 16.");
   console.log("");
   console.log("[smoke] Compare against:");
   console.log("  c:/strategaize/strategaize-dev-system/docs/curriculum/v2/MANDANTEN_REPORT_PROTOTYP.html");
