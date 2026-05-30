@@ -55,3 +55,6 @@ next-env.d.ts
 /test-results/
 /playwright-report/
 /playwright/.cache/
+
+# V8 SLC-150 smoke PDF artifacts (Founder-Verdict-Iterationen, build output)
+/temp/v8-mandanten-report-phase-a-smoke*.pdf
