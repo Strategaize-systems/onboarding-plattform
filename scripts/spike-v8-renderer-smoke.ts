@@ -1,9 +1,11 @@
 #!/usr/bin/env node
-// V8 SLC-150 + SLC-151 MT-2/MT-3 — Visual-Smoke-Skript fuer
-// Mandanten-Report-V2-Renderer (Pages 1-13 aktuell).
+// V8 SLC-150 + SLC-151 MT-2..MT-5 — Visual-Smoke-Skript fuer
+// Mandanten-Report-V2-Renderer (Pages 1-15 aktuell).
 //
-// Aufruf-Pfad: `npx vite-node scripts/spike-v8-renderer-smoke.ts`
-// Output: `temp/v8-mandanten-report-phase-a-smoke-v4.pdf`
+// Aufruf-Pfad: `npx vite-node --config vitest.config.ts scripts/spike-v8-renderer-smoke.ts`
+// Output:
+//   - `temp/v8-mandanten-report-phase-a-smoke-v4.pdf`        — Happy-Path (6 Reflexionen)
+//   - `temp/v8-mandanten-report-phase-a-smoke-empty.pdf`     — Reflexion-Empty-State
 //
 // Test-Fixture: SUI=44 ("Teil-Reife", amber) mit asymmetrischem 9-Modul-
 // Score-Profil. Mandant "Mueller Praezisionstechnik GmbH" analog
@@ -23,6 +25,7 @@ import type {
   HausaufgabeItem,
   HebelItem,
   ModulKey,
+  ReflexionItem,
   V8ReportSnapshot,
   V8StufenLookup,
   V8Template,
@@ -55,6 +58,41 @@ const MOCK_HAUSAUFGABEN: HausaufgabeItem[] = [
     frage_id: "M0.2",
     frage_text: "Markenrecht privat angemeldet",
     status: "teilweise",
+  },
+];
+
+// Smoke-Fixture: 4 Reflexion-Items (Spec: 3-5). Mit 6 Items bricht die
+// Page automatisch um (16 Pages statt 15). Long-Content-Page-Overflow
+// ist als bekanntes Polish-Risiko fuer MT-7 dokumentiert (analog
+// HebelPage MT-4 Long-Empfehlung-Risk).
+const MOCK_REFLEXIONEN: ReflexionItem[] = [
+  {
+    frage_id: "M10.1.1",
+    frage_text:
+      "Was wollen Sie, dass von Ihrer Arbeit bleibt?",
+    antwort_text:
+      "Dass die Mannschaft, die ich aufgebaut habe, weiterarbeiten kann ohne dass ich da bin. Dass die Kunden, die wir seit 20 Jahren betreuen, sagen koennen: das ist immer noch der gleiche Laden.",
+  },
+  {
+    frage_id: "M10.1.3",
+    frage_text:
+      "Welche Mitarbeiter / Kunden / Beziehungen wollen Sie schuetzen, auch nach der Uebergabe?",
+    antwort_text:
+      "Die drei Schluesselleute in der Fertigung — die haben mich getragen. Und die fuenf Top-Kunden, die seit Anfang dabei sind.",
+  },
+  {
+    frage_id: "M10.2.1",
+    frage_text:
+      "Was machen Sie ab dem Tag nach der Uebergabe? (Konkrete Antwort, nicht 'mal sehen')",
+    antwort_text:
+      "Im ersten halben Jahr nichts. Ehrlich. Reisen mit meiner Frau, mehr Zeit mit den Enkeln. Danach ueberlege ich mir, ob ich als Beirat irgendwo einsteige.",
+  },
+  {
+    frage_id: "M10.2.2",
+    frage_text:
+      "Welche Identitaet bleibt von Ihnen, wenn die Identitaet als Inhaber wegfaellt?",
+    antwort_text:
+      "Das ist die Frage, die mir am meisten Sorgen macht. Ich war 35 Jahre 'der Chef'. Ich weiss noch nicht, was ich danach bin.",
   },
 ];
 
@@ -109,8 +147,13 @@ const MOCK_SNAPSHOT: V8ReportSnapshot = {
   },
   stufenMapping: { m1: 4, m2: 2, m3: 3, m4: 2, m5: 5, m6: 2, m7: 4, m8: 3, m9: 3 },
   hausaufgaben: MOCK_HAUSAUFGABEN,
-  reflexionen: [],
+  reflexionen: MOCK_REFLEXIONEN,
   hebel: MOCK_HEBEL,
+};
+
+const MOCK_SNAPSHOT_EMPTY_REFLEXION: V8ReportSnapshot = {
+  ...MOCK_SNAPSHOT,
+  reflexionen: [],
 };
 
 const MOCK_MODULE_NAMES: Record<ModulKey, string> = {
@@ -228,22 +271,34 @@ const INPUT: RendererInput = {
 };
 
 const OUTPUT_PATH = resolve(__dirname, "..", "temp", "v8-mandanten-report-phase-a-smoke-v4.pdf");
+const OUTPUT_PATH_EMPTY = resolve(__dirname, "..", "temp", "v8-mandanten-report-phase-a-smoke-empty.pdf");
 
-async function main() {
-  console.log("[smoke] Rendering V8 Mandanten-Report-V2 Phase-A PDF...");
+const INPUT_EMPTY: RendererInput = {
+  ...INPUT,
+  snapshot: MOCK_SNAPSHOT_EMPTY_REFLEXION,
+};
+
+async function renderSmoke(label: string, input: RendererInput, outputPath: string): Promise<void> {
+  console.log(`[smoke] Rendering V8 Mandanten-Report-V2 ${label} PDF...`);
   const start = Date.now();
-  const buffer = await renderMandantenReportV2Pdf(INPUT);
+  const buffer = await renderMandantenReportV2Pdf(input);
   const renderMs = Date.now() - start;
 
-  mkdirSync(dirname(OUTPUT_PATH), { recursive: true });
-  writeFileSync(OUTPUT_PATH, buffer);
+  mkdirSync(dirname(outputPath), { recursive: true });
+  writeFileSync(outputPath, buffer);
 
-  const stats = statSync(OUTPUT_PATH);
+  const stats = statSync(outputPath);
   const kb = (stats.size / 1024).toFixed(1);
-  console.log(`[smoke] PDF written: ${OUTPUT_PATH}`);
+  console.log(`[smoke] PDF written: ${outputPath}`);
   console.log(`[smoke] Size: ${kb} KB (${stats.size} bytes)`);
   console.log(`[smoke] Render time: ${renderMs} ms`);
   console.log("");
+}
+
+async function main() {
+  await renderSmoke("Happy-Path (6 Reflexionen)", INPUT, OUTPUT_PATH);
+  await renderSmoke("Reflexion-Empty-State", INPUT_EMPTY, OUTPUT_PATH_EMPTY);
+
   console.log("[smoke] Founder-Verdict checklist:");
   console.log("  Page 1  (Cover):         Fraunces Hero + Mandant-Card + Footer");
   console.log("  Page 2  (SUI-Hero):      Score 44/100 + Teil-Reife Badge (amber)");
@@ -251,6 +306,7 @@ async function main() {
   console.log("  Page 4..12 (Modul-Pages): m1..m9 mit fokussiertem Wheel + 3 Text-Sektionen");
   console.log("  Page 13 (Hausaufgaben):   3 Cards (1 nein, 2 teilweise) + Footer");
   console.log("  Page 14 (Hebel):          3 Cards (Prio 1 rot, 2 amber, 3 brand) + Footer");
+  console.log("  Page 15 (Reflexion):      Happy: 4 Quote-Cards / Empty: Pitch-Karte 'Reflexion offen'");
   console.log("");
   console.log("[smoke] Compare against:");
   console.log("  c:/strategaize/strategaize-dev-system/docs/curriculum/v2/MANDANTEN_REPORT_PROTOTYP.html");
