@@ -834,3 +834,14 @@ Alle Slices nutzen Worktree-Isolation:
 - V7.4: `slc-143-app-shell-auth-pages-polish` (code-side done 2026-05-24, /qa + Master-Merge pending)
 
 Master-Merge nur nach Slice-/qa PASS (Pattern aus V7).
+
+## V8.0.1 Slices (Security-Hotfix — Cross-Repo-Audit 2026-05-30)
+
+V8.0.1 = 1 Slice SLC-160, 5 Micro-Tasks, ~2-3h Code + ~1h /qa + Coolify-Redeploy. Security-Hotfix parallel zur V8 Mandanten-Report-Implementation (SLC-148..152). Eigener Worktree `c:/strategaize/strategaize-onboarding-plattform-slc160` (SaaS-Mode-Pflicht), V8-Worktree `v8-mandanten-report` bleibt unangefasst. Schliesst 3 hoechst-priorisierte Security-Findings aus Cross-Repo-Audit 2026-05-30 (`docs/SECURITY_AUDIT_2026-05-30.md`): SEC-001 (12 SECURITY DEFINER Funktionen aus Migrations 047/054/062 ohne SET search_path, DSGVO-flagged), SEC-002 (4 Endpoints `!==` statt timing-safe-Compare — Helper `crypto.timingSafeEqual` existiert bereits in `src/lib/auth/service-key.ts` aus V7 Self-Signup), SEC-004 (partner-branding-Bucket erlaubt `image/svg+xml` → Stored-XSS-Pfad bei direkter Navigation). 2 neue idempotente Migrationen (103+104 — Nummern in MT-1 final). Pattern-Reuse aus Migrations 032/035/036/037/038 (search_path-Pattern) + `src/lib/auth/service-key.ts` (timing-safe). Out-of-Scope: SEC-003 (Recording-Webhook Path-Traversal) → eigener Slice Sprint 2 (Pre-Aktivierungs-Pflicht-Fix vor SLC-110 Network-Refactor), SEC-005..019 → Sprint 2-4.
+
+| ID | Slice | Feature | Status | Priority | Created |
+|----|-------|---------|--------|----------|---------|
+| SLC-160 | [OP Security Quick-Wins (search_path-Hardening + timing-safe Cron-Secret + SVG-Block)](SLC-160-op-security-quick-wins.md) | FEAT-160 / BL-128 | planned | High | 2026-05-30 |
+
+### V8.0.1 Execution Order
+MT-1 (Pre-Check Migration-Nummern + Funktions-Liste) zuerst → MT-2 + MT-3 + MT-4 parallel-ausfuehrbar → MT-5 (Quality-Gates + Apply-Live + Records) zuletzt.

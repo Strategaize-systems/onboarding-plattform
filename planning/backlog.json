@@ -1,6 +1,56 @@
 {
   "items": [
     {
+      "id": "BL-140",
+      "title": "V8.0.3 Logger-Redaction-Lib + LLM-Cost-Cap (NICE-TO-HAVE vor Live) — Sprint 4 OP-Anteil",
+      "type": "improvement",
+      "priority": "medium",
+      "status": "open",
+      "version": "V8.0.3",
+      "description": "**NICE-TO-HAVE vor Live, NICHT blockierend (DSGVO + Cost-Protection).** **Teil 1 — Logger-Redaction-Lib:** OP-Logs enthalten Klartext: Mandanten-Email-Adressen (Pitch-Lead-Captures), Whisper-Transcript-Snippets in Cron-Logs, Bedrock-Cost-Logs mit Customer-Strings, Cal.com-Webhook-Payloads. Coolify-Container-Logs gehen an Hetzner-Log-Aggregation ohne Redaction → Admin-User mit Coolify-Zugang sieht Klartext-PII. Fix: src/lib/logger/redact.ts Helper mit redactSecrets(obj) der Keys matching /password|token|secret|api_key|email|bearer/i auf [REDACTED] setzt, plus Values matching Email-Regex/Bearer-Token-Regex maskiert. Wrapper logSafe(level, ...args) der die Helper vor JSON.stringify ruft. Existing console.log/console.error-Calls in critical Files (cron-loops, webhook-handlers, Bedrock-Adapter) auf logSafe umstellen. Vitest mit Mock-Patterns. Aufwand ~3-4h. **Teil 2 — LLM-Cost-Cap:** Pre-flight in src/adapters/bedrock/client.ts: SELECT SUM(cost_eur) FROM ai_cost_ledger WHERE created_at >= NOW() - INTERVAL '1 day' — wenn > DAILY_LLM_CAP (default 5 EUR) → throw Error('LLM Daily Cap Exceeded'). Job/Cron faengt ab. Optional Slack-Webhook-Alert. ENV: DAILY_LLM_CAP_EUR, MONTHLY_LLM_CAP_EUR. Aufwand ~3h. **Gesamt: ~6-7h, 2 Mini-Slices oder gebundelt.** Cross-Repo-Hinweis: identisches Pattern in BS BL-503+504 + IS BL-117. **Ideal als Dev-System-Lib mit Pattern-Reuse-Pflicht.** Audit-Quelle: docs/SECURITY_AUDIT_2026-05-30.md SEC-013 + Cross-Repo-Pattern.",
+      "createdAt": "2026-05-30"
+    },
+    {
+      "id": "BL-139",
+      "title": "V8.0.3 Passwort-Policy 12+ Zeichen + zxcvbn (NICE-TO-HAVE vor Live) — Sprint 4 OP-Anteil",
+      "type": "improvement",
+      "priority": "medium",
+      "status": "open",
+      "version": "V8.0.3",
+      "description": "**NICE-TO-HAVE vor Live, NICHT blockierend.** Aktuell akzeptieren OP set-password/actions.ts + accept-invitation Passwoerter ab 6 Zeichen (Supabase-Default). Risiko: Brute-Force-Attack auf Mandanten-Accounts. Fix-Pattern (identisch zu BS BL-502 + IS BL-116): (1) zxcvbn-Dependency hinzufuegen, (2) Server-Action validatePasswordStrength: min 12 chars + zxcvbn-Score >= 3, (3) Client-Side Visual-Indicator (Progress-Bar), (4) Reject mit deutscher Fehlermeldung. **Aufwand ~S (~1-2h Code + 30 Min /qa).** Audit-Quelle: docs/SECURITY_AUDIT_2026-05-30.md + Cross-Repo Sprint-4-Pattern. Cross-Repo-Hinweis: identisches Pattern in BS BL-502 + IS BL-116. **Ideal als Dev-System-Helper-Lib.**",
+      "createdAt": "2026-05-30"
+    },
+    {
+      "id": "BL-138",
+      "title": "V8.0.3 CSP-Headers (NICE-TO-HAVE vor Live) — Sprint 4 OP-Anteil",
+      "type": "improvement",
+      "priority": "medium",
+      "status": "open",
+      "version": "V8.0.3",
+      "description": "**NICE-TO-HAVE vor Live, NICHT blockierend.** Content-Security-Policy-Layer in next.config.ts ergaenzen. Aktuell: keine CSP. Mit CSP: strikte Whitelist fuer script-src (self + 'nonce-'), img-src (self + data: + Supabase-Storage), connect-src (self + Bedrock + Supabase + Coolify), style-src (self + 'unsafe-inline'). **Mitigiert strukturell:** Stored-XSS (Defense-in-Depth zu V8.0.1 SEC-004 SVG-Block), DOM-XSS, Clickjacking. **Aufwand: ~M (iterativer Smoke-Test pflicht).** Kritisch: alle OP-Routes inkl. Capture-Sessions + Pitch-Render + Dialogue-Recording-UI + Cal.com-Webhook + Supabase-Auth-Callback. Erfahrungswert aus BS: 3-5 iter-Fixes wegen Inline-Scripts erwartbar. Aufwand: ~2-3h Code + ~2-3h iter-Smoke. Cross-Repo-Hinweis: identisches Pattern in BS BL-501 + IS BL-115. Audit-Quelle: docs/SECURITY_AUDIT_2026-05-30.md (Cross-Repo Sprint-4-Pattern).",
+      "createdAt": "2026-05-30"
+    },
+    {
+      "id": "BL-137",
+      "title": "V8.0.2 SEC-003 Recording-Webhook Path-Traversal Fix (PRE-AKTIVIERUNGS-PFLICHT) — Sprint 2 OP",
+      "type": "fix",
+      "priority": "high",
+      "status": "open",
+      "version": "V8.0.2",
+      "description": "**PRE-AKTIVIERUNGS-PFLICHT — Aktuell durch Middleware-Redirect extern unerreichbar (ISSUE-028), aber PFLICHT-FIX vor Re-Aktivierung.** /api/dialogue/recording-ready reicht User-controlled `file_path` an readFile() weiter ohne Validation. Attacker mit Endpoint-Zugang kann beliebige Server-Files lesen, im schlimmsten Fall: (a) /proc/self/environ → Service-Role-Key + Bedrock-Credentials + Postgres-Passwort, (b) /app/.next/server/app/.../*.js → Server-Code mit Hardcoded-Secrets, (c) /etc/passwd, /root/.ssh/* etc. **Risiko-Status aktuell: entschaerft durch ISSUE-028 Middleware-Redirect, aber HARD-GATE vor Re-Aktivierung** (z.B. wenn SLC-110 Network-Refactor den Endpoint wieder freischaltet, oder wenn Webhook-Receiver-Pattern fuer Recording-Pipeline neu aktiviert wird). Fix-Pattern: (a) Allowed-Prefix-Check (z.B. /tmp/recordings/<uuid>/ oder Coolify-Volume-Mount-Path) als String-Prefix-Test BEVOR readFile, (b) fs.realpath() um Symlinks aufzuloesen und Prefix nochmal pruefen (verhindert Symlink-Bypass), (c) BESSER: file_path nicht mehr von User akzeptieren sondern serverseitig aus room_name ableiten (Trust-Boundary verschieben), (d) Test-Suite mit Path-Traversal-Vectors (../../etc/passwd, /proc/self/environ, symlinked-paths). Aufwand: ~2-4h Code + ~1h /qa. **Gate-Logik:** wenn ein Slice SLC-110+ den Endpoint re-aktiviert, MUSS V8.0.2 vorher live sein. Audit-Quelle: docs/SECURITY_AUDIT_2026-05-30.md SEC-003. Slice-Empfehlung: SLC-161 (Sprint 2 OP).",
+      "createdAt": "2026-05-30"
+    },
+    {
+      "id": "BL-136",
+      "title": "OP Brand-Guide-Onboarding-Fragebogen-Generator (generische Cross-Product-Foundation, ImSch ist erster Pilot-Kunde)",
+      "type": "feature",
+      "priority": "medium",
+      "status": "open",
+      "version": null,
+      "description": "Generische Brand-Guide-Capability in der OP. Schliesst eine Strategie-Luecke die in mehreren Strategaize-Projekten parallel auftaucht (ImSch V3.2 SLC-316 brand_profile-Seed, IS V1.0 brand_profile, zukuenftige Brand-Projekte). Aktuell wird das Brand-Profile in jedem Projekt manuell als SQL-Seed oder UI-Form gepflegt — Inkonsistenz + Doppelarbeit. Vision: Ein Onboarding-Plattform-Template 'Brand-Guide V1' nach IS-13-Sektionen-Schema (productOverview, targetAudience, personas, painPoints, competitiveLandscape, differentiation, objections, switchingDynamics, customerLanguage, brandVoice, proofPoints, goals, impressum) + ImSch-Erweiterung um channel_overrides. Erweiterte Fragen erlauben Brand-Material-Upload (Brand-Guide-PDF, Landingpage-URL, bestehendes Marketing-Material) zur Tonalitaets-Extraktion via Bedrock-LLM. Output: vollstaendiger Brand-Guide-JSON als Export. Re-Import-Adapter pro Ziel-Repo (ImSch, IS, andere Brand-Projekte). Mandant fuellt Fragebogen aus, OP exportiert validierten Brand-Guide, Ziel-Repo macht UPSERT auf brand_profile-Singleton. ImSch ist erster Pilot: Mini-Brand-Seed-V3.2 (SLC-316 MT-0, 2026-05-29) wird spaeter durch OP-Pipeline-Output ersetzt via Re-Import-Slice in ImSch V3.3 oder V4. Founder-Direktive 2026-05-29: 'Das ist ein perfekter Test Case fuer die Onboarding-Plattform. Diese 13 Fragen als Fragebogen abfragen + Dokumente hochladen + Brand-Guides extrahieren + exportieren in ImSch, BS, IS oder zukuenftige Brand-Projekte.' Aufwand-Skizze ohne Discovery: ~6-10 Slices (Template-Definition + Brand-Material-Upload + LLM-Extraktion + Validation + Export-Format + Re-Import-Adapter ImSch + Re-Import-Adapter IS + Re-Import-Adapter Generic + Multi-Tenant-Brand-Profile-Support). version=null da nicht versions-gebunden — wird nach V8/V8.1 in Roadmap-Slot eingeplant (V9+ wahrscheinlich, gleicher Slot wie BL-135 Bedarfs-Mapping). Out of Scope ohne Discovery: Konkrete Sektionen-Anpassungen pro Ziel-Repo (Diff-Liste), Versionierung von Brand-Guides, Multi-Brand-pro-Tenant. Pre-Conditions: V8.0 live + erste Erfahrungswerte mit Mandanten-Report-Template-System (FEAT-066 bringt Renderer-Pattern), V8.1 Lead-Conversion-Flow live. Entstanden 2026-05-29 nach ImSch V3.2 SLC-316 Pre-MT-0-Strategie-Diskussion.",
+      "createdAt": "2026-05-29"
+    },
+    {
       "id": "BL-135",
       "title": "Discovery: Strategaize-internes Bedarfs-Mapping pro Modul x Stufe (Aufwand-Skala + KI-vs-Operativ-Klassifikation + Mandats-Vorschlag)",
       "type": "feature",
@@ -1319,6 +1369,16 @@
       "version": "V7.7",
       "description": "ISSUE-077 (Low) resolved via SLC-147 MT-2. Aus V7-SLC-135-/backend (RPT-307 F-1) bekannt: route.ts in src/app/api/capture/[sessionId]/evidence/upload/ exportiert 5 Helper-Symbole (ALLOWED_MIME_TYPES, MAX_FILE_SIZE, validateMimeType, validateFileSize, sanitizeFilename) — Next 16 Webpack-strict-validation rejected diese (nur POST/GET/dynamic etc. sind valid Route-Exports). Production-Coolify nutzt Turbopack (default), wo es passt — kein Production-Block. Aber Webpack-Build-Gate lokal pre-existing kaputt. Fix: 5 Symbole in validation.ts auslagern, route.ts importiert von ./validation, upload-validation.test.ts Import-Pfad anpassen. Aufwand ~5-10min. Quality-Gates: tsc + ESLint + Vitest upload-validation gruen.",
       "createdAt": "2026-05-28"
+    },
+    {
+      "id": "BL-128",
+      "title": "V8.0.1 Security Quick-Wins — search_path-Hardening + timing-safe Cron-Secret + SVG-Block (SLC-160)",
+      "type": "fix",
+      "priority": "high",
+      "status": "open",
+      "version": "V8.0.1",
+      "description": "Schliesst 3 hoechst-priorisierte Security-Findings aus Cross-Repo-Audit 2026-05-30 (docs/SECURITY_AUDIT_2026-05-30.md). SEC-001 (High, DSGVO, search_path-Hijack): 12 SECURITY DEFINER Funktionen in sql/migrations/047_rpc_orchestrator_and_gaps.sql + 054_rpc_evidence.sql + 062_rpc_dialogue.sql ohne SET search_path. Idempotente Patch-Migration 103 mit CREATE OR REPLACE + SET search_path = public, pg_catalog (Body identisch). SEC-002 (High, Timing-Side-Channel): 4 Endpoints (capture-reminders, pending-signup-cleanup, walkthrough-cleanup, dialogue/recording-ready) nutzen '!==' statt crypto.timingSafeEqual. Neuer Helper src/lib/auth/cron-secret.ts analog zu verifyServiceKey (Pattern-Reuse aus src/lib/auth/service-key.ts V7 Self-Signup). SEC-004 (High, Stored-XSS): partner-branding-Bucket erlaubt 'image/svg+xml' (sql/migrations/091:289). Migration 104 setzt allowed_mime_types = {png, jpeg, webp}. 5 MTs, ~2-3h Code + ~1h /qa + Coolify-Redeploy. Worktree slc-160-security-quick-wins-op (SaaS-Mode-Pflicht), V8-Worktree v8-mandanten-report bleibt unangefasst. Out-of-Scope SEC-003 (Recording-Webhook Path-Traversal) → Sprint 2 (Pre-Aktivierungs-Pflicht-Fix vor SLC-110 Network-Refactor). SLC-160. Audit-Quelle: c:/strategaize/strategaize-dev-system/docs/SECURITY_AUDIT_SUMMARY_2026-05-30.md.",
+      "createdAt": "2026-05-30"
     },
     {
       "id": "BL-127",
