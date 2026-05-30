@@ -45,7 +45,7 @@
       "title": "V8 FEAT-066: 17-Seiten-Premium-Mandanten-Report-Renderer V2 (Cover + Wheel + 9 Modul-Pages + Hausaufgaben + Hebel + Reflexion + CTA)",
       "type": "feature",
       "priority": "high",
-      "status": "open",
+      "status": "in_progress",
       "version": "V8",
       "description": "Neuer Mandanten-Report-Renderer V2 fuer V8 Teaser-Diagnose. Layout-Master `c:/strategaize/strategaize-dev-system/docs/curriculum/v2/MANDANTEN_REPORT_PROTOTYP.html` (freigegeben 2026-05-28, 17 Seiten A4 Premium-Look). V7.2-Renderer `src/lib/pdf/diagnose-report.tsx` bleibt unveraendert fuer V6.3 partner_diagnostic_v1, neuer Renderer additiv in `src/lib/pdf/mandanten-report-v2/`. **Phase A** (SLC-150) Engine-Setup + Wheel-Komponente + Cover + SUI-Hero + Modul-Profil-Page. **Phase B** (SLC-151) 9 Modul-Pages mit fokussiertem Wheel-Segment + Hausaufgaben + 3-Hebel + Reflexion + CTA. PDF-Engine-Wahl @react-pdf/renderer vs. Puppeteer/Playwright HTML-zu-PDF entschieden in /architecture Q-V8-A. Tonalitaet 'Unsere Empfehlung' Pflicht. Premium-Look Pflicht. Email-Versand-Integration ueber bestehende V7.2 FEAT-060 Server-Action mit Template-Branching. Aufwand ~16-24h ueber 2 Slices. Pre-Conditions: FEAT-063 + FEAT-064 + FEAT-065 done. Siehe FEAT-066-mandanten-report-renderer-v2.md.",
       "createdAt": "2026-05-28"

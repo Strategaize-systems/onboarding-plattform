@@ -812,7 +812,7 @@ Mandanten-Report-Port nach Prototyp-Freigabe 2026-05-28. /requirements done 2026
 |----|-------|---------|--------|----------|---------|
 | SLC-148 | [Template-Daten + Stufen-Lookup + SUI-Score-Engine Backend](SLC-148-template-daten-sui-score-engine.md) | FEAT-063 + FEAT-065 | done | High | 2026-05-28 |
 | SLC-149 | [Fragebogen-UI Components (Hygiene + Skala + Reflexion) Frontend](SLC-149-fragebogen-ui-components.md) | FEAT-064 | done | High | 2026-05-28 |
-| SLC-150 | [Renderer Phase A (Foundation + Wheel + Cover + SUI-Hero + Modul-Profil)](SLC-150-renderer-phase-a-foundation-wheel-cover.md) | FEAT-066 Phase A | planned | High | 2026-05-29 |
+| SLC-150 | [Renderer Phase A (Foundation + Wheel + Cover + SUI-Hero + Modul-Profil)](SLC-150-renderer-phase-a-foundation-wheel-cover.md) | FEAT-066 Phase A | done | High | 2026-05-29 |
 | SLC-151 | [Renderer Phase B (9 Modul-Pages + Hausaufgaben + Hebel + Reflexion + CTA)](SLC-151-renderer-phase-b-modul-pages-end-sections.md) | FEAT-066 Phase B | planned | High | 2026-05-29 |
 | SLC-152 | [Integration + Email-Versand-Branch + Telemetrie + Live-Smoke Founder-Test](SLC-152-integration-email-telemetrie-live-smoke.md) | FEAT-066 + FEAT-058-Reuse + FEAT-060-Reuse | planned | High | 2026-05-29 |
 

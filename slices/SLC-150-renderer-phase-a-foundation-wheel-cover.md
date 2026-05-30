@@ -3,7 +3,7 @@
 **Version:** V8
 **Feature:** FEAT-066 Phase A (17-Seiten-Premium-Mandanten-Report-Renderer V2)
 **Backlog:** BL-131
-**Status:** planned
+**Status:** done (2026-05-30, alle 7 MTs durch inkl. Polish-Round 1+2)
 **Created:** 2026-05-29
 **Priority:** High
 **Estimate:** ~8-12h Code-Side + Spike-Klausel (~1-2h MT-1 mit Pivot-Risiko ~3-4h zu Hybrid)
@@ -198,7 +198,7 @@ Der Founder hat in /architecture V8 zwei Pfade dokumentiert:
   - Visual-Akzeptanz: substanzielle Vorlagen-Treue
 - **Dependencies**: MT-1 (Wheel), MT-2 (Renderer-Foundation)
 
-### MT-6: Vitest-Coverage Pure-Logic-Helpers + Smoke-Skript erweitert
+### MT-6: Vitest-Coverage Pure-Logic-Helpers + Smoke-Skript erweitert [DONE 2026-05-30]
 - **Goal**: Pure-Function-Vitest-Coverage fuer Renderer-Helpers (Theme-Lookups, Klassifizierungs-Farb-Resolver, Modul-Name-Resolver). Smoke-Skript schreibt vollstaendiges 3-Page-PDF mit Founder-Test-Fixture.
 - **Files**:
   - `src/lib/pdf/mandanten-report-v2/__tests__/theme-resolvers.test.ts` (NEU) — Vitest fuer Color-Resolver + Typography-Resolver-Helpers
@@ -215,7 +215,7 @@ Der Founder hat in /architecture V8 zwei Pfade dokumentiert:
   - Smoke-Skript erzeugt nicht-zero-byte PDF
 - **Dependencies**: MT-5 (alle 3 Pages implementiert)
 
-### MT-7: Records + /qa SLC-150 + Phase-A-Visual-Founder-Verdict
+### MT-7: Records + /qa SLC-150 + Phase-A-Visual-Founder-Verdict [DONE 2026-05-30]
 - **Goal**: Project-Records updaten + /qa fuer Code-Side + Phase-A-Founder-Visual-Verdict gegen MANDANTEN_REPORT_PROTOTYP.html Pages 1-3.
 - **Files**:
   - `docs/STATE.md` — Current-Focus auf SLC-150 done

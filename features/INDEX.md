@@ -185,4 +185,4 @@ V8-Scope (User-Entscheidung 2026-05-28 nach Mandanten-Report-Prototyp-Freigabe):
 | FEAT-063 | 10-Prinzipien-Teaser-Template + Stufen-Lookup-Daten (53 Fragen inkl. 6 KI-Erweiterungen, 90+ Stufen-Inhalts-Bloecke) | done | [Spec](FEAT-063-mandanten-report-teaser-template.md) | 2026-05-28 |
 | FEAT-064 | Fragebogen-UI-Komponenten (Hygiene-Trichotomie + 5-Punkt-Reife-Skala + Reflexion-Textareas) | done | [Spec](FEAT-064-mandanten-report-fragebogen-ui.md) | 2026-05-28 |
 | FEAT-065 | SUI-Score-Engine (Module 1-9 gewichtetes Mittel, Modul 9 doppelt, 3-Stufen-Klassifizierung) | done | [Spec](FEAT-065-sui-score-engine.md) | 2026-05-28 |
-| FEAT-066 | 17-Seiten-Premium-Mandanten-Report-Renderer V2 (Cover + Wheel + 9 Modul-Pages + Hausaufgaben + Hebel + Reflexion + CTA) | planned | [Spec](FEAT-066-mandanten-report-renderer-v2.md) | 2026-05-28 |
+| FEAT-066 | 17-Seiten-Premium-Mandanten-Report-Renderer V2 (Cover + Wheel + 9 Modul-Pages + Hausaufgaben + Hebel + Reflexion + CTA) | in_progress | [Spec](FEAT-066-mandanten-report-renderer-v2.md) | 2026-05-28 |
