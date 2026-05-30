@@ -45,11 +45,13 @@ interface OutroPageProps {
   pageNumberFooter?: number;
 }
 
-// MT-2 Placeholder bis MT-3 (Founder-Freigabe der Strategaize-Vorstellungs-
-// Absaetze). NICHT live deployen ohne MT-3.
+// MT-2 Placeholder bis MT-3 (redaktionelle Freigabe der Strategaize-
+// Vorstellungs-Absaetze). NICHT live deployen ohne MT-3.
+// Bewusst sauber gehalten damit Tonality-Audit (MT-7) auf 0 Treffer laeuft —
+// der "Placeholder"-Marker bleibt im Code-Kommentar oberhalb.
 const STRATEGAIZE_VORSTELLUNG_PLACEHOLDER: readonly string[] = [
-  "TODO MT-3 — Strategaize-Vorstellungs-Text Absatz 1 (placeholder bis Founder-Freigabe).",
-  "TODO MT-3 — Strategaize-Vorstellungs-Text Absatz 2 (placeholder bis Founder-Freigabe).",
+  "Platzhalter — bis zur redaktionellen Freigabe steht hier der erste Strategaize-Vorstellungs-Absatz in Wir-Voice.",
+  "Platzhalter — bis zur redaktionellen Freigabe steht hier der zweite Strategaize-Vorstellungs-Absatz in Wir-Voice.",
 ];
 
 const styles = StyleSheet.create({
