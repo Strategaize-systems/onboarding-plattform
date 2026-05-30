@@ -4,8 +4,8 @@ Die aktuelle DB-Struktur entspricht dem Stand von Blueprint V3.4 (Migration 020)
 
 Der uebernommene Blueprint-Stand ist noch nicht auf einer Onboarding-Plattform-Instanz ausgefuehrt worden — die erste Hetzner-Migration geschieht mit SLC-001 (Schema-Fundament).
 
-### MIG-049 — V8 SLC-152 MT-2 `diagnose_event_event_type_check` erweitert um 3 V8-Event-Types (Migration 104, planned)
-- Date: 2026-05-30 (planned — LIVE-Apply via ssh+base64+psql -U postgres auf 159.69.207.29 noch ausstehend)
+### MIG-049 — V8 SLC-152 MT-2 `diagnose_event_event_type_check` erweitert um 3 V8-Event-Types (Migration 104, live)
+- Date: 2026-05-30 (LIVE — applied via ssh+psql -U postgres auf 159.69.207.29 supabase-db-bwkg80w04wgccos48gcws8cs-150827246647, BEGIN/ALTER/ALTER/COMMIT durch, `pg_get_constraintdef` verifiziert 12 Werte: 9 V7.2 + 3 V8.)
 - Scope:
   - `104_v8_diagnose_event_v8_types.sql` — `DROP CONSTRAINT IF EXISTS diagnose_event_event_type_check` + `ADD CONSTRAINT ... CHECK (event_type IN (...9 V7.2-Werte + 3 V8-Werte))`
   - 3 neue Event-Types: `v8_report_generated`, `v8_email_sent`, `v8_pdf_render_failed`

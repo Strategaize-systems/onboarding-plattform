@@ -185,7 +185,7 @@
     {
       "id": "v8",
       "name": "V8",
-      "status": "active",
+      "status": "released",
       "summary": "**Mandanten-Report-Port — 10-Prinzipien-Teaser-Diagnose fuer StB-Mandanten via Co-Hosting-Plattform.** Neuer Fragebogen-Template (47 Fragen: 5 Hygiene + 37 Skala + 5 Reflexion) entlang 10 Strategaize-Uebergabefaehigkeits-Prinzipien (Modul 0..10) mit SUI-Score (Strategaize Uebergabefaehigkeits-Index 0-100, gewichtetes Mittel Module 1-9, Modul 9 doppelt). 17-Seiten-Premium-PDF-Renderer nach Master-Vorlage (`docs/curriculum/v2/MANDANTEN_REPORT_PROTOTYP.html` im Dev-System) mit Cover + SUI-Hero + Modul-Profil-Wheel + 9 Modul-Pages mit fokussiertem Wheel-Segment + Hausaufgaben (Modul 0) + 3 Strategie-Hebel + Reflexion (Modul 10) + CTA Folgegespraech. Stufen-Lookup-Tabelle pro Modul x 5 Stufen aus `docs/curriculum/v2/EXIT_READINESS_LEVELS.md` als Inhalt fuer 'Was es in Ihrer Firma bedeutet' + 'Unsere Empfehlung'. Tonalitaet 'Unsere Empfehlung' (Strategaize-Sicht, NICHT 'Empfehlung Ihres Steuerberaters'). Distribution-Use-Case: StB Mandant-Einladung via Co-Hosting-Plattform (Mandant beantwortet in Ruhe, Beratungs-Protokoll als Output) + StB-eigene-Diagnose. Parallel zur bestehenden 6-Block-Variante (exit-readiness-v1.0.0.json, FEAT-002+FEAT-016 LIVE) — keine Replace, zwei klar getrennte Use-Cases (Teaser vs. Voll-Diagnose fuer bestehende Strategaize-Kunden). Diary-Mode (DEC-101) verschoben auf V9. Pilot-Empfaenger: StB selbst (Eigen-Diagnose) + StB-Mandanten via Co-Hosting-Plattform.",
       "order": 18
     },
