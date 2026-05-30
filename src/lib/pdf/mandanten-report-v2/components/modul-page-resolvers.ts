@@ -1,19 +1,22 @@
-// V8 SLC-151 MT-1 — Pure-Logic-Helpers fuer Modul-Page-Render.
+// V8 SLC-151 MT-1+MT-2 — Pure-Logic-Helpers fuer Modul-Page-Render.
 //
-// Reusable Sub-Component <ModulPage> braucht zwei Pure-Functions:
-// - resolveStufenInfo: holt {was_es_bedeutet, unsere_empfehlung} aus dem
-//   template.metadata.stufen_lookup JSONB (DEC-164). Defensive-Fail-Fast
-//   bei fehlenden Eintraegen, damit Caller (renderer) statt kryptischem
-//   @react-pdf-Crash eine klare Error-Message bekommt.
-// - modulIdxFromKey: konvertiert ModulKey ("m1".."m9") zu 0-basiertem Index
-//   fuer Wheel-focusIdx-Prop.
+// MT-1: resolveStufenInfo + modulIdxFromKey (Reusable-Component-Helpers).
+// MT-2: getAllModulPagesProps (Renderer-Foundation-Helper, baut 9
+//       ModulPageProps aus V8ReportSnapshot + V8Template).
+//
+// Defensive-Fail-Fast bei fehlenden Eintraegen, damit der Renderer eine
+// klare Error-Message bekommt statt eines kryptischen @react-pdf-Crash.
 
 import type {
   ModulKey,
   StufenInfo,
   V8StufenLookup,
+  V8Template,
+  V8ReportSnapshot,
   StufeKey,
 } from "@/lib/diagnose/types";
+
+import type { ModulPageProps } from "./modul-page";
 
 const MODUL_KEYS: ModulKey[] = [
   "m1",
@@ -71,4 +74,86 @@ export function resolveStufenInfo(
     );
   }
   return info;
+}
+
+/**
+ * Baut die 9 ModulPageProps-Eintraege fuer Pages 4-12 aus Snapshot + Template.
+ *
+ * Iteriert m1..m9, zieht pro Modul:
+ * - modulName aus `template.blocks` (Block mit modul_id = uppercase modulKey)
+ * - modulScore aus `snapshot.moduleScores[modulKey]`
+ * - modulStufe aus `snapshot.stufenMapping[modulKey]`
+ * - stufenInfo aus `template.metadata.stufen_lookup` via resolveStufenInfo
+ * - worumEsGeht aus `template.metadata.worum_es_geht[modulKey]`
+ *
+ * Defensive: wirft Error bei
+ * - fehlendem template.blocks-Eintrag (Template-Drift)
+ * - fehlendem worum_es_geht-Eintrag fuer einen ModulKey
+ * - Stufe-Mapping-Inkonsistenz (transitiv ueber resolveStufenInfo)
+ *
+ * @param snapshot SUI-Snapshot mit moduleScores + stufenMapping
+ * @param template V8Template (Migration 102) mit blocks + metadata
+ * @param mandantName Optional fuer Page-Footer-Slot
+ * @param startingPageNumber Default 4 (Modul-Page-1 ist Page 4)
+ */
+export function getAllModulPagesProps(
+  snapshot: V8ReportSnapshot,
+  template: V8Template,
+  mandantName?: string,
+  startingPageNumber: number = 4,
+): ModulPageProps[] {
+  if (!template.metadata.worum_es_geht) {
+    throw new Error(
+      "getAllModulPagesProps: template.metadata.worum_es_geht is required",
+    );
+  }
+  if (!template.metadata.stufen_lookup) {
+    throw new Error(
+      "getAllModulPagesProps: template.metadata.stufen_lookup is required",
+    );
+  }
+
+  return MODUL_KEYS.map((modulKey, idx) => {
+    const upperKey = modulKey.toUpperCase();
+    const block = template.blocks.find((b) => b.modul_id === upperKey);
+    if (!block) {
+      throw new Error(
+        `getAllModulPagesProps: template.blocks missing entry for "${upperKey}"`,
+      );
+    }
+    const modulName = block.name;
+    if (!modulName || modulName.trim().length === 0) {
+      throw new Error(
+        `getAllModulPagesProps: template.blocks[${upperKey}].name is empty`,
+      );
+    }
+
+    const modulScore = snapshot.moduleScores[modulKey];
+    const modulStufe = snapshot.stufenMapping[modulKey];
+
+    const stufenInfo = resolveStufenInfo(
+      modulKey,
+      modulStufe,
+      template.metadata.stufen_lookup,
+    );
+
+    const worumEsGeht = template.metadata.worum_es_geht?.[modulKey];
+    if (!worumEsGeht || worumEsGeht.trim().length === 0) {
+      throw new Error(
+        `getAllModulPagesProps: template.metadata.worum_es_geht missing for ${modulKey}`,
+      );
+    }
+
+    return {
+      modulKey,
+      modulName,
+      modulScore,
+      modulStufe,
+      wheelScores: snapshot.moduleScores,
+      stufenInfo,
+      worumEsGeht,
+      pageNumber: startingPageNumber + idx,
+      mandantName,
+    };
+  });
 }

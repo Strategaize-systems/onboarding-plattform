@@ -9,7 +9,7 @@
 // nur Scores enthaelt. Caller zieht die Namen aus `template.blocks[].name`
 // analog zum selectThreeHebel-Pattern in SLC-148 MT-4.
 
-import type { ModulKey, V8ReportSnapshot } from "@/lib/diagnose/types";
+import type { ModulKey, V8ReportSnapshot, V8Template } from "@/lib/diagnose/types";
 
 export interface MandantInfo {
   /** Pflicht. Firmenname des Mandanten. */
@@ -45,6 +45,14 @@ export interface RendererInput {
   stb?: StbInfo;
   /** Modul-Namen-Lookup. Caller populated aus template.blocks[].name. */
   moduleNames: Record<ModulKey, string>;
+  /**
+   * V8-Template-Source-of-Truth fuer Phase-B-Renders (SLC-151):
+   * - blocks[].name fuer Modul-Pages (Pages 4-12)
+   * - metadata.stufen_lookup fuer Modul-Page-Text-Sektionen
+   * - metadata.worum_es_geht fuer Modul-Page Sektion 1
+   * - metadata.hausaufgaben_lookup fuer HausaufgabenPage (Page 13)
+   */
+  template: V8Template;
   /** Optional Render-Options. */
   options?: RenderOptions;
 }
@@ -89,6 +97,25 @@ export function validateRendererInput(input: RendererInput): true {
     if (!input.moduleNames[key] || input.moduleNames[key].trim().length === 0) {
       throw new Error(`RendererInput: moduleNames.${key} is required`);
     }
+  }
+  if (!input.template) {
+    throw new Error("RendererInput: template is required (SLC-151 Phase B)");
+  }
+  if (!input.template.metadata) {
+    throw new Error("RendererInput: template.metadata is required");
+  }
+  if (!input.template.metadata.stufen_lookup) {
+    throw new Error(
+      "RendererInput: template.metadata.stufen_lookup is required (Modul-Pages 4-12)",
+    );
+  }
+  if (!input.template.metadata.worum_es_geht) {
+    throw new Error(
+      "RendererInput: template.metadata.worum_es_geht is required (Modul-Pages 4-12)",
+    );
+  }
+  if (!input.template.blocks || input.template.blocks.length === 0) {
+    throw new Error("RendererInput: template.blocks is required");
   }
   return true;
 }
