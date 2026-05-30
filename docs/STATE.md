@@ -373,6 +373,20 @@ V2 — 12/12 Slices done, released (REL-004).
 - V3 — 2026-04-24 — released (REL-005), Deploy-Commit e775ff0.
 - V2 — 2026-04-21 — released (REL-004).
 
+## Pre-Live Security Hausaufgaben (Master-Plan 5 Sprints, Stand 2026-05-30)
+
+Aus Cross-Repo-Audit 2026-05-30 (siehe `docs/SECURITY_AUDIT_2026-05-30.md` + Cross-Repo-Summary `c:/strategaize/strategaize-dev-system/docs/SECURITY_AUDIT_SUMMARY_2026-05-30.md`). Security-Sprints **NICHT jetzt** starten — User-Entscheidung 2026-05-30: erst BS V8.9..V8.12 sauber durchziehen, dann OP, dann IS. OP-Security wartet bis V8 (SLC-148..152 Mandanten-Report) STABLE ist.
+
+| Version | Scope | Aufwand | Pre-Live-Status |
+|---|---|---|---|
+| **V8.0.1** | Sprint 1 OP — 12 SECURITY DEFINER search_path + 4 Cron timing-safe + partner-branding SVG-Block (BL-128, SLC-160) | ~2-3h | **PRE-LIVE PFLICHT** |
+| **V8.0.2** | Sprint 2 OP — Recording-Webhook Path-Traversal Fix (BL-137) | ~2-4h | **PRE-AKTIVIERUNGS-PFLICHT** (vor Re-Aktivierung des Endpoints, z.B. SLC-110 Network-Refactor) |
+| **V8.0.3** | Sprint 4 OP-Anteil — CSP-Headers (BL-138) + Passwort-Policy 12+ (BL-139) + Logger-Redaction + LLM-Cost-Cap (BL-140) | ~1-2 Sessions parallel | **NICE-TO-HAVE vor Live** (Defense-in-Depth) |
+
+**Logik:** V8.0.1 + V8.0.2 sind Pflicht bevor OP echte Customer-Daten verarbeitet oder neue Endpoints freigeschaltet werden. V8.0.3 ist Defense-in-Depth, blockiert nicht. Sprint-3 (BS RLS-Sweep) ist BS-spezifisch und betrifft OP nicht. Sprint 5 (IS Single-User-vs-Multi-Tenant-Decision) ist IS-only.
+
+**Cross-Repo-Status 2026-05-30:** SLC-160 Slice-File existiert (im Worktree `c:/strategaize/strategaize-onboarding-plattform-slc160`), aber Code-Side NICHT begonnen. Trigger fuer OP-Security-Arbeit: **V8 Mandanten-Report STABLE** (sonst Merge-Konflikt-Risk mit aktivem V8-Worktree).
+
 ## Notes
 V4 wurde am 2026-04-23 in Planungs-Session auf Basis Personal Strategic Model V1 + SOFTWARE-EXECUTION-MAP definiert. Strategischer Rahmen: SOFTWARE-EXECUTION-MAP Phase 1 (8 Wochen) — Track A (V3 abschliessen) + Track B (V4 Requirements done) + Track C (V4 Implementation 3-4 Wochen).
 
