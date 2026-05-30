@@ -1,7 +1,7 @@
 # SLC-160 — OP Security Quick-Wins
 
 - **Version**: V8.0.1 (Security-Hotfix, parallel zur laufenden V8 Mandanten-Report-Implementation)
-- **Feature**: FEAT-160 / BL-128
+- **Feature**: FEAT-160 / BL-141 (war BL-128, 2026-05-30 renamed wegen Duplikat-Kollision mit V8-Mandanten-Report-BL-128)
 - **Created**: 2026-05-30
 - **Status**: planned
 - **Branch**: `slc-160-security-quick-wins-op` (Worktree empfohlen — OP = SaaS-Mode, Worktree-Isolation per SaaS-Mode-Pflicht. Worktree-Pfad: `c:/strategaize/strategaize-onboarding-plattform-slc160`)
@@ -85,8 +85,8 @@ Schliesst die 3 hoechst-priorisierten Security-Findings aus dem Cross-Repo-Audit
 
 ### MT-5: Quality-Gates + Apply-Live + Records
 - **Goal**: TSC + Lint + Build + Migrations live auf Coolify-DB + Records-Update.
-- **Files**: `docs/MIGRATIONS.md`, `docs/RELEASES.md` (NEU REL-026), `docs/STATE.md` (Current Focus + Last Stable Version), `slices/INDEX.md` (SLC-160 → done), `planning/backlog.json` (BL-128 → done), `planning/roadmap.json` (V8.0.1 → released).
-- **Expected behavior**: TSC EXIT=0. Lint 0/0. Build PASS. Migrations live appliziert per `.claude/rules/sql-migration-hetzner.md` base64-Pattern (User-SSH-Action oder Agent-SSH per OP-Server-Memory `reference_op_ssh_alias`). Records auf REL-026 / V8.0.1 / SLC-160 done.
+- **Files**: `docs/MIGRATIONS.md`, `docs/RELEASES.md` (NEU REL-027 — REL-026 ist V8.0 Mandanten-Report-Port belegt), `docs/STATE.md` (Current Focus + Last Stable Version), `slices/INDEX.md` (SLC-160 → done), `planning/backlog.json` (BL-141 → done), `planning/roadmap.json` (V8.0.1 → released).
+- **Expected behavior**: TSC EXIT=0. Lint 0/0. Build PASS. Migrations live appliziert per `.claude/rules/sql-migration-hetzner.md` base64-Pattern (User-SSH-Action oder Agent-SSH per OP-Server-Memory `reference_op_ssh_alias`). Records auf REL-027 / V8.0.1 / SLC-160 done.
 - **Verification**: Cockpit-Records-Format-Check + Counts.
 - **Dependencies**: MT-2 + MT-3 + MT-4 done + /qa PASS.
 

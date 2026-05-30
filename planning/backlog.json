@@ -1371,7 +1371,7 @@
       "createdAt": "2026-05-28"
     },
     {
-      "id": "BL-128",
+      "id": "BL-141",
       "title": "V8.0.1 Security Quick-Wins — search_path-Hardening + timing-safe Cron-Secret + SVG-Block (SLC-160)",
       "type": "fix",
       "priority": "high",
