@@ -113,6 +113,36 @@ describe("page + spacing tokens", () => {
     expect(SPACING.lg).toBeLessThan(SPACING.xl);
     expect(SPACING.xl).toBeLessThan(SPACING.xxl);
   });
+
+  it("SPACING.outroSectionGap is positive (V8.1 SLC-162 Card-Gap)", () => {
+    expect(SPACING.outroSectionGap).toBeGreaterThan(0);
+  });
+});
+
+describe("V8.1 SLC-162 Outro-Tokens (DEC-171 Verkaufs-Style)", () => {
+  const HEX = /^#[0-9a-fA-F]{6}$/;
+
+  it("outro.cardBg is valid hex", () => {
+    expect(COLOR.outro.cardBg).toMatch(HEX);
+  });
+
+  it("outro.cardBorder is valid hex", () => {
+    expect(COLOR.outro.cardBorder).toMatch(HEX);
+  });
+
+  it("outro.accent matches brandAccent #4dcb8b (Strategaize-Akzent per DEC-171)", () => {
+    expect(COLOR.outro.accent).toBe("#4dcb8b");
+    expect(COLOR.outro.accent).toBe(COLOR.brandAccent);
+  });
+
+  it("outro.videoBoxBg matches brandPrimaryDark #120774 (Strategaize-Brand-Box)", () => {
+    expect(COLOR.outro.videoBoxBg).toBe("#120774");
+    expect(COLOR.outro.videoBoxBg).toBe(COLOR.brandPrimaryDark);
+  });
+
+  it("outro.badgeAktuelleStufeBg is valid hex", () => {
+    expect(COLOR.outro.badgeAktuelleStufeBg).toMatch(HEX);
+  });
 });
 
 describe("typography tokens", () => {
