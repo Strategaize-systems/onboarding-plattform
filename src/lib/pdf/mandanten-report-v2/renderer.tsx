@@ -36,6 +36,7 @@ import {
   type AugmentOutput,
   type AugmentRunOptions,
 } from "@/lib/llm/v8-1-augmentation";
+import { generateCtaMagicLinkToken } from "@/lib/cta/token";
 import type { ModulKey, HebelItem } from "@/lib/diagnose/types";
 
 const MODUL_KEYS: ModulKey[] = [
@@ -67,14 +68,33 @@ export interface RendererAugmentConfig {
   options?: AugmentRunOptions;
 }
 
+/**
+ * Optionale Magic-Link-Config fuer V8.1-Outro-CTA (SLC-163 MT-8).
+ *
+ * Wenn gesetzt: generateCtaMagicLinkToken(...) wird aufgerufen und die
+ * resultierende URL als `magicLinkUrl`-Prop an OutroPage uebergeben.
+ *
+ * Wenn nicht gesetzt: OutroPage nutzt CTA_PLACEHOLDER_URL — sinnvoll fuer
+ * Smoke-Tests + Code-Side-Renderer-Verifikation ohne CTA_TOKEN_SECRET.
+ */
+export interface RendererMagicLinkConfig {
+  captureSessionId: string;
+  partnerOrganizationId: string;
+  mandantEmail: string;
+  /** Override-able App-URL fuer Token-URL-Konstruktion. Default NEXT_PUBLIC_APP_URL. */
+  appBaseUrl?: string;
+}
+
 interface DocumentProps {
   input: RendererInput;
   augmentedHebel: AugmentOutput[];
+  magicLinkUrl?: string;
 }
 
 export function MandantenReportV2Document({
   input,
   augmentedHebel,
+  magicLinkUrl,
 }: DocumentProps) {
   const modulPagesProps = getAllModulPagesProps(
     input.snapshot,
@@ -102,6 +122,7 @@ export function MandantenReportV2Document({
       <OutroPage
         input={input}
         augmentedHebel={augmentedHebel}
+        magicLinkUrl={magicLinkUrl}
         pageNumberHero={16}
         pageNumberFooter={17}
       />
@@ -159,6 +180,7 @@ function buildDeterministicFallback(
 export async function renderMandantenReportV2Pdf(
   input: RendererInput,
   augmentConfig?: RendererAugmentConfig,
+  magicLinkConfig?: RendererMagicLinkConfig,
 ): Promise<Buffer> {
   validateRendererInput(input);
 
@@ -181,10 +203,25 @@ export async function renderMandantenReportV2Pdf(
       })
     : buildDeterministicFallback(augmentInputs);
 
+  let magicLinkUrl: string | undefined;
+  if (magicLinkConfig) {
+    const token = generateCtaMagicLinkToken({
+      capture_session_id: magicLinkConfig.captureSessionId,
+      partner_organization_id: magicLinkConfig.partnerOrganizationId,
+      mandant_email: magicLinkConfig.mandantEmail,
+    });
+    const baseUrl =
+      magicLinkConfig.appBaseUrl ??
+      process.env.NEXT_PUBLIC_APP_URL ??
+      "https://onboarding.strategaizetransition.com";
+    magicLinkUrl = `${baseUrl}/strategaize-anfrage?token=${encodeURIComponent(token)}`;
+  }
+
   return renderToBuffer(
     <MandantenReportV2Document
       input={input}
       augmentedHebel={augmentedHebel}
+      magicLinkUrl={magicLinkUrl}
     />,
   );
 }
