@@ -207,15 +207,85 @@
       "id": "v9",
       "name": "V9",
       "status": "planned",
-      "summary": "Diary-Mode als zusaetzlicher Capture-Modus (zeitlich verteilte In-Situ-Aufnahmen, Mobile/PWA). Architektur-Hooks wurden in V4 vorbereitet (FEAT-025 Capture-Mode-Extension). Versionsnummer ehemals V5 (vor 2026-04-23 Re-Numerierung), dann V6, dann V8, jetzt V9 nach 2026-05-28 Versions-Shift (V8 wurde Mandanten-Report-Port). Diary-Mode adressiert das Erfassen von seltenem, situativem Wissen (z.B. nur monatlich auftretende Ausnahmen), das in Questionnaire/Walkthrough/Dialogue-Modi nicht praktikabel ist. V7.1-Polish-Sammler (BL-113..117) laeuft vorher als kompakter Cycle (siehe DEC-139).",
+      "summary": "**V9 Bulk-Import GF-Email → Pattern-Extraktion → Handbuch-Vervollstaendigung** (umgewidmet von Diary-Mode-deferred per RPT-372 + RPT-373 /discovery 2026-06-01). Founder-Pull (BL-146): GF hat Massen-Email-Korrespondenz mit verstecktem operativem Wissen (Kunden-Umgang, Vertriebsmuster, Loesungen die schon existieren) das nicht ueber Questionnaire/Evidence erfassbar ist. **V9.0-Workflow**: GF exportiert Email-Folder aus seinem Mail-Client (Gmail-Takeout, Outlook-Export, Thunderbird, Apple Mail) als `.mbox`, laedt hoch. (1) KI-Pre-Filter-Pass (Haiku) klassifiziert jede Email in `content`/`short_reply`/`notification`/`newsletter`/`private`/`unclear`. (2) GF sieht Filter-Ergebnis, kann Klassifikation korrigieren. (3) Thread-Aggregation via mailparser + In-Reply-To-Headers (Konversations-Einheit statt einzelne Snippets). (4) PII-Redaction-Pass (Reuse V5 SLC-076..078). (5) Pattern-Extraktion-Pass (Sonnet) auf nur 'content'+'unclear'-Threads — Themen + wiederkehrende Antworten + Entscheidungen + offene Fragen. (6) GF-Curation-UI: Akzeptieren/Ablehnen/Editieren pro Pattern. (7) Akzeptierte Patterns fliessen als zusaetzliche Knowledge-Units in V4.1-Handbuch-Snapshot. **Foundation-Reuse**: V2 Evidence-Mode (FEAT-013 deployed) liefert `evidence_file`+`evidence_chunk`+Storage-Bucket+RLS+KI-Mapping-Worker. V5 PII-Redaction live. V4 FEAT-025 Capture-Mode-Hook (`capture_mode='email_bulk'`). V4.1 Handbuch-Reader als Konsum-Endpunkt. **Persona V9.0**: GF im eigenen Tenant (NICHT Mandant im Multiplikator-Pfad, NICHT Mitarbeiter, NICHT Customer-Service-Mitarbeiter — alle V9.1+ oder V10+). **Aufwand V9.0**: ~2-3 Wochen Code-Side + /qa + /final-check + /go-live + /deploy. **Out of Scope V9.0**: Forward-Bucket-Email (Inbound-SMTP-Vendor, V9.1+), Customer-Service-Ticket-Bulk (V9.1+), Multi-Mitarbeiter-Upload (V9.2+), IS-Knowledge-Push (V9.1+ wenn IS V3.5 SLC-352 + Anwalt durch), Auto-Response-Generator (V10+), CRM-Connector (V10+), IMAP-Live-Sync (V10+), Outlook-PST (V10+). **Pre-Conditions**: KEINE Discovery-blockierenden Pre-Cond. V8.1 STABLE-Bestaetigung vor /requirements V9 erwartet (~2026-06-02 08:00 UTC). **Naechster Schritt**: /requirements V9.",
       "order": 19
     },
     {
-      "id": "v10",
-      "name": "V10+",
+      "id": "v9-1",
+      "name": "V9.1",
       "status": "planned",
-      "summary": "Queroptionen: Process-Mining-Connector, kollaborative Annotation, Anomalie-Flagging, Prozess-Simulation. Versionsnummer ehemals V6+ (vor 2026-04-23 Re-Numerierung), dann V7+, dann V9+, jetzt V10+ nach 2026-05-28 Versions-Shift (V8 wurde Mandanten-Report-Port, Diary-Mode rutschte auf V9). Falls kunden-getrieben gewollt: Browser-Extension fuer strukturierte Klick-Erfassung + DOM-Snapshots (V5+ baut nur Web-only Capture, Klick-Tracking ist V10+).",
+      "summary": "**V9.1 Bulk-Import Forward-Bucket-Email** (geparkt aus RPT-373 V9-Discovery 2026-06-01). Erweitert V9.0 .mbox-Upload um Inbound-SMTP-Workflow: dedicated Email-Adresse pro Tenant (z.B. `bulk-<tenant-slug>@bulk.strategaizetransition.com`), GF richtet Mail-Forward-Regel im eigenen Mail-Client ein, alle weitergeleiteten Emails fliessen automatisch in den OP-Bulk-Inbox-Speicher. Bequemster Workflow nach V9.0-Validation. **Tech-Aufwand**: Inbound-SMTP-Vendor-Anbindung noetig — IONOS ist nur Outbound, neue Vendor-Beziehung (Mailgun / AWS SES Inbound / Postmark) + DSGVO-Pruefung + Pricing-Vergleich. ~1-2 Wochen Setup + ~1 Woche Routing-Logik (Tenant-Adresse → Tenant-Bucket). **Pre-Conditions**: V9.0 RELEASED + Validation dass Pre-Filter-Qualitaet hoch genug fuer 'alles rein'-Workflow ist. **Out of Scope V9.1**: andere Datentypen (Tickets, CRM — V9.2/V11+).",
+      "order": 19.1
+    },
+    {
+      "id": "v9-2",
+      "name": "V9.2",
+      "status": "planned",
+      "summary": "**V9.2 Bulk-Import Customer-Service-Ticket-Bulk** (geparkt aus RPT-373 V9-Discovery 2026-06-01). Zweite Daten-Quelle nach Email: Helpdesk-Ticket-Export (CSV / JSON) aus gaengigen Helpdesk-Tools (Zendesk, Freshdesk, HubSpot Service Hub). Parsing-Adapter fuer 3-5 Standard-Helpdesk-Export-Formate. Konsum-Pfad gleicher wie V9.0: PII-Redaction → Pattern-Extraktion → GF-Curation → Handbuch-Snapshot ODER (V10-abhaengig) Customer-Service-Auto-Response-Bibliothek. Founder-Pull (2026-06-01): 'Kundenservicethemen mal durchschauen — wo stecken noch irgendwelche Themen drin, die wir noch nicht gesehen haben'. **Tech-Aufwand**: ~1-2 Wochen Code-Side (Parser pro Helpdesk-Format + Pattern-Extraktion-Prompt-Anpassung fuer Ticket-Struktur statt Email-Thread). **Pre-Conditions**: V9.0 RELEASED. **Out of Scope V9.2**: Live-Helpdesk-API-Sync (V11+).",
+      "order": 19.2
+    },
+    {
+      "id": "v9-3",
+      "name": "V9.3",
+      "status": "planned",
+      "summary": "**V9.3 Bulk-Import Multi-Mitarbeiter-Upload** (geparkt aus RPT-373 V9-Discovery 2026-06-01). Erweitert V9.0 GF-only-Persona um Mitarbeiter-Uploads. Jeder Mitarbeiter (Rolle `employee` aus FEAT-022 V4) laedt seine eigenen Emails / Tickets hoch, tenant_admin sieht aggregierte Pattern-Liste mit Mitarbeiter-Quellen-Provenance. Per-User-Bucket-Subpfad im bestehenden tenant-isolierten Storage, RLS-Erweiterung (Mitarbeiter sieht nur eigene Uploads, GF sieht alle Mitarbeiter-Uploads des Tenants). **Tech-Aufwand**: ~1-2 Wochen Code-Side (RLS-Erweiterung + UI-Sektion 'Meine Bulk-Imports' im Mitarbeiter-Dashboard + Aggregations-View im GF-Dashboard). **Pre-Conditions**: V9.0 RELEASED + FEAT-022 Mitarbeiter-Capture-Workflow live (V4, deployed). **Out of Scope V9.3**: Live-Synchronisation Mitarbeiter-Inbox (V11+), Mitarbeiter-Curation-Rechte (V9.4+).",
+      "order": 19.3
+    },
+    {
+      "id": "v9-4",
+      "name": "V9.4",
+      "status": "planned",
+      "summary": "**V9.4 Bulk-Import IS-Knowledge-Push** (geparkt aus RPT-373 V9-Discovery 2026-06-01). Cross-Repo-Hebel: akzeptierte Patterns aus V9.0/V9.1/V9.2/V9.3 fliessen zusaetzlich zum OP-internen Handbuch-Konsum in die IS V3.5 `knowledge_item`-Master-Schicht (mit `source_system='onboarding_plattform'`, `aggregation_level='pseudonymized'`, `pii_redacted=true`). Konsumenten in BS + IS (RAG-Workspace) koennen GF-Pattern-Wissen ueber Tenants hinweg konsumieren (mit DSGVO-konformer Pseudonymisierung). Reuse-Pattern: V7.6 SLC-354 OP→IS Verdichtungs-Cron-Architektur. **Tech-Aufwand**: ~1 Woche Code-Side (Push-Endpoint + Service-Key-Auth + Idempotenz-Hash). **Pre-Conditions** (Hart-Block): IS V3.5 SLC-352 Knowledge-API LIVE + Anwalts-Sign-off PII-Redaction (BL-104 extern). Solange Pre-Cond nicht durch: V9.4 nicht startbar. **KNOWLEDGE_PUSH_ENABLED=false** als Master-Switch bis Anwalt-OK. **Out of Scope V9.4**: Cross-Tenant-Pattern-Diff (V14+), Knowledge-API-Bidirectional-Sync (V12+).",
+      "order": 19.4
+    },
+    {
+      "id": "v10",
+      "name": "V10",
+      "status": "planned",
+      "summary": "**V10 Bulk-Konsum-Pfade — Auto-Response-Generator + Sales-Objection-Handling-Bibliothek** (geparkt aus RPT-373 V9-Discovery 2026-06-01). Greenfield-Konsum-Pfade fuer das in V9.0..V9.4 extrahierte Pattern-Wissen. **Auto-Response-Generator (FEAT-Cluster A)**: Customer-Service-Mitarbeiter bekommt KI-Vorschlaege fuer Ticket-Antworten basierend auf akzeptierten Patterns. Founder-Pull: 'kuenftig Customer-Service-Auto-Responses'. **Sales-Objection-Handling-Bibliothek (FEAT-Cluster B)**: durchsuchbare Bibliothek der haeufigsten Einwand-Antworten aus Sales-Email-Korrespondenz. Founder-Pull: 'Vertriebspipelines durchschauen — wo stecken schon Loesungen drin'. **Tech-Aufwand**: ~4-6 Wochen Code-Side, eigene /discovery V10 pflichtig (zwei separate Konsumenten-UIs, eigene Persona pro UI — Customer-Service-Mitarbeiter vs Vertriebler). **Pre-Conditions**: V9.0 + V9.2 (Ticket-Bulk fuer Auto-Response) RELEASED, ausreichend kuratierte Pattern-Menge (geschaetzt min. 100 akzeptierte Patterns pro Konsum-Pfad fuer sinnvolle Antwort-Qualitaet). **Out of Scope V10**: Direkte Helpdesk-Integration (Auto-Response wird im OP gezeigt, nicht im Helpdesk eingebettet — V12+).",
       "order": 20
+    },
+    {
+      "id": "v11",
+      "name": "V11",
+      "status": "planned",
+      "summary": "**V11 Externe-Daten-Quellen-Cluster — CRM-Pipeline-Connector + IMAP-Live-Sync + Outlook-PST** (geparkt aus RPT-373 V9-Discovery 2026-06-01). Tech-tiefe Connector-Iteration. **CRM-Pipeline-Connector (FEAT-Cluster A)**: Direkt-Anbindung an HubSpot / Pipedrive / Salesforce-APIs, importiert Deal-Notes + Pipeline-Email-Verlauf + Activity-Log. Founder-Pull: 'Vertriebspipelines durchschauen'. **IMAP-Live-Sync (FEAT-Cluster B)**: kontinuierlicher Email-Inbox-Watch via IMAP IDLE statt einmaliger .mbox-Upload. Connection-Pool, OAuth2-Auth pro Provider, Idempotenz-Hash, Inbox-Folder-Selektion. **Outlook-PST (FEAT-Cluster C)**: Outlook-Archiv-Format-Parser fuer Legacy-Email-Archive (Pre-Office-365-Kunden). **Tech-Aufwand**: ~6-8 Wochen Code-Side, eigene /discovery V11 pflichtig (drei separate Connector-Stacks mit unterschiedlicher Tiefe). **Pre-Conditions**: V9.0 RELEASED + V9.4 IS-Knowledge-Push (sinnvoller Sink fuer Live-Daten-Stream). **Out of Scope V11**: Outbound zurueck in CRM/Inbox (V13/V15).",
+      "order": 21
+    },
+    {
+      "id": "v12",
+      "name": "V12",
+      "status": "planned",
+      "summary": "**V12 Bulk-Import im Multiplikator-Pfad — Mandanten-eigene Email-Uploads** (geparkt aus RPT-373 V9-Discovery 2026-06-01). Privacy-tiefste Erweiterung: StB-Mandanten laden ihre eigenen Emails ins StB-Co-Hosting-Tenant-Bucket, Pattern-Extraktion liefert Mandanten-spezifische Wissens-Auskristallisierung als Mehrwert im Multiplikator-Vertriebspfad (zusaetzlich zum V8-Mandanten-Report). **DSGVO-Risiko hoch**: Mandant-eigene Daten in StB-verwaltetem Tenant — eigener Anwalts-Pass + AVV-Erweiterung + Consent-Mechanik (signierter Vertrag pro Mandant) Pflicht. KNOWLEDGE_PUSH zu IS bleibt strikt opt-in. **Tech-Aufwand**: ~3-4 Wochen Code-Side + min. 2-3 Wochen Anwalts-Drehbuch + AVV-Update. **Pre-Conditions** (Hart-Block): V9.0..V9.4 RELEASED, Anwalts-Sign-off Pattern-Extraktion Mandanten-Inhalte, AVV-Anhang Bulk-Import-Klausel, Mandanten-Consent-UI-Pattern (analog V6 lead_push_consent). **Out of Scope V12**: Multi-StB-Cross-Tenant-Pattern-Diff (Wettbewerbsrechtlich heikel — V14+).",
+      "order": 22
+    },
+    {
+      "id": "v13",
+      "name": "V13",
+      "status": "planned",
+      "summary": "**V13 KI-augmented Email-Beantwortung in GF-Inbox** (geparkt aus RPT-373 V9-Discovery 2026-06-01). Outbound-Tool: KI schlaegt direkt im GF-Mail-Client (via Browser-Extension oder Outlook-Add-In) Antwortvorschlaege basierend auf akzeptierten Patterns aus V9.x. Verlaesst den reinen Inbound-Bulk-Import-Pfad und wird zu einem Live-Assistenten. **Strategischer Hinweis**: dies ist im Gegensatz zu V10 Auto-Response (im OP angezeigt) eine Inbox-eingebettete-Loesung — voellig anderer UX-Pfad. **Tech-Aufwand**: ~4-6 Wochen Code-Side, eigene /discovery V13 pflichtig (Browser-Extension-Architektur oder Outlook-Web-Add-In, OAuth, Real-Time-Bedrock-Calls, Latency-Optimierung). **Pre-Conditions**: V9.0 + V10 RELEASED, ausreichend kurierte Pattern-Menge. **Out of Scope V13**: Auto-Send ohne User-Bestaetigung (kommt nie), Mobile-Inbox-Variante (V15+).",
+      "order": 23
+    },
+    {
+      "id": "v14",
+      "name": "V14",
+      "status": "planned",
+      "summary": "**V14 Pattern-Diff Mitarbeiter-Bulk vs GF-Bulk — Bridge-Engine V2 Use-Case** (geparkt aus RPT-373 V9-Discovery 2026-06-01). KI vergleicht Pattern-Sets aus GF-Bulk (V9.0) und Mitarbeiter-Bulk (V9.3): identifiziert Diskrepanzen (was sagt GF, was machen Mitarbeiter tatsaechlich), Wissens-Luecken (Mitarbeiter wissen Dinge die GF nicht in Handbuch hat) und Konsistenz-Pruefung (sind Pattern aligned oder driften sie). Erweitert die V4 Bridge-Engine (FEAT-023) um eine Pattern-Diff-Stufe. **Strategischer Wert**: liefert mess-bare Daten zum Reifegrad der Organisation — passt zu Exit-Readiness-Diagnose. **Tech-Aufwand**: ~3-4 Wochen Code-Side, eigene /discovery V14 pflichtig (Pattern-Similarity-Algorithmus, Diff-UI, Reifegrad-Score-Berechnung). **Pre-Conditions**: V9.0 + V9.3 RELEASED, ausreichend kurierte Pattern-Menge auf beiden Seiten (geschaetzt min. 50 Patterns GF + 50 Patterns Mitarbeiter). **Out of Scope V14**: Cross-Tenant-Pattern-Diff (StB-Berater sieht Mandanten-Pattern — heikel, V15+).",
+      "order": 24
+    },
+    {
+      "id": "diary-deferred",
+      "name": "Diary (deferred)",
+      "status": "deferred",
+      "summary": "**DEFERRED 2026-06-01 — kein Customer-Pull in Multiplikator-Strategie (RPT-372 /discovery V9-Re-Eval).** Reaktivierbar wenn realer Stakeholder-Pull entsteht. Ehemals V9 (vorher V8, vorher V6, vorher V5 — DEC-101 + 2026-05-28-Verschiebung). ORIGINAL-IDEE: Diary-Mode als zusaetzlicher Capture-Modus (zeitlich verteilte In-Situ-Aufnahmen, Mobile/PWA). Architektur-Hooks wurden in V4 vorbereitet (FEAT-025 Capture-Mode-Extension). Diary-Mode adressiert das Erfassen von seltenem, situativem Wissen (z.B. nur monatlich auftretende Ausnahmen), das in Questionnaire/Walkthrough/Dialogue-Modi nicht praktikabel ist. /discovery 2026-06-01 hat aufgedeckt: 0 Backlog-Items als Vorboten, 0 Pilot-Pull, Plattform ist seit 2026-05-07 in Richtung StB-Multiplikator + Mandanten-Diagnose pivotiert — Diary fuer urspruenliche GF-Self-Service-These ist nicht mehr strategischer Kern.",
+      "order": 200
+    },
+    {
+      "id": "queroptionen-deferred",
+      "name": "Queroptionen (deferred)",
+      "status": "deferred",
+      "summary": "**DEFERRED 2026-06-01 — alle 5 Items pre-Multiplikator-Pivot (RPT-372 /discovery V9-Re-Eval).** Reaktivierbar wenn ein einzelnes Item realer Stakeholder-Pull bekommt (dann separate Versions-Nummer). Ehemals V10+ (vorher V9+, vorher V7+, vorher V6+). ORIGINAL-IDEE: Process-Mining-Connector, kollaborative Annotation, Anomalie-Flagging, Prozess-Simulation, Browser-Extension fuer strukturierte Klick-Erfassung + DOM-Snapshots. /discovery 2026-06-01 hat aufgedeckt: alle 5 Items stammen aus Original-Discovery 2026-04-14, kein aktueller Stakeholder-Pull, Walkthrough V5 ist live aber ohne Mandanten-Adoption — Erweiterungen (Browser-Extension/Anomalie-Flagging) ohne Adoption-Empirie nicht sinnvoll.",
+      "order": 201
     },
     {
       "id": "v7-7",
