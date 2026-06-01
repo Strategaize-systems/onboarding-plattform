@@ -65,7 +65,7 @@
       "title": "V8.1 FEAT-067 Lead-Conversion-Outro-Renderer (PDF + Web-Bericht)",
       "type": "feature",
       "priority": "high",
-      "status": "in_progress",
+      "status": "done",
       "version": "V8.1",
       "description": "FEAT-067 Renderer-Scope. Erweitert V8.0-Mandanten-Bericht um Lead-Conversion-Outro-Section am Ende: (a) Strategaize-Vorstellung 2-3 Absaetze in Strategaize-Wir-Voice (Default V8-Tonalitaet, konsistent zu V8.0), (b) 3 personalisierte Empfehlungs-Vorschlaege basierend auf den drei niedrigsten Modul-Stufen (selectThreeHebel-Reuse aus SLC-148 MT-4, LLM-Augmentation siehe FEAT-069), (c) Video-Block-Platzhalter (statischer Block ohne echtes Video — Video kommt V8.2+), (d) Kontakt-CTA-Slot fuer 'Mit Strategaize sprechen' (Implementierung des CTA-Buttons + Click-Handler siehe FEAT-068). Distribution-Pfade: (1) PDF-Outro-Section per @react-pdf v4 Pages (analog V8.0 CtaPage), (2) V8-Web-Bericht-Section per React-Component im dashboard/diagnose/[id] Pfad. KEINE Pricing-Hinweise im Bericht. Pre-Conditions: V8.0 live (REL-026 2026-05-30). Founder-Direktive 2026-05-29: 'Vertrauen in uns und Bereitschaft mit uns zu reden steigern.' Refactored 2026-05-30 aus original BL-134 (Gesamt-Scope) in 3 atomare BL-Items: BL-134 (Outro-Renderer) + BL-142 (CTA + Dual-Email) + BL-143 (LLM-Augmentation).",
       "createdAt": "2026-05-29"
@@ -75,7 +75,7 @@
       "title": "V8.1 FEAT-068 Strategaize-Freigabe-CTA + Dual-Email-Trigger (BD + StB)",
       "type": "feature",
       "priority": "high",
-      "status": "in_progress",
+      "status": "done",
       "version": "V8.1",
       "description": "FEAT-068 CTA-Mechanik + Dual-Email-Trigger. Bei CTA-Klick 'Mit Strategaize sprechen' (im PDF via Magic-Link-Token, im V8-Web-Bericht via Server-Action): (1) capture_session.released_for_strategaize_review = true Flag setzen (DEC-163 Flag existiert seit V8.0), (2) Lead-Email an bd@strategaizetransition.de senden (landet in Business-System-Pipeline via Email-Inbox — kein BS-API-Endpoint in V8.1, loose-coupling) mit strukturierten Lead-Daten (Mandant + Partner + SUI-Score + 3 niedrigste Module + Diagnose-Link), (3) StB-Partner-Notification an partner_organization.contact_email senden ('Ihr Mandant X hat Kontakt zu Strategaize aufgenommen' — neutral-informativ, kein Glueckwunsch-Wording). PDF-Magic-Link nutzt HMAC-SHA256-signierten Token mit Expiry (Default 90 Tage, /architecture entscheidet). Web-CTA = Server-Action direkt (kein Token noetig, Session aus auth.users). Bestaetigungs-Seite nach CTA-Klick zeigt 'Strategaize meldet sich innerhalb von 2 Werktagen'. STRATEGAIZE_BD_EMAIL als ENV-Variable (Default bd@strategaizetransition.de). Re-Send-Verhalten bei Mehrfach-Klick: Flag bleibt true, KEINE doppelte Email (Idempotenz ueber Flag-Check). Pre-Conditions: FEAT-067 Outro-Renderer live, BL-132 Privacy-Flag in capture_session existiert. Entstanden 2026-05-30 als Refactor aus original BL-134.",
       "createdAt": "2026-05-30"
