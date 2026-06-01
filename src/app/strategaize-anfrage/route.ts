@@ -38,9 +38,12 @@ function appUrl(): string {
   );
 }
 
-function redirectTo(path: string, request: Request): NextResponse {
-  const base = new URL(request.url).origin || appUrl();
-  return NextResponse.redirect(new URL(path, base), { status: 302 });
+function redirectTo(path: string, _request: Request): NextResponse {
+  // SLC-163 Live-Smoke 2026-06-01 (F-1): request.url-Origin zeigt im
+  // Coolify+Traefik-Setup die Container-internal Origin (0.0.0.0:3000),
+  // nicht den Public-Host. Wir verwenden ausschliesslich
+  // NEXT_PUBLIC_APP_URL fuer die Public-URL-Konstruktion.
+  return NextResponse.redirect(new URL(path, appUrl()), { status: 302 });
 }
 
 export async function GET(request: Request): Promise<NextResponse> {
