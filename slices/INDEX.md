@@ -872,6 +872,26 @@ V8.1.1 = 1 Hotfix-Slice SLC-164 (~30-45min). Korrigiert 2 verbundene Schema-Bugs
 |----|-------|---------|--------|----------|---------|
 | SLC-164 | [Hotfix Partner-Resolution Tenant-Chain](SLC-164-hotfix-partner-resolution-tenant-chain.md) | FEAT-068 / BL-145 | done | Blocker | 2026-06-01 |
 
+## V9 Slices (Bulk-Import GF-Email → Pattern-Extraktion → Handbuch-Vervollstaendigung)
+
+V9 = 4 Slices SLC-165..168 (Konsolidierung 5 -> 4 per /architecture RPT-375). GF laedt `.mbox`/`.eml` hoch → 4-Stufen-KI-Pipeline (Pre-Filter Haiku + Thread-Aggregation + PII-Redaction V5-Reuse + Pattern-Extraktion Sonnet) + Curation-UI + V4.1-Handbuch-Snapshot-Integration. Cumulative-Single-Branch-Worktree `v9-bulk-email-import`. Reihenfolge linear (SLC-165 → SLC-166 → SLC-167 → SLC-168). Aufwand ~20-27 MTs, ~13-17 Tage Code-Side.
+
+| ID | Slice | Feature | Status | Priority | Created |
+|----|-------|---------|--------|----------|---------|
+| SLC-165 | [V9 Bulk-Email-Foundation + Upload + Parser](SLC-165-v9-foundation-upload.md) | FEAT-070 / BL-147 | planned | High | 2026-06-01 |
+| SLC-166 | [V9 Pre-Filter (Haiku) + Thread-Aggregation + PII-Redaction](SLC-166-v9-pre-filter-thread-redact.md) | FEAT-071+072 / BL-148+149 | planned | High | 2026-06-01 |
+| SLC-167 | [V9 Pattern-Extraktion (Sonnet) + Curation-UI + Cost-Cap](SLC-167-v9-pattern-curation-cost-cap.md) | FEAT-073 / BL-150 | planned | High | 2026-06-01 |
+| SLC-168 | [V9 Handbuch-Integration + Audit + Source-Attribution-View](SLC-168-v9-handbuch-integration-audit.md) | FEAT-074 / BL-151 | planned | High | 2026-06-01 |
+
+### V9 Pre-Slice User-Pflichten
+
+| Pflicht | Blockiert | Aktion |
+|---|---|---|
+| V8.1 STABLE-Bestaetigung via /post-launch | SLC-165 MT-2 LIVE-Apply | Burn-In bis ~2026-06-02 08:00 UTC + /post-launch V8.1 STABLE-Marker setzen |
+| Test-Email-Corpus (~100 anonymisierte .mbox-Emails) | SLC-165 MT-1 Cost-Validation | Founder liefert .mbox-Datei aus Gmail-Takeout/Outlook-Export |
+| `mailparser ^3.7.0` Lokal-Smoke-Parse-Test | SLC-165 MT-3 | npm install + scripts/smoke-mbox-parse.mjs gegen Test-.mbox |
+| ENV-Setup Coolify `V9_BULK_EMAIL_RUN_CAP_EUR=20`, `V9_BULK_EMAIL_TENANT_MONTH_CAP_EUR=100`, `V9_BULK_EMAIL_PRE_APPROVAL_THRESHOLD_EUR=10`, `BEDROCK_V9_HAIKU_MODEL_ID`, `BEDROCK_V9_SONNET_MODEL_ID` | SLC-166 MT-1 + SLC-167 MT-2 | Coolify-Resource-ENV setzen vor Worker-Deploy |
+
 ### V8.1 Pre-Slice User-Pflichten
 
 | Pflicht | Blockiert | Aktion |

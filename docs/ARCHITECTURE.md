@@ -7736,3 +7736,625 @@ Eine Implementation ist regelkonform wenn:
 - Strategaize-Wir-Voice durchgehend (Tonality-Audit + Manuell)
 
 **Naechster Schritt: /slice-planning V8.1** — SLC-V8.1-A/B/C Slice-Files mit Micro-Task-Decomposition + AC-Matrizen + Aufwand-Schaetzung. Realistisch ~1h /slice-planning. Pre-Conditions fuer Code-Start: Strategaize-Vorstellungs-Text-Freigabe + StB-Notification-Wording-Freigabe + STRATEGAIZE_CTA_TOKEN_SECRET-Generation.
+
+## V9 Architecture Addendum — Bulk-Import GF-Email -> Pattern-Extraktion -> Handbuch-Vervollstaendigung (RPT-375, 2026-06-01)
+
+### Context
+
+V9 setzt auf V8.1 RELEASED 2026-06-01 (REL-027 + REL-028 Hotfix, main HEAD `ad94b60`) auf. V9 ist kein Mandanten-Report-Erweiterung und keine Lead-Conversion-Iteration — V9 oeffnet erstmals **unstrukturierte Email-Korrespondenz** als Wissens-Quelle. Founder-Pull BL-146: "GF hat hier eine ganze Menge E-Mails, die er taeglich hin und her schickt — da ist sehr viel Wissen rauszuziehen." V9.0 setzt sich auf 1 Persona (GF im eigenen Tenant) + 1 Daten-Quelle (.mbox-Upload) + 1 Konsum-Pfad (V4.1-Handbuch-Snapshot) ein. Alle anderen Pfade (Forward-Bucket, IMAP, Multi-Mitarbeiter, CRM, IS-Knowledge-Push) sind nach V9.1+/V10+ deferred.
+
+Fuenf neue Features: FEAT-070 Upload + .mbox-Parser, FEAT-071 KI-Pre-Filter (Haiku eu-central-1), FEAT-072 Thread-Aggregation + PII-Redaction (V5-Pipeline-Reuse), FEAT-073 Pattern-Extraktion (Sonnet eu-central-1) + Curation-UI, FEAT-074 Handbuch-Integration + Audit/Cost-Tracking.
+
+Alle 10 Open Questions Q-V9-A..J aus /requirements RPT-374 sind via DEC-176..186 entschieden. **R1 Cost-Validation-Risiko bleibt aktiv** — Test-Email-Corpus deferred bis /backend SLC-V9-A (DEC-179). Architektur arbeitet mit Discovery-Schaetzungen ~0.10 EUR Haiku + ~5 EUR Sonnet pro 1000 Emails; bei Faktor-2-Abweichung in SLC-V9-A werden Cost-Cap-Werte (DEC-182) neu validiert.
+
+### Architecture Summary
+
+V9 fuegt vier neue Schichten zu V8.x hinzu:
+
+1. **Bulk-Email-Foundation** (`src/lib/bulk-email/` + 4 neue Tabellen + neuer Storage-Bucket `bulk-email`) — `.mbox`/`.eml`-Upload, `mailparser`-Parsing, Pflicht-Header-Persistierung (`message_id` + `in_reply_to` + `references`), Bulk-Run-Audit-Header. Reuse FEAT-013 Multi-File-Upload-Pattern + RLS-Bucket-Pattern.
+
+2. **KI-Pre-Filter-Adapter** (`src/lib/ai/bedrock-haiku/`) — neuer Bedrock-Sub-Path fuer Haiku eu-central-1, Strict-JSON-Klassifikations-Output mit 6 kanonischen Labels (content/short_reply/notification/newsletter/private/unclear). Reuse bestehender `ai_cost_ledger`-Audit-Pattern mit `feature='email_bulk_pre_filter'`.
+
+3. **PII-Redaction-Email-Wrapper** (`src/lib/ai/pii-patterns/email-adapter.ts`) — wrapt V5-PII-Pattern-Library (`src/lib/ai/pii-patterns/`) + V5-Walkthrough-Redact-Prompt-Pattern. Email-Spezial-Pre-Processing (Header-Pseudonymisierung Participant-Map P1/P2/... + Signatur-Entfernung via `--` und "Mit freundlichen Gruessen"-Trigger) BEVOR der V5-Bedrock-Call laeuft. Kein neuer LLM-Provider, kein neuer Prompt-Pattern — nur Email-Spezial-Wrapper um existierende Pipeline.
+
+4. **Pattern-Extraktion-Sonnet-Adapter + Curation-UI** (`src/lib/ai/bedrock-sonnet/email-pattern.ts` + `src/app/dashboard/bulk-email-import/[run_id]/curation/`) — Sonnet eu-central-1 mit Strict-JSON-Output-Schema (themes/patterns/decisions/open_questions), Cost-Cap-Pattern aus V8.1 FEAT-069 reused (Run 20 EUR / Monat 100 EUR / Pre-Approval ab 10 EUR), Curation-UI mit Akzeptieren/Ablehnen/Editieren/Section-Zuordnung + Bulk-Aktionen.
+
+Die finale Stufe (Handbuch-Integration via knowledge_unit-Insert + Snapshot-Trigger) ist **kein neuer Worker** — sie laeuft synchron in einer Server-Action am Curation-Abschluss-Trigger. Reuse FEAT-026 + FEAT-028 V4.1-Handbuch-Foundation.
+
+### Main Components
+
+#### Component-Diagram (textuell)
+
+```
++---------------------------------------------------------------+
+| V9 Bulk-Email-Pipeline (async, 4 Stufen mit GF-Gates)         |
+|                                                               |
+|  GF -> Upload-Page (Drag-Drop .mbox/.eml)                     |
+|         |                                                     |
+|         v                                                     |
+|  +----------------+   +-----------------------+               |
+|  | Storage-Bucket |<--| Upload-Handler        |               |
+|  | bulk-email     |   | (Server-Action)       |               |
+|  +----------------+   +-----------------------+               |
+|         |                       |                             |
+|         |                       v                             |
+|         |             +-----------------------+               |
+|         |             | Worker: email_bulk_   |               |
+|         |             |   parse               |               |
+|         |             | - mailparser-Loop     |               |
+|         |             | - email_message INS   |               |
+|         |             +-----------------------+               |
+|         |                       |                             |
+|         |                       v   status='parsed'           |
+|         |             +-----------------------+               |
+|         |             | Worker: email_bulk_   |               |
+|         |             |   pre_filter (Haiku)  |               |
+|         |             | - Batch 50/Call       |               |
+|         |             | - 6-Label-Klassif.    |               |
+|         |             | - ai_cost_ledger INS  |               |
+|         |             +-----------------------+               |
+|         |                       |                             |
+|         |                       v   status='pre_filtered'     |
+|         |             +-----------------------+               |
+|         |             | GF Filter-Review-UI   | <== GF-GATE 1 |
+|         |             | - Counts + Korrektur  |               |
+|         |             | - Approval-Button     |               |
+|         |             +-----------------------+               |
+|         |                       |                             |
+|         |                       v                             |
+|         |             +-----------------------+               |
+|         |             | Worker: email_bulk_   |               |
+|         |             |   thread_redact       |               |
+|         |             | - Thread-Aggregation  |               |
+|         |             |   (RFC-5322-Headers)  |               |
+|         |             | - PII-Redact (V5 +    |               |
+|         |             |   Email-Adapter)      |               |
+|         |             +-----------------------+               |
+|         |                       |                             |
+|         |                       v   status='thread_redacted'  |
+|         |             +-----------------------+               |
+|         |             | GF Pre-Cost-Estimate  | <== GF-GATE 2 |
+|         |             | + Pre-Approval-Modal  |               |
+|         |             | (Cost-Cap-Check)      |               |
+|         |             +-----------------------+               |
+|         |                       |                             |
+|         |                       v                             |
+|         |             +-----------------------+               |
+|         |             | Worker: email_bulk_   |               |
+|         |             |   pattern_extraction  |               |
+|         |             | - Sonnet 1/Thread     |               |
+|         |             | - Strict-JSON-Schema  |               |
+|         |             | - ai_cost_ledger INS  |               |
+|         |             +-----------------------+               |
+|         |                       |                             |
+|         |                       v   status='pattern_extracted'|
+|         |             +-----------------------+               |
+|         |             | GF Curation-UI        | <== GF-GATE 3 |
+|         |             | - Pattern-Cards       |               |
+|         |             | - Akzept./Ablehnen    |               |
+|         |             | - Section-Zuordnung   |               |
+|         |             | - Bulk-Aktionen       |               |
+|         |             +-----------------------+               |
+|         |                       |                             |
+|         |                       v                             |
+|         |             +-----------------------+               |
+|         |             | Server-Action:        |               |
+|         |             |   importToHandbook    |               |
+|         |             | - knowledge_unit INS  |               |
+|         |             | - handbook_snapshot   |               |
+|         |             |   Trigger             |               |
+|         |             +-----------------------+               |
+|         |                       |                             |
+|         +-----------------------+   status='completed'        |
++---------------------------------------------------------------+
+```
+
+#### Component Responsibilities
+
+| Component | Path | Responsibility |
+|---|---|---|
+| Upload-Page | `src/app/dashboard/bulk-email-import/page.tsx` | Drag-Drop UI, File-Type-Check, Capture-Mode `email_bulk`-Hook |
+| Upload-Handler (Server-Action) | `src/app/dashboard/bulk-email-import/actions.ts` | File-Hash, Duplicate-Check via UNIQUE-Constraint, Storage-Bucket-PUT, email_bulk_run INSERT, enqueue Worker-Job |
+| `email_bulk_parse` Worker | `src/workers/bulk-email/handle-parse-job.ts` | `.mbox`/`.eml`-Read aus Storage, `mailparser`-Loop, email_message INSERT mit Pflicht-Headers |
+| `email_bulk_pre_filter` Worker | `src/workers/bulk-email/handle-pre-filter-job.ts` | Bedrock-Haiku-Adapter-Call in Batches von 50, Strict-JSON-Klassifikation, ai_cost_ledger Audit-Entry |
+| Filter-Review-UI | `src/app/dashboard/bulk-email-import/[run_id]/filter-review/page.tsx` | Klassifikations-Counts, Pro-Email-Korrektur, Bulk-Reclassify, Approval-Trigger |
+| `email_bulk_thread_redact` Worker | `src/workers/bulk-email/handle-thread-redact-job.ts` | Thread-Aggregation (RFC-5322 message_id + in_reply_to + references), V5-PII-Pipeline-Aufruf via Email-Adapter, Pseudonymisierung |
+| Pre-Cost-Estimate + Pre-Approval-Modal | `src/app/dashboard/bulk-email-import/[run_id]/pattern-start/page.tsx` | Token-Count-Schaetzung pro Thread, Cost-Cap-Check (Run + Monat), Pre-Approval-Modal bei >10 EUR (DEC-182) |
+| `email_bulk_pattern_extraction` Worker | `src/workers/bulk-email/handle-pattern-extraction-job.ts` | Bedrock-Sonnet-Call pro Thread mit Strict-JSON-Schema, email_pattern INSERT, ai_cost_ledger Audit |
+| Curation-UI | `src/app/dashboard/bulk-email-import/[run_id]/curation/page.tsx` | Pattern-Cards (sortiert nach Confidence), Section-Dropdown (V4.1-Template-Sections + "Andere..."), Akzept./Ablehnen/Editieren, Bulk-Aktionen |
+| Handbuch-Import Server-Action | `src/app/dashboard/bulk-email-import/[run_id]/curation/actions.ts` | Idempotente knowledge_unit-Erzeugung, handbook_snapshot-Trigger, email_pattern.imported_to_handbook_at-Update |
+| Source-Attribution-View | `src/app/dashboard/handbook/[snapshot_id]/page.tsx` (Erweiterung FEAT-028) | Anzeige "Aus Email-Bulk-Import vom YYYY-MM-DD" mit Link zur Run-Detail |
+| Bulk-Run-Detail-Page (Admin-Audit) | `src/app/dashboard/bulk-email-import/[run_id]/page.tsx` + `src/app/admin/audit/bulk-email/page.tsx` | Pipeline-Stufen-Progress, Final-Stats, Audit-Trail Cross-Tenant fuer strategaize_admin |
+| `bulk-email`-Storage-Bucket | Supabase Storage | Tenant-isoliert RLS, getrennt von evidence-Bucket (DEC-183), separate Quota |
+| PII-Email-Adapter | `src/lib/ai/pii-patterns/email-adapter.ts` | Header-Participant-Map P1/P2, Signatur-Removal, wrapt V5-PII-Pattern-Library |
+| Bedrock-Haiku-Adapter | `src/lib/ai/bedrock-haiku/index.ts` | Erweiterung des bestehenden Bedrock-Clients fuer Haiku-Modell-ID, eu-central-1 |
+
+### Data Model / Storage Direction
+
+#### Schema-Variante: Neue email_*-Tabellen (DEC-177)
+
+Vier neue Tabellen werden angelegt — KEINE `evidence_chunk`-Erweiterung. Begruendung: Email-Domain ist semantisch zu unterschiedlich (Headers, Thread-Relations, Pseudonym-Map). evidence_chunk-Misuse waere Drift-Quelle und wuerde RLS- + Mapping-Logik aus FEAT-013 stoeren. Reuse-Pattern: Index-Strategie + tenant_id + Storage-Bucket-RLS-Helper-Functions + ai_cost_ledger.
+
+##### `email_bulk_run` (Audit-Header pro Upload)
+
+```sql
+CREATE TABLE email_bulk_run (
+  id                          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id                   uuid NOT NULL REFERENCES tenants ON DELETE CASCADE,
+  uploader_user_id            uuid NOT NULL,                                       -- FK auth.users
+  capture_session_id          uuid REFERENCES capture_session ON DELETE SET NULL, -- FEAT-025-Hook
+  source_file_name            text NOT NULL,
+  file_hash                   text NOT NULL,                                       -- SHA256
+  storage_path                text NOT NULL,                                       -- bulk-email/<tenant_id>/<run_id>/source.mbox
+  email_count                 integer NOT NULL DEFAULT 0,
+  content_emails              integer NOT NULL DEFAULT 0,
+  thread_count                integer NOT NULL DEFAULT 0,
+  patterns_extracted          integer NOT NULL DEFAULT 0,
+  patterns_accepted           integer NOT NULL DEFAULT 0,
+  patterns_imported           integer NOT NULL DEFAULT 0,
+  pre_filter_cost_eur         numeric(8, 4) NOT NULL DEFAULT 0,
+  pattern_extraction_cost_eur numeric(8, 4) NOT NULL DEFAULT 0,
+  total_cost_eur              numeric(8, 4) GENERATED ALWAYS AS
+                                (pre_filter_cost_eur + pattern_extraction_cost_eur) STORED,
+  status                      text NOT NULL CHECK (status IN (
+                                'uploaded', 'parsing', 'parsed',
+                                'pre_filtering', 'pre_filtered',
+                                'thread_redacting', 'thread_redacted',
+                                'pattern_extracting', 'pattern_extracted',
+                                'curating', 'importing', 'completed',
+                                'failed'
+                              )) DEFAULT 'uploaded',
+  failure_reason              text,
+  created_at                  timestamptz NOT NULL DEFAULT now(),
+  updated_at                  timestamptz NOT NULL DEFAULT now(),
+  completed_at                timestamptz,
+  UNIQUE (tenant_id, file_hash)
+);
+```
+
+Idempotenz-Story: UNIQUE-Constraint `(tenant_id, file_hash)` verhindert Doppel-Upload derselben Datei. Re-Upload erzeugt Warning ohne neuen Run.
+
+##### `email_message`
+
+```sql
+CREATE TABLE email_message (
+  id                    uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id             uuid NOT NULL REFERENCES tenants ON DELETE CASCADE,
+  bulk_run_id           uuid NOT NULL REFERENCES email_bulk_run ON DELETE CASCADE,
+  message_id            text NOT NULL,                                  -- RFC-5322 Message-ID
+  in_reply_to           text,
+  references_array      text[],
+  from_address          text,                                           -- Roh, pre-redact
+  to_addresses          text[],
+  cc_addresses          text[],
+  subject               text,
+  date                  timestamptz,
+  body_text             text,
+  body_html             text,
+  has_attachments       boolean NOT NULL DEFAULT false,
+  attachment_metadata   jsonb,                                          -- [{name, mime, size}]
+  pre_filter_label      text CHECK (pre_filter_label IN (
+                          'content', 'short_reply', 'notification',
+                          'newsletter', 'private', 'unclear'
+                        )),
+  pre_filter_confidence numeric(3, 2),
+  pre_filter_corrected  boolean NOT NULL DEFAULT false,                 -- GF-Korrektur-Flag
+  pii_redacted          boolean NOT NULL DEFAULT false,
+  thread_id             uuid,                                           -- FK email_thread SET NULL, late-bind
+  created_at            timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_email_message_bulk_run ON email_message(bulk_run_id);
+CREATE INDEX idx_email_message_thread ON email_message(thread_id);
+CREATE INDEX idx_email_message_message_id ON email_message(message_id);
+```
+
+`from_address` + `to_addresses` werden **vor** PII-Redact persistiert (fuer Thread-Aggregation via Headers noetig). Nach Redact werden Klarnamen via `participant_pseudonyms`-Map ersetzt im `redacted_body` auf email_thread. email_message.from_address bleibt unverschleiert — RLS schuetzt Tenant-Isolation.
+
+##### `email_thread`
+
+```sql
+CREATE TABLE email_thread (
+  id                     uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id              uuid NOT NULL REFERENCES tenants ON DELETE CASCADE,
+  bulk_run_id            uuid NOT NULL REFERENCES email_bulk_run ON DELETE CASCADE,
+  root_message_id        text NOT NULL,
+  subject                text,
+  email_count            integer NOT NULL DEFAULT 0,
+  first_date             timestamptz,
+  last_date              timestamptz,
+  participant_pseudonyms jsonb,                                         -- {"P1": "kunde-mueller", "P2": "gf-self"}
+  redacted_body          text,                                          -- Pseudonyme + Zeitstempel + Roles
+  thread_status          text NOT NULL CHECK (thread_status IN (
+                           'aggregated', 'redacting', 'redacted', 'failed'
+                         )) DEFAULT 'aggregated',
+  created_at             timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_email_thread_bulk_run ON email_thread(bulk_run_id);
+
+-- Late-Binding FK fuer email_message.thread_id
+ALTER TABLE email_message
+  ADD CONSTRAINT fk_email_message_thread
+  FOREIGN KEY (thread_id) REFERENCES email_thread ON DELETE SET NULL;
+```
+
+##### `email_pattern`
+
+```sql
+CREATE TABLE email_pattern (
+  id                         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id                  uuid NOT NULL REFERENCES tenants ON DELETE CASCADE,
+  bulk_run_id                uuid NOT NULL REFERENCES email_bulk_run ON DELETE CASCADE,
+  thread_id                  uuid NOT NULL REFERENCES email_thread ON DELETE CASCADE,
+  title                      text NOT NULL,
+  description                text NOT NULL,
+  evidence_snippets          jsonb,                                       -- ["snippet 1", "snippet 2"]
+  themes                     text[],
+  confidence                 numeric(3, 2) NOT NULL,
+  suggested_section          text,
+  curation_status            text NOT NULL CHECK (curation_status IN (
+                               'pending_curation', 'accepted', 'rejected', 'edited'
+                             )) DEFAULT 'pending_curation',
+  curated_section            text,
+  curator_user_id            uuid,                                        -- FK auth.users
+  curated_at                 timestamptz,
+  imported_to_handbook_at    timestamptz,
+  imported_knowledge_unit_id uuid REFERENCES knowledge_unit ON DELETE SET NULL,
+  created_at                 timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_email_pattern_bulk_run ON email_pattern(bulk_run_id);
+CREATE INDEX idx_email_pattern_curation ON email_pattern(bulk_run_id, curation_status);
+```
+
+Idempotenz-Story Handbuch-Import: `imported_to_handbook_at IS NULL` markiert Pattern als noch nicht in Handbuch importiert. Re-Run uebersetzt nur unprocessed Pattern.
+
+#### `capture_session.capture_mode` CHECK erweitert um `email_bulk` (DEC-186)
+
+```sql
+ALTER TABLE capture_session
+  DROP CONSTRAINT capture_session_capture_mode_check;
+ALTER TABLE capture_session
+  ADD CONSTRAINT capture_session_capture_mode_check
+  CHECK (capture_mode IS NULL OR capture_mode IN (
+    'questionnaire',
+    'evidence',
+    'dialogue',
+    'employee_questionnaire',
+    'walkthrough_stub',
+    'walkthrough_v5',
+    'email_bulk'  -- NEU V9.0
+  ));
+```
+
+(Aktuelle Liste der erlaubten Modes wird in MIG-050 entsprechend aktuellem Stand kanonisch ergaenzt.)
+
+#### Storage-Bucket `bulk-email` (DEC-183)
+
+Neuer Bucket statt evidence-Reuse. Begruendung:
+- Klare Quota-Buchhaltung pro Capture-Mode (.mbox kann mehrere GB sein).
+- Separate Lifecycle-Policy moeglich.
+- Mixing mit kleinen PDFs/Bildern aus evidence-Mode waere Operations-Albtraum.
+
+```sql
+INSERT INTO storage.buckets (id, name, public)
+  VALUES ('bulk-email', 'bulk-email', false);
+
+-- RLS-Policies analog evidence-Bucket-Pattern (V2 SLC-018, MIG-044):
+-- - SELECT: tenant_id matched + Rolle IN (tenant_admin, strategaize_admin)
+-- - INSERT: tenant_id matched + Rolle = tenant_admin (uploader)
+-- - DELETE: Rolle = strategaize_admin only (compliance + Auto-Delete-Cron)
+```
+
+Storage-Pfad-Konvention: `bulk-email/<tenant_id>/<bulk_run_id>/source.mbox` (oder `<n>.eml` bei Multi-Upload).
+
+#### View `vw_bulk_email_cost_monthly` (fuer Tenant-Monats-Cap-Enforcement)
+
+```sql
+CREATE VIEW vw_bulk_email_cost_monthly AS
+SELECT
+  tenant_id,
+  date_trunc('month', created_at) AS month,
+  SUM(total_cost_eur) AS total_cost_eur,
+  COUNT(*) AS run_count
+FROM email_bulk_run
+WHERE status != 'failed'
+GROUP BY tenant_id, date_trunc('month', created_at);
+
+GRANT SELECT ON vw_bulk_email_cost_monthly TO authenticated;
+-- RLS folgt email_bulk_run.tenant_id-Filter.
+```
+
+#### `ai_cost_ledger.feature`-Werte fuer V9
+
+Reuse bestehende `ai_cost_ledger`-Tabelle (V2 deployed, V8.1 in use). Neue feature-Strings:
+- `email_bulk_pre_filter` (Haiku-Calls)
+- `email_bulk_pattern_extraction` (Sonnet-Calls)
+- `email_bulk_pii_redact` (V5-PII-Pipeline-Calls, falls separate Cost-Buchung gewuenscht)
+
+`feature` ist ein freier text-DEFAULT, kein CHECK-Constraint — kein Migration-Bedarf.
+
+#### `knowledge_unit.metadata.source_type='email_bulk'` (DEC fuer Source-Attribution)
+
+Bestehende `knowledge_unit`-Tabelle (V4.1 deployed) wird mit neuem Metadata-Wert genutzt:
+
+```json
+{
+  "source_type": "email_bulk",
+  "bulk_run_id": "...",
+  "pattern_id": "...",
+  "thread_id": "...",
+  "participant_pseudonyms": { "P1": "...", "P2": "..." },
+  "confidence": 0.9,
+  "extracted_at": "2026-06-01T..."
+}
+```
+
+Schema-CHECK nicht erforderlich — JSONB ist generisch. Source-Attribution-View (FEAT-074 AC-4 + AC-5) lesen das.
+
+### Data Flow / Request Flow
+
+#### Pipeline-Stufen + Status-Transitions
+
+| # | Stufe | Trigger | Worker / Action | Status-Transition | LLM | GF-Gate |
+|---|---|---|---|---|---|---|
+| 1 | Upload + Parse | Sync (Upload-Handler) → Async (Worker) | `email_bulk_parse` | `uploaded` -> `parsing` -> `parsed` | nein | - |
+| 2 | Pre-Filter | Auto-chained on `parsed` (oder manuell) | `email_bulk_pre_filter` | `pre_filtering` -> `pre_filtered` | Haiku | - |
+| 3 | Filter-Review | UI | GF Review + Approval | (kein Status-Aenderung, internes UI-Gate) | nein | **GATE 1** |
+| 4 | Thread-Aggregation + PII-Redaction | Manuell on Approval | `email_bulk_thread_redact` | `thread_redacting` -> `thread_redacted` | Haiku (PII-Redact) | - |
+| 5 | Pre-Cost-Estimate + Pre-Approval-Modal | UI | Token-Count-Heuristik, Cap-Check | (kein DB-Aenderung, UI-Gate) | nein | **GATE 2** |
+| 6 | Pattern-Extraktion | Manuell on Pre-Approval | `email_bulk_pattern_extraction` | `pattern_extracting` -> `pattern_extracted` | Sonnet | - |
+| 7 | Curation | UI | GF Akzept./Ablehnen/Editieren/Section | (UPDATE email_pattern.curation_status, kein bulk_run-Status-Change) | nein | **GATE 3** |
+| 8 | Handbuch-Import | Sync (Server-Action on Curation-Complete) | `importToHandbook` Server-Action | `importing` -> `completed` | nein | - |
+
+#### Async vs Sync Begruendung (DEC-178)
+
+- **Stufen 1+2 (Parse, Pre-Filter)**: Async Worker. Parse braucht potenziell mehrere Minuten fuer grosse .mbox-Files. Pre-Filter braucht mehrere Minuten (50 Bedrock-Calls pro 1000 Emails). Worker-Pattern aus V2/V5 reused.
+- **Stufe 4 (Thread + Redact)**: Async Worker. Thread-Aggregation deterministisch, PII-Redact mit Bedrock-Haiku-Call pro Thread = mehrere Minuten Worker-Zeit. Beide Stufen als **ein** Worker-Job, weil kein GF-Gate dazwischen und beide deterministisch.
+- **Stufe 6 (Pattern-Extraktion)**: Async Worker. Sonnet-Calls pro Thread, 42 Threads ~ 30-60 Min Worker-Zeit. Sync-per-Button waere UX-Albtraum (Browser-Tab muss offen, Timeout-Risiko).
+- **Stufe 8 (Handbuch-Import)**: Sync Server-Action. knowledge_unit-Insert + Snapshot-Trigger sind deterministisch + schnell (<30s laut FEAT-074 AC). Worker-Overhead nicht gerechtfertigt.
+
+#### Cost-Cap-Enforcement-Flow (DEC-182, Reuse V8.1 FEAT-069-Pattern)
+
+```
+GF startet Pattern-Extraktion (Stufe 6)
+    |
+    v
+1) Plattform berechnet Pre-Cost-Estimate basierend auf Token-Count
+   aller redacted_body-Strings im Run + Sonnet-Token-Tarif
+    |
+    v
+2) Lookup vw_bulk_email_cost_monthly fuer Tenant + aktueller Monat
+    |
+    v
+3) Check: monatlicher Stand + Pre-Estimate > 100 EUR Hard-Cap?
+   ja  -> Block mit Fehlermeldung "Tenant-Monatlimit erreicht, weitere
+          Runs nicht moeglich". Run-Status bleibt 'thread_redacted'.
+   nein -> weiter
+    |
+    v
+4) Check: Pre-Estimate > 20 EUR Run-Cap?
+   ja  -> Block mit Fehlermeldung "Run-Limit ueberschritten, bitte
+          kleineren Bulk-Run waehlen". Run-Status bleibt 'thread_redacted'.
+   nein -> weiter
+    |
+    v
+5) Check: Pre-Estimate > 10 EUR Pre-Approval-Schwelle?
+   ja  -> Pre-Approval-Modal mit "Erwartete Kosten: X EUR. Fortfahren?".
+          GF muss bestaetigen, sonst Abbruch (Status bleibt).
+   nein -> Direkt-Start ohne Modal.
+    |
+    v
+6) Worker email_bulk_pattern_extraction startet.
+   - Pro Bedrock-Call wird ai_cost_ledger entry mit feature=
+     'email_bulk_pattern_extraction' angelegt.
+   - Worker prueft nach jedem Call laufende Run-Kosten gegen Run-Cap
+     (Live-Cap-Check, soft). Bei Ueberschreitung: status='failed',
+     failure_reason='cost_cap_run_exceeded'.
+   - Aggregation: email_bulk_run.pattern_extraction_cost_eur wird
+     nach Run-Ende per Worker UPDATE gesetzt.
+```
+
+### External Dependencies / Integrations
+
+- **`mailparser` ^3.7.0** (NEU) — Email-Parsing fuer .mbox + .eml. NodeMailer-Team-Maintainer, MIT, aktive Maintenance, Quasi-Standard fuer Node-Email-Parsing. Alternative `emailjs-mime-parser` rejected (weniger aktiv) (DEC-185).
+- **AWS Bedrock eu-central-1 Frankfurt** (existing) — neue Modell-IDs:
+  - `anthropic.claude-3-haiku-20240307-v1:0` (Pre-Filter, PII-Redact)
+  - `anthropic.claude-3-5-sonnet-20241022-v2:0` (Pattern-Extraktion, reuse `BEDROCK_V8_1_MODEL_ID`)
+- **Supabase Storage Bucket `bulk-email`** (NEU, MIG-050) — Tenant-RLS-Pattern aus FEAT-013 evidence-Bucket geportet.
+
+Keine externe Vendors fuer Inbound-SMTP, IMAP-OAuth oder PST-Parsing — alle nach V10+ deferred (Out-of-Scope).
+
+### Security / Privacy Considerations
+
+#### Tenant-Isolation
+- RLS auf allen 4 neuen Tabellen (`email_bulk_run`, `email_message`, `email_thread`, `email_pattern`) mit Standard-Helper `auth_tenant_id() = tenant_id`.
+- RLS auf `bulk-email`-Storage-Bucket analog evidence-Bucket-Pattern.
+- View `vw_bulk_email_cost_monthly` erbt RLS aus email_bulk_run.
+
+#### Rollen-Matrix V9.0
+
+| Rolle | email_bulk_run | email_message | email_thread | email_pattern | bulk-email-Bucket |
+|---|---|---|---|---|---|
+| strategaize_admin | SELECT Cross-Tenant (Audit) | SELECT Cross-Tenant | SELECT Cross-Tenant | SELECT Cross-Tenant | SELECT Cross-Tenant (Auto-Delete) |
+| tenant_admin (GF) | SELECT + INSERT + UPDATE (Curation) own Tenant | SELECT own Tenant | SELECT own Tenant | SELECT + UPDATE own Tenant | SELECT + INSERT own Tenant |
+| tenant_member | KEIN ACCESS V9.0 | KEIN ACCESS | KEIN ACCESS | KEIN ACCESS | KEIN ACCESS |
+| employee | KEIN ACCESS V9.0 | KEIN ACCESS | KEIN ACCESS | KEIN ACCESS | KEIN ACCESS |
+
+V9.2+: tenant_member + employee bekommen Multi-Mitarbeiter-Upload-Recht (Out-of-Scope V9.0).
+
+#### PII-Handling-Pflicht (DEC-176, Reuse V5)
+- `email_message.from_address` + `to_addresses` + `body_text` enthalten Roh-PII (Pre-Redact).
+- `email_thread.redacted_body` enthaelt Pseudonyme + Zeitstempel + Roles ohne Klarnamen / Email-Adressen / Telefonnummern.
+- Sonnet-Pattern-Extraktion (Stufe 6) liest ausschliesslich `email_thread.redacted_body` — kein Roh-PII zu Bedrock.
+- `participant_pseudonyms`-Map bleibt Tenant-intern, ist Teil der email_thread-Row, ist NICHT Teil des Pattern-Output oder Source-Attribution-Anzeige.
+
+#### Audit-Trail (DSGVO + COMPLIANCE.md)
+- Jeder Bedrock-Call (Haiku + Sonnet) erzeugt `ai_cost_ledger` Entry mit Provider, Region, Modell-ID, Input/Output-Token-Count, EUR-Cost, Timestamp.
+- `email_bulk_run.status`-Transitions erzeugen `updated_at`-Touch fuer Audit-Korrelation.
+- Curation-Aktionen werden in `email_pattern.curated_at + curator_user_id` persistiert.
+- Aufbewahrung: 7 Jahre (DSGVO + COMPLIANCE.md, analog V5-Audit-Pattern).
+
+#### Region-Pflicht (data-residency.md)
+- Alle Bedrock-Calls eu-central-1 Frankfurt. Adapter-Code erzwingt Region via Bedrock-Client-Config. CI-Test prueft Region-Header in Mock-Bedrock-Tests.
+
+#### Cost-Cap (DEC-182)
+- Soft-Cap Run: 20 EUR (Default, ENV-overridable `V9_BULK_EMAIL_RUN_CAP_EUR`).
+- Hard-Cap Monat: 100 EUR pro Tenant (`V9_BULK_EMAIL_TENANT_MONTH_CAP_EUR`).
+- Pre-Approval-Schwelle: 10 EUR (`V9_BULK_EMAIL_PRE_APPROVAL_THRESHOLD_EUR`).
+- Live-Cap-Check im Worker nach jedem Bedrock-Call, abort bei Ueberschreitung.
+
+### Constraints and Tradeoffs
+
+#### Constraint — V9.0 nur GF im eigenen Tenant (DEC-184)
+Persona ist nur `tenant_admin` (GF). Multi-Mitarbeiter (V9.2+) braucht Per-User-Bucket + RLS-Erweiterung. Mandanten-Upload im Multiplikator-Pfad (V10+) braucht Anwalts-Pass.
+
+#### Constraint — Klassifikations-Schema kanonisch (DEC-184)
+6 Labels (content / short_reply / notification / newsletter / private / unclear) sind hardcoded in V9.0. Pro-Tenant Custom-Schema erst V9.2+ (mit Multi-Mitarbeiter-Mode).
+
+#### Constraint — Cost-Validation deferred (DEC-179)
+Test-Email-Corpus liegt nicht parat. /architecture V9 arbeitet mit Discovery-Schaetzungen. R1-Risiko-Marker bleibt. Pre-Cond fuer /backend V9 SLC-V9-A: Test-Corpus muss in MT-1 bereitgestellt sein. Falls Faktor-2-Abweichung von Schaetzung: Cost-Cap-Werte (DEC-182) werden in /backend nachjustiert + Architektur-Update.
+
+#### Constraint — Async-Pipeline + GF-Gates (DEC-178)
+Vier separate Worker-Jobs + drei GF-Gates. Synchronisierung waere UX-Albtraum bei groesseren Korpora. Tradeoff: groessere Anzahl Status-Transitions = mehr Test-Surface.
+
+#### Constraint — Deterministischer Fallback bei Bedrock-Fail (Reuse V8.1)
+Bei Bedrock-Timeout / Bedrock-500-Fehler: Worker setzt Bulk-Run-Status `failed`, GF kann Re-Try ausloesen ohne Doppel-Charge (Idempotenz via email_message.pre_filter_label IS NULL + email_pattern.curation_status='pending_curation').
+
+#### Constraint — Kein Auto-Akzept ohne GF-Review (Founder-Direktive)
+Jeder Pattern in V9.0 MUSS GF-Approved sein. Bulk-Aktion "alle confidence >0.8 akzeptieren" ist Convenience-UI, aber kein implizites Auto-Akzept ohne GF-Click.
+
+#### Tradeoff — Neue Tabellen vs evidence_chunk-Erweiterung (DEC-177)
+Pro neue Tabellen: Klare Trennung, einfache RLS, einfache Mapping-Logik.
+Contra: Mehr Migrations-Arbeit (1 grosse MIG statt kleiner Erweiterung).
+Trotz Contra: gewaehlt, weil evidence_chunk-Misuse Schmerzen ueber Jahre erzeugen wuerde.
+
+#### Tradeoff — V5-PII-Pipeline-Reuse mit Email-Wrapper vs neuer Pipeline (DEC-176)
+Pro Wrapper: Strategaize-Pattern-Reuse, kein neuer LLM-Prompt-Pattern, V5-Pattern-Library deckt 90% der PII ab.
+Contra: Wrapper-Layer ist zusaetzliche Code-Schicht.
+Trotz Contra: Pattern-Reuse-Pflicht (rule strategaize-pattern-reuse.md) sticht.
+
+### Resolved Open Questions
+
+Alle 10 Q-V9-A..J aus PRD V9-Section sind via DEC-176..186 entschieden.
+
+| Open Question | Entscheidung | DEC |
+|---|---|---|
+| Q-V9-A PII-Redaction-Adapter | V5-Pipeline + Email-Adapter-Wrapper | DEC-176 |
+| Q-V9-B Schema-Variante | Neue email_*-Tabellen | DEC-177 |
+| Q-V9-C Worker-Pipeline-Sequenz | Async pro Stufe mit 4 Worker-Jobs + 3 GF-Gates | DEC-178 |
+| Q-V9-D Test-Email-Corpus | Deferred bis /backend SLC-V9-A | DEC-179 |
+| Q-V9-E Pattern-Extraktion-Trigger | Async Worker mit Status-Polling | DEC-180 |
+| Q-V9-F Curation-UI Section-Zuordnung | Vorgegebene V4.1-Sections + "Andere..."-Free-Text | DEC-181 |
+| Q-V9-G Cost-Cap-Werte | Run 20 EUR / Monat 100 EUR / Pre-Approval ab 10 EUR | DEC-182 |
+| Q-V9-H Storage-Bucket | Neuer `bulk-email`-Bucket | DEC-183 |
+| Q-V9-I Klassifikations-Schema-Customizing | V9.0 = 6-Labels kanonisch, V9.2+ Custom | DEC-184 |
+| Q-V9-J mailparser-Lib | `mailparser ^3.7.0` (NodeMailer-Team) | DEC-185 |
+| (zusaetzlich) Capture-Mode-Hook | Neuer `email_bulk` Mode in CHECK-Constraint | DEC-186 |
+
+### Recommended Implementation Direction (Slice-Sketch fuer /slice-planning V9)
+
+**Konsolidierung 5 -> 4 Slices** (PRD-Slice-Sketch SLC-V9-A..E -> 4 Slices). Begruendung in jedem Slice.
+
+#### SLC-V9-A — Bulk-Email-Foundation + Upload (FEAT-070 + Schema)
+
+Aufwand: ~5-7 MTs, ~3-4 Tage.
+
+Includes:
+- MT-1: Test-Email-Corpus-Bereitstellung von Founder (Pre-Cond) + LLM-Kosten-Validation gegen Discovery-Schaetzung
+- MT-2: MIG-050 Schema (4 neue Tabellen + capture_mode CHECK + bulk-email-Bucket + RLS)
+- MT-3: `src/lib/bulk-email/parser.ts` mailparser-Wiring mit Pflicht-Header-Persistierung + Unit-Tests
+- MT-4: Upload-Page (`src/app/dashboard/bulk-email-import/page.tsx`) + Multi-File-Drag-Drop (Reuse FEAT-013-Component)
+- MT-5: Upload-Handler Server-Action (`actions.ts`) + Duplicate-Check via UNIQUE-Constraint
+- MT-6: `email_bulk_parse` Worker (`src/workers/bulk-email/handle-parse-job.ts`) + handle-job.ts Dispatcher
+- MT-7: Status-View Dashboard-Card + Pipeline-Progress + RLS-Test-Matrix
+
+Konsolidierungs-Begruendung: Schema-Foundation muss vor jedem Pipeline-Schritt stehen. Trennung Schema + Upload-UI = 2 Slices mit Cross-Coupling → ineffizient.
+
+#### SLC-V9-B — Pre-Filter (Haiku) + Thread-Aggregation + PII-Redaction (FEAT-071 + FEAT-072)
+
+Aufwand: ~6-8 MTs, ~4-5 Tage.
+
+Includes:
+- MT-1: `src/lib/ai/bedrock-haiku/` Adapter-Sub-Path (Modell-ID + Strict-JSON-Klassifikations-Schema)
+- MT-2: `email_bulk_pre_filter` Worker mit Batching (50 Emails/Call) + ai_cost_ledger feature=`email_bulk_pre_filter`
+- MT-3: Filter-Review-UI + Bulk-Reclassify + Approval-Button
+- MT-4: `src/lib/bulk-email/thread-aggregation.ts` Pure-Function (RFC-5322 Headers) + Edge-Cases (Single-Email, Reply-Loops, Forward-Chains)
+- MT-5: `src/lib/ai/pii-patterns/email-adapter.ts` Wrapper (Participant-Map P1/P2 + Signatur-Entfernung) + V5-Pipeline-Aufruf
+- MT-6: `email_bulk_thread_redact` Worker (kombiniert Thread + Redact)
+- MT-7: Stage-Detail-View pro Run (Threads-Count + Redact-Status)
+- MT-8: RLS-Test-Matrix + Cost-Tracking-Integration
+
+Konsolidierungs-Begruendung: Pre-Filter, Thread-Aggregation und PII-Redaction nutzen alle Bedrock-Haiku. Ein gemeinsamer Slice = ein Adapter-Touch, ein gemeinsamer Worker-Lifecycle-Refactor. GF-Gate zwischen Pre-Filter und Thread-Aggregation ist UI-State, nicht Schema-State.
+
+#### SLC-V9-C — Pattern-Extraktion (Sonnet) + Curation-UI + Cost-Cap (FEAT-073)
+
+Aufwand: ~5-7 MTs, ~4-5 Tage.
+
+Includes:
+- MT-1: `src/lib/ai/bedrock-sonnet/email-pattern.ts` Pure-Function mit Strict-JSON-Output-Schema
+- MT-2: Pre-Cost-Estimate-Service (`src/lib/bulk-email/cost-estimate.ts`)
+- MT-3: Cost-Cap-Check-Service (Reuse V8.1 FEAT-069-Pattern) + Live-Cap-Check im Worker
+- MT-4: `email_bulk_pattern_extraction` Worker
+- MT-5: Pre-Approval-Modal + Token-Count-Anzeige
+- MT-6: Curation-UI (Pattern-Cards + Section-Dropdown + Akzept./Ablehnen/Editieren + Bulk-Aktionen)
+- MT-7: Vitest-Tests Cost-Cap + Curation-Actions + RLS
+
+#### SLC-V9-D — Handbuch-Integration + Audit/Cost-Aggregation + Source-Attribution-View (FEAT-074)
+
+Aufwand: ~4-5 MTs, ~2-3 Tage.
+
+Includes:
+- MT-1: MIG-051 vw_bulk_email_cost_monthly View + GRANTs
+- MT-2: `importToHandbook` Server-Action (idempotente knowledge_unit-Insert + handbook_snapshot-Trigger)
+- MT-3: Source-Attribution-View im V4.1-Handbuch-Reader
+- MT-4: Bulk-Run-Detail-Page mit Final-Stats + Audit-Trail
+- MT-5: Admin-Audit-Cross-Tenant-View + Vitest-Tests Idempotenz + RLS
+
+**Reihenfolge linear**: SLC-V9-A -> SLC-V9-B -> SLC-V9-C -> SLC-V9-D. Strikte Pipeline-Reihenfolge: jeder Slice braucht den vorigen als Daten-Quelle.
+
+**Cumulative-Single-Branch-Worktree** analog V8.0/V8.1 (Pflicht per SaaS-Mode-Direktive). Branch: `v9-bulk-email-import`.
+
+#### MIG-Plan (alle PLANNED)
+
+| ID | Migration-Datei | Inhalt |
+|---|---|---|
+| MIG-050 | `106_v9_bulk_email_schema.sql` | 4 neue Tabellen (email_bulk_run, email_message, email_thread, email_pattern) + capture_mode CHECK-Erweiterung um `email_bulk` + bulk-email-Storage-Bucket + RLS-Policies |
+| MIG-051 | `107_v9_bulk_email_cost_view.sql` | vw_bulk_email_cost_monthly View + GRANTs + RLS-Filter-Funktionen |
+
+Naechste SQL-Migration-Datei = `106_v9_bulk_email_schema.sql`.
+
+### V9 vs V8 / V8.1 Architektur-Kontext
+
+V8.x bleibt unveraendert. V9 ist additive Erweiterung:
+- Mandanten-Report-Render (V8.0/V8.1) bleibt unveraendert. V9 produziert KEIN Mandanten-Report-Output.
+- Lead-Conversion-CTA (V8.1) bleibt unveraendert. V9 hat keinen CTA-Trigger.
+- LLM-Augmentation-Cache (V8.1 FEAT-069) bleibt unveraendert. V9 nutzt **eigenen** Bedrock-Adapter-Sub-Path fuer Haiku + Sonnet, keinen V8.1-Cache.
+- Cost-Cap-Pattern (V8.1 FEAT-069) wird konzeptionell reused, aber V9 implementiert eigene Cost-Cap-Logik fuer Bulk-Email-Runs (separater Konsum-Pfad, separate Caps).
+
+Foundations explizit reused:
+- FEAT-013 (V2 Evidence) — Multi-File-Upload-Component, RLS-Bucket-Pattern (Schema-Pattern, nicht evidence_chunk-Tabelle selbst).
+- FEAT-025 (V4 Capture-Mode-Hook) — neuer Mode `email_bulk` via CHECK-Constraint-Erweiterung (DEC-186).
+- FEAT-026 + FEAT-028 (V4 + V4.1 Handbuch) — knowledge_unit-Insert-Pattern + handbook_snapshot-Trigger.
+- V5 SLC-076..078 (PII-Redaction-Pipeline) — Pattern-Library + Bedrock-Prompt + Pipeline-Stufen-Pattern, wrapped via Email-Adapter (DEC-176).
+- V5 ai_cost_ledger — feature-Spalte fuer V9-spezifische Cost-Buchung.
+- V8.1 FEAT-069 Cost-Cap-Pattern — Pre-Approval-Modal + Hard-Cap-Enforcement.
+
+### V9-Verifikations-Standard
+
+Eine Implementation ist regelkonform wenn:
+- Alle Bedrock-Calls laufen via Bedrock eu-central-1 (Audit via ai_cost_ledger, CI-Test prueft Region-Config)
+- PII-Redact-Adapter wrapt V5-Pattern-Library, kein neuer LLM-Prompt-Pattern (Pattern-Reuse-Rule)
+- 4 neue Tabellen haben Tenant-RLS auf allen CRUD-Operationen (Pen-Test 4x4-Matrix in /qa)
+- Cost-Cap (Run 20 EUR / Monat 100 EUR / Pre-Approval 10 EUR) ist enforced in Worker + UI (Vitest-Cases mit synthetischen Token-Counts)
+- Pre-Cost-Estimate-Modal erscheint bei >10 EUR (Pflicht-Vitest)
+- Hard-Cap blockt Run bei >100 EUR Tenant-Monat (Pflicht-Vitest)
+- Deterministischer Fallback bei Bedrock-Fail markiert Run als `failed`, GF kann Re-Try ohne Doppel-Charge (Pflicht-Vitest)
+- Idempotenz: Re-Upload + Re-Run sind no-ops (UNIQUE-Constraint + imported_to_handbook_at-Check)
+- Source-Attribution-View zeigt Pseudonyme, keine Klarnamen (Pattern-Scan im /qa)
+- Audit-Trail vollstaendig pro Run (Upload + Pre-Filter + Thread + Redact + Pattern + Curation + Import nachweisbar)
+- strategaize_admin sieht Cross-Tenant-Audit, tenant_admin nur eigenen (RLS-verifiziert)
+- `mailparser`-Version gepinnt auf `^3.7.0`, kein Lock-File-Drift
+
+**Naechster Schritt: /slice-planning V9** — SLC-V9-A/B/C/D Slice-Files mit Micro-Task-Decomposition + AC-Matrizen + Aufwand-Schaetzung. Pre-Conditions fuer /backend V9-Start:
+1. V8.1 STABLE-Bestaetigung via /post-launch nach Burn-In ~2026-06-02 08:00 UTC
+2. Test-Email-Corpus von Founder bereit (~100 anonymisierte .mbox-Emails fuer SLC-V9-A MT-1 Cost-Validation)
+3. `mailparser ^3.7.0` lokal validiert (npm-Install + Smoke-Parse-Test)

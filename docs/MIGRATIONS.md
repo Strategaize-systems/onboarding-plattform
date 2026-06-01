@@ -4,6 +4,41 @@ Die aktuelle DB-Struktur entspricht dem Stand von Blueprint V3.4 (Migration 020)
 
 Der uebernommene Blueprint-Stand ist noch nicht auf einer Onboarding-Plattform-Instanz ausgefuehrt worden — die erste Hetzner-Migration geschieht mit SLC-001 (Schema-Fundament).
 
+### MIG-052 — V9 SLC-V9-D `vw_bulk_email_cost_monthly` View + RPCs (Migration 107, PLANNED)
+- Date: PLANNED (2026-06-XX) — Cost-Aggregation-View + GRANT-Pattern fuer Tenant-Monatscap-Enforcement
+- Scope:
+  - `107_v9_bulk_email_cost_view.sql` — `CREATE VIEW vw_bulk_email_cost_monthly` (SELECT tenant_id + date_trunc('month', created_at) AS month + SUM(total_cost_eur) + COUNT(*) FROM email_bulk_run WHERE status != 'failed' GROUP BY ...)
+  - `GRANT SELECT ON vw_bulk_email_cost_monthly TO authenticated`
+  - Optional: `rpc_get_bulk_email_cost_month(tenant_id, month)` als typsichere Lookup-Function fuer Cost-Cap-Service
+- Affected Areas: `vw_bulk_email_cost_monthly` (NEW), Hard-Cap-Enforcement-Pfad in `src/lib/bulk-email/cost-cap.ts`
+- Reason: V9.0 DEC-182 Hard-Cap pro Tenant/Monat 100 EUR. View aggregiert ueber alle Bulk-Runs pro Tenant + Monat. View ist read-only und folgt RLS aus email_bulk_run (Tenant-Isolation).
+- Risk: Niedrig. View ist additive, kein Schema-Change auf email_bulk_run. Tradeoff: Aggregation pro Query, kein Cache. Bei vielen Runs/Tenant performant via Index auf (tenant_id, created_at).
+- Rollback Notes: `DROP VIEW vw_bulk_email_cost_monthly`. Kein Daten-Verlust. Cost-Cap-Service ist forward-compatible (Bei View-Wegfall: SUM-Query inline ohne RPC).
+
+### MIG-051 — V9 SLC-V9-A 4 neue Tabellen + capture_mode CHECK-Erweiterung + bulk-email Storage-Bucket + RLS (Migration 106, PLANNED)
+- Date: PLANNED (2026-06-XX) — V9.0 Schema-Foundation. Pre-Cond: V8.1 STABLE + Test-Email-Corpus bereitgestellt.
+- Scope:
+  - `106_v9_bulk_email_schema.sql` — Atomare Transaction enthaelt:
+    - `CREATE TABLE email_bulk_run` (Audit-Header mit UNIQUE(tenant_id, file_hash) + GENERATED total_cost_eur + status CHECK 13 Werte)
+    - `CREATE TABLE email_message` (Pflicht-Headers message_id + in_reply_to + references_array + pre_filter_label CHECK 6 Werte + Indexes auf bulk_run_id, thread_id, message_id)
+    - `CREATE TABLE email_thread` (root_message_id + participant_pseudonyms JSONB + redacted_body + thread_status CHECK 4 Werte)
+    - `CREATE TABLE email_pattern` (title + description + evidence_snippets JSONB + themes text[] + confidence + curation_status CHECK 4 Werte + imported_to_handbook_at + Indexes auf bulk_run_id + (bulk_run_id, curation_status))
+    - `ALTER TABLE email_message ADD CONSTRAINT fk_email_message_thread FOREIGN KEY (thread_id) REFERENCES email_thread ON DELETE SET NULL` (Late-Binding)
+    - `ALTER TABLE capture_session DROP CONSTRAINT capture_session_capture_mode_check; ALTER TABLE capture_session ADD CONSTRAINT capture_session_capture_mode_check CHECK (capture_mode IS NULL OR capture_mode IN (...alle aktuellen Werte..., 'email_bulk'))`
+    - `ALTER TABLE knowledge_unit.source` CHECK-Erweiterung um `'email_bulk'`-Wert (nur wenn knowledge_unit.source CHECK aktiv ist — pruefen in MT-2)
+    - `INSERT INTO storage.buckets (id, name, public) VALUES ('bulk-email', 'bulk-email', false)`
+    - 4x RLS-Policies (SELECT + INSERT + UPDATE) pro email_*-Tabelle, Standard-Helper `auth_tenant_id() = tenant_id`, mit Rollen-Matrix V9.0 (strategaize_admin Cross-Tenant + tenant_admin own-Tenant + tenant_member/employee KEIN ACCESS)
+    - 5x RLS-Policies fuer `bulk-email`-Bucket (SELECT + INSERT + DELETE-Admin-only) analog evidence-Bucket-Pattern (V2 SLC-018 Migration 044)
+    - `GRANT SELECT, INSERT, UPDATE ON email_bulk_run, email_message, email_thread, email_pattern TO authenticated`
+- Affected Areas: 4 neue Tabellen, capture_session CHECK-Constraint, knowledge_unit-Source CHECK ggf., Supabase Storage Buckets, RLS-Policy-Layer
+- Reason: V9.0 Bulk-Email-Import-Foundation. Schema-Foundation muss vor jedem Pipeline-Schritt stehen. Atomare Transaction-Migration vermeidet halben State bei Failure.
+- Risk: Mittel. capture_mode CHECK-Constraint DROP+ADD ist atomic — minimaler Lock-Time (ms). 4 neue Tabellen + RLS sind additive. Storage-Bucket-Insert ist idempotent via `ON CONFLICT (id) DO NOTHING`. Bedrock-Adapter-Code + Worker-Job-Code muss VOR Migration deployed sein (Worker-handle-job.ts kennt neue Job-Types) — sonst NULL-Job-Handler-Crash. Deploy-Reihenfolge: Code-Deploy first, dann Migration.
+- Rollback Notes: 
+  - `DROP TABLE email_pattern, email_thread, email_message, email_bulk_run CASCADE` (CASCADE wegen knowledge_unit-FK auf email_pattern.imported_knowledge_unit_id, der ON DELETE SET NULL ist — kein knowledge_unit-Verlust).
+  - `DELETE FROM storage.objects WHERE bucket_id = 'bulk-email'; DELETE FROM storage.buckets WHERE id = 'bulk-email'`.
+  - capture_session CHECK-Constraint zurueck auf vorherige Werte-Liste (analog MIG-067 + spaetere Erweiterungen).
+  - knowledge_unit-Daten mit `metadata->>'source_type' = 'email_bulk'` bleiben unveraendert, sind aber ohne Audit-Trail nutzlos. Aufraeumen optional via separate Cleanup-Migration.
+
 ### MIG-050 — V8.1 SLC-161 MT-5 `ai_cost_ledger_role_check` erweitert um 'v8_1_augmentation' (Migration 105, live)
 - Date: 2026-05-30 (LIVE — applied via ssh+base64+psql -U postgres auf 159.69.207.29 supabase-db-bwkg80w04wgccos48gcws8cs-083510365632, BEGIN/ALTER/ALTER/COMMIT durch, `pg_get_constraintdef` verifiziert 16 Werte: 15 alte + 1 V8.1.)
 - Scope:

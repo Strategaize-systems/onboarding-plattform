@@ -199,12 +199,12 @@ V8.1-Scope (Requirements DONE 2026-05-30 via RPT-364, nach V8.0 RELEASED 2026-05
 
 ## V9 Features (Bulk-Import GF-Email → Pattern-Extraktion → Handbuch-Vervollstaendigung)
 
-V9-Scope (Requirements DONE 2026-06-01 via RPT-374, nach /discovery RPT-373 2026-06-01). Bulk-Import von GF-Email-Korrespondenz zur Handbuch-Vervollstaendigung. Persona V9.0 = GF im eigenen Tenant. Daten-Quelle = `.mbox`-Upload (Modus C Hybrid). 5 Features bauen die Pipeline Upload → KI-Pre-Filter → Filter-Review → Thread-Aggregation → PII-Redaction → Pattern-Extraktion → Curation → Handbuch-Snapshot. Foundation-Reuse hoch: FEAT-013 Evidence-Mode (V2 deployed) als Storage/Bucket/Chunk-Pattern, V5 PII-Redaction (deployed) als Pipeline-Stufen-Reuse, FEAT-025 Capture-Mode-Hook (V4 deployed) fuer Mode `email_bulk`, FEAT-026/028 V4/V4.1 Handbuch als Konsum-Endpunkt. ~3-5 Slices, ~2-3 Wochen Code-Side.
+V9-Scope (Requirements DONE 2026-06-01 via RPT-374 + Architecture DONE 2026-06-01 via RPT-375 + Slice-Planning DONE 2026-06-01 via RPT-376). Bulk-Import von GF-Email-Korrespondenz zur Handbuch-Vervollstaendigung. Persona V9.0 = GF im eigenen Tenant. Daten-Quelle = `.mbox`-Upload (Modus C Hybrid). 5 Features bauen die Pipeline Upload → KI-Pre-Filter → Filter-Review → Thread-Aggregation → PII-Redaction → Pattern-Extraktion → Curation → Handbuch-Snapshot. Foundation-Reuse hoch: FEAT-013 Evidence-Mode (V2 deployed) als Storage/Bucket/Chunk-Pattern, V5 PII-Redaction (deployed) als Pipeline-Stufen-Reuse, FEAT-025 Capture-Mode-Hook (V4 deployed) fuer Mode `email_bulk`, FEAT-026/028 V4/V4.1 Handbuch als Konsum-Endpunkt. **Slice-Konsolidierung 5 -> 4** (SLC-165..168), ~20-27 MTs, ~13-17 Tage Code-Side. Status `in_progress` ab Code-Start.
 
 | ID | Feature | Status | Spec | Created |
 |----|---------|--------|------|---------|
-| FEAT-070 | Bulk-Email-Upload + .mbox/.eml-Parser | planned | [Spec](FEAT-070-bulk-email-upload-mbox-parser.md) | 2026-06-01 |
-| FEAT-071 | KI-Pre-Filter-Klassifikation (Haiku) + Filter-Review-UI | planned | [Spec](FEAT-071-ki-pre-filter-klassifikation-haiku.md) | 2026-06-01 |
-| FEAT-072 | Thread-Aggregation + PII-Redaction-Pipeline (V5-Reuse) | planned | [Spec](FEAT-072-thread-aggregation-pii-redaction.md) | 2026-06-01 |
-| FEAT-073 | Pattern-Extraktion (Sonnet eu-central-1) + Curation-UI | planned | [Spec](FEAT-073-pattern-extraktion-sonnet-curation.md) | 2026-06-01 |
-| FEAT-074 | Handbuch-Integration + Audit/Cost-Tracking | planned | [Spec](FEAT-074-handbuch-integration-audit-cost.md) | 2026-06-01 |
+| FEAT-070 | Bulk-Email-Upload + .mbox/.eml-Parser | in_progress | [Spec](FEAT-070-bulk-email-upload-mbox-parser.md) | 2026-06-01 |
+| FEAT-071 | KI-Pre-Filter-Klassifikation (Haiku) + Filter-Review-UI | in_progress | [Spec](FEAT-071-ki-pre-filter-klassifikation-haiku.md) | 2026-06-01 |
+| FEAT-072 | Thread-Aggregation + PII-Redaction-Pipeline (V5-Reuse) | in_progress | [Spec](FEAT-072-thread-aggregation-pii-redaction.md) | 2026-06-01 |
+| FEAT-073 | Pattern-Extraktion (Sonnet eu-central-1) + Curation-UI | in_progress | [Spec](FEAT-073-pattern-extraktion-sonnet-curation.md) | 2026-06-01 |
+| FEAT-074 | Handbuch-Integration + Audit/Cost-Tracking | in_progress | [Spec](FEAT-074-handbuch-integration-audit-cost.md) | 2026-06-01 |
