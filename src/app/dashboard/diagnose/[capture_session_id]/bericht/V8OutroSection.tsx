@@ -13,15 +13,16 @@
 // V8.2+ (siehe ARCHITECTURE.md V8.1 Section, kein Web-Loading-State noetig
 // im V8.1-Scope).
 
-import Link from "next/link";
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { HebelItem } from "@/lib/diagnose/types";
+import { triggerStrategaizeFreigabe } from "./actions";
 
 /**
- * SLC-163 ersetzt diesen Default mit einer signierten HMAC-Magic-Link-URL.
- * Bis dahin rendert die CTA mit dem Placeholder — kein server-side-Click-Effekt.
+ * Web-Bericht-CTA nutzt seit SLC-163 die Server-Action triggerStrategaizeFreigabe
+ * mit Session-basierter Auth (kein Magic-Link-Token noetig). Die Form bindet
+ * captureSessionId an die Action; Erfolg redirected zu /strategaize-anfrage/
+ * bestaetigung. Placeholder-Konstante bleibt exportiert fuer Vitest-Kompatibilitaet.
  */
 export const V8_OUTRO_WEB_CTA_PLACEHOLDER_URL =
   "#cta-magic-link-token-replaced-in-slc163";
@@ -30,10 +31,10 @@ interface V8OutroSectionProps {
   /** 3 Hebel-Bloecke aus snapshot.hebel (deterministische V8.0-Texte). */
   hebel: HebelItem[];
   /**
-   * Magic-Link-URL fuer den CTA-Button. SLC-163 injiziert den HMAC-Token.
-   * Default = V8_OUTRO_WEB_CTA_PLACEHOLDER_URL fuer V8.1-Pre-SLC-163-Pfade.
+   * capture_session.id fuer die Server-Action-Bindung. Pflicht ab SLC-163 MT-9.
+   * In Tests darf der String leer sein — die Action wirft dann beim Submit.
    */
-  magicLinkUrl?: string;
+  captureSessionId?: string;
 }
 
 // MT-3 — Mock-Text bis zur redaktionellen Founder-Freigabe. Wir-Voice,
@@ -48,13 +49,17 @@ const STRATEGAIZE_VORSTELLUNG_PLACEHOLDER: readonly string[] = [
 
 export function V8OutroSection({
   hebel,
-  magicLinkUrl = V8_OUTRO_WEB_CTA_PLACEHOLDER_URL,
+  captureSessionId,
 }: V8OutroSectionProps) {
   if (hebel.length !== 3) {
     throw new Error(
       `V8OutroSection: expected exactly 3 hebel, got ${hebel.length}`,
     );
   }
+
+  const submitAction = captureSessionId
+    ? triggerStrategaizeFreigabe.bind(null, captureSessionId)
+    : undefined;
 
   return (
     <section
@@ -124,7 +129,7 @@ export function V8OutroSection({
         </p>
       </div>
 
-      {/* Block 4: CTA-Button (shadcn/ui Button asChild) */}
+      {/* Block 4: CTA-Button via Server-Action triggerStrategaizeFreigabe */}
       <div className="rounded-2xl bg-indigo-950 p-8 text-white">
         <div className="font-mono text-xs font-bold uppercase tracking-widest text-emerald-400">
           Naechster Schritt
@@ -137,13 +142,16 @@ export function V8OutroSection({
           Termin ab, in dem wir Ihre Diagnose gemeinsam durchgehen. Kein
           Verkaufs-Druck, keine Pauschal-Antworten.
         </p>
-        <Button
-          asChild
-          size="lg"
-          className="mt-5 min-h-[44px] bg-emerald-400 px-6 font-mono text-sm font-bold uppercase tracking-widest text-indigo-950 hover:bg-emerald-300"
-        >
-          <Link href={magicLinkUrl}>Mit Strategaize sprechen</Link>
-        </Button>
+        <form action={submitAction} className="mt-5">
+          <Button
+            type="submit"
+            size="lg"
+            disabled={!submitAction}
+            className="min-h-[44px] bg-emerald-400 px-6 font-mono text-sm font-bold uppercase tracking-widest text-indigo-950 hover:bg-emerald-300"
+          >
+            Mit Strategaize sprechen
+          </Button>
+        </form>
         <p className="mt-3 text-xs text-slate-300">
           Strategaize meldet sich innerhalb von 2 Werktagen.
         </p>

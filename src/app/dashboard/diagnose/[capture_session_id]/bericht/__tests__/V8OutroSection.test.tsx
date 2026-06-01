@@ -1,11 +1,19 @@
-// V8.1 SLC-162 MT-6 — Smoke-Test fuer V8OutroSection (Web-Bericht-Outro).
+// V8.1 SLC-162 MT-6 + SLC-163 MT-9 — Smoke-Test fuer V8OutroSection.
 //
 // Verifiziert Component-Rendering ohne Errors + Presence der 4 Bloecke
 // via renderToString (vermeidet @testing-library/react als neue Dep).
+//
+// Mockt ./actions damit der Test-Bootstrap nicht supabase-admin laedt
+// (feedback_vitest_split_pure_logic_from_db_adapter / IMP-880).
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import React from "react";
 import { renderToString } from "react-dom/server";
+
+vi.mock("../actions", () => ({
+  triggerStrategaizeFreigabe: vi.fn(),
+  sendDiagnoseReportByEmail: vi.fn(),
+}));
 
 import {
   V8OutroSection,
@@ -65,15 +73,22 @@ describe("V8OutroSection", () => {
     expect(html).toContain("Wie wir arbeiten");
     expect(html).toContain("Video folgt in Kuerze");
 
-    // Block 4: CTA
+    // Block 4: CTA via form action
     expect(html).toContain("Naechster Schritt");
     expect(html).toContain("Mit Strategaize sprechen");
     expect(html).toContain("innerhalb von 2 Werktagen");
-    // Magic-Link-Placeholder bis SLC-163
-    expect(html).toContain(V8_OUTRO_WEB_CTA_PLACEHOLDER_URL);
+    // Form submit-button (SLC-163 MT-9 — kein Link mehr)
+    expect(html).toMatch(/<form[^>]*>[\s\S]*?<button[^>]*type="submit"/);
   });
 
-  it("CTA-Magic-Link defaults to SLC-163-placeholder", () => {
+  it("CTA-button is disabled when no captureSessionId provided", () => {
+    const html = renderToString(
+      React.createElement(V8OutroSection, { hebel: FIXTURE_HEBEL }),
+    );
+    expect(html).toMatch(/<button[^>]*disabled/);
+  });
+
+  it("CTA-Magic-Link-Placeholder constant remains exported for compatibility", () => {
     expect(V8_OUTRO_WEB_CTA_PLACEHOLDER_URL).toBe(
       "#cta-magic-link-token-replaced-in-slc163",
     );

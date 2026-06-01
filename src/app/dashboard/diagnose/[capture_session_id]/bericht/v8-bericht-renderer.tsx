@@ -231,7 +231,10 @@ export function V8BerichtRenderer({
 
       {/* V8.1 Lead-Conversion-Outro (SLC-162 MT-6) — analog zu PDF Pages 16-17 */}
       {snapshot.hebel.length === 3 ? (
-        <V8OutroSection hebel={snapshot.hebel} />
+        <V8OutroSection
+          hebel={snapshot.hebel}
+          captureSessionId={captureSessionId}
+        />
       ) : null}
 
       {/* Action-Slot (Client-Component) */}
