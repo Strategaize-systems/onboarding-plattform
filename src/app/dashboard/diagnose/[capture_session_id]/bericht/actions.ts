@@ -46,6 +46,7 @@ import {
   recordCtaIdempotentSkip,
   recordStbNotificationSkippedNoEmail,
 } from "@/lib/cta/audit";
+import { resolvePartnerForCaptureSession } from "@/lib/cta/resolve-partner";
 import { redirect } from "next/navigation";
 
 const UUID_REGEX = /^[0-9a-f-]{36}$/i;
@@ -321,17 +322,20 @@ export async function sendDiagnoseReportByEmail(
     // Wenn Secret nicht gesetzt: Placeholder-URL im PDF (kein Crash, sondern
     // graceful degradation). Web-Bericht-CTA funktioniert davon unabhaengig
     // via Server-Action triggerStrategaizeFreigabe.
+    // SLC-164 (ISSUE-086): Partner via Tenant-Chain, capture_session hat keine
+    // partner_organization_id-Spalte.
     const ctaSecret = process.env.STRATEGAIZE_CTA_TOKEN_SECRET;
+    const ctaPartner =
+      ctaSecret && ctaSecret.length >= 32 && session.tenant_id
+        ? await resolvePartnerForCaptureSession(admin, {
+            tenant_id: session.tenant_id,
+          })
+        : null;
     const magicLinkConfig =
       ctaSecret && ctaSecret.length >= 32 && session.tenant_id
         ? {
             captureSessionId: input.captureSessionId,
-            partnerOrganizationId:
-              (await admin
-                .from("capture_session")
-                .select("partner_organization_id")
-                .eq("id", input.captureSessionId)
-                .maybeSingle()).data?.partner_organization_id ?? "",
+            partnerOrganizationId: ctaPartner?.id ?? "",
             mandantEmail: profile.email ?? "",
           }
         : undefined;
@@ -591,17 +595,19 @@ export async function downloadMandantenReportV2Pdf(
 
   // SLC-163 MT-8/MT-10: PDF-Magic-Link-CTA gated auf STRATEGAIZE_CTA_TOKEN_SECRET
   // (siehe sendDiagnoseReportByEmail oben fuer Begruendung).
+  // SLC-164 (ISSUE-086): Partner via Tenant-Chain.
   const ctaSecret = process.env.STRATEGAIZE_CTA_TOKEN_SECRET;
+  const ctaPartner =
+    ctaSecret && ctaSecret.length >= 32
+      ? await resolvePartnerForCaptureSession(admin, {
+          tenant_id: session.tenant_id,
+        })
+      : null;
   const magicLinkConfig =
     ctaSecret && ctaSecret.length >= 32
       ? {
           captureSessionId,
-          partnerOrganizationId:
-            (await admin
-              .from("capture_session")
-              .select("partner_organization_id")
-              .eq("id", captureSessionId)
-              .maybeSingle()).data?.partner_organization_id ?? "",
+          partnerOrganizationId: ctaPartner?.id ?? "",
           mandantEmail: profile.email ?? "",
         }
       : undefined;
@@ -675,10 +681,12 @@ export async function triggerStrategaizeFreigabe(
     throw new Error("profile_not_found");
   }
 
+  // SLC-164 (ISSUE-086): partner_organization_id existiert nicht auf
+  // capture_session — Aufloesung via Tenant-Chain weiter unten.
   const { data: session, error: sessionErr } = await admin
     .from("capture_session")
     .select(
-      "id, tenant_id, owner_user_id, partner_organization_id, metadata, released_for_strategaize_review",
+      "id, tenant_id, owner_user_id, metadata, released_for_strategaize_review",
     )
     .eq("id", captureSessionId)
     .maybeSingle();
@@ -721,14 +729,10 @@ export async function triggerStrategaizeFreigabe(
     redirect("/strategaize-anfrage/bestaetigung");
   }
 
-  // Erste Triggerung — Partner laden + Dual-Email senden.
-  const { data: partner } = session.partner_organization_id
-    ? await admin
-        .from("partner_organization")
-        .select("id, name, contact_email")
-        .eq("id", session.partner_organization_id)
-        .maybeSingle()
-    : { data: null };
+  // Erste Triggerung — Partner via Tenant-Chain laden + Dual-Email senden.
+  const partner = await resolvePartnerForCaptureSession(admin, {
+    tenant_id: session.tenant_id,
+  });
 
   const snapshot = (session.metadata?.v8_report_snapshot ?? {}) as Record<
     string,
@@ -760,7 +764,7 @@ export async function triggerStrategaizeFreigabe(
       diagnose_link_admin: `${appBaseUrl}/admin/diagnose/${captureSessionId}`,
     },
     partner: {
-      id: partner?.id ?? session.partner_organization_id ?? "",
+      id: partner?.id ?? "",
       name: partner?.name ?? "Unbekannter Partner",
       contact_email: partner?.contact_email ?? null,
     },

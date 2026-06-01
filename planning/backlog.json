@@ -1,6 +1,16 @@
 {
   "items": [
     {
+      "id": "BL-145",
+      "title": "V8.1.1 Hotfix SLC-164 — Partner-Resolution via Tenant-Chain",
+      "type": "fix",
+      "priority": "high",
+      "status": "done",
+      "version": "V8.1.1",
+      "description": "**V8.1.1 Hotfix — Partner-Resolution via Tenant-Chain.** Korrigiert 2 verbundene Schema-Bugs in V8.1 CTA-Mechanik (ISSUE-086 + verdeckter Bug B). Bug A: `capture_session.partner_organization_id` existiert nicht im Schema. Schema-Wahrheit: `capture_session.tenant_id → tenants.parent_partner_tenant_id → partner_organization.tenant_id`. Bug B (durch A maskiert): `partner_organization.name` existiert nicht — Schema kennt nur `legal_name` + `display_name`. Fix: Helper `src/lib/cta/resolve-partner.ts` extrahiert (Pattern-Reuse aus V7.2 `sendDiagnoseReportByEmail`-Tenant-Chain), 4 Call-Sites umgestellt: `src/app/strategaize-anfrage/route.ts` MT-7 + `triggerStrategaizeFreigabe` MT-9 + 2× PDF-Magic-Link-Embedding in `bericht/actions.ts`. Quality-Gates: tsc=0, eslint=0, 58 Vitest grün, 0 Regression. 0 Migrations, 0 neue ENVs. Worktree `slc-164-hotfix-partner-resolution`. Bemerkenswertes Detail: Pattern war in V7.2 im selben File schon korrekt — Hauptlehre 'Pattern-Reuse innerhalb selbst File' (siehe strategaize-pattern-reuse.md Rule).",
+      "createdAt": "2026-06-01"
+    },
+    {
       "id": "BL-140",
       "title": "V22 Security Sprint 3 — Logger-Redaction-Lib + LLM-Cost-Cap",
       "type": "improvement",

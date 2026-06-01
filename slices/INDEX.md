@@ -864,6 +864,14 @@ V8.1 = 3 Slices SLC-161 + SLC-162 + SLC-163 (insgesamt 23 Micro-Tasks + MT-0 Wor
 - **Worktree-Setup `v8-1-lead-conversion`** als SLC-161 MT-0 (Pre-Slice)
 - **Master-Merge** `v8-1-lead-conversion` → `main` in SLC-163 MT-10 nach Gesamt-V8.1-/qa PASS
 
+## V8.1.1 Slices (Hotfix Partner-Resolution Tenant-Chain)
+
+V8.1.1 = 1 Hotfix-Slice SLC-164 (~30-45min). Korrigiert 2 verbundene Schema-Bugs in V8.1 CTA-Mechanik: ISSUE-086 (`capture_session.partner_organization_id` existiert nicht) + verdeckter Bug B (`partner_organization.name` existiert nicht, Schema kennt nur `display_name`). Helper `resolvePartnerForCaptureSession` extrahiert + 4 Call-Sites umgestellt.
+
+| ID | Slice | Feature | Status | Priority | Created |
+|----|-------|---------|--------|----------|---------|
+| SLC-164 | [Hotfix Partner-Resolution Tenant-Chain](SLC-164-hotfix-partner-resolution-tenant-chain.md) | FEAT-068 / BL-145 | done | Blocker | 2026-06-01 |
+
 ### V8.1 Pre-Slice User-Pflichten
 
 | Pflicht | Blockiert | Aktion |

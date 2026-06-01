@@ -197,6 +197,13 @@
       "order": 18.5
     },
     {
+      "id": "v8-1-1",
+      "name": "V8.1.1",
+      "status": "active",
+      "summary": "**V8.1.1 Hotfix — Partner-Resolution via Tenant-Chain.** 1 Hotfix-Slice SLC-164 (~30-45min). Korrigiert 2 verbundene Schema-Bugs in V8.1 CTA-Mechanik: Bug A (ISSUE-086) `capture_session.partner_organization_id` existiert nicht — Schema-Wahrheit: `capture_session.tenant_id → tenants.parent_partner_tenant_id → partner_organization.tenant_id`. Bug B (durch A maskiert) `partner_organization.name` existiert nicht — Schema kennt nur `legal_name` + `display_name`. Fix: Helper `src/lib/cta/resolve-partner.ts` extrahiert (Pattern-Reuse aus V7.2 actions.ts) + 4 Call-Sites umgestellt (`/strategaize-anfrage/route.ts` + 3× in `bericht/actions.ts`). Quality-Gates: tsc=0, eslint=0, 58 Vitest grün, 0 Regression. 0 Migration, 0 neue ENVs, 0 Schema-Change. Status active bis User-Coolify-Redeploy + Live-Smoke PASS → REL-028.",
+      "order": 18.51
+    },
+    {
       "id": "v9",
       "name": "V9",
       "status": "planned",

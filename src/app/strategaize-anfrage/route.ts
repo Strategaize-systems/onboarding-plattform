@@ -26,6 +26,7 @@ import {
   recordCtaIdempotentSkip,
   recordStbNotificationSkippedNoEmail,
 } from "@/lib/cta/audit";
+import { resolvePartnerForCaptureSession } from "@/lib/cta/resolve-partner";
 import { sendStrategaizeAnfrageEmails } from "@/lib/email/v8-1/send-strategaize-anfrage-emails";
 
 export const runtime = "nodejs";
@@ -100,11 +101,11 @@ export async function GET(request: Request): Promise<NextResponse> {
   }
 
   // Erste Triggerung — Session + Partner laden, Emails senden.
+  // SLC-164 (ISSUE-086): Partner via Tenant-Chain aufloesen, capture_session
+  // hat keine partner_organization_id-Spalte.
   const { data: session } = await admin
     .from("capture_session")
-    .select(
-      "id, owner_user_id, partner_organization_id, metadata, tenant_id",
-    )
+    .select("id, owner_user_id, metadata, tenant_id")
     .eq("id", captureSessionId)
     .maybeSingle();
 
@@ -115,11 +116,9 @@ export async function GET(request: Request): Promise<NextResponse> {
     );
   }
 
-  const { data: partner } = await admin
-    .from("partner_organization")
-    .select("id, name, contact_email")
-    .eq("id", session.partner_organization_id ?? verify.payload.partner_organization_id)
-    .maybeSingle();
+  const partner = await resolvePartnerForCaptureSession(admin, {
+    tenant_id: session.tenant_id,
+  });
 
   const snapshot = (session.metadata?.v8_report_snapshot ?? {}) as Record<
     string,
