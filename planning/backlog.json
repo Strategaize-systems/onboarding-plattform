@@ -7,7 +7,57 @@
       "priority": "high",
       "status": "in_progress",
       "version": "V9",
-      "description": "**V9 Versions-Anker per RPT-373 /discovery V9=Bulk-Import 2026-06-01.** V9.0-Workflow: GF im eigenen Tenant exportiert Email-Folder aus Mail-Client als .mbox, laedt in OP hoch. (1) KI-Pre-Filter-Pass (Haiku) klassifiziert in content/short_reply/notification/newsletter/private/unclear. (2) GF korrigiert Klassifikation optional. (3) Thread-Aggregation via mailparser + In-Reply-To. (4) PII-Redaction-Pass (Reuse V5 SLC-076..078). (5) Pattern-Extraktion-Pass (Sonnet) auf content+unclear Threads — Themen + wiederkehrende Antworten + Entscheidungen + offene Fragen. (6) GF-Curation-UI: Akzeptieren/Ablehnen/Editieren. (7) Akzeptierte Patterns als KUs in V4.1-Handbuch-Snapshot. **Foundation-Reuse**: V2 Evidence-Mode (FEAT-013 deployed) + V5 PII-Redaction + V4 FEAT-025 Capture-Mode-Hook (capture_mode='email_bulk') + V4.1 Handbuch-Reader. **Persona V9.0**: GF im eigenen Tenant (NICHT Mandant, NICHT Mitarbeiter, NICHT Customer-Service-Mitarbeiter). **Aufwand**: ~2-3 Wochen V9.0 Code-Side + /qa + Release. **Bedrock-Kosten 1000 Emails**: ~0.10 EUR Pre-Filter (Haiku) + ~5 EUR Pattern-Extraktion (Sonnet, nur gefilterte ~10% Content-Emails). **Out of Scope V9.0**: Forward-Bucket-Email (V9.1+), Customer-Service-Ticket-Bulk (V9.1+), Multi-Mitarbeiter-Upload (V9.2+), IS-Knowledge-Push (V9.1+ wenn IS V3.5 SLC-352 + Anwalt durch), Auto-Response-Generator (V10+), CRM-Connector (V10+), IMAP-Live-Sync (V10+). **Pre-Conditions vor /requirements V9**: V8.1 STABLE-Bestaetigung (~2026-06-02 08:00 UTC). **Naechster Schritt**: /requirements V9.",
+      "description": "**V9 Versions-Anker per RPT-373 /discovery V9=Bulk-Import 2026-06-01 + Requirements DONE RPT-374 2026-06-01.** V9.0-Workflow: GF im eigenen Tenant exportiert Email-Folder aus Mail-Client als .mbox, laedt in OP hoch. (1) KI-Pre-Filter-Pass (Haiku) klassifiziert in content/short_reply/notification/newsletter/private/unclear. (2) GF korrigiert Klassifikation optional. (3) Thread-Aggregation via mailparser + In-Reply-To. (4) PII-Redaction-Pass (Reuse V5 SLC-076..078). (5) Pattern-Extraktion-Pass (Sonnet) auf content+unclear Threads — Themen + wiederkehrende Antworten + Entscheidungen + offene Fragen. (6) GF-Curation-UI: Akzeptieren/Ablehnen/Editieren. (7) Akzeptierte Patterns als KUs in V4.1-Handbuch-Snapshot. **5 Features definiert (BL-147..151)**: FEAT-070 Upload+Parser, FEAT-071 Pre-Filter+Review, FEAT-072 Thread-Aggregation+PII-Redaction, FEAT-073 Pattern-Extraktion+Curation, FEAT-074 Handbuch-Integration+Audit. **10 Open Questions Q-V9-A..J fuer /architecture**. **Foundation-Reuse**: V2 Evidence-Mode (FEAT-013 deployed) + V5 PII-Redaction + V4 FEAT-025 Capture-Mode-Hook (capture_mode='email_bulk') + V4.1 Handbuch-Reader. **Persona V9.0**: GF im eigenen Tenant (NICHT Mandant, NICHT Mitarbeiter, NICHT Customer-Service-Mitarbeiter). **Aufwand**: ~2-3 Wochen V9.0 Code-Side + /qa + Release. **Bedrock-Kosten 1000 Emails**: ~0.10 EUR Pre-Filter (Haiku) + ~5 EUR Pattern-Extraktion (Sonnet, nur gefilterte ~10% Content-Emails). **Out of Scope V9.0**: Forward-Bucket-Email (V9.1+), Customer-Service-Ticket-Bulk (V9.1+), Multi-Mitarbeiter-Upload (V9.2+), IS-Knowledge-Push (V9.1+ wenn IS V3.5 SLC-352 + Anwalt durch), Auto-Response-Generator (V10+), CRM-Connector (V10+), IMAP-Live-Sync (V10+). **Pre-Conditions vor /backend V9**: V8.1 STABLE-Bestaetigung (~2026-06-02 08:00 UTC), Test-Email-Corpus von Founder. **Naechster Schritt**: /architecture V9.",
+      "createdAt": "2026-06-01"
+    },
+    {
+      "id": "BL-147",
+      "title": "V9 FEAT-070 Bulk-Email-Upload + .mbox/.eml-Parser",
+      "type": "feature",
+      "priority": "high",
+      "status": "in_progress",
+      "version": "V9",
+      "description": "V9.0 Feature: Upload-Foundation fuer GF-Email-Bulk-Import. GF kann .mbox-Datei (Gmail-Takeout, Outlook-Export, Thunderbird, Apple Mail) oder mehrere .eml-Dateien hochladen. mailparser-Lib persistiert pro Email Pflicht-Headers (message_id, in_reply_to, references, from, to, subject, date, body_text/html). Roh-Datei in Tenant-isoliertem Storage-Bucket (RLS-Pattern aus V2). Bulk-Run-Audit-Header in email_bulk_run. Upload-Limit Default V9.0: 500 MB / 50.000 Emails (/architecture finalisiert). Idempotenz via file_hash. Foundation-Reuse: FEAT-013 Multi-File-Upload-Pattern, FEAT-025 Capture-Mode-Hook (mode='email_bulk'). Pre-Cond: V8.1 STABLE. Spec: features/FEAT-070-bulk-email-upload-mbox-parser.md.",
+      "createdAt": "2026-06-01"
+    },
+    {
+      "id": "BL-148",
+      "title": "V9 FEAT-071 KI-Pre-Filter-Klassifikation (Haiku) + Filter-Review-UI",
+      "type": "feature",
+      "priority": "high",
+      "status": "in_progress",
+      "version": "V9",
+      "description": "V9.0 Feature: Bedrock Claude Haiku eu-central-1 klassifiziert jede Email in 6 Labels (content/short_reply/notification/newsletter/private/unclear). Volumen-Reduktion ~90% fuer den teureren Sonnet-Pattern-Extraktion-Pass. GF-Review-UI mit Klassifikations-Counts + Bulk-Reclassify + Pro-Email-Korrektur + Approval-Button. Confidence-Schwelle <0.6 markiert als 'unclear' (/architecture finalisiert Schwelle). Cost-Tracking pro Run via ai_cost_ledger (V5-Reuse). Geschaetzt <0.20 EUR pro 1000 Emails. Audit-Log: Provider + Region (Pflicht: eu-central-1) + Modell + Token-Count + Cost. Data-Residency-Pflicht (data-residency.md). Spec: features/FEAT-071-ki-pre-filter-klassifikation-haiku.md.",
+      "createdAt": "2026-06-01"
+    },
+    {
+      "id": "BL-149",
+      "title": "V9 FEAT-072 Thread-Aggregation + PII-Redaction-Pipeline (V5-Reuse)",
+      "type": "feature",
+      "priority": "high",
+      "status": "in_progress",
+      "version": "V9",
+      "description": "V9.0 Feature: content+unclear-Emails aus FEAT-071 werden per RFC-5322 In-Reply-To/References-Headers zu Konversations-Threads gruppiert. Thread = Pattern-Extraktions-Einheit (statt einzelne Snippets). PII-Redaction-Pass (Reuse V5 SLC-076..078 Pipeline) entfernt Klarnamen + Email-Adressen + Telefonnummern. Email-spezifische Patterns ergaenzt: Signaturen (Trigger-Token), From/To-Headers, embedded Kontakte. Pseudonymisierung pro Thread mit Participant-Map (z.B. P1=kunde-mueller, P2=gf-self). redacted_body persistiert. Edge-Cases: Single-Email-Threads zulassen, Reply-Loops nach 100 Emails unterbrechen, Forward-Chains separat. Q-V9-A klaert in /architecture: V5-Pipeline direkt vs Email-Adapter zwischen. Pflicht: kein Klarname/Email-Adresse im redacted_body (Pattern-Scan im /qa). Spec: features/FEAT-072-thread-aggregation-pii-redaction.md.",
+      "createdAt": "2026-06-01"
+    },
+    {
+      "id": "BL-150",
+      "title": "V9 FEAT-073 Pattern-Extraktion (Sonnet eu-central-1) + Curation-UI",
+      "type": "feature",
+      "priority": "high",
+      "status": "in_progress",
+      "version": "V9",
+      "description": "V9.0 Feature (Wert-Hebel der V9): Bedrock Claude Sonnet eu-central-1 extrahiert pro Thread Themen + wiederkehrende Antwort-Muster + Entscheidungen + offene Fragen (Strict-JSON-Output-Schema). Pattern persistiert in email_pattern mit Confidence + suggested_section + evidence_snippets (aus redacted_body). Pre-Cost-Estimate + Pre-Approval-Modal bei erwarteten >10 EUR. Default-Cost-Cap pro Bulk-Run 20 EUR + Hard-Cap pro Tenant/Monat 100 EUR (/architecture finalisiert). Curation-UI: Pattern-Liste sortiert nach Confidence + Theme, pro Card Akzeptieren/Ablehnen/Editieren + Section-Dropdown (V4.1-Sections), Bulk-Aktion 'alle conf>0.8 akzeptieren', Edit-Modal fuer Titel+Description. Geschaetzt <8 EUR pro 1000 Emails Pattern-Extraktion. Cost-Cap-Pattern aus V8.1 FEAT-069 Reuse. Audit pro Sonnet-Call (Region: eu-central-1 Pflicht). Spec: features/FEAT-073-pattern-extraktion-sonnet-curation.md.",
+      "createdAt": "2026-06-01"
+    },
+    {
+      "id": "BL-151",
+      "title": "V9 FEAT-074 Handbuch-Integration + Audit/Cost-Tracking",
+      "type": "feature",
+      "priority": "high",
+      "status": "in_progress",
+      "version": "V9",
+      "description": "V9.0 Feature: akzeptierte Patterns aus FEAT-073 werden als knowledge_unit-Rows in V4.1-Handbuch-Snapshot uebernommen. Idempotenz via email_pattern.imported_to_handbook_at. Pro knowledge_unit Source-Attribution-Metadata (bulk_run_id, pattern_id, thread_id, participant_pseudonyms, confidence, extracted_at). Source-Attribution-View im V4.1-Handbuch-Reader: 'Aus Email-Bulk-Import vom YYYY-MM-DD' + Link zur Run-Detail + Evidence-Snippets pseudonymisiert. Audit-Trail vollstaendig pro Run: Upload + Pre-Filter + Threading + Redact + Pattern + Curation + Import — unloeschbar 7 Jahre (DSGVO + COMPLIANCE.md). Cost-Aggregation pro Run (total_cost_eur) und pro Tenant/Monat (View vw_bulk_email_cost_monthly). Strategaize-Admin sieht Cross-Tenant-Audit. Foundation-Reuse: FEAT-026/028 V4/V4.1 Handbuch, ai_cost_ledger V5, error_log/audit_log Pattern V4.2+. Spec: features/FEAT-074-handbuch-integration-audit-cost.md.",
       "createdAt": "2026-06-01"
     },
     {

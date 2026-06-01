@@ -2204,3 +2204,144 @@ Realistische Sessions: 1 LLM-Backend-Session + 1 Renderer-Session + 1 CTA-Mechan
 
 ### Detail-Spec
 V8.1-Requirements-Completion-Report wird in dieser Session erstellt als RPT-364. Feature-Specs unter `/features/FEAT-067..069-*.md`. /architecture-Schritt klaert Q-V8.1-A..I und definiert /slice-planning V8.1-Vorbereitung.
+
+## V9 — Bulk-Import GF-Email -> Pattern-Extraktion -> Handbuch-Vervollstaendigung
+
+Requirements DONE 2026-06-01 via RPT-374, basierend auf /discovery RPT-373 2026-06-01 + V9-Re-Eval RPT-372 (Diary-Mode deferred, V9-Slot neu belegt). V9 ist die erste Plattform-Iteration, die unstrukturierte Email-Korrespondenz als Wissens-Quelle erschliesst. Founder-Pull BL-146: "GF hat hier eine ganze Menge E-Mails, die er täglich hin und her schickt — da ist sehr viel Wissen rauszuziehen."
+
+### Problem Statement
+
+Operatives Wissen (Kunden-Umgang, wiederkehrende Antwort-Muster, Vertriebs-Loesungen, Entscheidungsbegruendungen) liegt zu erheblichen Teilen in Email-Korrespondenz und nicht in strukturierten Quellen. Questionnaire/Evidence/Walkthrough-Modi adressieren das nicht — Email-Inboxes sind too tief und vendor-abhaengig (IMAP, OAuth, PST). Klassischer Inbox-Zugriff ist privacy-tief und scope-breit. V9 oeffnet den Email-Korpus ueber den schmalsten DSGVO-konformen Pfad (Export-Format-Upload, GF kuratiert manuell welcher Folder rein darf).
+
+### Goal / Intended Outcome
+
+GF kann eine `.mbox`-Datei (Gmail-Takeout, Outlook-Export, Thunderbird, Apple Mail) hochladen, durchlaeuft eine KI-gestuetzte 4-Stufen-Pipeline (Pre-Filter -> Thread-Aggregation -> PII-Redaction -> Pattern-Extraktion) und entscheidet im Curation-UI welche extrahierten Pattern als zusaetzliche `knowledge_unit`-Rows in den V4.1-Handbuch-Snapshot fliessen. Mindestens 5 wiederkehrende Antwort-Muster pro 1000-Email-Corpus identifiziert + curated + im Handbuch konsumierbar.
+
+### Target Users (V9.0)
+
+- **GF im eigenen Tenant (tenant_admin)**: einzige Persona V9.0. NICHT Mandant im Multiplikator-Pfad (Privacy-tief, V10+), NICHT Mitarbeiter (V9.2+), NICHT Customer-Service-Mitarbeiter (V10+).
+- **strategaize_admin (sekundaer)**: sieht Audit-Trail Cross-Tenant fuer Compliance + Pattern-Quality-Review.
+
+### V9.0 In Scope
+
+1. **Upload + Parser (FEAT-070)**: `.mbox` + `.eml`-Multi-Upload, `mailparser`-Lib, Roh-Datei-Storage Tenant-isoliert, Email-Persistierung mit Pflicht-Headern (message_id, in_reply_to, references), Bulk-Run-Audit-Header.
+2. **KI-Pre-Filter (FEAT-071)**: Bedrock Claude Haiku eu-central-1, 6-Label-Klassifikation (content/short_reply/notification/newsletter/private/unclear), Filter-Review-UI mit Bulk-Reclassify, Cost-Tracking pro Run.
+3. **Thread-Aggregation + PII-Redaction (FEAT-072)**: RFC-5322-Header-basierte Thread-Bildung, Reuse V5 PII-Pipeline mit Email-spezifischen Patterns (Signaturen, Email-Adressen-Headers), Pseudonymisierung pro Thread.
+4. **Pattern-Extraktion + Curation-UI (FEAT-073)**: Bedrock Claude Sonnet eu-central-1, Strict-JSON-Output (themes/patterns/decisions/open_questions), Curation-UI mit Akzeptieren/Ablehnen/Editieren + Section-Zuordnung, Cost-Cap pro Run + pro Tenant/Monat mit Pre-Approval.
+5. **Handbuch-Integration + Audit/Cost-Tracking (FEAT-074)**: Idempotente Pattern -> knowledge_unit-Uebersetzung, Source-Attribution-Metadata, Handbuch-Snapshot-Trigger, Source-Attribution-View im Reader, vollstaendiger Audit-Trail pro Run, Cost-Aggregation pro Tenant/Monat.
+
+### V9.0 Out of Scope (verschoben nach V9.1+/V10+)
+
+- **Forward-Bucket-Email (V9.1+)**: Inbound-SMTP-Vendor (Mailgun/SES/Postmark) noetig, IONOS ist nur Outbound. ~1-2 Wochen Setup.
+- **Customer-Service-Ticket-Bulk (V9.1+)**: Helpdesk-CSV-Export-Parser, anderes Format.
+- **Multi-Mitarbeiter-Upload (V9.2+)**: FEAT-022 Employee-Rolle reuse, Per-User-Bucket + RLS-Erweiterung.
+- **IS-Knowledge-Push (V9.1+)**: wartet auf IS V3.5 SLC-352 Knowledge-API LIVE + Anwalts-Sign-off.
+- **Auto-Response-Generator (V10+)**: greenfield Konsum-Pfad, eigene Discovery.
+- **Sales-Objection-Handling-Bibliothek (V10+)**: greenfield Konsum, eigene Discovery.
+- **CRM-Pipeline-Connector (V10+)**: eigene Daten-Quelle.
+- **IMAP-Live-Sync (V10+)**: Connection-Pool, Inbox-Watch, Idempotenz-via-Server-UID.
+- **Outlook-PST-Format (V10+)**: Outlook-only-Nische.
+- **Mandanten-eigene Email-Uploads im Multiplikator-Pfad (V10+)**: Privacy-tief, extra Anwalts-Pass.
+- **KI-augmentierte Email-Beantwortung in GF-Inbox (V10+)**: reines Outbound-Tool, raus aus Onboarding-Scope.
+- **Pattern-Diff zwischen Mitarbeiter-Bulk und GF-Bulk (V10+)**: Bridge-Engine V2 Use-Case.
+- **Attachment-Inhalts-Persistierung (V9.1+)**: nur Metadaten in V9.0.
+- **Auto-Akzeptanz ohne GF-Review (V10+)**: jedes Pattern V9.0 muss GF-Approved sein.
+- **Pattern-Diff zwischen Bulk-Runs (V10+)**: Cross-Run-Pattern-Konsolidierung.
+
+### Core Features (V9.0)
+
+| ID | Feature | Zweck |
+|----|---------|-------|
+| FEAT-070 | Bulk-Email-Upload + .mbox/.eml-Parser | Upload-Foundation, Storage-Persistierung, Pflicht-Header-Parsing |
+| FEAT-071 | KI-Pre-Filter-Klassifikation (Haiku) + Filter-Review-UI | Volumen-Reduktion ~90%, 6-Label-Klassifikation, GF-Korrektur vor Sonnet-Pass |
+| FEAT-072 | Thread-Aggregation + PII-Redaction-Pipeline | Konversations-Threads als Pattern-Einheit, DSGVO-konforme Pseudonymisierung |
+| FEAT-073 | Pattern-Extraktion (Sonnet) + Curation-UI | Eigentliche Wert-Hebel: KI extrahiert + GF kuratiert wiederkehrende Pattern |
+| FEAT-074 | Handbuch-Integration + Audit/Cost-Tracking | Pattern -> knowledge_unit in V4.1-Handbuch, Source-Attribution, Audit + Cost |
+
+Detail-Specs unter `/features/FEAT-070..074-*.md`.
+
+### Constraints
+
+#### Technologie
+- **LLM-Provider**: AWS Bedrock eu-central-1 (Frankfurt) Pflicht (data-residency.md). Haiku fuer Pre-Filter + Sonnet fuer Pattern-Extraktion. KEIN OpenAI direkt, KEIN US-Region.
+- **PII-Redaction**: V5-Pipeline-Reuse Pflicht (kein neuer Adapter ohne Begruendung), Email-spezifische Pattern-Erweiterung erlaubt.
+- **Storage**: Supabase Storage, Tenant-RLS-isoliert. /architecture entscheidet neuer Bucket vs evidence-Bucket-Reuse (Q-V9-H).
+- **Schema**: /architecture entscheidet evidence_chunk-Erweiterung vs neue `email_message` + `email_thread` + `email_pattern` + `email_bulk_run`-Tabellen (Q-V9-B).
+- **Reuse-Pflicht** (siehe `.claude/rules/strategaize-pattern-reuse.md`): RLS-Helper-Functions, Bedrock-Adapter, ai_cost_ledger, Multi-File-Upload-Component, V4.1-Snapshot-Mechanik.
+
+#### Organisatorisch
+- **GF-Curation-Pflicht (V9.0)**: kein Auto-Import von Pattern ohne GF-Review.
+- **Cost-Cap-Pflicht**: pro Bulk-Run Default-Cap (V9.0-Vorschlag 20 EUR) + Pre-Approval-Modal, pro Tenant/Monat Hard-Cap (V9.0-Vorschlag 100 EUR). /architecture entscheidet finale Werte.
+- **Audit-Trail-Pflicht (DSGVO + COMPLIANCE.md)**: jeder LLM-Call mit Provider + Region + Modell + Token-Count + Cost. Audit unloeschbar 7 Jahre.
+
+#### Sprache / Inhalt
+- V9.0 default deutsch + englisch (V5-PII-Pattern-Stand). Multi-Lingual-Pre-Filter erst V9.1+.
+
+### Risks / Assumptions
+
+#### Risiken
+- **R1 — LLM-Kosten-Modell unbestaetigt**: ~0.10 EUR Pre-Filter (Haiku) + ~5 EUR Pattern-Extraktion (Sonnet) pro 1000 Emails sind /discovery-Schaetzungen. /architecture muss mit Test-Email-Corpus + echten Bedrock-Token-Counts validieren bevor /backend startet. Bei Faktor-2-Abweichung: Cost-Cap-Werte anpassen.
+- **R2 — PII-Redaction-Pattern V5 ist Walkthrough-zugeschnitten**: Email-Inhalt hat anderen Pattern (Signaturen, Email-Adressen-Headers, eingebettete Kontakte). /architecture pruft ob V5-Pipeline direkt anwendbar oder Email-Adapter zwischen Pflicht.
+- **R3 — Pattern-Qualitaet bei nur 100-Email-Corpus**: kleine Korpora liefern evtl. wenig Pattern. Test-Corpus in /architecture validiert Qualitaets-Schwelle.
+- **R4 — Bulk-Run-Worker-Performance**: 50.000 Emails Bulk-Run -> 50 Haiku-Batches + 200 Sonnet-Calls + viel Worker-Zeit. /architecture entscheidet Worker-Tier oder Async-Job-Queue-Pattern.
+- **R5 — Storage-Kosten**: `.mbox`-Files koennen mehrere GB sein. Tenant-Storage-Quota Pflicht. /architecture entscheidet Quota-Default + Auto-Delete-Pattern.
+- **R6 — Curation-UI Fatigue**: 50 Pattern zu kurieren ist viel. Bulk-Aktionen + Confidence-Sortierung helfen, /architecture pruft UX.
+
+#### Annahmen
+- GF kann selbst eine `.mbox`-Datei aus seinem Mail-Client exportieren (Gmail-Takeout-Pfad, Outlook-Export-Pfad, Thunderbird-Pfad, Apple-Mail-Pfad alle dokumentiert User-Guide-Pflicht in /go-live).
+- V8.1 STABLE-Bestaetigung erfolgt vor V9 /backend-Start (Burn-In-Ende ~2026-06-02 08:00 UTC).
+- V4.1 Handbuch-Reader (FEAT-028) bleibt der Konsum-Endpunkt (KEIN neuer Reader fuer V9).
+- ai_cost_ledger V5 reicht fuer Audit, evtl. mit Subschema-Erweiterung.
+
+### Success Criteria (V9.0 Gesamt)
+
+- SC-V9-1: GF kann `.mbox`-Datei (Gmail-Takeout-Format) hochladen, Plattform parsed N Emails ohne Datenverlust (Pflicht-Headers + body_text).
+- SC-V9-2: Pre-Filter klassifiziert 1000 Emails in <10 Min mit <0.20 EUR Kosten.
+- SC-V9-3: GF kann Klassifikationen korrigieren bevor Pattern-Extraktion laeuft.
+- SC-V9-4: Thread-Aggregation gruppiert Emails zu Konversations-Threads via RFC-5322-Headers.
+- SC-V9-5: PII-Redaction entfernt Klarnamen + Email-Adressen + Telefonnummern (Stichprobe pro Run prueft 10% Threads).
+- SC-V9-6: Pattern-Extraktion identifiziert min. 5 wiederkehrende Antwort-Muster aus Test-Corpus (~100 Threads).
+- SC-V9-7: Curation-UI erlaubt Akzeptieren/Ablehnen/Editieren von Pattern + Section-Zuordnung.
+- SC-V9-8: Akzeptierte Pattern erscheinen als knowledge_unit-Rows in V4.1-Handbuch-Snapshot, im V4.1-Reader konsumierbar.
+- SC-V9-9: Source-Attribution belegt fuer jedes Pattern die Email/Thread-Quelle, Pseudonyme-konform.
+- SC-V9-10: Audit-Trail-Vollstaendigkeit: Upload + Pre-Filter + Threading + Redact + Pattern + Curation + Import nachweisbar, LLM-Calls dokumentiert mit Region (eu-central-1) + Token-Count + Cost.
+- SC-V9-11: Cost-Cap pro Bulk-Run + pro Tenant/Monat enforced, Pre-Approval-Modal funktional.
+- SC-V9-12: Tenant-RLS verhindert Cross-Tenant-Read auf alle neuen Tabellen (Pen-Test-Erweiterung Pflicht in /qa).
+
+### Open Questions (fuer /architecture V9)
+
+- **Q-V9-A — PII-Redaction-Pattern Email-Adapter**: V5-Pipeline direkt anwendbar oder Email-spezifischer Adapter Pflicht? Wenn Adapter: welche Pattern (Signaturen, Headers, embedded Kontakte)?
+- **Q-V9-B — Schema-Erweiterung vs neue Tabellen**: evidence_chunk + evidence_file erweitern (analoge Foundation) oder neue Tabellen `email_message` + `email_thread` + `email_pattern` + `email_bulk_run` (klarere Trennung, mehr Migration-Arbeit)?
+- **Q-V9-C — Worker-Pipeline-Stufen-Sequenz**: synchron (alle Stufen in einem Worker-Job-Lauf) oder asynchron (jeder Stufen-Wechsel triggert naechsten Job, GF kann zwischen Stufen entscheiden)?
+- **Q-V9-D — Test-Email-Corpus**: /architecture braucht anonymisierten Test-Corpus (~100 Founder-Emails) als Pre-Step fuer Cost + Pattern-Qualitaets-Validation. Wer liefert + wann?
+- **Q-V9-E — Pattern-Extraktion-Trigger**: synchron per "Pattern-Extraktion starten"-Button (GF wartet) vs asynchron via Worker (GF sieht Status, kommt zurueck)?
+- **Q-V9-F — Curation-UI Section-Zuordnung**: vorgegebene Sections aus V4.1-Handbuch-Template-Liste vs free-text-Sections mit Auto-Komplett? Default Empfehlung: vorgegebene Sections mit "Andere..."-Option.
+- **Q-V9-G — Cost-Cap Hard/Soft + Pre-Approval-Schwelle**: pro Bulk-Run 20 EUR Default + Pre-Approval-Modal? pro Tenant/Monat 100 EUR Hard-Cap? Welche Schwelle triggert Pre-Approval-Modal (5 EUR? 10 EUR? 20 EUR)?
+- **Q-V9-H — Storage-Bucket**: neuer `bulk-email`-Bucket vs evidence-Bucket-Reuse? evidence-Reuse: konsistent zur Foundation. neuer Bucket: klarere Storage-Quota pro Capture-Mode.
+- **Q-V9-I — Klassifikations-Schema-Customizing**: 6-Labels-Default kanonisch oder pro Tenant erweiterbar (V9.0 nein, V9.2+ ja — bestaetigen)?
+- **Q-V9-J — mailparser-Lib-Stabilitaet**: `mailparser` ist Standard fuer Node, /architecture prueft Versionierung + Bekannte-Bugs + Alternativen (z.B. `emailjs-mime-parser`).
+
+### Delivery Mode
+
+**SaaS Product** — unveraendert. Strengste TDD-Disziplin (PII-Redaction-Pipeline + Cost-Cap-Logik + Tenant-RLS). Mandatory atomic commits pro Micro-Task ([[git-release]] Rule). Eigener Worktree (SaaS-Mode-Pflicht).
+
+### Slice-Sketch (vorlaeufig, /architecture + /slice-planning entscheiden)
+
+Geschaetzt **3-5 Slices, ~2-3 Wochen Implementations-Zeit**. Cumulative-Single-Branch-Worktree analog V8.0/V8.1-Pattern.
+
+- **SLC-V9-A (geplant) — FEAT-070 Upload + Parser**: `.mbox`/`.eml`-Upload, mailparser-Wiring, Storage-Bucket-Setup, email_bulk_run + email_message-Tabellen (oder evidence-Erweiterung Q-V9-B), Status-View. Pre-Cond: Test-Corpus von Founder.
+- **SLC-V9-B (geplant) — FEAT-071 Pre-Filter Haiku**: Bedrock-Haiku-Adapter, Klassifikations-Worker, Filter-Review-UI mit Bulk-Reclassify, Cost-Tracking-Integration.
+- **SLC-V9-C (geplant) — FEAT-072 Thread-Aggregation + PII-Redaction**: Header-basierte Thread-Bildung, V5-PII-Pipeline-Adapter, Pseudonymisierung, email_thread-Tabelle.
+- **SLC-V9-D (geplant) — FEAT-073 Pattern-Extraktion + Curation**: Sonnet-Adapter, Pattern-Extraktion-Worker, Strict-JSON-Output, Curation-UI mit Akzeptieren/Ablehnen/Editieren, Cost-Cap-Logik + Pre-Approval-Modal.
+- **SLC-V9-E (geplant) — FEAT-074 Handbuch-Integration + Audit**: knowledge_unit-Insert mit Source-Attribution, Snapshot-Trigger, Source-Attribution-View, Audit-Aggregation, Cost-Aggregation, Final-Stats-Anzeige.
+
+Reihenfolge linear (SLC-V9-A -> SLC-V9-B -> SLC-V9-C -> SLC-V9-D -> SLC-V9-E). /architecture pruft ob Slices A+B oder D+E zusammenlegbar (Reduktion auf 3-4 Slices moeglich, abhaengig von Q-V9-B/C/E).
+
+### Pre-Conditions
+
+- V8.1 STABLE-Bestaetigung (Burn-In bis ~2026-06-02 08:00 UTC, /post-launch danach).
+- Optional Founder-Final-Tausch ISSUE-084 + ISSUE-085 vor erstem realen V8.1-Lead.
+- Test-Email-Corpus (~100 anonymisierte Founder-Emails) bereitgestellt fuer /architecture-Validation (Q-V9-D).
+
+### Detail-Spec
+V9-Requirements-Completion-Report wird in dieser Session erstellt als RPT-374. Feature-Specs unter `/features/FEAT-070..074-*.md`. /architecture-Schritt klaert Q-V9-A..J und definiert /slice-planning V9-Vorbereitung. Naechster Schritt nach diesem Skill: /architecture V9.
