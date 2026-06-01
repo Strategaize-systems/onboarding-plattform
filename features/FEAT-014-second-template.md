@@ -30,7 +30,7 @@ V1 hat das Datenmodell template-ready gebaut (DEC-003, SC-3), aber nie produktiv
 
 ### Zweites Template
 Thema wird in Q6 entschieden. Kandidaten:
-- **Immobilien-Onboarding:** Synergie mit ImmoCheckheft-Vision. Bloecke: Portfolio-Analyse, Marktposition, Akquise-Strategie, Mieterverwaltung, Instandhaltung, Finanzierung.
+- **Immobilien-Onboarding:** Synergie mit immoscheckheft-Vision. Bloecke: Portfolio-Analyse, Marktposition, Akquise-Strategie, Mieterverwaltung, Instandhaltung, Finanzierung.
 - **Mitarbeiter-Discovery:** Generischer Use-Case. Bloecke: Rolle, Prozesse, Tools, Wissensquellen, Verbesserungsvorschlaege.
 - **User-definiert:** User liefert Thema, KI generiert Template-Entwurf.
 

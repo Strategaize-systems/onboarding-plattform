@@ -25,7 +25,7 @@ FEAT-022 (primaer), FEAT-023 + FEAT-024 + FEAT-025 + FEAT-026 (Schema-Vorbereitu
 - UI-Arbeit jeder Art.
 - Worker-Job-Types — Teil von SLC-035 und SLC-039.
 - `rpc_accept_employee_invitation` (braucht DEC-011-Pattern mit Auth-Admin-API) — Teil von SLC-034.
-- Bridge-Engine-Logik, Handbuch-Renderer, Template-Updates fuer ImmoCheckheft o.a.
+- Bridge-Engine-Logik, Handbuch-Renderer, Template-Updates fuer immoscheckheft o.a.
 
 ## Acceptance Criteria
 - AC-1: Alle 8 Migrationen (065-071, 075) laufen idempotent auf frischer DB via `psql -U postgres` durch. Zweite Ausfuehrung produziert NO-OP ohne Fehler.
