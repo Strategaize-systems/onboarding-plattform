@@ -1,0 +1,18 @@
+Received: from EX-MBX-01.contoso.com (10.0.0.10) by EX-MBX-02.contoso.com
+ (10.0.0.11) with Microsoft SMTP Server (TLS) id 15.2.0; Mon, 12 Feb 2024
+ 14:30:01 +0000
+X-MS-Exchange-Organization-AuthSource: EX-MBX-01.contoso.com
+X-MS-Has-Attach:
+X-MS-TNEF-Correlator:
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
+From: "Schmidt, Klaus" <klaus.schmidt@contoso.test>
+To: "Founder" <founder@example.com>
+Subject: =?utf-8?B?QXVzc2NocmVpYnVuZyDigJMgUmVjaGVuemVudHJ1bSBNw7xuY2hlbg==?=
+Date: Mon, 12 Feb 2024 14:30:00 +0000
+Message-ID: <01010-EX-MBX-01-contoso-001@contoso.test>
+Thread-Topic: =?utf-8?B?QXVzc2NocmVpYnVuZw==?=
+Thread-Index: AdLBwlRZeAbCgQQQ==
+
+R3LDvMOfIEZvdW5kZXIsCgppY2ggbWVsZGUgbWljaCBhdXMgZGVtIFRlYW0gQmF1IGRlcyBSWiBNw7xuY2hlbi4=

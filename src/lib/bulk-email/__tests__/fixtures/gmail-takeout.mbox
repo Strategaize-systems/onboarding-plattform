@@ -1,0 +1,195 @@
+From 1837256000@xxx Mon Jan 15 09:30:00 +0000 2024
+Delivered-To: founder@example.com
+Received: by 2002:a05:6512:3f1f:b0:512:8e60:fb5b with SMTP id n31csp3845032lfh;
+        Mon, 15 Jan 2024 01:30:02 -0800 (PST)
+X-Gmail-Labels: Sent,Important
+Message-ID: <CABx7p9Q+abc1@mail.gmail.com>
+Date: Mon, 15 Jan 2024 09:30:00 +0000
+From: Founder <founder@example.com>
+To: Prospect <alice@acme-corp.test>
+Subject: Q1 partnership outreach
+Mime-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 7bit
+
+Hi Alice,
+
+I wanted to reach out about a potential Q1 partnership opportunity.
+Our products complement each other well and our customer bases overlap.
+
+Best,
+The Founder
+
+From 1837256001@xxx Tue Jan 16 14:15:00 +0000 2024
+Delivered-To: founder@example.com
+Received: from mail.acme-corp.test (mail.acme-corp.test. [192.0.2.10])
+        by mx.google.com with ESMTPS id k3si9876543lfh.42.2024.01.16.06.15.05;
+        Tue, 16 Jan 2024 06:15:05 -0800 (PST)
+X-Gmail-Labels: Inbox,Important
+Message-ID: <reply-q1-001@acme-corp.test>
+In-Reply-To: <CABx7p9Q+abc1@mail.gmail.com>
+References: <CABx7p9Q+abc1@mail.gmail.com>
+Date: Tue, 16 Jan 2024 14:15:00 +0000
+From: Alice Brown <alice@acme-corp.test>
+To: Founder <founder@example.com>
+Cc: legal@acme-corp.test
+Subject: Re: Q1 partnership outreach
+Mime-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
+
+Hi,
+
+Thanks for reaching out. Could you share a one-pager on the technical=
+ integration?
+
+> On Mon, 15 Jan 2024 09:30:00 +0000, Founder wrote:
+> I wanted to reach out about a potential Q1 partnership opportunity.
+
+Alice
+
+From 1837256002@xxx Wed Jan 17 08:00:00 +0000 2024
+Delivered-To: founder@example.com
+X-Gmail-Labels: Sent
+Message-ID: <CABx7p9Q+def2@mail.gmail.com>
+In-Reply-To: <reply-q1-001@acme-corp.test>
+References: <CABx7p9Q+abc1@mail.gmail.com> <reply-q1-001@acme-corp.test>
+Date: Wed, 17 Jan 2024 08:00:00 +0000
+From: Founder <founder@example.com>
+To: Alice Brown <alice@acme-corp.test>
+Subject: Re: Q1 partnership outreach
+Mime-Version: 1.0
+Content-Type: multipart/mixed; boundary="bound-1"
+
+--bound-1
+Content-Type: text/plain; charset=UTF-8
+
+Hi Alice,
+
+Attached the technical one-pager. Happy to walk through it on a call.
+
+Founder
+
+--bound-1
+Content-Type: application/pdf; name="onepager.pdf"
+Content-Disposition: attachment; filename="onepager.pdf"
+Content-Transfer-Encoding: base64
+
+JVBERi0xLjQKJeLjz9MKMSAwIG9iago8PC9UeXBlL0NhdGFsb2c+PgplbmRvYmoK
+--bound-1--
+
+From 1837256003@xxx Wed Jan 17 11:22:00 +0000 2024
+Delivered-To: founder@example.com
+X-Gmail-Labels: Inbox
+Message-ID: <weekly-roundup-w03@newsletter.test>
+Date: Wed, 17 Jan 2024 11:22:00 +0000
+From: Industry News <news@newsletter.test>
+To: founder@example.com
+Subject: Weekly Roundup W03 — 5 stories
+Mime-Version: 1.0
+Content-Type: text/html; charset=UTF-8
+
+<html><body><h1>Weekly Roundup</h1><p>Top stories of the week.</p></body></html>
+
+From 1837256004@xxx Thu Jan 18 09:45:00 +0000 2024
+Delivered-To: founder@example.com
+X-Gmail-Labels: Sent
+Message-ID: <CABx7p9Q+ghi3@mail.gmail.com>
+Date: Thu, 18 Jan 2024 09:45:00 +0000
+From: Founder <founder@example.com>
+To: bob@beta-llc.test, carol@beta-llc.test
+Cc: founder-bcc@example.com
+Subject: Pilot proposal for Beta LLC
+Mime-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+Hi Bob, Hi Carol,
+
+Following up on our intro call, here is the pilot proposal we discussed.
+
+Founder
+
+From 1837256005@xxx Thu Jan 18 16:00:00 +0000 2024
+Delivered-To: founder@example.com
+X-Gmail-Labels: Inbox
+Message-ID: <reply-pilot-bob-001@beta-llc.test>
+In-Reply-To: <CABx7p9Q+ghi3@mail.gmail.com>
+References: <CABx7p9Q+ghi3@mail.gmail.com>
+Date: Thu, 18 Jan 2024 16:00:00 +0000
+From: Bob White <bob@beta-llc.test>
+To: Founder <founder@example.com>
+Subject: Re: Pilot proposal for Beta LLC
+Mime-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+Thanks — looking. Will respond by Monday.
+
+Bob
+
+From 1837256006@xxx Mon Jan 22 10:30:00 +0000 2024
+Delivered-To: founder@example.com
+X-Gmail-Labels: Inbox
+Message-ID: <reply-pilot-carol-001@beta-llc.test>
+In-Reply-To: <CABx7p9Q+ghi3@mail.gmail.com>
+References: <CABx7p9Q+ghi3@mail.gmail.com>
+Date: Mon, 22 Jan 2024 10:30:00 +0000
+From: Carol Green <carol@beta-llc.test>
+To: Founder <founder@example.com>
+Cc: Bob White <bob@beta-llc.test>
+Subject: Re: Pilot proposal for Beta LLC
+Mime-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+Founder,
+
+We are interested. Two questions on pricing — see inline.
+
+Carol
+
+From 1837256007@xxx Tue Jan 23 14:00:00 +0000 2024
+Delivered-To: founder@example.com
+X-Gmail-Labels: Sent
+Message-ID: <cold-out-gamma-001@mail.gmail.com>
+Date: Tue, 23 Jan 2024 14:00:00 +0000
+From: Founder <founder@example.com>
+To: dan@gamma-inc.test
+Subject: Quick intro — overlap with Gamma Inc
+Mime-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+Dan,
+
+Saw your recent post on series A goals. We have a similar customer set.
+Worth a 15-min intro?
+
+Founder
+
+From 1837256008@xxx Fri Jan 26 12:00:00 +0000 2024
+Delivered-To: founder@example.com
+X-Gmail-Labels: Inbox
+Date: Fri, 26 Jan 2024 12:00:00 +0000
+From: anon-sender@nowhere.test
+To: founder@example.com
+Subject: No Message-ID test
+Mime-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+This email intentionally has no Message-ID header. The parser must
+synthesize one deterministically from sender+date+content.
+
+From 1837256009@xxx Sat Jan 27 09:00:00 +0000 2024
+Delivered-To: founder@example.com
+X-Gmail-Labels: Inbox
+Message-ID: <reply-cold-gamma-001@gamma-inc.test>
+In-Reply-To: <cold-out-gamma-001@mail.gmail.com>
+References: <cold-out-gamma-001@mail.gmail.com>
+Date: Sat, 27 Jan 2024 09:00:00 +0000
+From: Dan Black <dan@gamma-inc.test>
+To: Founder <founder@example.com>
+Subject: Re: Quick intro — overlap with Gamma Inc
+Mime-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+Founder, happy to do 15 min next week.
+
+Dan

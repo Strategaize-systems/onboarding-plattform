@@ -1,0 +1,26 @@
+From valid-sender Tue Mar 01 09:00:00 +0000 2024
+Message-ID: <valid-mar-001@example.test>
+From: Sender <sender@example.test>
+To: founder@example.com
+Subject: Valid email before broken one
+Date: Tue, 01 Mar 2024 09:00:00 +0000
+Mime-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+This email is well-formed.
+From broken-1 Wed Mar 02 10:00:00 +0000 2024
+€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€
+From broken-2 Thu Mar 03 11:00:00 +0000 2024
+Message-ID: <truncated-mar-001@example.test>
+From: sender@example.test
+To: founder@example.com
+Subject: Truncated
+Date: Thu, 03 Mar 2024 11:00:00 +0000
+Mime-Version: 1.0
+Content-Type: multipart/mixed; boundary="end-never-arrives"
+
+--end-never-arrives
+Content-Type: application/octet-stream
+Content-Transfer-Encoding: base64
+
+!!!NOT-VALID-BASE64@@@
