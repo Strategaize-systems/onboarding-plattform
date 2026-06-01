@@ -1,6 +1,16 @@
 {
   "items": [
     {
+      "id": "BL-146",
+      "title": "Bulk-Import GF/Mitarbeiter-E-Mails + Customer-Service-Tickets mit KI-Wissens-Auskristallisierung",
+      "type": "idea",
+      "priority": "medium",
+      "status": "open",
+      "version": null,
+      "description": "**User-Direktive 2026-06-01 (Immo): Idee eingekippt nach Recherche dass sie nirgendwo festgehalten war.** GF (oder spaeter Customer-Service-Mitarbeiter) sollen einen Haufen E-Mails / Tickets als **Bulk-Import** reinziehen koennen. KI extrahiert daraus systematisch Wissen, Entscheidungen, Antwort-Patterns. Nach **Founder/User-Review** (Curation-Schritt) fliesst das verdichtete Wissen in nachgelagerte Antworten/Reports ein (z.B. Exit-Ready-Programm, kuenftig Customer-Service-Auto-Responses, Sales-Objection-Handling). Ist **nicht V9** (V9 = Diary-Mode, Capture-Modus). Ist eigenstaendiges Feature. **Andock-Punkte**: (a) eigener Capture-Modus 'email_bulk' / 'ticket_bulk' parallel zu Questionnaire/Walkthrough/Diary; (b) IS-Erweiterung mit `source_system='customer_service_email'` im knowledge_item-Schema, KI-Pattern-Extraktion auf Foundation aus IS V3.5 SLC-350; (c) Cross-Repo (OP UI + PII-Redaction, IS Extraktion, BS konsumiert). **Pre-Conditions vor Discovery**: IS V3.5 SLC-352 Knowledge-API LIVE + Anwalts-Sign-off fuer PII-Redaction von Mandanten-Inhalten. **Out of Scope first-Discovery**: Auto-Reply ohne User-Review (kommt nie ohne Curation), CRM-Integration (separate Discovery), Live-Stream-Import (V2+). Sobald V9 Diary-Mode RELEASED ist und IS V3.5 SLC-352 durch, /discovery anstossen.",
+      "createdAt": "2026-06-01"
+    },
+    {
       "id": "BL-145",
       "title": "V8.1.1 Hotfix SLC-164 — Partner-Resolution via Tenant-Chain",
       "type": "fix",
