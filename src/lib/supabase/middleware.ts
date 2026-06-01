@@ -39,6 +39,7 @@ export async function updateSession(request: NextRequest) {
     "/accept-invitation", // SLC-034: Employee accepts invitation without being logged in
     "/datenschutz", // SLC-120 (FEAT-048): oeffentliche DSGVO-Pflicht-Page, pre-auth
     "/impressum", // SLC-120 (FEAT-048): oeffentliche TMG/DDG-Pflicht-Page, pre-auth
+    "/strategaize-anfrage", // V8.1 SLC-163: Magic-Link-CTA + bestaetigung + error pages
   ];
   const isPublicPath = publicPaths.some((p) => pathname.startsWith(p));
   const isApiHealth = pathname === "/api/health";
