@@ -1,5 +1,15 @@
 # Known Issues
 
+### ISSUE-086 — V8.1 Partner-Organization-Lookup verwendet falsches Schema (capture_session.partner_organization_id existiert nicht)
+- Status: open
+- Severity: High
+- Area: V8.1 SLC-163 / src/app/strategaize-anfrage/route.ts + src/app/dashboard/diagnose/[capture_session_id]/bericht/actions.ts
+- Summary: V8.1-Code (route.ts + actions.ts) liest `session.partner_organization_id` direkt. Diese Spalte existiert nicht im Schema. Schema-Wahrheit: capture_session.tenant_id -> tenants.id (mandant-tenant) -> tenants.parent_partner_tenant_id -> tenants.id (partner-tenant) -> partner_organization.tenant_id (1:1). Effekt: `partner_organization_id` im Token-Payload bleibt leerer String. Im Endpoint faellt der Partner-Lookup auf token.payload.partner_organization_id zurueck (auch leer) -> partner-Row nicht gefunden -> StB-Notification silent-skip mit reason='no_email'. BD-Email geht trotzdem raus (BD-Email-Empfaenger kommt aus STRATEGAIZE_BD_EMAIL-ENV).
+- Impact: Web-CTA und PDF-Magic-Link-CTA fuehren zu BD-Email-Send + Flag-Flip + Bestaetigungs-Page (alles OK), aber StB-Notification wird NIE versandt. Audit-Log zeigt `stb_skip_reason='no_email'` falsch (Bug, nicht echte leere contact_email). 2026-06-01 Smoke-Test Token-Roundtrip mit fake session-id passierte den idempotent_skip-Branch — der echte Bug triggert erst beim ersten realen Lead-Klick mit existierender capture_session.
+- Workaround: Manueller StB-Notification-Versand wenn BD-Inbox einen Lead bekommt (BD-Inbox-Bearbeiter forwardet manuell an Partner-StB).
+- Next Action: Hotfix-Slice V8.1.1 — Partner-Resolution via tenants-Chain. Code: `const { data: mandantTenant } = await admin.from('tenants').select('parent_partner_tenant_id').eq('id', session.tenant_id).maybeSingle()` + `await admin.from('partner_organization').select('id, name, contact_email').eq('tenant_id', mandantTenant.parent_partner_tenant_id).maybeSingle()`. Token-Payload erweitern um partner_organization_id korrekt resolved aus Tenant-Chain. ~30min Code + 1x Master-Merge + Coolify-Redeploy.
+- Related: SLC-163 MT-7 + MT-9, FEAT-068 AC-9 silent-skip, REL-027 Live-Smoke 2026-06-01.
+
 ### ISSUE-085 — V8.1 StB-Notification-Body steht als Mock im Code, nicht Founder-freigegeben
 - Status: open
 - Severity: High
