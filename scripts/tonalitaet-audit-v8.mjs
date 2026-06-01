@@ -29,11 +29,16 @@
 //   - "Euro" / "EUR" / "Kosten" / "Preis"                 — Pricing-Hinweise (V8.1 = kein Pricing-Druck)
 //   - "Empfehlung Ihres Steuerberaters"                   — V8.0-Wording im V8.1-Pfad
 //
+// V8.1-StB-Notification-Blacklist-Patterns (Neutral-Informativ-Voice, DEC-169):
+//   - "Glueckwunsch" / "gratuliere" / "super"            — Gratulations-Voice (StB darf nicht "ueberschritten" werden)
+//   - "Euro" / "EUR" / "Kosten" / "Preis"                 — Pricing-Hinweise (V8.1 = kein Pricing-Druck)
+//
 // Aufruf:
 //   TEST_DATABASE_URL='postgresql://postgres:PW@HOST:5432/postgres' \
-//     node scripts/tonalitaet-audit-v8.mjs                   # both
-//   node scripts/tonalitaet-audit-v8.mjs --scope=db          # nur V8.0-Template-DB
-//   node scripts/tonalitaet-audit-v8.mjs --scope=outro       # nur V8.1-Outro-Files
+//     node scripts/tonalitaet-audit-v8.mjs                       # all (db+outro+stb-notification)
+//   node scripts/tonalitaet-audit-v8.mjs --scope=db              # nur V8.0-Template-DB
+//   node scripts/tonalitaet-audit-v8.mjs --scope=outro           # nur V8.1-Outro-Files
+//   node scripts/tonalitaet-audit-v8.mjs --scope=stb-notification # nur V8.1-StB-Notification
 //
 // Exit-Code: 0 bei clean, 1 bei Treffer (Audit-Fail).
 
@@ -71,6 +76,21 @@ const OUTRO_BLACKLIST = [
 const OUTRO_FILES = [
   "src/lib/pdf/mandanten-report-v2/pages/outro.tsx",
   "src/app/dashboard/diagnose/[capture_session_id]/bericht/V8OutroSection.tsx",
+];
+
+// V8.1 StB-Notification-Blacklist (SLC-163 MT-4, DEC-169 neutral-informativ).
+const STB_NOTIFICATION_BLACKLIST = [
+  { pattern: /\bGlueckwunsch\b/i, label: "Glueckwunsch (Gratulations-Voice)" },
+  { pattern: /\bgratulier(e|en|t)\b/i, label: "gratuliere (Gratulations-Voice)" },
+  { pattern: /\bsuper\b/i, label: "super (Gratulations-Voice)" },
+  { pattern: /\bEuro\b/i, label: "Euro (Pricing-Hinweis)" },
+  { pattern: /\bEUR\b/, label: "EUR (Pricing-Hinweis)" },
+  { pattern: /\bKosten\b/i, label: "Kosten (Pricing-Hinweis)" },
+  { pattern: /\bPreis(?!t)\b/i, label: "Preis (Pricing-Hinweis)" },
+];
+
+const STB_NOTIFICATION_FILES = [
+  "src/lib/email/v8-1/stb-notification.ts",
 ];
 
 const MODUL_KEYS = ["m1", "m2", "m3", "m4", "m5", "m6", "m7", "m8", "m9"];
@@ -129,11 +149,12 @@ function excerpt(text, idx) {
 
 function parseScope(argv) {
   const flag = argv.find((a) => a.startsWith("--scope="));
-  if (!flag) return "both";
+  if (!flag) return "all";
   const value = flag.slice("--scope=".length);
-  if (value !== "db" && value !== "outro" && value !== "both") {
+  const allowed = ["db", "outro", "stb-notification", "both", "all"];
+  if (!allowed.includes(value)) {
     console.error(
-      `[tonalitaet-audit-v8] FEHLER: --scope muss db|outro|both sein, war '${value}'.`,
+      `[tonalitaet-audit-v8] FEHLER: --scope muss ${allowed.join("|")} sein, war '${value}'.`,
     );
     process.exit(2);
   }
@@ -240,15 +261,47 @@ function scanOutroScope(hits) {
   );
 }
 
+function scanStbNotificationScope(hits) {
+  let scannedCount = 0;
+  for (const relPath of STB_NOTIFICATION_FILES) {
+    const abs = resolve(process.cwd(), relPath);
+    let content;
+    try {
+      content = readFileSync(abs, "utf8");
+    } catch (err) {
+      console.error(
+        `[tonalitaet-audit-v8 StbNotification] FEHLER: Datei '${relPath}' nicht lesbar: ${err.message}`,
+      );
+      process.exit(2);
+    }
+    const strings = extractUserFacingStrings(content);
+    for (const s of strings) {
+      scanString(
+        s,
+        `${relPath}::"${s.slice(0, 40)}…"`,
+        STB_NOTIFICATION_BLACKLIST,
+        hits,
+      );
+      scannedCount += 1;
+    }
+  }
+  console.log(
+    `[tonalitaet-audit-v8 StbNotification] Geprueft: ${scannedCount} String-Literale aus ${STB_NOTIFICATION_FILES.length} StB-Notification-Files.`,
+  );
+}
+
 async function main() {
   const scope = parseScope(process.argv.slice(2));
   const hits = [];
 
-  if (scope === "db" || scope === "both") {
+  if (scope === "db" || scope === "both" || scope === "all") {
     await scanDbScope(hits);
   }
-  if (scope === "outro" || scope === "both") {
+  if (scope === "outro" || scope === "both" || scope === "all") {
     scanOutroScope(hits);
+  }
+  if (scope === "stb-notification" || scope === "all") {
+    scanStbNotificationScope(hits);
   }
 
   if (hits.length === 0) {
