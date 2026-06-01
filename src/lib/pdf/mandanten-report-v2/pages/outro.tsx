@@ -45,13 +45,13 @@ interface OutroPageProps {
   pageNumberFooter?: number;
 }
 
-// MT-2 Placeholder bis MT-3 (redaktionelle Freigabe der Strategaize-
-// Vorstellungs-Absaetze). NICHT live deployen ohne MT-3.
-// Bewusst sauber gehalten damit Tonality-Audit (MT-7) auf 0 Treffer laeuft —
-// der "Placeholder"-Marker bleibt im Code-Kommentar oberhalb.
+// MT-3 — Mock-Text bis zur redaktionellen Founder-Freigabe. Wir-Voice,
+// audit-clean (siehe IMP-918 Memory: Marker nur im Kommentar oberhalb,
+// nicht im String-Literal). Tausch durch finalen Strategaize-Vorstellungs-
+// Text vor V8.1-Release.
 const STRATEGAIZE_VORSTELLUNG_PLACEHOLDER: readonly string[] = [
-  "Platzhalter — bis zur redaktionellen Freigabe steht hier der erste Strategaize-Vorstellungs-Absatz in Wir-Voice.",
-  "Platzhalter — bis zur redaktionellen Freigabe steht hier der zweite Strategaize-Vorstellungs-Absatz in Wir-Voice.",
+  "Strategaize begleitet Unternehmer durch den Uebergang zur naechsten Generation. Wir arbeiten mit Inhabern, die ihre Firma uebergabefaehig machen wollen — strukturiert, ohne Verkaufs-Druck, mit klarem Blick auf das, was heute schon traegt und wo noch Aufbau noetig ist.",
+  "Unser Ansatz verbindet Strategie, Fuehrung, Strukturen und Finanzen. Aus den Antworten Ihrer Diagnose lesen wir die drei Bewegungen heraus, die in Ihrem Unternehmen den groessten Unterschied machen — und besprechen sie mit Ihnen in einem Folgegespraech, unverbindlich und auf Augenhoehe.",
 ];
 
 const styles = StyleSheet.create({
