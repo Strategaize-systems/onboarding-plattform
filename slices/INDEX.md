@@ -853,7 +853,7 @@ V8.1 = 3 Slices SLC-161 + SLC-162 + SLC-163 (insgesamt 23 Micro-Tasks + MT-0 Wor
 | ID | Slice | Feature | Status | Priority | Created |
 |----|-------|---------|--------|----------|---------|
 | SLC-161 | [LLM-Augmentation Backend (Bedrock + Cache + Fallback)](SLC-161-llm-augmentation-backend.md) | FEAT-069 / BL-143 | done | High | 2026-05-30 |
-| SLC-162 | [Outro-Renderer + V8.0-CtaPage-Replacement (PDF + Web)](SLC-162-outro-renderer-replacement.md) | FEAT-067 / BL-134 | in_progress | High | 2026-05-30 |
+| SLC-162 | [Outro-Renderer + V8.0-CtaPage-Replacement (PDF + Web)](SLC-162-outro-renderer-replacement.md) | FEAT-067 / BL-134 | done | High | 2026-05-30 |
 | SLC-163 | [CTA-Mechanik + Dual-Email-Trigger + Master-Merge](SLC-163-cta-mechanism-dual-email.md) | FEAT-068 / BL-142 | planned | High | 2026-05-30 |
 
 ### V8.1 Execution Order (strikt sequentiell, Begruendung)
