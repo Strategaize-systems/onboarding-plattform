@@ -878,7 +878,7 @@ V9 = 4 Slices SLC-165..168 (Konsolidierung 5 -> 4 per /architecture RPT-375). GF
 
 | ID | Slice | Feature | Status | Priority | Created |
 |----|-------|---------|--------|----------|---------|
-| SLC-165 | [V9 Bulk-Email-Foundation + Upload + Parser](SLC-165-v9-foundation-upload.md) | FEAT-070 / BL-147 | planned | High | 2026-06-01 |
+| SLC-165 | [V9 Bulk-Email-Foundation + Upload + Parser](SLC-165-v9-foundation-upload.md) | FEAT-070 / BL-147 | in_progress | High | 2026-06-01 |
 | SLC-166 | [V9 Pre-Filter (Haiku) + Thread-Aggregation + PII-Redaction](SLC-166-v9-pre-filter-thread-redact.md) | FEAT-071+072 / BL-148+149 | planned | High | 2026-06-01 |
 | SLC-167 | [V9 Pattern-Extraktion (Sonnet) + Curation-UI + Cost-Cap](SLC-167-v9-pattern-curation-cost-cap.md) | FEAT-073 / BL-150 | planned | High | 2026-06-01 |
 | SLC-168 | [V9 Handbuch-Integration + Audit + Source-Attribution-View](SLC-168-v9-handbuch-integration-audit.md) | FEAT-074 / BL-151 | planned | High | 2026-06-01 |
