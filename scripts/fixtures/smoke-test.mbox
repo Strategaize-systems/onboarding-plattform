@@ -1,0 +1,100 @@
+From MAILER-DAEMON Mon Jan  1 12:00:00 2024
+Message-ID: <msg-001@smoke.test>
+From: alice@smoke.test
+To: bob@smoke.test
+Subject: Smoke Email 1 — Initial outreach
+Date: Mon, 01 Jan 2024 12:00:00 +0000
+
+This is smoke email 1 body content.
+
+From MAILER-DAEMON Mon Jan  1 12:05:00 2024
+Message-ID: <msg-002@smoke.test>
+In-Reply-To: <msg-001@smoke.test>
+References: <msg-001@smoke.test>
+From: bob@smoke.test
+To: alice@smoke.test
+Subject: Re: Smoke Email 1 — Initial outreach
+Date: Mon, 01 Jan 2024 12:05:00 +0000
+
+Reply body for smoke email 2.
+
+From MAILER-DAEMON Mon Jan  2 09:00:00 2024
+Message-ID: <msg-003@smoke.test>
+From: carol@smoke.test
+To: alice@smoke.test, bob@smoke.test
+Subject: Smoke Email 3 — Quarterly review
+Date: Tue, 02 Jan 2024 09:00:00 +0000
+
+This is smoke email 3 body content with multiple recipients.
+
+From MAILER-DAEMON Mon Jan  2 10:00:00 2024
+Message-ID: <msg-004@smoke.test>
+In-Reply-To: <msg-003@smoke.test>
+References: <msg-003@smoke.test>
+From: alice@smoke.test
+To: carol@smoke.test
+Cc: bob@smoke.test
+Subject: Re: Smoke Email 3 — Quarterly review
+Date: Tue, 02 Jan 2024 10:00:00 +0000
+
+Reply to carol on the quarterly review thread.
+
+From MAILER-DAEMON Mon Jan  3 14:30:00 2024
+Message-ID: <msg-005@smoke.test>
+From: dave@smoke.test
+To: alice@smoke.test
+Subject: Smoke Email 5 — Question about pricing
+Date: Wed, 03 Jan 2024 14:30:00 +0000
+
+I would like to ask about your pricing model for the SMB segment.
+
+From MAILER-DAEMON Mon Jan  3 16:00:00 2024
+Message-ID: <msg-006@smoke.test>
+In-Reply-To: <msg-005@smoke.test>
+References: <msg-005@smoke.test>
+From: alice@smoke.test
+To: dave@smoke.test
+Subject: Re: Smoke Email 5 — Question about pricing
+Date: Wed, 03 Jan 2024 16:00:00 +0000
+
+Our standard SMB pricing is X EUR per seat per month.
+
+From MAILER-DAEMON Mon Jan  4 08:15:00 2024
+Message-ID: <msg-007@smoke.test>
+From: eve@smoke.test
+To: support@smoke.test
+Subject: Smoke Email 7 — Newsletter Q1
+Date: Thu, 04 Jan 2024 08:15:00 +0000
+
+This is a newsletter-style email broadcast.
+
+From MAILER-DAEMON Mon Jan  4 11:45:00 2024
+Message-ID: <msg-008@smoke.test>
+From: notifications@smoke.test
+To: alice@smoke.test
+Subject: Smoke Email 8 — System notification
+Date: Thu, 04 Jan 2024 11:45:00 +0000
+
+You have 3 new messages waiting in your inbox.
+
+From MAILER-DAEMON Mon Jan  5 13:00:00 2024
+Message-ID: <msg-009@smoke.test>
+From: frank@smoke.test
+To: alice@smoke.test
+Cc: bob@smoke.test
+Subject: Smoke Email 9 — Contract amendment
+Date: Fri, 05 Jan 2024 13:00:00 +0000
+
+Please review the attached amendment to our service contract.
+
+From MAILER-DAEMON Mon Jan  5 15:20:00 2024
+Message-ID: <msg-010@smoke.test>
+In-Reply-To: <msg-009@smoke.test>
+References: <msg-009@smoke.test>
+From: alice@smoke.test
+To: frank@smoke.test
+Cc: bob@smoke.test
+Subject: Re: Smoke Email 9 — Contract amendment
+Date: Fri, 05 Jan 2024 15:20:00 +0000
+
+Acknowledged, will review by end of week.
