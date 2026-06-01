@@ -317,8 +317,31 @@ export async function sendDiagnoseReportByEmail(
       template: template as unknown as V8Template,
     };
 
+    // SLC-163 MT-8/MT-10: PDF-Magic-Link-CTA gated auf STRATEGAIZE_CTA_TOKEN_SECRET.
+    // Wenn Secret nicht gesetzt: Placeholder-URL im PDF (kein Crash, sondern
+    // graceful degradation). Web-Bericht-CTA funktioniert davon unabhaengig
+    // via Server-Action triggerStrategaizeFreigabe.
+    const ctaSecret = process.env.STRATEGAIZE_CTA_TOKEN_SECRET;
+    const magicLinkConfig =
+      ctaSecret && ctaSecret.length >= 32 && session.tenant_id
+        ? {
+            captureSessionId: input.captureSessionId,
+            partnerOrganizationId:
+              (await admin
+                .from("capture_session")
+                .select("partner_organization_id")
+                .eq("id", input.captureSessionId)
+                .maybeSingle()).data?.partner_organization_id ?? "",
+            mandantEmail: profile.email ?? "",
+          }
+        : undefined;
+
     try {
-      pdfBuffer = await renderMandantenReportV2Pdf(v8Input);
+      pdfBuffer = await renderMandantenReportV2Pdf(
+        v8Input,
+        undefined,
+        magicLinkConfig,
+      );
     } catch (e) {
       trackV8PdfRenderFailed(
         admin,
@@ -476,7 +499,7 @@ export async function downloadMandantenReportV2Pdf(
 
   const { data: profile } = await admin
     .from("profiles")
-    .select("id, tenant_id, role")
+    .select("id, tenant_id, role, email")
     .eq("id", user.id)
     .single();
   if (!profile?.tenant_id) return { ok: false, error: "profile_not_found" };
@@ -566,9 +589,30 @@ export async function downloadMandantenReportV2Pdf(
     template: template as unknown as V8Template,
   };
 
+  // SLC-163 MT-8/MT-10: PDF-Magic-Link-CTA gated auf STRATEGAIZE_CTA_TOKEN_SECRET
+  // (siehe sendDiagnoseReportByEmail oben fuer Begruendung).
+  const ctaSecret = process.env.STRATEGAIZE_CTA_TOKEN_SECRET;
+  const magicLinkConfig =
+    ctaSecret && ctaSecret.length >= 32
+      ? {
+          captureSessionId,
+          partnerOrganizationId:
+            (await admin
+              .from("capture_session")
+              .select("partner_organization_id")
+              .eq("id", captureSessionId)
+              .maybeSingle()).data?.partner_organization_id ?? "",
+          mandantEmail: profile.email ?? "",
+        }
+      : undefined;
+
   let pdfBuffer: Buffer;
   try {
-    pdfBuffer = await renderMandantenReportV2Pdf(v8Input);
+    pdfBuffer = await renderMandantenReportV2Pdf(
+      v8Input,
+      undefined,
+      magicLinkConfig,
+    );
   } catch (e) {
     trackV8PdfRenderFailed(admin, captureSessionId, profile.tenant_id, e);
     captureException(e, {
