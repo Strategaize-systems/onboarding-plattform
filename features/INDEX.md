@@ -193,6 +193,6 @@ V8.1-Scope (Requirements DONE 2026-05-30 via RPT-364, nach V8.0 RELEASED 2026-05
 
 | ID | Feature | Status | Spec | Created |
 |----|---------|--------|------|---------|
-| FEAT-067 | Lead-Conversion-Outro-Renderer (PDF + Web-Bericht, Strategaize-Vorstellung + 3 Empfehlungs-Slots + Video-Platzhalter + CTA-Slot) | done | [Spec](FEAT-067-lead-conversion-outro-renderer.md) | 2026-05-30 |
-| FEAT-068 | Strategaize-Freigabe-CTA + Dual-Email-Trigger (BD-Lead-Email + StB-Partner-Notification + Magic-Link-Token + Server-Action) | done | [Spec](FEAT-068-strategaize-freigabe-cta-dual-email.md) | 2026-05-30 |
-| FEAT-069 | LLM-Augmentation der 3 Empfehlungs-Texte (Bedrock Claude Sonnet eu-central-1, deterministischer Fallback, Caching, Cost-Cap) | done | [Spec](FEAT-069-llm-augmentation-empfehlungs-texte.md) | 2026-05-30 |
+| FEAT-067 | Lead-Conversion-Outro-Renderer (PDF + Web-Bericht, Strategaize-Vorstellung + 3 Empfehlungs-Slots + Video-Platzhalter + CTA-Slot) | deployed | [Spec](FEAT-067-lead-conversion-outro-renderer.md) | 2026-05-30 |
+| FEAT-068 | Strategaize-Freigabe-CTA + Dual-Email-Trigger (BD-Lead-Email + StB-Partner-Notification + Magic-Link-Token + Server-Action) | deployed | [Spec](FEAT-068-strategaize-freigabe-cta-dual-email.md) | 2026-05-30 |
+| FEAT-069 | LLM-Augmentation der 3 Empfehlungs-Texte (Bedrock Claude Sonnet eu-central-1, deterministischer Fallback, Caching, Cost-Cap) | deployed | [Spec](FEAT-069-llm-augmentation-empfehlungs-texte.md) | 2026-05-30 |
