@@ -1,5 +1,25 @@
 # Known Issues
 
+### ISSUE-085 — V8.1 StB-Notification-Body steht als Mock im Code, nicht Founder-freigegeben
+- Status: open
+- Severity: High
+- Area: V8.1 SLC-163 MT-4 / src/lib/email/v8-1/stb-notification.ts
+- Summary: Die StB-Partner-Notification-Email enthaelt einen 4-Saetze-Body (Mock-Wording 2026-06-01 per User-Direktive), der noch nicht durch Founder freigegeben ist. Wir-Voice, neutral-informativ (DEC-169), audit-clean (Tonality-Audit `--scope=stb-notification` 0 Treffer).
+- Impact: Kein Code-Side-Blocker fuer Master-Merge. **V8.1-Release-Blocker** — Final-Text muss vor produktivem Deploy stehen. AC-SLC-163-8 (Founder-freigegeben + Code-Kommentar-Datum) ist bis dahin nicht erfuellt.
+- Workaround: Mock-Text bleibt sichtbar bis Tausch. Mock-Wording: "Wir informieren Sie ... heute den Kontakt zu Strategaize aufgenommen ... Strategaize wird sich direkt ... abstimmen ... Sie bleiben jederzeit Ansprechpartner ... bei Rueckfragen ... info@strategaize.de".
+- Next Action: Founder liefert finalen 4-Saetze-Body. Tausch via 1:1-String-Replacement in `buildStbNotificationEmail` (Konstanten intro/followUp/role/contact) + Re-Run Audit + Re-Run Vitest. Aufwand ~10min wenn Text vorliegt.
+- Related: SLC-163 MT-4, FEAT-068, RPT-371, AC-SLC-163-8, [[ISSUE-084]].
+
+### ISSUE-084 — V8.1 Strategaize-Vorstellungs-Text steht als Mock im Code, nicht Founder-freigegeben
+- Status: open
+- Severity: High
+- Area: V8.1 SLC-162 MT-3 / src/lib/pdf/mandanten-report-v2/pages/outro.tsx + src/app/dashboard/diagnose/[capture_session_id]/bericht/V8OutroSection.tsx
+- Summary: V8.1-Outro Page 16 (PDF) + V8OutroSection (Web) zeigen aktuell einen Mock-Vorstellungs-Text in 2 Absaetzen Wir-Voice, der am 2026-06-01 per User-Direktive "Bitte hinterleg erstmal Mocktexte, sodass du es bauen kannst, und die werden wir dann spaeter austauschen" eingesetzt wurde. Mock-Text ist substanziell, audit-clean (0 Treffer auf Outro-Blacklist) und in beiden Distribution-Pfaden identisch — aber nicht durch Founder freigegeben.
+- Impact: Kein Code-Side-Blocker fuer Master-Merge oder SLC-163-Implementation. **V8.1-Release-Blocker** — Final-Text muss vor produktivem Deploy in Coolify stehen. AC-SLC-162-7 (Founder-freigegeben + Code-Kommentar-Datum) ist bis dahin nicht erfuellt.
+- Workaround: Mock-Text bleibt sichtbar bis Tausch. Strukturell passend ("Strategaize begleitet Unternehmer..."), kein Platzhalter-Marker mehr im String-Literal (per IMP-918 nur Code-Kommentar oberhalb).
+- Next Action: V8.1-Pre-Release-User-Pflicht — Founder liefert finalen 2-3-Absatz-Text in Wir-Voice. Tausch via 1:1-String-Replacement in beiden Files (Konstante `STRATEGAIZE_VORSTELLUNG_PLACEHOLDER`) + Re-Run `node scripts/tonalitaet-audit-v8.mjs --scope=outro` + Re-Run Outro-Vitest. Aufwand ~10min wenn Text vorliegt.
+- Related: SLC-162 MT-3, FEAT-067, RPT-369, AC-SLC-162-7, feedback_tonality_audit_safe_placeholders.md (IMP-918).
+
 ### ISSUE-083 — Partner-Mandant-Welcome (`tenant_kind='partner_client'`) hat keinen Logout-Button
 - Status: resolved
 - Severity: High

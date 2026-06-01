@@ -20,6 +20,7 @@ import type {
   V8ReportSnapshot,
 } from "@/lib/diagnose/types";
 import { V8BerichtActions } from "@/components/diagnose/V8BerichtActions";
+import { V8OutroSection } from "./V8OutroSection";
 
 interface V8BerichtRendererProps {
   captureSessionId: string;
@@ -226,6 +227,14 @@ export function V8BerichtRenderer({
             ))}
           </ul>
         </section>
+      ) : null}
+
+      {/* V8.1 Lead-Conversion-Outro (SLC-162 MT-6) — analog zu PDF Pages 16-17 */}
+      {snapshot.hebel.length === 3 ? (
+        <V8OutroSection
+          hebel={snapshot.hebel}
+          captureSessionId={captureSessionId}
+        />
       ) : null}
 
       {/* Action-Slot (Client-Component) */}

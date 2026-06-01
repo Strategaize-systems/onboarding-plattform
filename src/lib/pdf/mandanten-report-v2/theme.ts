@@ -68,6 +68,15 @@ export const COLOR = {
     s4: "#4dcb8b", // Stufe 4 = etabliert (brand-accent)
     s5: "#00a84f", // Stufe 5 = belastbar (success)
   },
+
+  // V8.1 SLC-162 Outro-Tokens (DEC-171 Verkaufs-Style mit groesseren Cards)
+  outro: {
+    cardBg: "#fafbfc", // neutral50 — subtiler Card-Hintergrund auf weissem Page
+    cardBorder: "#e8ecf3", // neutral200 — dezenter Top/Left/Right-Border
+    accent: "#4dcb8b", // brandAccent — Akzent-Border-Bottom (DEC-171)
+    videoBoxBg: "#120774", // brandPrimaryDark — Strategaize-Brand-Box analog V8.0-brandBlock
+    badgeAktuelleStufeBg: "#f4f6fa", // neutral100 — neutraler Badge-Hintergrund
+  },
 } as const;
 
 export const PAGE = {
@@ -87,6 +96,8 @@ export const SPACING = {
   lg: 18,
   xl: 28,
   xxl: 40,
+  // V8.1 SLC-162 Outro-Section-Gap zwischen 3 Empfehlungs-Cards
+  outroSectionGap: 14,
 } as const;
 
 export const TYPOGRAPHY = {

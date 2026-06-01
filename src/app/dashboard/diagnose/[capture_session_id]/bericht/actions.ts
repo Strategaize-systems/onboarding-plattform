@@ -40,6 +40,13 @@ import {
   trackV8PdfRenderFailed,
 } from "@/lib/diagnose/telemetry-v8";
 import type { TemplateBlock } from "@/workers/condensation/light-pipeline";
+import { sendStrategaizeAnfrageEmails } from "@/lib/email/v8-1/send-strategaize-anfrage-emails";
+import {
+  recordCtaTrigger,
+  recordCtaIdempotentSkip,
+  recordStbNotificationSkippedNoEmail,
+} from "@/lib/cta/audit";
+import { redirect } from "next/navigation";
 
 const UUID_REGEX = /^[0-9a-f-]{36}$/i;
 // Pragmatischer Email-Regex (RFC-822 ist zu komplex fuer Userland-Validation).
@@ -310,8 +317,31 @@ export async function sendDiagnoseReportByEmail(
       template: template as unknown as V8Template,
     };
 
+    // SLC-163 MT-8/MT-10: PDF-Magic-Link-CTA gated auf STRATEGAIZE_CTA_TOKEN_SECRET.
+    // Wenn Secret nicht gesetzt: Placeholder-URL im PDF (kein Crash, sondern
+    // graceful degradation). Web-Bericht-CTA funktioniert davon unabhaengig
+    // via Server-Action triggerStrategaizeFreigabe.
+    const ctaSecret = process.env.STRATEGAIZE_CTA_TOKEN_SECRET;
+    const magicLinkConfig =
+      ctaSecret && ctaSecret.length >= 32 && session.tenant_id
+        ? {
+            captureSessionId: input.captureSessionId,
+            partnerOrganizationId:
+              (await admin
+                .from("capture_session")
+                .select("partner_organization_id")
+                .eq("id", input.captureSessionId)
+                .maybeSingle()).data?.partner_organization_id ?? "",
+            mandantEmail: profile.email ?? "",
+          }
+        : undefined;
+
     try {
-      pdfBuffer = await renderMandantenReportV2Pdf(v8Input);
+      pdfBuffer = await renderMandantenReportV2Pdf(
+        v8Input,
+        undefined,
+        magicLinkConfig,
+      );
     } catch (e) {
       trackV8PdfRenderFailed(
         admin,
@@ -469,7 +499,7 @@ export async function downloadMandantenReportV2Pdf(
 
   const { data: profile } = await admin
     .from("profiles")
-    .select("id, tenant_id, role")
+    .select("id, tenant_id, role, email")
     .eq("id", user.id)
     .single();
   if (!profile?.tenant_id) return { ok: false, error: "profile_not_found" };
@@ -559,9 +589,30 @@ export async function downloadMandantenReportV2Pdf(
     template: template as unknown as V8Template,
   };
 
+  // SLC-163 MT-8/MT-10: PDF-Magic-Link-CTA gated auf STRATEGAIZE_CTA_TOKEN_SECRET
+  // (siehe sendDiagnoseReportByEmail oben fuer Begruendung).
+  const ctaSecret = process.env.STRATEGAIZE_CTA_TOKEN_SECRET;
+  const magicLinkConfig =
+    ctaSecret && ctaSecret.length >= 32
+      ? {
+          captureSessionId,
+          partnerOrganizationId:
+            (await admin
+              .from("capture_session")
+              .select("partner_organization_id")
+              .eq("id", captureSessionId)
+              .maybeSingle()).data?.partner_organization_id ?? "",
+          mandantEmail: profile.email ?? "",
+        }
+      : undefined;
+
   let pdfBuffer: Buffer;
   try {
-    pdfBuffer = await renderMandantenReportV2Pdf(v8Input);
+    pdfBuffer = await renderMandantenReportV2Pdf(
+      v8Input,
+      undefined,
+      magicLinkConfig,
+    );
   } catch (e) {
     trackV8PdfRenderFailed(admin, captureSessionId, profile.tenant_id, e);
     captureException(e, {
@@ -579,4 +630,170 @@ export async function downloadMandantenReportV2Pdf(
     pdfBase64: pdfBuffer.toString("base64"),
     filename,
   };
+}
+
+// ============================================================================
+// V8.1 SLC-163 MT-9 — triggerStrategaizeFreigabe Server-Action
+// ============================================================================
+//
+// Web-Bericht-CTA-Pfad (Session-basiert, kein Magic-Link-Token noetig).
+// Auth via Supabase-Session: User muss Mandant der capture_session ODER
+// strategaize_admin sein.
+//
+// Flow analog GET /strategaize-anfrage-Endpoint (SLC-163 MT-7):
+//   1. Auth-Check
+//   2. Atomic-UPDATE flag (race-safe)
+//   3. Idempotent-Skip ODER Dual-Email senden
+//   4. Audit-Log
+//   5. redirect zu /strategaize-anfrage/bestaetigung
+
+const TRIGGER_SOURCE = "diagnose/bericht/triggerStrategaizeFreigabe";
+
+export async function triggerStrategaizeFreigabe(
+  captureSessionId: string,
+): Promise<never> {
+  if (!captureSessionId || !UUID_REGEX.test(captureSessionId)) {
+    throw new Error("invalid_capture_session_id");
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    throw new Error("unauthenticated");
+  }
+
+  const admin = createAdminClient();
+
+  const { data: profile, error: profileErr } = await admin
+    .from("profiles")
+    .select("id, tenant_id, role, email")
+    .eq("id", user.id)
+    .single();
+  if (profileErr || !profile) {
+    throw new Error("profile_not_found");
+  }
+
+  const { data: session, error: sessionErr } = await admin
+    .from("capture_session")
+    .select(
+      "id, tenant_id, owner_user_id, partner_organization_id, metadata, released_for_strategaize_review",
+    )
+    .eq("id", captureSessionId)
+    .maybeSingle();
+  if (sessionErr || !session) {
+    throw new Error("capture_session_not_found");
+  }
+
+  const isStrategaizeAdmin = profile.role === "strategaize_admin";
+  const isOwnMandant =
+    session.tenant_id === profile.tenant_id &&
+    session.owner_user_id === user.id;
+  if (!isStrategaizeAdmin && !isOwnMandant) {
+    throw new Error("forbidden");
+  }
+
+  // Race-safe Idempotency per SQL-Level (R5 SLC-163 spec).
+  const { data: updateData, error: updateError } = await admin
+    .from("capture_session")
+    .update({ released_for_strategaize_review: true })
+    .eq("id", captureSessionId)
+    .eq("released_for_strategaize_review", false)
+    .select("id")
+    .maybeSingle();
+
+  if (updateError) {
+    captureException(new Error(updateError.message), {
+      source: `${TRIGGER_SOURCE}/update_flag`,
+      userId: user.id,
+      metadata: { capture_session_id: captureSessionId },
+    });
+    throw new Error("internal");
+  }
+
+  if (!updateData) {
+    // Flag bereits true (idempotent skip).
+    await recordCtaIdempotentSkip(admin, {
+      captureSessionId,
+      source: "web_action",
+    });
+    redirect("/strategaize-anfrage/bestaetigung");
+  }
+
+  // Erste Triggerung — Partner laden + Dual-Email senden.
+  const { data: partner } = session.partner_organization_id
+    ? await admin
+        .from("partner_organization")
+        .select("id, name, contact_email")
+        .eq("id", session.partner_organization_id)
+        .maybeSingle()
+    : { data: null };
+
+  const snapshot = (session.metadata?.v8_report_snapshot ?? {}) as Record<
+    string,
+    unknown
+  >;
+  const mandantInfo = (snapshot.mandant ?? {}) as {
+    name?: string;
+    firma?: string;
+    email?: string;
+  };
+  const sui = (snapshot.sui ?? {}) as { gesamt_score?: number };
+  const hebelArr = Array.isArray(snapshot.hebel) ? snapshot.hebel : [];
+  const dreiHebelNamen = hebelArr
+    .map((h: { modul_name?: string }) => h?.modul_name ?? "")
+    .filter((s: string) => s.length > 0);
+
+  const appBaseUrl =
+    process.env.NEXT_PUBLIC_APP_URL ??
+    "https://onboarding.strategaizetransition.com";
+
+  const sendResult = await sendStrategaizeAnfrageEmails({
+    captureSession: {
+      id: captureSessionId,
+      mandant_email: mandantInfo.email ?? profile.email,
+      mandant_name: mandantInfo.name ?? "",
+      mandant_firma: mandantInfo.firma ?? "",
+      sui_score: sui.gesamt_score ?? 0,
+      drei_hebel_modul_namen: dreiHebelNamen,
+      diagnose_link_admin: `${appBaseUrl}/admin/diagnose/${captureSessionId}`,
+    },
+    partner: {
+      id: partner?.id ?? session.partner_organization_id ?? "",
+      name: partner?.name ?? "Unbekannter Partner",
+      contact_email: partner?.contact_email ?? null,
+    },
+  });
+
+  await recordCtaTrigger(admin, {
+    captureSessionId,
+    source: "web_action",
+    bdSent: sendResult.bd_sent,
+    stbSent: sendResult.stb_sent,
+    stbSkipReason: sendResult.stb_skip_reason,
+  });
+
+  if (sendResult.stb_skip_reason === "no_email" && partner) {
+    await recordStbNotificationSkippedNoEmail(admin, {
+      captureSessionId,
+      partnerOrganizationId: partner.id,
+    });
+  }
+
+  captureInfo(
+    `V8.1 web-action CTA triggered (bd=${sendResult.bd_sent}, stb=${sendResult.stb_sent})`,
+    {
+      source: TRIGGER_SOURCE,
+      userId: user.id,
+      metadata: {
+        capture_session_id: captureSessionId,
+        bd_sent: sendResult.bd_sent,
+        stb_sent: sendResult.stb_sent,
+        stb_skip_reason: sendResult.stb_skip_reason ?? null,
+      },
+    },
+  );
+
+  redirect("/strategaize-anfrage/bestaetigung");
 }

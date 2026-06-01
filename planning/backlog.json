@@ -65,7 +65,7 @@
       "title": "V8.1 FEAT-067 Lead-Conversion-Outro-Renderer (PDF + Web-Bericht)",
       "type": "feature",
       "priority": "high",
-      "status": "in_progress",
+      "status": "done",
       "version": "V8.1",
       "description": "FEAT-067 Renderer-Scope. Erweitert V8.0-Mandanten-Bericht um Lead-Conversion-Outro-Section am Ende: (a) Strategaize-Vorstellung 2-3 Absaetze in Strategaize-Wir-Voice (Default V8-Tonalitaet, konsistent zu V8.0), (b) 3 personalisierte Empfehlungs-Vorschlaege basierend auf den drei niedrigsten Modul-Stufen (selectThreeHebel-Reuse aus SLC-148 MT-4, LLM-Augmentation siehe FEAT-069), (c) Video-Block-Platzhalter (statischer Block ohne echtes Video — Video kommt V8.2+), (d) Kontakt-CTA-Slot fuer 'Mit Strategaize sprechen' (Implementierung des CTA-Buttons + Click-Handler siehe FEAT-068). Distribution-Pfade: (1) PDF-Outro-Section per @react-pdf v4 Pages (analog V8.0 CtaPage), (2) V8-Web-Bericht-Section per React-Component im dashboard/diagnose/[id] Pfad. KEINE Pricing-Hinweise im Bericht. Pre-Conditions: V8.0 live (REL-026 2026-05-30). Founder-Direktive 2026-05-29: 'Vertrauen in uns und Bereitschaft mit uns zu reden steigern.' Refactored 2026-05-30 aus original BL-134 (Gesamt-Scope) in 3 atomare BL-Items: BL-134 (Outro-Renderer) + BL-142 (CTA + Dual-Email) + BL-143 (LLM-Augmentation).",
       "createdAt": "2026-05-29"
@@ -75,7 +75,7 @@
       "title": "V8.1 FEAT-068 Strategaize-Freigabe-CTA + Dual-Email-Trigger (BD + StB)",
       "type": "feature",
       "priority": "high",
-      "status": "in_progress",
+      "status": "done",
       "version": "V8.1",
       "description": "FEAT-068 CTA-Mechanik + Dual-Email-Trigger. Bei CTA-Klick 'Mit Strategaize sprechen' (im PDF via Magic-Link-Token, im V8-Web-Bericht via Server-Action): (1) capture_session.released_for_strategaize_review = true Flag setzen (DEC-163 Flag existiert seit V8.0), (2) Lead-Email an bd@strategaizetransition.de senden (landet in Business-System-Pipeline via Email-Inbox — kein BS-API-Endpoint in V8.1, loose-coupling) mit strukturierten Lead-Daten (Mandant + Partner + SUI-Score + 3 niedrigste Module + Diagnose-Link), (3) StB-Partner-Notification an partner_organization.contact_email senden ('Ihr Mandant X hat Kontakt zu Strategaize aufgenommen' — neutral-informativ, kein Glueckwunsch-Wording). PDF-Magic-Link nutzt HMAC-SHA256-signierten Token mit Expiry (Default 90 Tage, /architecture entscheidet). Web-CTA = Server-Action direkt (kein Token noetig, Session aus auth.users). Bestaetigungs-Seite nach CTA-Klick zeigt 'Strategaize meldet sich innerhalb von 2 Werktagen'. STRATEGAIZE_BD_EMAIL als ENV-Variable (Default bd@strategaizetransition.de). Re-Send-Verhalten bei Mehrfach-Klick: Flag bleibt true, KEINE doppelte Email (Idempotenz ueber Flag-Check). Pre-Conditions: FEAT-067 Outro-Renderer live, BL-132 Privacy-Flag in capture_session existiert. Entstanden 2026-05-30 als Refactor aus original BL-134.",
       "createdAt": "2026-05-30"
@@ -85,9 +85,9 @@
       "title": "V8.1 FEAT-069 LLM-Augmentation der Empfehlungs-Texte (Bedrock eu-central-1)",
       "type": "feature",
       "priority": "high",
-      "status": "in_progress",
+      "status": "done",
       "version": "V8.1",
-      "description": "FEAT-069 LLM-Augmentation. Ersetzt die rein deterministischen V8.0-Empfehlungs-Texte (aus template.metadata.stufen_lookup) durch LLM-augmentierte verkaufsorientiertere Tonalitaet fuer die 3 ausgewaehlten Hebel-Module im V8.1-Outro. Bedrock Claude Sonnet eu-central-1 (data-residency.md Pflicht). Input: Modul-Name + Aktuelle-Stufe + Stufen-Lookup-Text + Mandant-Kontext (anonymisiert). Output: 2-3 Saetze pro Hebel-Modul (max 80 Worte), Strategaize-Wir-Voice. Deterministischer Fallback bei LLM-Fail (Timeout, Cost-Cap, Error): rein deterministische Stufen-Lookup-Texte aus V8.0 werden gerendert (graceful-degrade, keine Fehler-Anzeige im PDF/Web). Caching: pro capture_session.metadata.v8_1_llm_augmentation_cache cached (analog V8.0 report_snapshot Pattern, Reproduzierbarkeit + Cost-Control, /architecture entscheidet Cache-Granularitaet). Cost-Cap pro Mandanten-Bericht: ~$0.02 (3 Calls x ~$0.007). Audit-Trail: jeder LLM-Call wird via ai_cost_ledger erfasst (existierende Tabelle). KEINE LLM-Augmentation der Strategaize-Vorstellungs-Absaetze oder des CTA-Hero-Wordings (statisch, redaktionell gepflegt). Pre-Conditions: FEAT-067 Outro-Renderer live (3 Empfehlungs-Texte-Slots existieren). Bedrock-Adapter existiert. Entstanden 2026-05-30 als Refactor aus original BL-134.",
+      "description": "FEAT-069 LLM-Augmentation. DONE 2026-05-30 via SLC-161 (worktree v8-1-lead-conversion HEAD 09afd63+, RPT-367). Implementiert: prompt.ts (Strategaize-Wir-Voice + Tonality-Blacklist + V8_1_PROMPT_VERSION) + types.ts + cache.ts (pure JSONB-Helpers) + audit.ts (ai_cost_ledger + error_log Wrappers, lazy-import logger) + augment.ts (Core-Orchestration: Cache-Hit/Miss + Bedrock-Call + Tonality-Validation + Word-Count-Cap + Cost-Cap + Fallback + atomarer Cache-Write) + index.ts Public-API. Bedrock Claude Sonnet 3.5 eu-central-1 via reused defaultBedrockCaller-Pattern aus light-pipeline.ts. Deterministischer Fallback (V8.0-stufen_lookup) bei Timeout/Cost-Cap/Tonality-Drift/Word-Count-Exceed/Bedrock-Error. Caching in capture_session.metadata.v8_1_llm_augmentation_cache mit Tuple-Cache-Key {model_id|prompt_version} (DEC-167). Migration 105 LIVE: ai_cost_ledger.role CHECK-Extension um 'v8_1_augmentation' analog V6.3 Migration 095. ENV BEDROCK_V8_1_MODEL_ID Default anthropic.claude-3-5-sonnet-20241022-v2:0 (DEC-175). 86/86 Vitest GREEN gegen Coolify-DB (25 prompt + 33 cache pure + 4 cache-db roundtrip + 9 audit row-shape + 15 augment orchestration). 0 neue Tabellen, 1 Migration (Constraint-Extension). TSC EXIT=0. Naechster Schritt: SLC-162 Outro-Renderer (FEAT-067) konsumiert augmentEmpfehlungsText.",
       "createdAt": "2026-05-30"
     },
     {

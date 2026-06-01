@@ -4,6 +4,16 @@ Die aktuelle DB-Struktur entspricht dem Stand von Blueprint V3.4 (Migration 020)
 
 Der uebernommene Blueprint-Stand ist noch nicht auf einer Onboarding-Plattform-Instanz ausgefuehrt worden — die erste Hetzner-Migration geschieht mit SLC-001 (Schema-Fundament).
 
+### MIG-050 — V8.1 SLC-161 MT-5 `ai_cost_ledger_role_check` erweitert um 'v8_1_augmentation' (Migration 105, live)
+- Date: 2026-05-30 (LIVE — applied via ssh+base64+psql -U postgres auf 159.69.207.29 supabase-db-bwkg80w04wgccos48gcws8cs-083510365632, BEGIN/ALTER/ALTER/COMMIT durch, `pg_get_constraintdef` verifiziert 16 Werte: 15 alte + 1 V8.1.)
+- Scope:
+  - `105_v81_cost_ledger_v8_1_augmentation_role.sql` — `DROP CONSTRAINT IF EXISTS ai_cost_ledger_role_check` + `ADD CONSTRAINT ... CHECK (role IS NULL OR role = ANY (ARRAY[...15 alte + 'v8_1_augmentation']))`
+  - 1 neuer Role-Wert: `v8_1_augmentation`
+- Reason: ARCHITECTURE.md V8.1 Line 7521 vorhergesehen: "ai_cost_ledger Tabelle (V6+, Constraint-Erweiterung V6.3 Migration 095 vorhanden — V8.1-Eintraege passen rein)". Migration analog V6.3 Migration 095 (light_pipeline_block) noetig: ohne diese Erweiterung schlaegt `INSERT INTO ai_cost_ledger (role) VALUES ('v8_1_augmentation')` mit CHECK-Constraint-Violation fehl. SLC-161 audit.ts (recordLlmCall) wuerde silent broken sein (analog dem V6.3-Bug ISSUE-076 wo Cost-Logging silent-fail via captureException geschluckt wurde). audit.test.ts (9/9 GREEN gegen Coolify-DB) verifiziert beide Faelle: accept 'v8_1_augmentation' + reject unknown role 'totally_unknown_role'.
+- Affected Areas: `public.ai_cost_ledger` CHECK-Constraint (1 Constraint replaced). Bestehende V6+/V6.3/V7 Rows bleiben valide (alle 15 alten Werte sind in der neuen Liste enthalten). RLS-Policies unbetroffen.
+- Risk: S — additive Constraint-Erweiterung, kein Datenmigrations-Bedarf, keine Policy-Aenderung. 0 Auswirkung auf existing roles.
+- Rollback Notes: Original-Constraint aus Migration 095 wiederherstellen (`DROP + ADD CONSTRAINT ai_cost_ledger_role_check CHECK (role IS NULL OR role = ANY (ARRAY[...15 alte])))`) — wuerde V8.1-Augmentation-Audit blockieren aber nicht zerstoeren (bestehende V8.1-Rows bleiben in Tabelle).
+
 ### MIG-049 — V8 SLC-152 MT-2 `diagnose_event_event_type_check` erweitert um 3 V8-Event-Types (Migration 104, live)
 - Date: 2026-05-30 (LIVE — applied via ssh+psql -U postgres auf 159.69.207.29 supabase-db-bwkg80w04wgccos48gcws8cs-150827246647, BEGIN/ALTER/ALTER/COMMIT durch, `pg_get_constraintdef` verifiziert 12 Werte: 9 V7.2 + 3 V8.)
 - Scope:

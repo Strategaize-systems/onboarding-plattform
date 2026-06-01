@@ -105,13 +105,14 @@ CTA-Slot bleibt in V8.1-Outro vorbereitet — eigentliche CTA-Click-Mechanik kom
 - **Verification**: TSC EXIT=0. Smoke-Render-Test (Vitest) erzeugt PDF-Buffer, dann `pdfinfo`-Tool zaehlt Pages-Anzahl = 1 (Page 16 only).
 - **Dependencies**: MT-1
 
-### MT-3: Strategaize-Vorstellungs-Final-Text einbauen
+### MT-3: Strategaize-Vorstellungs-Final-Text einbauen — Status: done (Mock 2026-06-01)
 - **Goal**: Founder-freigegebenen 2-3-Absatz-Text in OutroPage einbauen. Placeholder ersetzen.
 - **Files**:
-  - `src/lib/pdf/mandanten-report-v2/pages/outro.tsx` (UPDATE)
-- **Expected behavior**: Strategaize-Vorstellungs-Absaetze als statische Konstante (oder Text-Override-Lookup falls Inline-Text-Override-Foundation V7.1 genutzt werden soll). Founder-Freigabe-Datum als Code-Kommentar.
-- **Verification**: Tonality-Audit `scripts/tonalitaet-audit-v8.mjs --scope=outro` 0 Treffer.
-- **Dependencies**: MT-2 + **Pre-MT-1 User-Pflicht (Strategaize-Vorstellungs-Text-Freigabe)**
+  - `src/lib/pdf/mandanten-report-v2/pages/outro.tsx` (UPDATE — done 2026-06-01 commit 3a02078)
+  - `src/app/dashboard/diagnose/[capture_session_id]/bericht/V8OutroSection.tsx` (UPDATE — done 2026-06-01 commit 3a02078, identischer Text)
+- **Expected behavior**: Strategaize-Vorstellungs-Absaetze als statische Konstante. Mock-Text 2026-06-01 eingesetzt (Wir-Voice, 2 Absaetze, audit-clean). Final-Founder-Freigabe-Text wird vor V8.1-Release getauscht.
+- **Verification**: Tonality-Audit `scripts/tonalitaet-audit-v8.mjs --scope=outro` 0 Treffer (89 String-Literale geprueft). 12/12 Outro-Vitest GREEN (4 outro.test + 4 V8OutroSection.test + 4 renderer.test inkl. 17-Pages-Smoke).
+- **Dependencies**: MT-2 erfuellt; Founder-Final-Text-Freigabe deferred — Mock-Text bleibt bis Tausch.
 
 ### MT-4: PDF-OutroPage Component — Page 17 (Video + CTA + Footer)
 - **Goal**: Zweite Page mit Video-Platzhalter + CTA-Hero-Card + Strategaize-Footer.
