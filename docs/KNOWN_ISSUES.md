@@ -1,5 +1,15 @@
 # Known Issues
 
+### ISSUE-085 — V8.1 StB-Notification-Body steht als Mock im Code, nicht Founder-freigegeben
+- Status: open
+- Severity: High
+- Area: V8.1 SLC-163 MT-4 / src/lib/email/v8-1/stb-notification.ts
+- Summary: Die StB-Partner-Notification-Email enthaelt einen 4-Saetze-Body (Mock-Wording 2026-06-01 per User-Direktive), der noch nicht durch Founder freigegeben ist. Wir-Voice, neutral-informativ (DEC-169), audit-clean (Tonality-Audit `--scope=stb-notification` 0 Treffer).
+- Impact: Kein Code-Side-Blocker fuer Master-Merge. **V8.1-Release-Blocker** — Final-Text muss vor produktivem Deploy stehen. AC-SLC-163-8 (Founder-freigegeben + Code-Kommentar-Datum) ist bis dahin nicht erfuellt.
+- Workaround: Mock-Text bleibt sichtbar bis Tausch. Mock-Wording: "Wir informieren Sie ... heute den Kontakt zu Strategaize aufgenommen ... Strategaize wird sich direkt ... abstimmen ... Sie bleiben jederzeit Ansprechpartner ... bei Rueckfragen ... info@strategaize.de".
+- Next Action: Founder liefert finalen 4-Saetze-Body. Tausch via 1:1-String-Replacement in `buildStbNotificationEmail` (Konstanten intro/followUp/role/contact) + Re-Run Audit + Re-Run Vitest. Aufwand ~10min wenn Text vorliegt.
+- Related: SLC-163 MT-4, FEAT-068, RPT-371, AC-SLC-163-8, [[ISSUE-084]].
+
 ### ISSUE-084 — V8.1 Strategaize-Vorstellungs-Text steht als Mock im Code, nicht Founder-freigegeben
 - Status: open
 - Severity: High
