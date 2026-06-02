@@ -6,6 +6,16 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 const nextConfig: NextConfig = {
   output: "standalone",
   serverExternalPackages: ["pdf-parse", "mammoth"],
+  experimental: {
+    // V9 SLC-165 MT-4-hotfix (RPT-384 F-1 / ISSUE-087): Bulk-Email-Upload
+    // akzeptiert .mbox bis 500 MB. Default = 1 MB blockt Real-World-Uploads
+    // (Gmail-Takeout 100MB-GB) an der HTTP-Body-Pipeline bevor die Server-
+    // Action laeuft. Bucket file_size_limit (Migration 106) + UI-Validation
+    // (helpers.ts MAX_FILE_SIZE_BYTES) sind ebenfalls auf 500 MB gesetzt.
+    serverActions: {
+      bodySizeLimit: "500mb",
+    },
+  },
   async rewrites() {
     return [
       {

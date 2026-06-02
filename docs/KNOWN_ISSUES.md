@@ -1,5 +1,17 @@
 # Known Issues
 
+### ISSUE-087 — V9 SLC-165 MT-4 Next.js Server-Action `bodySizeLimit` nicht konfiguriert — alle Upload-Files >1 MB scheitern an HTTP-Pipeline
+- Status: resolved
+- Resolution Date: 2026-06-02
+- Resolution Slice: V9 SLC-165 MT-4-hotfix
+- Severity: High
+- Area: V9 SLC-165 MT-4 / next.config.ts + src/app/dashboard/bulk-email-import/actions.ts
+- Resolution: MT-4-hotfix 2026-06-02. `next.config.ts` um `experimental: { serverActions: { bodySizeLimit: "500mb" } }` erweitert (matched `MAX_FILE_SIZE_BYTES` aus helpers.ts und Storage-Bucket file_size_limit aus Migration 106). Verifikation: TSC `--noEmit` EXIT=0, ESLint EXIT=0, `next build` zeigt "Experiments (use with caution): serverActions" + "Compiled successfully in 12.3s" — Config wird von Next.js erkannt. Page-Data-Collection bricht offline ab wegen Missing-SUPABASE_URL (pre-existing env-condition, kein Hotfix-Regress).
+- Summary: `next.config.ts` enthielt keinen `experimental.serverActions.bodySizeLimit`-Eintrag. Next.js Default = 1 MB. UI akzeptiert Files bis 500 MB (`MAX_FILE_SIZE_BYTES = 524288000` in helpers.ts), Storage-Bucket hard-capt auf 500 MB (Migration 106 Line 475), Action `uploadBulkEmailRun` ist auf 500 MB ausgelegt — aber Next.js wirft `Body exceeded 1mb limit` an der HTTP-Body-Pipeline, BEVOR der Server-Action-Handler aufgerufen wird.
+- Impact: Gmail-Takeout-`.mbox` (typisch 100 MB - GB) + viele `.eml` (oft 2-5 MB) waren faktisch nicht hochladbar. Vitest 17/17 PASS erfassen das nicht, weil sie die Action-Funktion direkt aufrufen und die HTTP-Pipeline umgehen.
+- Caveat: 500 MB Body-Buffering im App-Container belastet RAM. Bei mehreren parallelen Uploads moegliches OOM-Risiko. Akzeptabel fuer V9.0 (Single-User-Upload-Cadence), aber Stream-Threshold + chunked-Upload als V9.1+ Backlog-Kandidat.
+- Related: RPT-384 (QA-Finding F-1), SLC-165 MT-4, FEAT-070, AC-SLC-165-2, AC-SLC-165-3.
+
 ### ISSUE-086 — V8.1 Partner-Organization-Lookup verwendet falsches Schema (capture_session.partner_organization_id existiert nicht) + verdeckter Bug B (partner_organization.name existiert nicht)
 - Status: resolved
 - Resolution Date: 2026-06-01
