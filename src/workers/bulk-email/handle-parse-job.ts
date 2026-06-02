@@ -123,6 +123,18 @@ export async function executeEmailBulkParse(
   }
   const run = runRow as BulkRunRow;
 
+  // 1b. Defense-in-depth (ISSUE-089): re-validate the storage_path carries
+  //     the tenant_id prefix. MT-4 always builds the path with
+  //     `${tenant_id}/${file_hash}/${name}`, but the worker uses service_role
+  //     for the download — a future MT-4 bug, direct admin INSERT, or a later
+  //     migration with a different path scheme must not be able to trick the
+  //     worker into loading another tenant's bytes.
+  if (!run.storage_path.startsWith(`${run.tenant_id}/`)) {
+    throw new Error(
+      `email_bulk_parse: storage_path tenant prefix mismatch for bulk_run ${bulkRunId}`,
+    );
+  }
+
   // 2. Status-Skip fuer alles ausser 'uploaded' (idempotent, kein Throw).
   if (run.status !== "uploaded") {
     captureWarning(
@@ -132,7 +144,19 @@ export async function executeEmailBulkParse(
         metadata: { jobId: job.id, bulkRunId, status: run.status },
       },
     );
-    await adminClient.rpc("rpc_complete_ai_job", { p_job_id: job.id });
+    // ISSUE-088: error-check + re-throw, symmetric to the happy-path
+    // completion at L211-219. Without it a rpc_complete_ai_job failure on
+    // the skip path leaves the ai_job pending; the claim-loop would re-pick
+    // it forever (silent worker loop).
+    const { error: skipCompleteError } = await adminClient.rpc(
+      "rpc_complete_ai_job",
+      { p_job_id: job.id },
+    );
+    if (skipCompleteError) {
+      throw new Error(
+        `email_bulk_parse: rpc_complete_ai_job failed on status-skip path: ${skipCompleteError.message}`,
+      );
+    }
     return;
   }
 

@@ -361,6 +361,46 @@ describe("executeEmailBulkParse — status skip", () => {
       { name: "rpc_complete_ai_job", args: { p_job_id: JOB_ID } },
     ]);
   });
+
+  it("throws when rpc_complete_ai_job fails on status-skip path (ISSUE-088)", async () => {
+    const { client, state } = makeAdminStub({
+      bulkRun: { ...RUN_OK, status: "parsing" },
+      rpcCompleteError: { message: "rpc unavailable" },
+    });
+    await expect(
+      executeEmailBulkParse(makeJob(), { adminClient: client as never }),
+    ).rejects.toThrow(/rpc_complete_ai_job failed on status-skip path/);
+    expect(state.rpcs).toEqual([
+      { name: "rpc_complete_ai_job", args: { p_job_id: JOB_ID } },
+    ]);
+    expect(state.inserts).toHaveLength(0);
+    expect(state.storageDownloads).toHaveLength(0);
+  });
+});
+
+describe("executeEmailBulkParse — defense-in-depth", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("throws when storage_path lacks the tenant_id prefix (ISSUE-089)", async () => {
+    const evilRun: BulkRunStub = {
+      ...RUN_OK,
+      storage_path: "44444444-4444-4444-4444-444444444444/secret/foo.mbox",
+    };
+    const { client, state } = makeAdminStub({ bulkRun: evilRun });
+    await expect(
+      executeEmailBulkParse(makeJob(), { adminClient: client as never }),
+    ).rejects.toThrow(/storage_path tenant prefix mismatch/);
+
+    // Defense fires before any state change: no storage download, no status
+    // updates, no rpc_complete.
+    expect(state.storageDownloads).toHaveLength(0);
+    expect(state.updates).toHaveLength(0);
+    expect(state.rpcs).toHaveLength(0);
+    expect(state.inserts).toHaveLength(0);
+    expect(state.deletes).toHaveLength(0);
+  });
 });
 
 describe("executeEmailBulkParse — happy path (.mbox)", () => {
