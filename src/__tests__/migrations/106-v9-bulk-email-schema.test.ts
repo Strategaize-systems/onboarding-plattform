@@ -372,17 +372,33 @@ describe("Migration 106 — capture_mode CHECK", () => {
   it("INSERT capture_session mit capture_mode='email_bulk' wird akzeptiert", async () => {
     await withTestDb(async (client) => {
       await applyMigration106(client);
-      // tenant + capture_session-Setup im selben TX-Scope.
-      // capture_session.template_id ist NOT NULL — Subquery auf bestehendes
-      // Template (V1/V6.3/V8.0 sind in jedem Supabase-Schema vorhanden).
+      // capture_session hat mehrere NOT NULL Spalten: tenant_id, template_id,
+      // template_version, owner_user_id, status, answers, metadata,
+      // released_for_strategaize_review. Wir holen template_id + version
+      // aus dem Bestand und referenzieren einen bestehenden auth.users-User,
+      // um den handle_new_user-Trigger zu vermeiden.
       const tenantRes = await client.query<{ id: string }>(
         `INSERT INTO public.tenants (name) VALUES ($1) RETURNING id`,
         ["V9-mt2-test-tenant"],
       );
       const tenantId = tenantRes.rows[0].id;
       const sessionRes = await client.query<{ capture_mode: string }>(
-        `INSERT INTO public.capture_session (tenant_id, template_id, capture_mode)
-         VALUES ($1, (SELECT id FROM public.template LIMIT 1), 'email_bulk')
+        `INSERT INTO public.capture_session (
+           tenant_id, template_id, template_version, owner_user_id,
+           status, answers, released_for_strategaize_review, metadata, capture_mode
+         )
+         SELECT
+           $1::uuid,
+           t.id,
+           t.version,
+           (SELECT id FROM auth.users LIMIT 1),
+           'open',
+           '{}'::jsonb,
+           false,
+           '{}'::jsonb,
+           'email_bulk'
+         FROM public.template t
+         LIMIT 1
          RETURNING capture_mode`,
         [tenantId],
       );
@@ -456,7 +472,8 @@ describe("Migration 106 — Storage-Bucket + View", () => {
       );
       const tenantId = tenantRes.rows[0].id;
       // auth.users-Schema von Supabase erfordert viele NOT-NULL Spalten +
-      // handle_new_user-Trigger verlangt tenant_id + role in raw_app_meta_data.
+      // handle_new_user-Trigger verlangt tenant_id + role in raw_USER_meta_data
+      // (NICHT raw_app_meta_data — siehe pg_proc handle_new_user-Definition).
       // Pattern aus src/__tests__/rls/v4-fixtures.ts (mkUser) reused.
       const userRes = await client.query<{ id: string }>(
         `INSERT INTO auth.users (
@@ -468,8 +485,8 @@ describe("Migration 106 — Storage-Bucket + View", () => {
            '00000000-0000-0000-0000-000000000000', gen_random_uuid(),
            'authenticated', 'authenticated',
            'mt2-test-' || substr(gen_random_uuid()::text, 1, 8) || '@onboarding.test', '',
-           jsonb_build_object('tenant_id', $1::text, 'role', 'tenant_admin'),
            '{}'::jsonb,
+           jsonb_build_object('tenant_id', $1::text, 'role', 'tenant_admin'),
            now(), now()
          )
          RETURNING id`,
