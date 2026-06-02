@@ -239,7 +239,9 @@ describe("Migration 106 — Schema (4 Tabellen)", () => {
             AND conname  = 'fk_email_message_thread'`,
       );
       expect(res.rowCount).toBe(1);
-      expect(res.rows[0].pg_get_constraintdef).toContain("REFERENCES public.email_thread");
+      // pg_get_constraintdef rendert ohne `public.`-Prefix wenn das Default-Schema
+      // im search_path ist (was bei Supabase-Default-Setup der Fall ist).
+      expect(res.rows[0].pg_get_constraintdef).toContain("REFERENCES email_thread");
       expect(res.rows[0].pg_get_constraintdef).toContain("ON DELETE SET NULL");
     });
   });
@@ -370,15 +372,17 @@ describe("Migration 106 — capture_mode CHECK", () => {
   it("INSERT capture_session mit capture_mode='email_bulk' wird akzeptiert", async () => {
     await withTestDb(async (client) => {
       await applyMigration106(client);
-      // tenant + capture_session-Setup im selben TX-Scope
+      // tenant + capture_session-Setup im selben TX-Scope.
+      // capture_session.template_id ist NOT NULL — Subquery auf bestehendes
+      // Template (V1/V6.3/V8.0 sind in jedem Supabase-Schema vorhanden).
       const tenantRes = await client.query<{ id: string }>(
         `INSERT INTO public.tenants (name) VALUES ($1) RETURNING id`,
         ["V9-mt2-test-tenant"],
       );
       const tenantId = tenantRes.rows[0].id;
       const sessionRes = await client.query<{ capture_mode: string }>(
-        `INSERT INTO public.capture_session (tenant_id, capture_mode)
-         VALUES ($1, 'email_bulk')
+        `INSERT INTO public.capture_session (tenant_id, template_id, capture_mode)
+         VALUES ($1, (SELECT id FROM public.template LIMIT 1), 'email_bulk')
          RETURNING capture_mode`,
         [tenantId],
       );
@@ -403,7 +407,8 @@ describe("Migration 106 — Storage-Bucket + View", () => {
       );
       expect(res.rowCount).toBe(1);
       expect(res.rows[0].public).toBe(false);
-      expect(res.rows[0].file_size_limit).toBe(524288000);
+      // file_size_limit ist bigint -> pg liefert als String, daher Number(...)
+      expect(Number(res.rows[0].file_size_limit)).toBe(524288000);
       expect(res.rows[0].allowed_mime_types).toEqual(
         expect.arrayContaining(["application/mbox", "message/rfc822"]),
       );
@@ -442,13 +447,16 @@ describe("Migration 106 — Storage-Bucket + View", () => {
       );
       expect(viewRes.rowCount).toBe(1);
 
-      // Smoke: 1 completed-Run + 1 failed-Run → View zeigt nur completed
+      // Smoke: 1 completed-Run + 1 failed-Run → View zeigt nur completed.
+      // tenant zuerst, weil handle_new_user-Trigger auf auth.users den Wert
+      // tenant_id aus raw_app_meta_data liest.
       const tenantRes = await client.query<{ id: string }>(
         `INSERT INTO public.tenants (name) VALUES ($1) RETURNING id`,
         ["V9-mt2-cost-test"],
       );
       const tenantId = tenantRes.rows[0].id;
-      // auth.users-Schema von Supabase erfordert viele NOT-NULL Spalten —
+      // auth.users-Schema von Supabase erfordert viele NOT-NULL Spalten +
+      // handle_new_user-Trigger verlangt tenant_id + role in raw_app_meta_data.
       // Pattern aus src/__tests__/rls/v4-fixtures.ts (mkUser) reused.
       const userRes = await client.query<{ id: string }>(
         `INSERT INTO auth.users (
@@ -460,10 +468,12 @@ describe("Migration 106 — Storage-Bucket + View", () => {
            '00000000-0000-0000-0000-000000000000', gen_random_uuid(),
            'authenticated', 'authenticated',
            'mt2-test-' || substr(gen_random_uuid()::text, 1, 8) || '@onboarding.test', '',
-           '{}'::jsonb, '{}'::jsonb,
+           jsonb_build_object('tenant_id', $1::text, 'role', 'tenant_admin'),
+           '{}'::jsonb,
            now(), now()
          )
          RETURNING id`,
+        [tenantId],
       );
       const userId = userRes.rows[0].id;
       await client.query(
