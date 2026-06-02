@@ -1,5 +1,25 @@
 # Known Issues
 
+### ISSUE-089 — V9 SLC-165 MT-5 Worker re-validiert `storage_path` nicht gegen `${tenant_id}/`-Prefix (Defense-in-depth-Luecke)
+- Status: open
+- Severity: Low
+- Area: V9 SLC-165 MT-5 / src/workers/bulk-email/handle-parse-job.ts:114-169
+- Summary: `executeEmailBulkParse` liest `run.storage_path` aus DB-Load (L114) und uebergibt direkt an `admin.storage.from("bulk-email").download(path)` (L167-169). Annahme: MT-4-Caller hat den Path mit `${tenant_id}/`-Prefix gebaut. Worker selbst validiert das nicht.
+- Impact: Wenn ein zukuenftiger Bug in MT-4-Caller, direkter DB-INSERT durch Admin-Operations oder eine zukuenftige Migration einen `storage_path` ohne tenant_id-Prefix erzeugt, koennte der Worker via service_role eine Datei eines anderen Tenants laden. Defense-in-depth fehlt im Worker-Code selbst.
+- Workaround: Bestehender MT-4-Caller baut den Path korrekt; aktuell kein Live-Risk. Defense-in-depth-Luecke nur theoretisch.
+- Next Action: `if (!run.storage_path.startsWith(`${run.tenant_id}/`)) throw new Error("storage_path tenant prefix mismatch");` in handle-parse-job.ts zwischen Load (L116) und Status-Skip-Check (L127) einbauen. ~2 Zeilen. Empfohlen in Gesamt-/qa SLC-165 vor Master-Merge oder als 2-Zeilen-Mini-Fix vor MT-6.
+- Quelle: RPT-386 Finding F-2.
+
+### ISSUE-088 — V9 SLC-165 MT-5 rpc_complete_ai_job ohne Error-Check auf Status-Skip-Pfad
+- Status: open
+- Severity: Low
+- Area: V9 SLC-165 MT-5 / src/workers/bulk-email/handle-parse-job.ts:135
+- Summary: Im Status-Skip-Branch (bulk_run.status != 'uploaded', L127-137) wird `adminClient.rpc("rpc_complete_ai_job", { p_job_id: job.id })` ohne Error-Check aufgerufen. Im Happy-Path L211-219 wird derselbe RPC explizit error-checked + re-throwt. Asymmetrie zwischen den Branches.
+- Impact: Wenn rpc_complete_ai_job auf dem Skip-Pfad fehlschlaegt, bleibt der ai_job in pending-Status. Round-Robin pickt ihn wieder auf, hit gleichen Skip-Pfad, repeat. Self-healing aber Log-Spam und unsichtbare Worker-Schleife.
+- Workaround: Praktisch kein Live-Impact, weil Skip-Pfad nur bei re-enqueued bulk_runs feuert (selten) und rpc_complete_ai_job-Fehler grundsaetzlich selten sind.
+- Next Action: Analog zum Happy-Path Error-Check + Re-Throw ergaenzen. 2-3 Zeilen. Empfohlen in Gesamt-/qa SLC-165 vor Master-Merge oder als 2-Zeilen-Mini-Fix vor MT-6.
+- Quelle: RPT-386 Finding F-1.
+
 ### ISSUE-087 — V9 SLC-165 MT-4 Next.js Server-Action `bodySizeLimit` nicht konfiguriert — alle Upload-Files >1 MB scheitern an HTTP-Pipeline
 - Status: resolved
 - Resolution Date: 2026-06-02
