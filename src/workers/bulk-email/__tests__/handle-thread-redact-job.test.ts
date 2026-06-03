@@ -551,6 +551,60 @@ describe("executeEmailBulkThreadRedact", () => {
       expect(failedUpdate).toBeDefined();
       expect(failedUpdate?.patch.failure_reason).toMatch(/thread_redact_error/);
       expect(failedUpdate?.patch.failure_reason).toMatch(/Bedrock-timeout/);
+
+      // V9 SLC-166 MT-7 L-1 Code-Defense: per-Thread thread_status='failed'
+      // wird fuer in-flight-Threads gesetzt. Hier 1 Thread, Bedrock-Call
+      // schlaegt fehl bevor UPDATE auf 'redacted' geschieht → der Thread
+      // bleibt im inProgressThreadIds-Set und wird auf 'failed' geflippt.
+      const threadFailedUpdate = state.updates.find(
+        (u) =>
+          u.table === "email_thread" &&
+          u.patch.thread_status === "failed" &&
+          u.filter.op === "in",
+      );
+      expect(threadFailedUpdate).toBeDefined();
+      expect(threadFailedUpdate?.filter.val).toEqual(["thread-1"]);
+    });
+
+    it("L-1 Code-Defense: nur in-flight Threads (NOT 'redacted') flippen auf 'failed'", async () => {
+      // Setup: 2 separate Threads (kein Reply, beide root). Erster Thread laeuft
+      // sauber durch chatCaller; zweiter Thread crasht. Nur Thread 2 darf in
+      // L-1-Defense auf 'failed', Thread 1 ist schon 'redacted'.
+      const msgs = [
+        makeMessage("a", { subject: "Thread A" }),
+        makeMessage("b", {
+          subject: "Thread B",
+          date: "2026-06-03T11:00:00.000Z",
+        }),
+      ];
+      let callCount = 0;
+      const chatCaller: ChatCaller = (async (_msgs, _opts) => {
+        callCount += 1;
+        if (callCount === 1) return "Thread A redacted";
+        throw new Error("Bedrock-fail-mid-batch");
+      }) as ChatCaller;
+      const { client, state } = makeAdminStub({
+        bulkRun: HAPPY_BULK_RUN,
+        messages: msgs,
+      });
+
+      await expect(
+        executeEmailBulkThreadRedact(makeJob(), {
+          adminClient: client as never,
+          chatCaller,
+        }),
+      ).rejects.toThrow(/Bedrock-fail-mid-batch/);
+
+      const threadFailedUpdate = state.updates.find(
+        (u) =>
+          u.table === "email_thread" &&
+          u.patch.thread_status === "failed" &&
+          u.filter.op === "in",
+      );
+      expect(threadFailedUpdate).toBeDefined();
+      // Nur Thread 2 (im redacting-State waehrend Crash); Thread 1 ist schon
+      // 'redacted' und NICHT in der L-1 Defense-Liste.
+      expect(threadFailedUpdate?.filter.val).toEqual(["thread-2"]);
     });
 
     it("ai_cost_ledger INSERT-Fail is non-fatal", async () => {

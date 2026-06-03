@@ -114,6 +114,13 @@ interface ThreadRedactSummary {
   threadSkippedCount: number;
   emailRedactedCount: number;
   totalUsdCost: number;
+  /**
+   * V9 SLC-166 MT-7 L-1 Code-Defense: Thread-DB-IDs, die im aktuellen Worker-
+   * Lauf INSERTed wurden und noch NICHT erfolgreich auf 'redacted' geflippt
+   * sind. Bei einem Crash im outer try wird der catch-Block diese Threads
+   * auf 'failed' setzen (Spec L179 — per-Thread Crash-State).
+   */
+  inProgressThreadIds: Set<string>;
 }
 
 function isUuid(value: unknown): value is string {
@@ -138,6 +145,14 @@ export async function executeEmailBulkThreadRedact(
   const resolveTenantDomain =
     deps.tenantDomainResolver ?? defaultTenantDomainResolver;
   const startMs = Date.now();
+
+  // V9 SLC-166 MT-7 L-1 Code-Defense: per-Thread "in flight"-Tracking. Wird
+  // unten an processThreads weitergereicht; Set wird live mutiert (push bei
+  // INSERT email_thread('redacting'), pop bei erfolgreichem UPDATE auf
+  // 'redacted'). Bei Crash setzt der catch-Block die verbliebenen IDs auf
+  // 'failed' (Spec L179 — per-Thread Crash-State, ergaenzt zum Run-Level-
+  // Fail aus MT-6).
+  const inProgressThreadIds = new Set<string>();
 
   const payload = job.payload as unknown as EmailBulkThreadRedactPayload;
   if (!payload || !isUuid(payload.bulk_run_id)) {
@@ -256,6 +271,7 @@ export async function executeEmailBulkThreadRedact(
       messages,
       tenantDomain,
       chatCaller,
+      inProgressThreadIds,
     );
 
     // 9. Skip-Count = bestehende Threads die wir wegen Idempotenz nicht
@@ -310,6 +326,31 @@ export async function executeEmailBulkThreadRedact(
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err);
     const failureReason = `thread_redact_error: ${reason}`;
+
+    // V9 SLC-166 MT-7 L-1 Code-Defense: in-flight email_thread-Rows auf
+    // 'failed' setzen (Spec L179). Best-effort — ein DB-Fehler hier wird
+    // geloggt aber nicht re-thrown, weil der Run-Level-Fail-State unten die
+    // primaere Recovery-Quelle ist und Idempotency-Filter beim Re-Run
+    // 'redacting'-Stale-Rows ohnehin erkennt.
+    if (inProgressThreadIds.size > 0) {
+      try {
+        await adminClient
+          .from("email_thread")
+          .update({ thread_status: "failed" })
+          .in("id", Array.from(inProgressThreadIds));
+      } catch (threadFailErr) {
+        captureException(threadFailErr, {
+          source: LOG_SOURCE,
+          metadata: {
+            jobId: job.id,
+            bulkRunId,
+            phase: "set-thread-status-failed",
+            inProgressCount: inProgressThreadIds.size,
+          },
+        });
+      }
+    }
+
     try {
       await adminClient
         .from("email_bulk_run")
@@ -358,12 +399,14 @@ async function processThreads(
   messages: EmailMessageRow[],
   tenantDomain: string | undefined,
   chatCaller: ChatCaller,
+  inProgressThreadIds: Set<string>,
 ): Promise<ThreadRedactSummary> {
   const summary: ThreadRedactSummary = {
     threadInsertedCount: 0,
     threadSkippedCount: 0,
     emailRedactedCount: 0,
     totalUsdCost: 0,
+    inProgressThreadIds,
   };
 
   // Lookup: message_id (RFC-5322) -> EmailMessageRow.
@@ -398,6 +441,10 @@ async function processThreads(
       );
     }
     const threadDbId = (insertedRow as { id: string }).id;
+
+    // V9 SLC-166 MT-7 L-1 Code-Defense: Thread ist jetzt 'redacting' und
+    // in flight. Bei Crash bis vor dem 'redacted'-UPDATE muss er auf 'failed'.
+    inProgressThreadIds.add(threadDbId);
 
     // 2. Map die Email-Message-Rows fuer diesen Thread.
     const threadEmails: EmailForRedaction[] = [];
@@ -455,6 +502,10 @@ async function processThreads(
         `email_bulk_thread_redact: email_thread UPDATE(redacted) failed (thread_db_id=${threadDbId}): ${redactUpdateError.message}`,
       );
     }
+
+    // V9 SLC-166 MT-7 L-1 Code-Defense: Thread ist jetzt 'redacted' und nicht
+    // mehr in flight. Aus der Crash-Recovery-Liste entfernen.
+    inProgressThreadIds.delete(threadDbId);
 
     // 6. UPDATE email_message.pii_redacted=true fuer alle Thread-Member.
     if (threadDbIds.length > 0) {
