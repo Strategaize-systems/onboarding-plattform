@@ -436,6 +436,228 @@ describe("V9 RLS email_thread — 4 Rollen", () => {
 });
 
 // ============================================================================
+// email_thread MT-6 Sensitive-Spalten + Status-Maschine — +8 Tests (SLC-166 MT-7)
+//
+// Die obigen 6 email_thread-Cases decken die Basics (Cross-Tenant SELECT/INSERT/
+// UPDATE/default-deny) ab. MT-6 fuehrt zwei MT-6-spezifische RLS-relevante
+// Aspekte ein, die hier ergaenzt werden:
+//
+// 1. Sensitive Spalten: `redacted_body` (TEXT) + `participant_pseudonyms`
+//    (JSONB). Beide enthalten potentielle PII (Pseudonyme-Mapping enthaelt die
+//    Klartext-Email-Adresse als Map-Key). Die SELECT-Policy muss auch fuer
+//    diese Spalten greifen — Cross-Tenant-Read darf weder den Spalten-Wert
+//    noch ein Pattern-Leakage erlauben.
+// 2. Status-Maschine: thread_status durchlaeuft 'aggregated' → 'redacting' →
+//    'redacted' (Happy Path) oder 'redacting' → 'failed' (Crash, Spec L179).
+//    Die UPDATE-Policy muss alle 4 Werte zulassen, Cross-Tenant-UPDATE muss
+//    weiterhin 0 Rows liefern.
+//
+// Setup-Pattern: nach seedV9BulkEmailFixtures UPDATE-en wir die Threads als
+// Superuser auf 'redacted' + redacted_body + participant_pseudonyms. Dann
+// kommt withJwtContext fuer den Pen-Test.
+// ============================================================================
+
+const REDACTED_BODY_PLACEHOLDER =
+  "From: P1\nTo: P2\nSubject: Anfrage\n\nHallo P2, ich melde mich wegen der Sache. Gruss P1.";
+
+const PARTICIPANT_PSEUDONYMS_PLACEHOLDER = {
+  "alice@example.com": "P1",
+  "bob@example.com": "P2",
+};
+
+async function applyRedactedFixturesToAllThreads(
+  client: Client,
+  threadAId: string,
+  threadBId: string,
+): Promise<void> {
+  await client.query(
+    `UPDATE public.email_thread
+        SET redacted_body          = $1,
+            participant_pseudonyms = $2,
+            thread_status          = 'redacted'
+      WHERE id IN ($3, $4)`,
+    [
+      REDACTED_BODY_PLACEHOLDER,
+      JSON.stringify(PARTICIPANT_PSEUDONYMS_PLACEHOLDER),
+      threadAId,
+      threadBId,
+    ],
+  );
+}
+
+describe("V9 RLS email_thread MT-6 — Sensitive-Spalten + Status-Maschine (+8 Cases)", () => {
+  // --- Cluster A: Sensitive-Spalten Read-Isolation (3 Cases) ---
+
+  it("strategaize_admin sieht redacted_body + participant_pseudonyms cross-tenant", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV9BulkEmailFixtures(client);
+      await applyRedactedFixturesToAllThreads(client, f.threadA, f.threadB);
+      await withJwtContext(client, f.strategaizeAdminUserId, async () => {
+        const res = await client.query<{
+          id: string;
+          redacted_body: string | null;
+          participant_pseudonyms: Record<string, string> | null;
+        }>(
+          `SELECT id, redacted_body, participant_pseudonyms
+             FROM public.email_thread
+            WHERE id IN ($1, $2)
+            ORDER BY id`,
+          [f.threadA, f.threadB],
+        );
+        expect(res.rowCount).toBe(2);
+        for (const row of res.rows) {
+          expect(row.redacted_body).toContain("P1");
+          expect(row.redacted_body).toContain("P2");
+          expect(row.participant_pseudonyms).toMatchObject(
+            PARTICIPANT_PSEUDONYMS_PLACEHOLDER,
+          );
+        }
+      });
+    });
+  });
+
+  it("tenant_admin sieht eigene redacted_body + participant_pseudonyms", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV9BulkEmailFixtures(client);
+      await applyRedactedFixturesToAllThreads(client, f.threadA, f.threadB);
+      await withJwtContext(client, f.tenantAdminAUserId, async () => {
+        const res = await client.query<{
+          redacted_body: string | null;
+          participant_pseudonyms: Record<string, string> | null;
+        }>(
+          `SELECT redacted_body, participant_pseudonyms
+             FROM public.email_thread
+            WHERE id = $1`,
+          [f.threadA],
+        );
+        expect(res.rowCount).toBe(1);
+        expect(res.rows[0].redacted_body).toContain("P1");
+        expect(res.rows[0].participant_pseudonyms).toMatchObject(
+          PARTICIPANT_PSEUDONYMS_PLACEHOLDER,
+        );
+      });
+    });
+  });
+
+  it("tenant_admin: Cross-Tenant redacted_body + participant_pseudonyms → 0 Rows", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV9BulkEmailFixtures(client);
+      await applyRedactedFixturesToAllThreads(client, f.threadA, f.threadB);
+      await withJwtContext(client, f.tenantAdminAUserId, async () => {
+        const res = await client.query<{ redacted_body: string | null }>(
+          `SELECT redacted_body, participant_pseudonyms
+             FROM public.email_thread
+            WHERE id = $1`,
+          [f.threadB],
+        );
+        expect(res.rowCount).toBe(0);
+      });
+    });
+  });
+
+  // --- Cluster B: Status-Maschine MT-6 Transitions (3 Cases) ---
+
+  it("tenant_admin darf UPDATE thread_status 'aggregated' → 'redacting' (Worker-Start-Pfad)", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV9BulkEmailFixtures(client);
+      // Default-Fixtures sind 'aggregated' (kein vorheriger UPDATE noetig).
+      await withJwtContext(client, f.tenantAdminAUserId, async () => {
+        const res = await client.query<{ thread_status: string }>(
+          `UPDATE public.email_thread
+              SET thread_status = 'redacting'
+            WHERE id = $1
+            RETURNING thread_status`,
+          [f.threadA],
+        );
+        expect(res.rowCount).toBe(1);
+        expect(res.rows[0].thread_status).toBe("redacting");
+      });
+    });
+  });
+
+  it("tenant_admin darf UPDATE thread_status 'redacting' → 'redacted' (Happy Path)", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV9BulkEmailFixtures(client);
+      // Setup: Thread A auf 'redacting' setzen.
+      await client.query(
+        `UPDATE public.email_thread SET thread_status = 'redacting' WHERE id = $1`,
+        [f.threadA],
+      );
+      await withJwtContext(client, f.tenantAdminAUserId, async () => {
+        const res = await client.query<{ thread_status: string }>(
+          `UPDATE public.email_thread
+              SET thread_status = 'redacted'
+            WHERE id = $1
+            RETURNING thread_status`,
+          [f.threadA],
+        );
+        expect(res.rowCount).toBe(1);
+        expect(res.rows[0].thread_status).toBe("redacted");
+      });
+    });
+  });
+
+  it("tenant_admin darf UPDATE thread_status 'redacting' → 'failed' (Crash-Pfad, L-1)", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV9BulkEmailFixtures(client);
+      // Setup: Thread A auf 'redacting' setzen.
+      await client.query(
+        `UPDATE public.email_thread SET thread_status = 'redacting' WHERE id = $1`,
+        [f.threadA],
+      );
+      await withJwtContext(client, f.tenantAdminAUserId, async () => {
+        const res = await client.query<{ thread_status: string }>(
+          `UPDATE public.email_thread
+              SET thread_status = 'failed'
+            WHERE id = $1
+            RETURNING thread_status`,
+          [f.threadA],
+        );
+        expect(res.rowCount).toBe(1);
+        expect(res.rows[0].thread_status).toBe("failed");
+      });
+    });
+  });
+
+  // --- Cluster C: Default-Deny auf MT-6-Spalten (2 Cases) ---
+
+  it("tenant_member: SELECT redacted_body + participant_pseudonyms → 0 Rows", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV9BulkEmailFixtures(client);
+      await applyRedactedFixturesToAllThreads(client, f.threadA, f.threadB);
+      await withJwtContext(client, f.tenantMemberAUserId, async () => {
+        const res = await client.query<{ redacted_body: string | null }>(
+          `SELECT redacted_body, participant_pseudonyms
+             FROM public.email_thread
+            WHERE id IN ($1, $2)`,
+          [f.threadA, f.threadB],
+        );
+        expect(res.rowCount).toBe(0);
+      });
+    });
+  });
+
+  it("employee: UPDATE thread_status → 0 Rows (default-deny via RLS USING)", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedV9BulkEmailFixtures(client);
+      await withJwtContext(client, f.employeeAUserId, async () => {
+        // RLS USING-Clause maskiert die Row vor dem UPDATE — kein WITH-CHECK-
+        // Reject, sondern 0 Rows. Pattern analog der Cross-Cut-Defense fuer
+        // email_message (Test L589-604).
+        const res = await client.query(
+          `UPDATE public.email_thread
+              SET thread_status = 'failed'
+            WHERE id = $1
+            RETURNING id`,
+          [f.threadA],
+        );
+        expect(res.rowCount).toBe(0);
+      });
+    });
+  });
+});
+
+// ============================================================================
 // email_pattern — 6 Tests
 // ============================================================================
 
