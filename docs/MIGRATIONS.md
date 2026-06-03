@@ -4,7 +4,19 @@ Die aktuelle DB-Struktur entspricht dem Stand von Blueprint V3.4 (Migration 020)
 
 Der uebernommene Blueprint-Stand ist noch nicht auf einer Onboarding-Plattform-Instanz ausgefuehrt worden — die erste Hetzner-Migration geschieht mit SLC-001 (Schema-Fundament).
 
-### MIG-052 — V9 SLC-V9-D `vw_bulk_email_cost_monthly` View + RPCs (Migration 107, PLANNED)
+### MIG-053 — V9 SLC-166 MT-6 ai_cost_ledger role + ai_jobs.job_type CHECK extensions (Migration 108, PLANNED)
+- Date: PLANNED 2026-06-03 (Code-Side ready, LIVE-Apply deferred bis Founder-Pause-Window analog Migration 107)
+- Scope:
+  - `108_v9_thread_redact_role_and_job_types.sql` — Atomare BEGIN/COMMIT-Transaction:
+    - `DROP CONSTRAINT IF EXISTS ai_cost_ledger_role_check` + `ADD CONSTRAINT ai_cost_ledger_role_check CHECK (role IS NULL OR role = ANY (ARRAY[...17 alte + 'email_bulk_pii_redact']))` — neuer 18. Wert fuer Thread-Redact-Worker Cost-Audit (Pattern wie MIG-050 v8_1_augmentation + MIG-107 email_bulk_pre_filter)
+    - `DROP CONSTRAINT IF EXISTS ai_jobs_job_type_check` + `ADD CONSTRAINT ai_jobs_job_type_check CHECK (job_type IN (...15 alte + 'email_bulk_parse' + 'email_bulk_pre_filter' + 'email_bulk_thread_redact'))` — Pre-existing-Bug-Fix aus SLC-165 MT-2 + SLC-166 MT-2 + SLC-166 MT-3. Migration 092 (MIG-034) hat ai_jobs.job_type CHECK mit 15 Werten eingefuehrt, Migration 106 (MIG-051) + Migration 107 (kein MIG-XXX-Eintrag) haben die CHECK NICHT mit-erweitert. D.h. die in SLC-165 MT-2 `email_bulk_parse`-INSERT (actions.ts) + SLC-166 MT-2 `email_bulk_pre_filter`-Auto-enqueue (handle-parse-job.ts) + SLC-166 MT-3 `email_bulk_thread_redact`-Approval-INSERT (filter-review/actions.ts) waren live mit Constraint-Violation-Risk. Code-Side-Tests umgehen das via vi.mock — Live-DB wuerde die INSERTs failen lassen. MT-6 fixt alle drei job_types in einer Migration zusammen mit dem MT-6-Hauptzweck (role-Erweiterung).
+- Affected Areas: `public.ai_cost_ledger` CHECK + `public.ai_jobs` CHECK (2 Constraints replaced). Bestehende Rows bleiben valide (additive Erweiterung). RLS-Policies unbetroffen. Keine Schema-Aenderung an Tabellen.
+- Reason: SLC-166 MT-6 Thread-Redact-Worker schreibt pro V5-PII-Bedrock-Call einen ai_cost_ledger-Eintrag mit role='email_bulk_pii_redact'. Ohne MIG-053 wuerde der INSERT mit `ai_cost_ledger_role_check`-Violation fehlschlagen (non-fatal-pattern faengt es zwar, aber Audit waere weg). Zusaetzlich: ohne ai_jobs.job_type CHECK-Erweiterung wuerde sowohl der Thread-Redact-Worker-Trigger (MT-3 filter-review Approval-Button) als auch die SLC-165/166 MT-1/MT-2 enqueue-Pfade live mit `ai_jobs_job_type_check`-Violation fehlschlagen. MT-6-Trigger wuerde nie ankommen.
+- Risk: S — additive Constraint-Erweiterung 2x. Kein Datenmigrations-Bedarf, keine Policy-Aenderung. 0 Auswirkung auf existing roles/job_types.
+- Rollback Notes: Original-Constraints aus MIG-107 (ai_cost_ledger 17 Werte) + MIG-092 (ai_jobs 15 Werte) wiederherstellen — wuerde V9-Pipeline blockieren aber nicht zerstoeren (bestehende Rows in beiden Tabellen bleiben).
+- Apply-Procedure: Per `.claude/rules/sql-migration-hetzner.md` Pattern, identisch zu MIG-050/107: base64 + ssh + `docker exec -i $(docker ps --format '{{.Names}}' | grep ^supabase-db) psql -U postgres -d postgres < /tmp/m108.sql`. Verify: `SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conname IN ('ai_cost_ledger_role_check', 'ai_jobs_job_type_check');`
+
+### MIG-052 — V9 SLC-V9-D `vw_bulk_email_cost_monthly` View + RPCs (Migration 107, PLANNED — OBSOLET)
 - Date: PLANNED (2026-06-XX) — Cost-Aggregation-View + GRANT-Pattern fuer Tenant-Monatscap-Enforcement
 - Scope:
   - `107_v9_bulk_email_cost_view.sql` — `CREATE VIEW vw_bulk_email_cost_monthly` (SELECT tenant_id + date_trunc('month', created_at) AS month + SUM(total_cost_eur) + COUNT(*) FROM email_bulk_run WHERE status != 'failed' GROUP BY ...)
