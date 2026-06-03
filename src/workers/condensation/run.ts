@@ -21,6 +21,7 @@ import { handleMapSubtopicsJob } from "../walkthrough/handle-map-subtopics-job";
 import { handleLeadPushRetryJob } from "../lead-push/handle-job";
 import { handleEmailBulkParseJob } from "../bulk-email/handle-parse-job";
 import { handleEmailBulkPreFilterJob } from "../bulk-email/handle-pre-filter-job";
+import { handleEmailBulkThreadRedactJob } from "../bulk-email/handle-thread-redact-job";
 
 // Validate required environment variables
 const REQUIRED_ENV = [
@@ -105,6 +106,7 @@ async function main(): Promise<void> {
   console.log("[worker] lead_push_retry handler registered");
   console.log("[worker] email_bulk_parse handler registered");
   console.log("[worker] email_bulk_pre_filter handler registered");
+  console.log("[worker] email_bulk_thread_redact handler registered");
   validateEnv();
   setupShutdown();
 
@@ -126,7 +128,8 @@ async function main(): Promise<void> {
     handleMapSubtopicsJob,
     handleLeadPushRetryJob,
     handleEmailBulkParseJob,
-    handleEmailBulkPreFilterJob
+    handleEmailBulkPreFilterJob,
+    handleEmailBulkThreadRedactJob
   );
 }
 
