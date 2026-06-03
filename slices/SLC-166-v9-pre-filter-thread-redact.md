@@ -174,7 +174,7 @@ Output: alle content+unclear-Emails sind klassifiziert + GF-approved, alle Threa
   - INSERT email_thread Rows + UPDATE email_message.thread_id per FK
   - PII-Redaction per MT-5 pro Thread → UPDATE email_thread.participant_pseudonyms + redacted_body + thread_status='redacted'
   - UPDATE email_message.pii_redacted=true pro Thread-Member
-  - INSERT ai_cost_ledger pro V5-PII-Bedrock-Call mit feature='email_bulk_pii_redact'
+  - INSERT ai_cost_ledger pro V5-PII-Bedrock-Call mit role='email_bulk_pii_redact'
   - UPDATE email_bulk_run: status='thread_redacting' am Anfang, status='thread_redacted' + thread_count=N am Ende
   - Bei Bedrock-Fail: status='failed' + failure_reason='thread_redact_error', betroffener email_thread.thread_status='failed'
 - **Verification**: Vitest gegen Coolify-DB mit Mock-Bedrock:
@@ -188,7 +188,7 @@ Output: alle content+unclear-Emails sind klassifiziert + GF-approved, alle Threa
 - **Goal**: Bulk-Run-Detail-View aus SLC-165 MT-6 erweitern um Thread-Count + Redact-Status + Filter-Review-Link. RLS-Tests fuer email_thread.
 - **Files**:
   - `src/app/dashboard/bulk-email-import/[run_id]/page.tsx` (UPDATE)
-  - `__tests__/rls/v9-bulk-email.rls.test.ts` (UPDATE — +8 RLS-Cases fuer email_thread)
+  - `__tests__/rls/v9-bulk-email.rls.test.ts` (UPDATE — +8 RLS-Cases fuer email_thread: 3 Sensitive-Spalten-Read + 3 Status-Transitions + 2 Default-Deny)
 - **Expected behavior**:
   - Detail-View zeigt jetzt: Threads (X aus Y content+unclear Emails), Redact-Status (X/Y abgeschlossen), Link zu Filter-Review-UI bei status='pre_filtered'
   - Polling-Loop weiter aktiv fuer Live-Progress
@@ -218,7 +218,7 @@ Output: alle content+unclear-Emails sind klassifiziert + GF-approved, alle Threa
 - **AC-SLC-166-8**: Thread-Aggregation erzeugt korrekte Threads via RFC-5322-Headers, Single-Email-Threads + Reply-Loops + Forward-Chains alle korrekt behandelt.
 - **AC-SLC-166-9**: PII-Redaction entfernt Klarnamen + Email-Adressen + Telefonnummern aus body_text (Stichprobe 10% Threads in /qa).
 - **AC-SLC-166-10**: Participant-Pseudonyms-Map persistiert pro Thread, redacted_body Pseudonym-konform.
-- **AC-SLC-166-11**: ai_cost_ledger erhaelt Entries pro Bedrock-Call (Pre-Filter + V5-PII) mit Provider, Region, Modell, Token-Count, Cost.
+- **AC-SLC-166-11**: ai_cost_ledger erhaelt Entries pro Bedrock-Call (Pre-Filter + V5-PII) mit Provider, Modell, Token-Count, Cost. Region wird implizit ueber den MODEL_ID-Prefix `eu.` kodiert (Bedrock Cross-Region-Inference-Konvention) — ai_cost_ledger hat keine separate `region`-Spalte. Pattern-Parallel zu V5-Walkthrough-Worker (MIG-035 Schema).
 - **AC-SLC-166-12**: Confidence < 0.6 markiert Emails als `unclear` (ENV-overridable).
 - **AC-SLC-166-13**: Bedrock-Fail markiert Run/Thread als `failed`, GF kann Re-Try ausloesen ohne Doppel-Charge.
 - **AC-SLC-166-14**: Tenant-RLS verhindert Cross-Tenant-Read auf email_thread + participant_pseudonyms.
