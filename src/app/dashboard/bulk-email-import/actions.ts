@@ -327,3 +327,53 @@ export async function getBulkRunById(
   if (error || !data) return null;
   return data as unknown as BulkRunSummary;
 }
+
+export interface ThreadStatusBreakdown {
+  aggregated: number;
+  redacting: number;
+  redacted: number;
+  failed: number;
+  total: number;
+}
+
+/**
+ * V9 SLC-166 MT-7 — Live-Aggregat fuer Thread-Redact-Progress in der Detail-View.
+ *
+ * Liefert per-status-Counts ueber email_thread filtered auf bulk_run_id. Nutzt
+ * user-context Client: RLS-Policy gilt analog Detail-View (tenant_admin own,
+ * strategaize_admin cross-tenant). Bei Fehler ODER fehlendem RLS-Match liefert
+ * die Funktion null — die Detail-View rendert dann ohne Aggregat-Card.
+ *
+ * Pattern-Reuse: getBulkRunById oben (user-context + maybeSingle-Pattern).
+ */
+export async function getThreadStatusBreakdown(
+  runId: string,
+): Promise<ThreadStatusBreakdown | null> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data, error } = await supabase
+    .from("email_thread")
+    .select("thread_status")
+    .eq("bulk_run_id", runId);
+  if (error || !data) return null;
+
+  const breakdown: ThreadStatusBreakdown = {
+    aggregated: 0,
+    redacting: 0,
+    redacted: 0,
+    failed: 0,
+    total: 0,
+  };
+  for (const row of data as Array<{ thread_status: string }>) {
+    const s = row.thread_status;
+    if (s === "aggregated" || s === "redacting" || s === "redacted" || s === "failed") {
+      breakdown[s] += 1;
+      breakdown.total += 1;
+    }
+  }
+  return breakdown;
+}

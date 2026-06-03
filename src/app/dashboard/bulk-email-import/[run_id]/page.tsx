@@ -15,7 +15,14 @@
 
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, AlertCircle, CheckCircle2, Loader2, Circle } from "lucide-react";
+import {
+  ArrowLeft,
+  AlertCircle,
+  CheckCircle2,
+  Loader2,
+  Circle,
+  ArrowRight,
+} from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -27,7 +34,11 @@ import {
 } from "@/components/ui/card";
 import { AutoRefresh } from "@/app/admin/handbook/AutoRefresh";
 
-import { getBulkRunById } from "../actions";
+import {
+  getBulkRunById,
+  getThreadStatusBreakdown,
+  type ThreadStatusBreakdown,
+} from "../actions";
 import type { BulkRunStatus, BulkRunSummary } from "../helpers";
 
 interface PipelineStep {
@@ -217,6 +228,94 @@ function StatRow({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
+// V9 SLC-166 MT-7 — Thread-Aggregation-Card mit Live-Counts pro thread_status.
+//
+// Sichtbar, sobald die Pipeline mind. status='thread_redacting' erreicht hat
+// (vorher ist breakdown.total=0 und die Card waere irrelevant). Bei
+// status='pre_filtered' rendert die Card stattdessen den Filter-Review-Link.
+//
+// Aggregat-Quelle: getThreadStatusBreakdown (RLS-scoped). Auto-Refresh via
+// AutoRefresh-Komponente uebernimmt die Live-Aktualisierung.
+function ThreadAggregationCard({
+  breakdown,
+  run,
+}: {
+  breakdown: ThreadStatusBreakdown;
+  run: BulkRunSummary;
+}) {
+  const denominator =
+    run.content_emails > 0 ? run.content_emails : breakdown.total;
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Thread-Aggregation und PII-Redaction</CardTitle>
+        <CardDescription>
+          {breakdown.total > 0
+            ? "Threads, die aus content + unclear Emails aggregiert wurden."
+            : "Noch keine Threads aggregiert — laeuft mit der Pre-Filter-Approval."}
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-1">
+          <StatRow
+            label="Threads erkannt"
+            value={`${breakdown.total} (aus ${denominator} Emails)`}
+          />
+          <StatRow
+            label="Redact abgeschlossen"
+            value={`${breakdown.redacted} / ${breakdown.total}`}
+          />
+          {breakdown.redacting > 0 ? (
+            <StatRow
+              label="Redact laeuft"
+              value={`${breakdown.redacting}`}
+            />
+          ) : null}
+          {breakdown.aggregated > 0 ? (
+            <StatRow
+              label="Aggregiert (noch nicht redacted)"
+              value={`${breakdown.aggregated}`}
+            />
+          ) : null}
+          {breakdown.failed > 0 ? (
+            <StatRow
+              label="Fehlgeschlagen"
+              value={
+                <span className="text-red-600">{breakdown.failed}</span>
+              }
+            />
+          ) : null}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// V9 SLC-166 MT-7 — Inline-Banner mit Link zur Filter-Review-UI.
+// Sichtbar exklusiv waehrend status='pre_filtered' (GF-Gate vor Thread-Redact).
+function FilterReviewLinkBanner({ runId }: { runId: string }) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-lg border border-brand-primary/30 bg-brand-primary/5 p-4">
+      <div className="space-y-1">
+        <p className="text-sm font-semibold text-brand-primary">
+          Pre-Filter abgeschlossen — bitte Klassifikationen reviewen
+        </p>
+        <p className="text-sm text-slate-600">
+          Du kannst einzelne Emails korrigieren oder Bulk-Reclassify ausfuehren,
+          bevor Threads aggregiert und redacted werden.
+        </p>
+      </div>
+      <Link
+        href={`/dashboard/bulk-email-import/${runId}/filter-review`}
+        className="inline-flex items-center gap-2 rounded-md bg-brand-primary px-4 py-2 text-sm font-medium text-white hover:bg-brand-primary/90"
+      >
+        Filter-Review oeffnen
+        <ArrowRight className="h-4 w-4" />
+      </Link>
+    </div>
+  );
+}
+
 function RunStats({ run }: { run: BulkRunSummary }) {
   return (
     <div className="space-y-1">
@@ -269,7 +368,14 @@ export default async function BulkEmailRunDetailPage({
     notFound();
   }
 
+  // V9 SLC-166 MT-7 — Live-Thread-Aggregation. Parallel zum run-Load, weil
+  // unabhaengig. Bei null (RLS-Miss / DB-Fehler) rendert die Card nicht.
+  const threadBreakdown = await getThreadStatusBreakdown(runId);
+
   const pollActive = !isTerminal(run.status);
+  const showFilterReviewLink = run.status === "pre_filtered";
+  const showThreadAggregation =
+    threadBreakdown !== null && threadBreakdown.total > 0;
 
   return (
     <main className="mx-auto max-w-3xl space-y-6 px-4 py-8 sm:px-6 sm:py-10">
@@ -319,6 +425,14 @@ export default async function BulkEmailRunDetailPage({
           <PipelineProgress status={run.status} />
         </CardContent>
       </Card>
+
+      {showFilterReviewLink ? (
+        <FilterReviewLinkBanner runId={run.id} />
+      ) : null}
+
+      {showThreadAggregation && threadBreakdown ? (
+        <ThreadAggregationCard breakdown={threadBreakdown} run={run} />
+      ) : null}
 
       <Card>
         <CardHeader>
