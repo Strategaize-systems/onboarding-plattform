@@ -204,6 +204,14 @@ V9-Scope (Requirements DONE 2026-06-01 via RPT-374 + Architecture DONE 2026-06-0
 | ID | Feature | Status | Spec | Created |
 |----|---------|--------|------|---------|
 | FEAT-070 | Bulk-Email-Upload + .mbox/.eml-Parser | in_progress | [Spec](FEAT-070-bulk-email-upload-mbox-parser.md) | 2026-06-01 |
+
+## V8.0.2 Features (Cross-Repo Storage-GRANTs Hotfix-Mirror — BS-V8.13-Symmetrie)
+
+V8.0.2 = 1 Slice SLC-169 / 5 MTs / ~60-90 min. Cross-Repo-Symmetrie-Fix zu BS V8.13 SLC-894 / MIG-043. OP-Pre-Check 2026-06-03 zeigt authenticated+anon haben 0 GRANTs auf storage.objects (BS hatte vor MIG-043 wenigstens SELECT) → OP schlimmer betroffen. MIG-044-Mirror NICHT noetig (auth.users.aud-Verteilung clean). KEIN Coolify-Redeploy (0 cockpit/src-Code-Change). Pattern-Reuse-Quelle: `c:/strategaize/strategaize-business-system/docs/CROSS_REPO_V813_STORAGE_GRANTS.md`.
+
+| ID | Feature | Status | Spec | Created |
+|----|---------|--------|------|---------|
+| FEAT-075 | V8.0.2 OP Storage-GRANTs-Hotfix-Mirror (SLC-169, BL-152, ISSUE-087 closed) | deployed | — | 2026-06-03 |
 | FEAT-071 | KI-Pre-Filter-Klassifikation (Haiku) + Filter-Review-UI | in_progress | [Spec](FEAT-071-ki-pre-filter-klassifikation-haiku.md) | 2026-06-01 |
 | FEAT-072 | Thread-Aggregation + PII-Redaction-Pipeline (V5-Reuse) | in_progress | [Spec](FEAT-072-thread-aggregation-pii-redaction.md) | 2026-06-01 |
 | FEAT-073 | Pattern-Extraktion (Sonnet eu-central-1) + Curation-UI | in_progress | [Spec](FEAT-073-pattern-extraktion-sonnet-curation.md) | 2026-06-01 |

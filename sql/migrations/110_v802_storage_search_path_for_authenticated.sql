@@ -1,0 +1,54 @@
+-- =====================================================
+-- MIG-110 — V8.0.2 OP authenticated+anon search_path Storage-Fix (Cross-Repo-Symmetrie zu BS)
+-- =====================================================
+-- Slice: SLC-169 (V8.0.2 OP Storage-Hotfix-Mirror) — Deviation-Rule-2-Erweiterung
+-- Audit-Quelle: Live-Smoke MT-4 2026-06-03 hat aufgedeckt dass OP-`authenticated`-Rolle
+--   keinen `search_path` Config-Eintrag hat, waehrend BS sowohl `anon`/`authenticated`/
+--   `service_role` alle `search_path=storage, public` gesetzt haben.
+--
+-- Befund Live-Smoke 2026-06-03 post-MIG-109:
+--   - TEST-1 LIST evidence mit authenticated-JWT: HTTP 400 + RLS-Body
+--     (GRANT-Check passes MIG-109 fix verified, RLS-Defense greift)
+--   - TEST-2 INSERT evidence/<uuid>/test mit authenticated-JWT: HTTP 500
+--     `relation "objects" does not exist` (Storage-Service-Query mit authenticated-Session
+--     kann storage.objects nicht aufloesen weil search_path nur ["$user","public"])
+--   - service_role-JWT: HTTP 200 (RLS-Bypass + search_path=storage,public,extensions)
+--
+-- BS-Cross-Repo-Vergleich:
+--   BS  : anon + authenticated + service_role haben alle `search_path=storage, public`
+--   OP  : nur service_role + supabase_storage_admin haben `search_path=storage,...`,
+--         anon + authenticated haben KEINEN search_path → Postgres-default `"$user",public`
+--
+-- Das ist ein **pre-existing OP-Konfigurations-Drift** der durch MIG-109 sichtbar wird:
+-- vorher kam der 42501 GRANT-Check ZUERST (vor search_path-Resolve), jetzt kommt
+-- search_path-Resolve zuerst und failed. Cross-Repo-Symmetrie zu BS verlangt diesen Fix.
+--
+-- Fix: ALTER ROLE setzt persistente Default-search_path-Config. Idempotent
+-- (ALTER ROLE ueberschreibt bestehende Config fuer die gleichen settings).
+--
+-- Risk: LOW
+--   - ALTER ROLE betrifft nur NEUE Sessions (bestehende Sessions behalten alten search_path).
+--   - `authenticated`+`anon` sind Funktional-Rollen ohne aktive User-Logins (User-Sessions
+--     erhalten via JWT-Validation + SET LOCAL ROLE).
+--   - Cross-Repo-symmetrische Setzung — gleicher Wert wie in BS.
+--   - service_role+supabase_storage_admin bleiben unangetastet (haben bereits search_path).
+--
+-- Verify (nach Apply):
+--   SELECT rolname, rolconfig FROM pg_roles
+--    WHERE rolname IN ('authenticated','anon','service_role','supabase_storage_admin')
+--    ORDER BY rolname;
+--   -- Erwartet: authenticated + anon haben jetzt rolconfig mit search_path=storage,public
+--
+-- Anwenden via SSH+base64+psql analog .claude/rules/sql-migration-hetzner.md
+-- (als `postgres` Superuser im Container).
+
+ALTER ROLE authenticated SET search_path = storage, public;
+ALTER ROLE anon SET search_path = storage, public;
+
+-- =====================================================
+-- Verifikations-Queries (manuell, nach Apply)
+-- =====================================================
+-- SELECT rolname, rolconfig FROM pg_roles
+--   WHERE rolname IN ('authenticated','anon')
+--   ORDER BY rolname;
+--   -- Erwartet: 2 Rows, beide mit rolconfig = {search_path=storage, public}

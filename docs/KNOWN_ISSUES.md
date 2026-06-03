@@ -1,5 +1,28 @@
 # Known Issues
 
+### ISSUE-088 — OP Storage-Service authenticated-Role INSERT/UPDATE/DELETE failed mit `relation "objects" does not exist` (Storage-Knex-Pool search_path-Drift)
+- Status: open
+- Severity: High (PRE-CUSTOMER-LIVE relevant fuer User-Side-Storage-Uploads — service_role-Uploads aus Server-Code funktionieren)
+- Area: Storage-Service v1.11.13 / Knex-Pool / Postgres search_path / `SET LOCAL ROLE authenticated`
+- Discovery: 2026-06-03 waehrend V8.0.2 SLC-169 Live-Smoke (MT-4) nach MIG-109 + MIG-110 Apply. Vorher verdeckt durch ISSUE-088-Pendant GRANT-Bug (HTTP 400 mit "row-level security policy"-Cast aus 42501 GRANT-Check).
+- Summary: Storage-Service v1.11.13 Knex-Pool verbindet als `supabase_storage_admin`, macht pro Request `SET LOCAL ROLE authenticated` + JWT-Claims-Setup. Beim Wechsel zu `authenticated` wird der search_path auf den authenticated-Default zurueckgesetzt — und enthaelt **kein** `storage`-Schema. INSERT-Query nutzt unqualifiziertes `objects` → PostgreSQL `42P01 relation does not exist`. **BS hat das Problem NICHT** — vermutlich aufgrund subtiler Konfigurations-Differenz im pg-Login-Path (BS hat keine `supabase_storage_admin`-rolconfig + keinen invalid DB-Level-search_path-Eintrag). OP MIG-110 (ALTER ROLE authenticated SET search_path = storage, public) wirkt beim Storage-Knex-Pool nicht — Postgres applied ALTER-ROLE-Config nur beim LOGIN, nicht beim `SET LOCAL ROLE`.
+- Impact: User-Side Storage-Uploads via supabase-js client (mit JWT-authenticated session) failen aktuell. Server-Side uploads via service_role-Key funktionieren. **OP-Production-Impact zu pruefen**: meiste Uploads (evidence, walkthroughs, recordings, partner-branding) laufen vermutlich server-side via Server-Actions mit service_role → kein User-Impact. Falls direkter client-side upload existiert → broken.
+- Reproducer: SLC-169-Live-Smoke 2026-06-03 — authenticated-JWT INSERT auf `evidence/<uuid>/test.txt` → HTTP 500 mit "objects does not exist". service_role-JWT INSERT auf gleichen Pfad → HTTP 200.
+- Workaround: Server-Actions im Server-Side Coolify-Container nutzen service_role-Key, nicht User-Session-JWT. Bei user-side direct-upload: temporaer ueber Server-Action proxy.
+- Next Action: (a) Audit aller OP-Storage-Uploads (Server-Side vs client-side) — Code-Grep nach `supabase.storage.from(...).upload()` ohne service_role-Override. (b) Falls echter client-side-Pfad existiert: V8.0.3 Hotfix-Slice mit alternativem Fix (z.B. ALTER DATABASE postgres SET search_path = storage, public). (c) Long-Tail-Defense via V8.14 Container-Upgrade Storage v1.44.2 (vermutlich loest das Verhalten auch).
+- Related: V8.0.2 SLC-169 MT-4 Live-Smoke, V8.0.2 MIG-109 (GRANT-Fix erfolgreich), V8.0.2 MIG-110 (search_path-Defense, ohne Effekt fuer Storage-Service-Pool), BS V8.13 SLC-894 RPT-574 (Cross-Repo-Vorlage), V8.14 Container-Upgrade-Plan.
+
+### ISSUE-087 — OP Storage-Schema GRANTs fehlen fuer authenticated+anon (Cross-Repo BS-V8.13-ISSUE-088-Pendant) [RESOLVED 2026-06-03]
+- Status: resolved
+- Resolution Date: 2026-06-03
+- Resolution Slice: V8.0.2 SLC-169
+- Severity: High (PRE-CUSTOMER-LIVE PFLICHT — Cross-Repo-Symmetrie zu BS V8.13)
+- Area: Storage-Schema GRANTs / Self-Hosted Container-Versions-Drift v1.11.13
+- Resolution: V8.0.2 SLC-169 (2026-06-03). MIG-109 `109_v802_storage_schema_grants.sql` idempotent applied via SSH+base64+psql als `postgres`-Superuser. Setzt fuer `authenticated`+`anon`: GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA storage (5 Tables × 4 Privileges = 20 Rows je Rolle) + GRANT USAGE,SELECT ON ALL SEQUENCES + 4 ALTER DEFAULT PRIVILEGES + NOTIFY pgrst. Pre-Apply-Audit zeigte authenticated+anon hatten NUR SELECT auf 2 unwichtige s3_-Tables (s3_multipart_uploads + s3_multipart_uploads_parts), 0 GRANTs auf buckets/migrations/objects → OP war **schlimmer betroffen als BS** (BS hatte vor MIG-043 SELECT auf alle 5 Tables). Post-Apply-Verify: authenticated+anon haben je 20 CRUD-Privileges, pg_default_acl 4 Eintraege, 18 bestehende storage.objects-RLS-Policies unangetastet. Vitest 5/5 PASS in 39ms gegen Coolify-DB-Sidecar (node:20 im strategaize-net). Live-Smoke-Beweis: LIST evidence via authenticated-JWT kommt in RLS-Layer (HTTP 400 mit "row-level security policy" Body, vorher waere es 42501 GRANT-Check-Fail gewesen). Storage v1.11.13 castet 42501 zu Misleading-RLS-Body — Echte Wurzel war GRANT-Check, nicht RLS-Policy-Eval. Cross-Repo-Mirror via `c:/strategaize/strategaize-business-system/docs/CROSS_REPO_V813_STORAGE_GRANTS.md` 1:1 portiert.
+- Summary: OP `authenticated`+`anon` Rollen hatten fehlende Default-Supabase-GRANTs auf `storage.*`-Tabellen wegen alter Container-Version (Storage v1.11.13 + GoTrue v2.160). Storage v1.44+ setzt diese Init-Script-seitig — IS+ImSch betroffen waren daher nicht. Cross-Repo-symmetrischer Bug zu BS V8.13 ISSUE-088. OP war schlimmer betroffen (KEINE GRANTs vs BS nur-SELECT-vorher).
+- Impact: Vor Fix waren alle Storage-Operationen mit authenticated-JWT-Session broken (42501 als RLS-Body verkleidet). Nach Fix passt GRANT-Check, aber Storage-Service-Knex-Pool hat separaten search_path-Drift → siehe [[ISSUE-088]] OP fuer Folge-Bug.
+- Reports: V8.0.2 SLC-169 /backend (PARTIAL-SUCCESS — GRANT-Fix complete, search_path-Drift als ISSUE-088 separater Slice), Cross-Repo-Doc BS V8.13 SLC-894 RPT-574.
+
 ### ISSUE-086 — V8.1 Partner-Organization-Lookup verwendet falsches Schema (capture_session.partner_organization_id existiert nicht) + verdeckter Bug B (partner_organization.name existiert nicht)
 - Status: resolved
 - Resolution Date: 2026-06-01
