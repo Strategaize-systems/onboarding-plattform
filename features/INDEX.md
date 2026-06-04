@@ -203,7 +203,7 @@ V9-Scope (Requirements DONE 2026-06-01 via RPT-374 + Architecture DONE 2026-06-0
 
 | ID | Feature | Status | Spec | Created |
 |----|---------|--------|------|---------|
-| FEAT-070 | Bulk-Email-Upload + .mbox/.eml-Parser | in_progress | [Spec](FEAT-070-bulk-email-upload-mbox-parser.md) | 2026-06-01 |
+| FEAT-070 | Bulk-Email-Upload + .mbox/.eml-Parser | done | [Spec](FEAT-070-bulk-email-upload-mbox-parser.md) | 2026-06-01 |
 | FEAT-071 | KI-Pre-Filter-Klassifikation (Haiku) + Filter-Review-UI | in_progress | [Spec](FEAT-071-ki-pre-filter-klassifikation-haiku.md) | 2026-06-01 |
 | FEAT-072 | Thread-Aggregation + PII-Redaction-Pipeline (V5-Reuse) | in_progress | [Spec](FEAT-072-thread-aggregation-pii-redaction.md) | 2026-06-01 |
 | FEAT-073 | Pattern-Extraktion (Sonnet eu-central-1) + Curation-UI | in_progress | [Spec](FEAT-073-pattern-extraktion-sonnet-curation.md) | 2026-06-01 |

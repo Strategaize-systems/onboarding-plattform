@@ -15,7 +15,7 @@
       "title": "V9 FEAT-070 Bulk-Email-Upload + .mbox/.eml-Parser",
       "type": "feature",
       "priority": "high",
-      "status": "in_progress",
+      "status": "done",
       "version": "V9",
       "description": "V9.0 Feature: Upload-Foundation fuer GF-Email-Bulk-Import. GF kann .mbox-Datei (Gmail-Takeout, Outlook-Export, Thunderbird, Apple Mail) oder mehrere .eml-Dateien hochladen. mailparser-Lib persistiert pro Email Pflicht-Headers (message_id, in_reply_to, references, from, to, subject, date, body_text/html). Roh-Datei in Tenant-isoliertem Storage-Bucket (RLS-Pattern aus V2). Bulk-Run-Audit-Header in email_bulk_run. Upload-Limit Default V9.0: 500 MB / 50.000 Emails (/architecture finalisiert). Idempotenz via file_hash. Foundation-Reuse: FEAT-013 Multi-File-Upload-Pattern, FEAT-025 Capture-Mode-Hook (mode='email_bulk'). Pre-Cond: V8.1 STABLE. Spec: features/FEAT-070-bulk-email-upload-mbox-parser.md.",
       "createdAt": "2026-06-01"
