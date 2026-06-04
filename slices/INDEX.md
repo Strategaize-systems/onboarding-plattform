@@ -878,7 +878,7 @@ V9 = 4 Slices SLC-165..168 (Konsolidierung 5 -> 4 per /architecture RPT-375). GF
 
 | ID | Slice | Feature | Status | Priority | Created |
 |----|-------|---------|--------|----------|---------|
-| SLC-165 | [V9 Bulk-Email-Foundation + Upload + Parser](SLC-165-v9-foundation-upload.md) | FEAT-070 / BL-147 | planned | High | 2026-06-01 |
+| SLC-165 | [V9 Bulk-Email-Foundation + Upload + Parser](SLC-165-v9-foundation-upload.md) | FEAT-070 / BL-147 | done | High | 2026-06-01 |
 
 ## V8.0.2 Slices (Cross-Repo Storage-GRANTs Hotfix-Mirror — BS-V8.13-Symmetrie 2026-06-03)
 
@@ -887,7 +887,7 @@ V8.0.2 = 1 Slice SLC-169 / 5 MTs / ~60-90 min Code+QA+Workflow-Closure. Cross-Re
 | ID | Slice | Feature | Status | Priority | Created |
 |----|-------|---------|--------|----------|---------|
 | SLC-169 | [V8.0.2 OP Storage-Schema GRANTs Cross-Repo-Mirror](SLC-169-v802-storage-grants-cross-repo-mirror.md) | FEAT-075 / BL-152 | deployed | High | 2026-06-03 |
-| SLC-166 | [V9 Pre-Filter (Haiku) + Thread-Aggregation + PII-Redaction](SLC-166-v9-pre-filter-thread-redact.md) | FEAT-071+072 / BL-148+149 | planned | High | 2026-06-01 |
+| SLC-166 | [V9 Pre-Filter (Haiku) + Thread-Aggregation + PII-Redaction](SLC-166-v9-pre-filter-thread-redact.md) | FEAT-071+072 / BL-148+149 | in_progress | High | 2026-06-01 |
 | SLC-167 | [V9 Pattern-Extraktion (Sonnet) + Curation-UI + Cost-Cap](SLC-167-v9-pattern-curation-cost-cap.md) | FEAT-073 / BL-150 | planned | High | 2026-06-01 |
 | SLC-168 | [V9 Handbuch-Integration + Audit + Source-Attribution-View](SLC-168-v9-handbuch-integration-audit.md) | FEAT-074 / BL-151 | planned | High | 2026-06-01 |
 

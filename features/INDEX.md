@@ -203,7 +203,7 @@ V9-Scope (Requirements DONE 2026-06-01 via RPT-374 + Architecture DONE 2026-06-0
 
 | ID | Feature | Status | Spec | Created |
 |----|---------|--------|------|---------|
-| FEAT-070 | Bulk-Email-Upload + .mbox/.eml-Parser | in_progress | [Spec](FEAT-070-bulk-email-upload-mbox-parser.md) | 2026-06-01 |
+| FEAT-070 | Bulk-Email-Upload + .mbox/.eml-Parser | done | [Spec](FEAT-070-bulk-email-upload-mbox-parser.md) | 2026-06-01 |
 
 ## V8.0.2 Features (Cross-Repo Storage-GRANTs Hotfix-Mirror — BS-V8.13-Symmetrie)
 
