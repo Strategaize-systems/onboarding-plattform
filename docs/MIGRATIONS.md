@@ -4,6 +4,21 @@ Die aktuelle DB-Struktur entspricht dem Stand von Blueprint V3.4 (Migration 020)
 
 Der uebernommene Blueprint-Stand ist noch nicht auf einer Onboarding-Plattform-Instanz ausgefuehrt worden — die erste Hetzner-Migration geschieht mit SLC-001 (Schema-Fundament).
 
+### MIG-054 — V9 SLC-167 MT-1 vw_bulk_email_cost_monthly View Security-Hotfix (Migration 109, applied)
+- Date: 2026-06-04 (LIVE — applied via ssh+base64+psql -U postgres auf 159.69.207.29 `supabase-db-bwkg80w04wgccos48gcws8cs-084548596447`, atomare BEGIN/DROP/CREATE/COMMENT/GRANT×2/COMMIT durch. Post-Apply Verify: `\d+ public.vw_bulk_email_cost_monthly` zeigt `Options: security_invoker=true`, `month date`, `total_cost_eur numeric(12,4)`, `run_count integer`. Vitest gegen Coolify-DB: 7/7 PASS in 247ms auf node:22-Sidecar im `bwkg80w04wgccos48gcws8cs_strategaize-net`-Network.)
+- Scope:
+  - `109_v9_bulk_email_cost_view.sql` — Atomare BEGIN/COMMIT-Transaction:
+    - `DROP VIEW IF EXISTS public.vw_bulk_email_cost_monthly` — alte MIG-051/106-Variante ohne security_invoker (RLS-Bypass) wird entfernt
+    - `CREATE VIEW public.vw_bulk_email_cost_monthly WITH (security_invoker = true) AS SELECT tenant_id, date_trunc('month', created_at)::date AS month, SUM(total_cost_eur)::numeric(12,4) AS total_cost_eur, COUNT(*)::integer AS run_count FROM email_bulk_run WHERE status <> 'failed' GROUP BY tenant_id, ...`
+    - `COMMENT ON VIEW` — Dokumentation des MT-1-Zwecks
+    - `GRANT SELECT TO authenticated` — Tenant-Admins lesen via RLS-Filter
+    - `GRANT SELECT TO service_role` — Cron/Audit-Jobs lesen Cross-Tenant via BYPASSRLS
+- Affected Areas: `public.vw_bulk_email_cost_monthly` View (1 DROP + 1 CREATE replaced). Underlying-Table `email_bulk_run` unbetroffen. RLS-Policies auf email_bulk_run werden ab MIG-054 vom View-Caller geerbt (vorher: View lief mit Owner-Privilegien = postgres = BYPASSRLS = Cross-Tenant-Leak-Risiko).
+- Reason: Security-Hotfix + Typed-Output fuer Cost-Cap-Service in SLC-167 MT-3. Die alte MIG-051/106-View hatte `security_invoker = false` (Default) → ein authenticated-tenant-Admin haette via SELECT auf der View Cross-Tenant-Cost-Daten gesehen (RLS-Bypass via Owner-Privileg-Inheritance). Realer Impact gering, weil bis SLC-167 noch keine UI/API auf der View liest — aber pre-launch-Hotfix vor MT-3 Pflicht. Zusaetzlich: getypte Output-Spalten (::date statt timestamptz, ::numeric(12,4) statt numeric, ::integer statt bigint) fuer stabile Type-Inference im TypeScript-Cost-Cap-Service.
+- Risk: S — additive Schema-Korrektur. Idempotent via DROP IF EXISTS. Kein Datenmigrations-Bedarf, View ist abgeleitet aus email_bulk_run. Code-Konsumenten existieren noch nicht (SLC-167 MT-3 ist der erste).
+- Rollback Notes: Original-View aus MIG-051/106 wiederherstellen (`CREATE OR REPLACE VIEW ... AS SELECT tenant_id, date_trunc('month', created_at) AS month, SUM(total_cost_eur) AS total_cost_eur, COUNT(*) AS run_count FROM email_bulk_run WHERE status != 'failed' GROUP BY tenant_id, date_trunc('month', created_at)` ohne security_invoker) — wuerde RLS-Bypass wiederherstellen aber View-Funktionalitaet erhalten. Nicht empfohlen.
+- Apply-Procedure: Per `.claude/rules/sql-migration-hetzner.md` Pattern, identisch zu MIG-052/053: base64 + ssh + `docker exec -i $(docker ps --format '{{.Names}}' | grep ^supabase-db) psql -U postgres -d postgres < /tmp/m109.sql`. Verify: `\d+ public.vw_bulk_email_cost_monthly` muss `Options: security_invoker=true` zeigen.
+
 ### MIG-053 — V9 SLC-166 MT-6 ai_cost_ledger role + ai_jobs.job_type CHECK extensions (Migration 108, applied)
 - Date: 2026-06-04 (LIVE — applied via ssh+base64+psql -U postgres auf 159.69.207.29 `supabase-db-bwkg80w04wgccos48gcws8cs-084548596447`, atomare BEGIN/ALTER×4/COMMIT durch. Post-Apply Verify: `ai_cost_ledger_role_check` 18 Werte incl. `email_bulk_pre_filter` + `email_bulk_pii_redact`, `ai_jobs_job_type_check` 18 Werte incl. `email_bulk_parse` + `email_bulk_pre_filter` + `email_bulk_thread_redact`. Pre-existing-Bug-Fix Live-erfolgreich. Live-Verifikations-Stack Step 1 PASS — siehe RPT-405.)
 - Scope:

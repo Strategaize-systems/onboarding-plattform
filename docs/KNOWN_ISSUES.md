@@ -1,5 +1,16 @@
 # Known Issues
 
+### ISSUE-090 — V9 vw_bulk_email_cost_monthly View ohne security_invoker (RLS-Bypass, MIG-051/106-Erbe)
+- Status: resolved
+- Resolution Date: 2026-06-04
+- Resolution Slice: V9 SLC-167 MT-1 — MIG-054/109 LIVE
+- Severity: High
+- Area: V9 SLC-165 MT-2b / MIG-051/106 sql/migrations/106_v9_bulk_email_schema.sql Lines 451-459
+- Resolution: MIG-054/109 (Migration 109) drop+recreate die View mit `WITH (security_invoker = true)` + getypten Output-Spalten (::date, ::numeric(12,4), ::integer). Tenant_admin-Caller sehen ab jetzt nur eigene Tenant-Monats-Summen via RLS-Inheritance aus email_bulk_run; service_role bleibt Cross-Tenant via BYPASSRLS. LIVE-applied auf Coolify-DB 2026-06-04. Vitest gegen Coolify-DB 7/7 PASS (3 Schema-Existence inkl. security_invoker-Reloption-Check + 4 Aggregation-Tests).
+- Summary: Die View `vw_bulk_email_cost_monthly` wurde in MIG-051/106 angelegt mit `CREATE OR REPLACE VIEW ... AS SELECT ...` ohne `WITH (security_invoker = true)`. Default in PostgreSQL: View laeuft mit Owner-Privilegien (View wurde via `psql -U postgres` erstellt → Owner = postgres = Superuser = BYPASSRLS). Tenant-Admin-User haetten via SELECT auf der View Cross-Tenant-Cost-Aggregat-Daten gesehen (Tenant-A's Pre-Filter+Pattern-Cost in Tenant-B's Cockpit sichtbar).
+- Impact: Cross-Tenant-Cost-Leak-Potenzial. Realer Impact: gering, weil bis SLC-167 MT-1 noch kein Production-Code aus der View liest (Cost-Cap-Service in MT-3 ist der erste Konsument, und Cron-/Audit-Lese-Jobs nutzen service_role). Aber RLS-Bypass haette mit MT-3 sofort live geschnipsteten Cross-Tenant-Leak gehabt.
+- Quelle: SLC-167 MT-1 Pre-Migration-Inspection 2026-06-04 — `\d+` zeigte alte View ohne Options-Block. Sicherheitsrelevant genug fuer Pre-MT-3-Hotfix.
+
 ### ISSUE-089 — V9 SLC-165 MT-5 Worker re-validiert `storage_path` nicht gegen `${tenant_id}/`-Prefix (Defense-in-depth-Luecke)
 - Status: resolved
 - Resolution Date: 2026-06-02
