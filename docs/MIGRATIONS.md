@@ -4,8 +4,8 @@ Die aktuelle DB-Struktur entspricht dem Stand von Blueprint V3.4 (Migration 020)
 
 Der uebernommene Blueprint-Stand ist noch nicht auf einer Onboarding-Plattform-Instanz ausgefuehrt worden — die erste Hetzner-Migration geschieht mit SLC-001 (Schema-Fundament).
 
-### MIG-053 — V9 SLC-166 MT-6 ai_cost_ledger role + ai_jobs.job_type CHECK extensions (Migration 108, PLANNED)
-- Date: PLANNED 2026-06-03 (Code-Side ready, LIVE-Apply deferred bis Founder-Pause-Window analog Migration 107)
+### MIG-053 — V9 SLC-166 MT-6 ai_cost_ledger role + ai_jobs.job_type CHECK extensions (Migration 108, applied)
+- Date: 2026-06-04 (LIVE — applied via ssh+base64+psql -U postgres auf 159.69.207.29 `supabase-db-bwkg80w04wgccos48gcws8cs-084548596447`, atomare BEGIN/ALTER×4/COMMIT durch. Post-Apply Verify: `ai_cost_ledger_role_check` 18 Werte incl. `email_bulk_pre_filter` + `email_bulk_pii_redact`, `ai_jobs_job_type_check` 18 Werte incl. `email_bulk_parse` + `email_bulk_pre_filter` + `email_bulk_thread_redact`. Pre-existing-Bug-Fix Live-erfolgreich. Live-Verifikations-Stack Step 1 PASS — siehe RPT-405.)
 - Scope:
   - `108_v9_thread_redact_role_and_job_types.sql` — Atomare BEGIN/COMMIT-Transaction:
     - `DROP CONSTRAINT IF EXISTS ai_cost_ledger_role_check` + `ADD CONSTRAINT ai_cost_ledger_role_check CHECK (role IS NULL OR role = ANY (ARRAY[...17 alte + 'email_bulk_pii_redact']))` — neuer 18. Wert fuer Thread-Redact-Worker Cost-Audit (Pattern wie MIG-050 v8_1_augmentation + MIG-107 email_bulk_pre_filter)
@@ -16,8 +16,8 @@ Der uebernommene Blueprint-Stand ist noch nicht auf einer Onboarding-Plattform-I
 - Rollback Notes: Original-Constraints aus MIG-107 (ai_cost_ledger 17 Werte) + MIG-092 (ai_jobs 15 Werte) wiederherstellen — wuerde V9-Pipeline blockieren aber nicht zerstoeren (bestehende Rows in beiden Tabellen bleiben).
 - Apply-Procedure: Per `.claude/rules/sql-migration-hetzner.md` Pattern, identisch zu MIG-050/107: base64 + ssh + `docker exec -i $(docker ps --format '{{.Names}}' | grep ^supabase-db) psql -U postgres -d postgres < /tmp/m108.sql`. Verify: `SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conname IN ('ai_cost_ledger_role_check', 'ai_jobs_job_type_check');`
 
-### MIG-052 — V9 SLC-166 MT-2 ai_cost_ledger.role + 'email_bulk_pre_filter' (Migration 107, PLANNED)
-- Date: PLANNED (Code-Side ready seit SLC-166 MT-2 RPT-389/390 commit `8a8eb96` 2026-06-02; LIVE-Apply deferred bis Founder-Pause-Window — gemeinsam mit Migration 108 per MIG-053 applizierbar; Records-Eintrag retroactively dokumentiert 2026-06-03 in SLC-166 MT-8 records-cleanup per RPT-398 P-1)
+### MIG-052 — V9 SLC-166 MT-2 ai_cost_ledger.role + 'email_bulk_pre_filter' (Migration 107, applied)
+- Date: 2026-06-04 (LIVE — applied via ssh+base64+psql -U postgres auf 159.69.207.29 `supabase-db-bwkg80w04wgccos48gcws8cs-084548596447`, atomare BEGIN/ALTER×2/COMMIT durch. Post-Apply Verify: `ai_cost_ledger_role_check` 17 Werte incl. neu `email_bulk_pre_filter`. Anschliessend MIG-053 LIVE-Apply hat den Constraint auf 18 Werte erweitert. Live-Verifikations-Stack Step 1 PASS — siehe RPT-405.)
 - Scope:
   - `107_v9_cost_ledger_email_bulk_pre_filter_role.sql` — Atomare BEGIN/COMMIT-Transaction:
     - `DROP CONSTRAINT IF EXISTS ai_cost_ledger_role_check` + `ADD CONSTRAINT ai_cost_ledger_role_check CHECK (role IS NULL OR role = ANY (ARRAY[...16 alte aus MIG-050 + 'email_bulk_pre_filter']))` — neuer 17. Wert fuer Haiku-Pre-Filter-Worker Cost-Audit (Pattern-parallel zu DEC-167 + MIG-050 v8_1_augmentation)
