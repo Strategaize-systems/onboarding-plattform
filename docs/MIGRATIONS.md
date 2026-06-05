@@ -4,6 +4,22 @@ Die aktuelle DB-Struktur entspricht dem Stand von Blueprint V3.4 (Migration 020)
 
 Der uebernommene Blueprint-Stand ist noch nicht auf einer Onboarding-Plattform-Instanz ausgefuehrt worden — die erste Hetzner-Migration geschieht mit SLC-001 (Schema-Fundament).
 
+### MIG-056 — V9 SLC-167 Pattern-Extraktion Migration-Luecke Hotfix (Migration 111, applied — POST-LAUNCH HOTFIX)
+- Date: 2026-06-05 (LIVE — applied via ssh+base64+psql -U postgres auf 159.69.207.29 `supabase-db-bwkg80w04wgccos48gcws8cs-162742842423` in /post-launch V9 RPT-422 ~16:55 UTC, atomare BEGIN/ALTER×4/COMMIT durch. Post-Apply Verify: `ai_cost_ledger_role_check` jetzt 19 Werte incl. 'email_bulk_pattern_extraction', `ai_jobs_job_type_check` jetzt 19 Werte incl. 'email_bulk_pattern_extract'.)
+- Scope:
+  - `111_v9_pattern_extraction_role_and_job_type.sql` — Atomare BEGIN/ALTER×4/COMMIT-Transaction:
+    - `ALTER TABLE ai_cost_ledger DROP CONSTRAINT IF EXISTS ai_cost_ledger_role_check` — alte 18-Werte-Variante aus Migration 108 wird entfernt
+    - `ALTER TABLE ai_cost_ledger ADD CONSTRAINT ai_cost_ledger_role_check CHECK (...19 Werte)` — kanonische Liste inkl. SLC-167 'email_bulk_pattern_extraction' (mit -tion-Suffix, per IMP-1055 Naming-Konvention)
+    - `ALTER TABLE ai_jobs DROP CONSTRAINT IF EXISTS ai_jobs_job_type_check` — alte 18-Werte-Variante aus Migration 108 wird entfernt
+    - `ALTER TABLE ai_jobs ADD CONSTRAINT ai_jobs_job_type_check CHECK (...19 Werte)` — kanonische Liste inkl. SLC-167 'email_bulk_pattern_extract' (ohne -tion-Suffix, per Job-Type-Naming-Konvention)
+- Affected Areas: `public.ai_cost_ledger.role` CHECK Constraint (1 DROP + 1 ADD, 19 Werte) und `public.ai_jobs.job_type` CHECK Constraint (1 DROP + 1 ADD, 19 Werte). Keine Tabellen-Schema-Aenderung. Keine Row-Aenderung. Idempotent via DROP IF EXISTS.
+- Reason: SLC-167 hat zwei neue CHECK-Werte eingefuehrt (per L-V9-7 / IMP-1055 Asymmetrie), aber niemand hat sie zur jeweiligen CHECK-Constraint hinzugefuegt. Migrations 107 (email_bulk_pre_filter) + 108 (email_bulk_pii_redact + 3 job_types) deckten SLC-166 ab. Migrations 109 (View-Only) + 110 (knowledge_unit.source + checkpoint_type) waren scope-anders. RPT-417 Gesamt-/qa-Verdict PASS-WITH-LOW-DEFERRED-LIVE hatte keine DB-vs-Code Cross-Verifikation aller neuen CHECK-Werte. Discovery durch /post-launch V9 T+immediate ai_cost_ledger Live-Schema-Check vs Code-Constant `AI_COST_LEDGER_ROLE` in `handle-pattern-extraction-job.ts:77`.
+- Risk: S — additive CHECK-Erweiterungen ohne Datenmigration. Idempotent. Pre-Apply-Check: 0 Pattern-Extraction-Runs in Production (kein Daten-Verlust). Cross-Repo IMP-Pflicht fuer Dev-System (separates IMP-Update geplant).
+- Rollback Notes: `ALTER TABLE ai_cost_ledger DROP CONSTRAINT ai_cost_ledger_role_check; ADD CONSTRAINT ... CHECK (...18 Werte ohne 'email_bulk_pattern_extraction')` — wuerde Pattern-Extraction-ai_cost_ledger-INSERT wieder mit CHECK-Violation fehlschlagen lassen (Cost-Audit-Trail-Bypass). Analog ai_jobs. Nicht empfohlen — V9-Pattern-Extraction-Pipeline waere broken.
+- Apply-Procedure: Per `.claude/rules/sql-migration-hetzner.md` Pattern, identisch zu MIG-052/053/054/055: base64 + ssh + `docker exec -i $(docker ps --format '{{.Names}}' | grep ^supabase-db) psql -U postgres -d postgres < /tmp/m111.sql`. Verify: `SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conname IN ('ai_cost_ledger_role_check','ai_jobs_job_type_check')` muss beide 19-Werte-Listen zeigen.
+- ISSUE-Trail: ISSUE-092 (HIGH discovered + resolved in derselben /post-launch Session — see KNOWN_ISSUES.md).
+
+
 ### MIG-055 — V9 SLC-168 knowledge_unit.source + block_checkpoint.checkpoint_type CHECK extensions (Migration 110, applied)
 - Date: 2026-06-05 (LIVE — applied via ssh+base64+psql -U postgres auf 159.69.207.29 `supabase-db-bwkg80w04wgccos48gcws8cs-084548596447`, atomare DO/ALTER×2 + 2x DROP IF EXISTS + 2x ADD CONSTRAINT durch. Post-Apply Verify: `knowledge_unit_source_check` 11 Werte incl. `email_bulk`, `block_checkpoint_checkpoint_type_check` 5 Werte incl. `email_bulk_import`. Beide NOTICEs gefeuert. Discovery-Korrektur: `knowledge_unit.metadata jsonb NOT NULL DEFAULT '{}'::jsonb` LIVE bestaetigt (existiert seit V4-Foundation, war im Slice-Spec-Discovery zu Migrations-Files-orientiert verschollen) — defensive Try-Set-Pattern in MT-2 nicht noetig, metadata wird direkt befuellt. `block_checkpoint_id` IS NULLABLE (Migration 063) — Pseudo-Checkpoint fuer Audit-Konsistenz beibehalten.)
 - Scope:

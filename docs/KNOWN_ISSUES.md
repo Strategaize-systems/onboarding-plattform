@@ -1,5 +1,14 @@
 # Known Issues
 
+### ISSUE-092 — V9 SLC-167 Migrations-Luecke: ai_cost_ledger.role + ai_jobs.job_type CHECK fehlen 'email_bulk_pattern_extraction' + 'email_bulk_pattern_extract'
+- Status: resolved (2026-06-05 ~16:55 UTC via Migration 111 / MIG-056 LIVE-applied auf Coolify-Postgres `supabase-db-bwkg80w04wgccos48gcws8cs-162742842423`. ai_cost_ledger_role_check jetzt 19 Werte incl. 'email_bulk_pattern_extraction'. ai_jobs_job_type_check jetzt 19 Werte incl. 'email_bulk_pattern_extract'. RPT-422 /post-launch V9 T+immediate Discovery.)
+- Severity: High
+- Area: V9 SLC-167 Pattern-Extraktion (FEAT-073) — Migrations-Bundle 106-110
+- Summary: SLC-167 fuehrt zwei neue CHECK-Werte ein (per L-V9-7 / IMP-1055 Asymmetrie): `ai_jobs.job_type = 'email_bulk_pattern_extract'` (ohne -tion-Suffix, im `startPatternExtraction` Server-Action) und `ai_cost_ledger.role = 'email_bulk_pattern_extraction'` (mit -tion-Suffix, im `handle-pattern-extraction-job.ts`). Migrations 107 + 108 + 109 + 110 fuegten BEIDE Werte NICHT zur CHECK-Constraint hinzu — Migration-Luecke. RPT-417 Gesamt-/qa Verdict war PASS-WITH-LOW-DEFERRED-LIVE OHNE diese DB-vs-Code-Cross-Verifikation. Discovery durch /post-launch V9 T+immediate ai_cost_ledger Live-Schema-Check vs Code-Constants.
+- Impact: (a) `INSERT INTO ai_jobs (job_type='email_bulk_pattern_extract')` in `startPatternExtraction` (SLC-167 MT-4) wuerde mit CHECK-VIOLATION fehlschlagen → **Pattern-Extraction-Pipeline BLOCKED** ab Curation-Finish bis Hotfix. (b) `INSERT INTO ai_cost_ledger (role='email_bulk_pattern_extraction')` in `handle-pattern-extraction-job.ts:532-543` wuerde mit CHECK-VIOLATION fehlschlagen → **non-fatal try/catch, Pipeline laeuft technisch durch**, ABER Cost-Audit-Trail fuer Sonnet-Calls broken + vw_bulk_email_cost_monthly unterzaehlt Sonnet-Datenpunkte + DSGVO/Compliance-Audit-Trail unvollstaendig.
+- Workaround: Keine — Hotfix-Migration 111 sofort applied in derselben /post-launch Session.
+- Next Action: Resolved per Migration 111. Pre-existing pre-Apply-Check: 0 Pattern-Extraction-Runs in Production (kein Daten-Verlust). Cross-Repo IMP-Pflicht: `/qa` Gesamt-Verdict muss DB-vs-Code Cross-Verifikation aller neuen CHECK-Werte erzwingen (separater Dev-System-IMP geplant).
+
 ### ISSUE-091 — V9 SLC-168 Source-Attribution Visual-Polish: knowledge_unit.body wird im Handbuch-Reader single-line gerendert
 - Status: open
 - Severity: Low
