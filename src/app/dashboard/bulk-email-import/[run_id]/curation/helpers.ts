@@ -160,3 +160,23 @@ export type FinishCurationResult =
       pendingMessage?: string;
     }
   | { ok: false; error: string };
+
+/**
+ * Result-Type fuer `importToHandbook` (SLC-168 MT-2).
+ *
+ * Erfolg liefert die Stats des Imports plus die handbookSnapshotId, die der
+ * Worker `handle-snapshot-job.ts` asynchron in den fertigen Snapshot ueberfuehrt.
+ * Bei 0 pending Patterns (Idempotenz-Re-Run nach erfolgreichem Vorlauf) wird
+ * handbookSnapshotId leer zurueckgegeben — kein 2. Snapshot getriggert.
+ */
+export type ImportToHandbookResult =
+  | {
+      ok: true;
+      /** Anzahl in diesem Lauf importierter Patterns. */
+      patternsImported: number;
+      /** Anzahl angelegter knowledge_unit-Rows. Sollte = patternsImported sein. */
+      knowledgeUnitsCreated: number;
+      /** Snapshot-ID — leer falls keine neuen Patterns importiert wurden. */
+      handbookSnapshotId: string;
+    }
+  | { ok: false; error: string };

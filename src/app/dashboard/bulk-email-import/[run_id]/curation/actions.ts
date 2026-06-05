@@ -33,6 +33,13 @@ import {
   createSectionStoreFromSupabase,
   getAvailableSections,
 } from "@/lib/bulk-email/sections";
+import {
+  getOrCreatePseudoBlockCheckpoint,
+  mapPatternToKnowledgeUnit,
+  triggerHandbookSnapshot,
+  type BulkRunForImport,
+  type PatternForImport,
+} from "@/lib/bulk-email/handbook-import";
 
 import {
   BULK_ACCEPT_DEFAULT_THRESHOLD,
@@ -47,6 +54,7 @@ import {
   type CurationPattern,
   type CurationStatus,
   type FinishCurationResult,
+  type ImportToHandbookResult,
   type UpdatePatternCurationResult,
 } from "./helpers";
 
@@ -541,12 +549,344 @@ export async function finishCurationAndStartHandbookImport(
   revalidatePath(`/dashboard/bulk-email-import/${bulkRunId}/curation`);
   revalidatePath(`/dashboard/bulk-email-import/${bulkRunId}`);
 
-  // SLC-167-Scope: nur Status-Flip + Hinweis. SLC-168 wird den eigentlichen
-  // Handbook-Import-Worker enqueuen + handbookImportStarted=true setzen.
+  // SLC-167-Scope: Status-Flip durch. SLC-168 fuehrt Import in separater
+  // Server-Action (importToHandbook) aus — CurationClient.tsx chained beide
+  // Calls. Diese Funktion bleibt rein Status-Flip + Pre-Conditions-Validation,
+  // damit der bestehende Pre-Check-Contract (Tests + Code) stabil bleibt.
   return {
     ok: true,
     handbookImportStarted: false,
     pendingMessage:
-      "Status auf 'importing' gesetzt. Der Handbook-Import-Worker (SLC-168) ist noch nicht implementiert — die akzeptierten Patterns warten in der DB auf den SLC-168-Sync.",
+      "Status auf 'importing' gesetzt. CurationClient triggert nun importToHandbook.",
+  };
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// importToHandbook — SLC-168 MT-2 Server-Action (FEAT-074)
+// ────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Server-Action: konvertiert akzeptierte/editierte Patterns in knowledge_unit-
+ * Rows + triggert handbook_snapshot. Aufgerufen unmittelbar nach
+ * finishCurationAndStartHandbookImport (UI-Chain) oder als manueller Re-Try
+ * nach Status='failed'.
+ *
+ * Path-A-Lite (DEC-193):
+ *   - Pseudo-block_checkpoint pro Bulk-Run (idempotent via content_hash)
+ *   - knowledge_unit-INSERT mit Source-Attribution im body als Markdown +
+ *     parallel als metadata JSONB (LIVE bestaetigt knowledge_unit.metadata
+ *     existiert mit NOT NULL DEFAULT '{}'::jsonb)
+ *   - email_pattern.imported_to_handbook_at = now() + imported_knowledge_unit_id
+ *   - triggerHandbookSnapshot via RPC rpc_trigger_handbook_snapshot
+ *   - Worker handle-snapshot-job.ts pickt asynchron und rendert ZIP
+ *
+ * Idempotenz:
+ *   - imported_to_handbook_at IS NULL filtert bereits importierte Patterns
+ *   - Pseudo-Checkpoint via content_hash=sha256(bulk_run_id) deduped
+ *
+ * Failure-Pfad (Snapshot-Trigger oder mid-Loop):
+ *   - ROLLBACK: DELETE knowledge_unit-Rows + UPDATE email_pattern.imported_to_*
+ *     auf NULL fuer alle insertierten Patterns
+ *   - UPDATE bulk_run.status='failed', failure_reason
+ *   - Re-Run via dieser Action ist moeglich (status='failed' akzeptiert)
+ *
+ * Uses createAdminClient() fuer den I/O-Pfad — wir bypassen RLS bewusst weil:
+ *   (a) bulk-INSERT in knowledge_unit (V4.1-RLS hat keine direkte INSERT-Policy
+ *       fuer tenant_admin Cross-Pfad)
+ *   (b) RPC trigger ist SECURITY DEFINER — funktioniert auch mit user_client,
+ *       aber wir behalten admin-Client fuer den ganzen Lauf konsistent
+ *   (c) Cross-Tenant-Schutz ist ueber Auth-Gate + tenant_id-Check im run-Load
+ *       sichergestellt
+ */
+export async function importToHandbook(
+  bulkRunId: string,
+): Promise<ImportToHandbookResult> {
+  const auth = await authorizeActor();
+  if ("error" in auth) {
+    return { ok: false, error: auth.error };
+  }
+
+  if (!UUID_REGEX.test(bulkRunId)) {
+    return { ok: false, error: "Ungueltige bulk_run_id" };
+  }
+
+  const adminClient = createAdminClient();
+
+  // 1. Lade Bulk-Run + Cross-Tenant-Schutz
+  const { data: runRow, error: runError } = await adminClient
+    .from("email_bulk_run")
+    .select(
+      "id, tenant_id, capture_session_id, source_file_name, status",
+    )
+    .eq("id", bulkRunId)
+    .maybeSingle();
+  if (runError) {
+    return {
+      ok: false,
+      error: `Bulk-Run-Lookup fehlgeschlagen: ${runError.message}`,
+    };
+  }
+  if (!runRow) {
+    return { ok: false, error: "Bulk-Run nicht gefunden" };
+  }
+  if (runRow.tenant_id !== auth.actor.tenantId) {
+    return { ok: false, error: "Forbidden — Cross-Tenant" };
+  }
+
+  // 2. Status-Pre-Check: 'importing' (Vorlauf via finishCuration) ODER 'failed'
+  //    (Re-Try nach handbook_import_error / handbook_snapshot_trigger_failed)
+  const status = runRow.status as string;
+  if (status !== "importing" && status !== "failed") {
+    return {
+      ok: false,
+      error: `Status '${status}', erwartet 'importing' oder 'failed' fuer Re-Try`,
+    };
+  }
+
+  const captureSessionId = runRow.capture_session_id as string | null;
+  if (!captureSessionId) {
+    return {
+      ok: false,
+      error:
+        "Bulk-Run hat keine capture_session_id — Handbuch-Import nicht moeglich",
+    };
+  }
+
+  // 3. Lade pending Patterns (accepted/edited mit Section + nicht-importiert)
+  const { data: patternRows, error: patternError } = await adminClient
+    .from("email_pattern")
+    .select(
+      "id, thread_id, title, description, evidence_snippets, confidence, curated_section, created_at, curator_user_id",
+    )
+    .eq("bulk_run_id", bulkRunId)
+    .in("curation_status", ["accepted", "edited"])
+    .is("imported_to_handbook_at", null)
+    .not("curated_section", "is", null);
+  if (patternError) {
+    return {
+      ok: false,
+      error: `Pattern-SELECT fehlgeschlagen: ${patternError.message}`,
+    };
+  }
+  const patterns = (patternRows ?? []) as Array<{
+    id: string;
+    thread_id: string;
+    title: string;
+    description: string;
+    evidence_snippets: unknown[] | null;
+    confidence: number;
+    curated_section: string;
+    created_at: string;
+    curator_user_id: string | null;
+  }>;
+
+  const bulkRunForImport: BulkRunForImport = {
+    id: runRow.id as string,
+    tenant_id: runRow.tenant_id as string,
+    capture_session_id: captureSessionId,
+    source_file_name: runRow.source_file_name as string,
+  };
+
+  // 4. Re-Run-Idempotenz: keine pending Patterns → Status auf 'completed' (nur
+  //    falls noch nicht), kein 2. Snapshot-Trigger, kein Pseudo-Checkpoint.
+  if (patterns.length === 0) {
+    const { error: completeError } = await adminClient
+      .from("email_bulk_run")
+      .update({
+        status: "completed",
+        completed_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", bulkRunId);
+    if (completeError) {
+      return {
+        ok: false,
+        error: `Status-UPDATE (idempotent-completed) fehlgeschlagen: ${completeError.message}`,
+      };
+    }
+    revalidatePath(`/dashboard/bulk-email-import/${bulkRunId}/curation`);
+    revalidatePath(`/dashboard/bulk-email-import/${bulkRunId}`);
+    return {
+      ok: true,
+      patternsImported: 0,
+      knowledgeUnitsCreated: 0,
+      handbookSnapshotId: "",
+    };
+  }
+
+  // 5. Thread-Pseudonym-Lookup (eine Query, JOIN-frei via .in())
+  const threadIds = Array.from(new Set(patterns.map((p) => p.thread_id)));
+  const pseudonymMap = new Map<string, Record<string, string>>();
+  const { data: threadRows, error: threadError } = await adminClient
+    .from("email_thread")
+    .select("id, participant_pseudonyms")
+    .in("id", threadIds);
+  if (threadError) {
+    return {
+      ok: false,
+      error: `Thread-SELECT fehlgeschlagen: ${threadError.message}`,
+    };
+  }
+  for (const thread of threadRows ?? []) {
+    const pseudonyms = thread.participant_pseudonyms;
+    if (
+      pseudonyms &&
+      typeof pseudonyms === "object" &&
+      !Array.isArray(pseudonyms)
+    ) {
+      pseudonymMap.set(
+        thread.id as string,
+        pseudonyms as Record<string, string>,
+      );
+    }
+  }
+
+  // 6. Get-or-create Pseudo-block_checkpoint
+  const checkpointResult = await getOrCreatePseudoBlockCheckpoint(adminClient, {
+    captureSessionId,
+    bulkRunId,
+    tenantId: runRow.tenant_id as string,
+    createdByUserId: auth.actor.userId,
+  });
+  if (!checkpointResult.ok) {
+    return { ok: false, error: checkpointResult.error };
+  }
+  const blockCheckpointId = checkpointResult.blockCheckpointId;
+
+  // 7. Loop: INSERT knowledge_unit + UPDATE email_pattern
+  const insertedKuIds: string[] = [];
+  const insertedPatternIds: string[] = [];
+
+  async function rollbackLoop(failureReason: string): Promise<void> {
+    if (insertedKuIds.length > 0) {
+      await adminClient
+        .from("knowledge_unit")
+        .delete()
+        .in("id", insertedKuIds);
+    }
+    if (insertedPatternIds.length > 0) {
+      await adminClient
+        .from("email_pattern")
+        .update({
+          imported_to_handbook_at: null,
+          imported_knowledge_unit_id: null,
+        })
+        .in("id", insertedPatternIds);
+    }
+    await adminClient
+      .from("email_bulk_run")
+      .update({
+        status: "failed",
+        failure_reason: failureReason,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", bulkRunId);
+  }
+
+  for (const pattern of patterns) {
+    const patternForImport: PatternForImport = {
+      id: pattern.id,
+      thread_id: pattern.thread_id,
+      title: pattern.title,
+      description: pattern.description,
+      evidence_snippets: pattern.evidence_snippets,
+      confidence: Number(pattern.confidence),
+      curated_section: pattern.curated_section,
+    };
+
+    let insertInput;
+    try {
+      insertInput = mapPatternToKnowledgeUnit({
+        pattern: patternForImport,
+        bulkRun: bulkRunForImport,
+        captureSessionId,
+        blockCheckpointId,
+        curatorUserId: pattern.curator_user_id ?? auth.actor.userId,
+        extractedAt: pattern.created_at,
+        participantPseudonyms: pseudonymMap.get(pattern.thread_id),
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      await rollbackLoop("handbook_import_mapper_error");
+      return {
+        ok: false,
+        error: `Mapper-Fehler bei pattern ${pattern.id}: ${msg}`,
+      };
+    }
+
+    const { data: kuRow, error: kuInsertError } = await adminClient
+      .from("knowledge_unit")
+      .insert(insertInput)
+      .select("id")
+      .single();
+    if (kuInsertError || !kuRow) {
+      await rollbackLoop("handbook_import_ku_insert_error");
+      return {
+        ok: false,
+        error: `knowledge_unit INSERT (pattern ${pattern.id}): ${kuInsertError?.message ?? "unknown"}`,
+      };
+    }
+    insertedKuIds.push(kuRow.id as string);
+
+    const { error: patternUpdateError } = await adminClient
+      .from("email_pattern")
+      .update({
+        imported_to_handbook_at: new Date().toISOString(),
+        imported_knowledge_unit_id: kuRow.id,
+      })
+      .eq("id", pattern.id);
+    if (patternUpdateError) {
+      await rollbackLoop("handbook_import_pattern_update_error");
+      return {
+        ok: false,
+        error: `email_pattern UPDATE (pattern ${pattern.id}): ${patternUpdateError.message}`,
+      };
+    }
+    insertedPatternIds.push(pattern.id);
+  }
+
+  // 8. Snapshot-Trigger
+  const snapshotResult = await triggerHandbookSnapshot(
+    adminClient,
+    captureSessionId,
+  );
+  if (!snapshotResult.ok) {
+    await rollbackLoop("handbook_snapshot_trigger_failed");
+    return {
+      ok: false,
+      error: `Snapshot-Trigger fehlgeschlagen: ${snapshotResult.error}`,
+    };
+  }
+
+  // 9. Final-Status-UPDATE: 'completed' + Stats
+  const { error: finalUpdateError } = await adminClient
+    .from("email_bulk_run")
+    .update({
+      status: "completed",
+      completed_at: new Date().toISOString(),
+      patterns_imported: patterns.length,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", bulkRunId);
+  if (finalUpdateError) {
+    // Snapshot ist schon getriggert — Rollback waere inkonsistent. Stattdessen
+    // status='failed' setzen mit klarer Fehlermeldung; Re-Run wuerde via
+    // imported_to_handbook_at IS NULL-Filter 0 Patterns finden und idempotent
+    // den Status auf 'completed' setzen.
+    return {
+      ok: false,
+      error: `Final-Status-UPDATE fehlgeschlagen (Snapshot ${snapshotResult.handbookSnapshotId} ist getriggert): ${finalUpdateError.message}`,
+    };
+  }
+
+  revalidatePath(`/dashboard/bulk-email-import/${bulkRunId}/curation`);
+  revalidatePath(`/dashboard/bulk-email-import/${bulkRunId}`);
+  revalidatePath(`/dashboard/handbook`);
+
+  return {
+    ok: true,
+    patternsImported: patterns.length,
+    knowledgeUnitsCreated: insertedKuIds.length,
+    handbookSnapshotId: snapshotResult.handbookSnapshotId,
   };
 }

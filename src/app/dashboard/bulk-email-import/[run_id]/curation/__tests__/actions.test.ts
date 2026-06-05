@@ -38,6 +38,7 @@ import {
   bulkAcceptPatterns,
   bulkRejectAll,
   finishCurationAndStartHandbookImport,
+  importToHandbook,
   updatePatternCuration,
 } from "../actions";
 
@@ -513,7 +514,7 @@ describe("finishCurationAndStartHandbookImport", () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.handbookImportStarted).toBe(false);
-      expect(result.pendingMessage).toMatch(/SLC-168/);
+      expect(result.pendingMessage).toMatch(/importToHandbook/);
     }
     const runUpdate = tracker.find((t) => t.table === "email_bulk_run");
     expect(runUpdate?.patch.status).toBe("importing");
@@ -528,5 +529,537 @@ describe("finishCurationAndStartHandbookImport", () => {
     );
     const result = await finishCurationAndStartHandbookImport(RUN_ID);
     expect(result.ok).toBe(true);
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+// importToHandbook (SLC-168 MT-2)
+// ──────────────────────────────────────────────────────────────────────────────
+
+const CAPTURE_SESSION_ID = "88888888-8888-8888-8888-888888888888";
+const SNAPSHOT_ID = "99999999-9999-9999-9999-999999999999";
+
+interface AdminMockOpts {
+  /** email_bulk_run.select() result */
+  runRow?: {
+    id: string;
+    tenant_id: string;
+    capture_session_id: string | null;
+    source_file_name: string;
+    status: string;
+  } | null;
+  runError?: { message: string } | null;
+  /** Pattern-Liste fuer email_pattern.select() */
+  patterns?: Array<{
+    id: string;
+    thread_id: string;
+    title: string;
+    description: string;
+    evidence_snippets: unknown[] | null;
+    confidence: number;
+    curated_section: string;
+    created_at: string;
+    curator_user_id: string | null;
+  }>;
+  patternsError?: { message: string } | null;
+  /** Thread-Pseudonym-Lookup */
+  threads?: Array<{
+    id: string;
+    participant_pseudonyms: Record<string, string> | null;
+  }>;
+  /** Existierender Pseudo-Checkpoint? */
+  existingCheckpointId?: string | null;
+  /** Neu erzeugte Checkpoint-ID bei INSERT */
+  newCheckpointId?: string;
+  /** Block-Checkpoint INSERT error */
+  blockCheckpointInsertError?: { message: string } | null;
+  /** knowledge_unit INSERT generator — liefert pro Aufruf eine neue ID */
+  knowledgeUnitIds?: string[];
+  /** Index in knowledgeUnitIds bei dem INSERT failed */
+  knowledgeUnitInsertFailIndex?: number;
+  /** RPC rpc_trigger_handbook_snapshot result */
+  rpcResult?: Record<string, unknown> | null;
+  rpcError?: { message: string } | null;
+  /** Tracker fuer alle bulk_run-UPDATEs */
+  bulkRunUpdates?: Array<Record<string, unknown>>;
+  /** Tracker fuer pattern-Updates */
+  patternUpdates?: Array<{ id: string; patch: Record<string, unknown> }>;
+  /** Tracker fuer Bulk-pattern-Updates via .in() */
+  patternBulkUpdates?: Array<{ ids: string[]; patch: Record<string, unknown> }>;
+  /** Tracker fuer knowledge_unit-INSERTs */
+  knowledgeUnitInserts?: Array<Record<string, unknown>>;
+  /** Tracker fuer knowledge_unit-DELETEs (Rollback-Pfad) */
+  knowledgeUnitDeletes?: Array<string[]>;
+  /** Tracker fuer RPC-Calls */
+  rpcCalls?: Array<{ fn: string; params: Record<string, unknown> }>;
+}
+
+function buildAdminClientForImport(opts: AdminMockOpts) {
+  let kuInsertIndex = 0;
+
+  return {
+    from(table: string) {
+      if (table === "email_bulk_run") {
+        return {
+          select: () => ({
+            eq: () => ({
+              maybeSingle: async () => ({
+                data: opts.runRow ?? null,
+                error: opts.runError ?? null,
+              }),
+            }),
+          }),
+          update: (patch: Record<string, unknown>) => {
+            opts.bulkRunUpdates?.push(patch);
+            return {
+              eq: async () => ({ error: null }),
+            };
+          },
+        };
+      }
+
+      if (table === "email_pattern") {
+        return {
+          select: () => ({
+            eq: () => ({
+              in: () => ({
+                is: () => ({
+                  not: async () => ({
+                    data: opts.patterns ?? [],
+                    error: opts.patternsError ?? null,
+                  }),
+                }),
+              }),
+            }),
+          }),
+          update: (patch: Record<string, unknown>) => ({
+            eq: async (col: string, val: string) => {
+              opts.patternUpdates?.push({ id: val, patch });
+              return { error: null };
+            },
+            in: async (col: string, ids: string[]) => {
+              opts.patternBulkUpdates?.push({ ids, patch });
+              return { error: null };
+            },
+          }),
+        };
+      }
+
+      if (table === "email_thread") {
+        return {
+          select: () => ({
+            in: async () => ({
+              data: opts.threads ?? [],
+              error: null,
+            }),
+          }),
+        };
+      }
+
+      if (table === "block_checkpoint") {
+        return {
+          select: () => ({
+            eq: () => ({
+              eq: () => ({
+                eq: () => ({
+                  maybeSingle: async () =>
+                    opts.existingCheckpointId
+                      ? { data: { id: opts.existingCheckpointId }, error: null }
+                      : { data: null, error: null },
+                }),
+              }),
+            }),
+          }),
+          insert: () => ({
+            select: () => ({
+              single: async () =>
+                opts.blockCheckpointInsertError
+                  ? {
+                      data: null,
+                      error: opts.blockCheckpointInsertError,
+                    }
+                  : {
+                      data: { id: opts.newCheckpointId ?? "ck-default" },
+                      error: null,
+                    },
+            }),
+          }),
+        };
+      }
+
+      if (table === "knowledge_unit") {
+        return {
+          insert: (row: Record<string, unknown>) => {
+            const currentIndex = kuInsertIndex;
+            kuInsertIndex += 1;
+            return {
+              select: () => ({
+                single: async () => {
+                  if (
+                    opts.knowledgeUnitInsertFailIndex !== undefined &&
+                    currentIndex === opts.knowledgeUnitInsertFailIndex
+                  ) {
+                    return {
+                      data: null,
+                      error: { message: "simulated ku-insert-error" },
+                    };
+                  }
+                  opts.knowledgeUnitInserts?.push(row);
+                  const id = opts.knowledgeUnitIds?.[currentIndex] ?? `ku-${currentIndex}`;
+                  return { data: { id }, error: null };
+                },
+              }),
+            };
+          },
+          delete: () => ({
+            in: async (col: string, ids: string[]) => {
+              opts.knowledgeUnitDeletes?.push(ids);
+              return { error: null };
+            },
+          }),
+        };
+      }
+
+      throw new Error(`unexpected admin-client from(${table})`);
+    },
+    rpc: async (fn: string, params: Record<string, unknown>) => {
+      opts.rpcCalls?.push({ fn, params });
+      if (opts.rpcError) {
+        return { data: null, error: opts.rpcError };
+      }
+      return {
+        data: opts.rpcResult ?? { handbook_snapshot_id: SNAPSHOT_ID },
+        error: null,
+      };
+    },
+  };
+}
+
+function makePatternRow(
+  overrides: Partial<{
+    id: string;
+    thread_id: string;
+    title: string;
+    description: string;
+    evidence_snippets: unknown[] | null;
+    confidence: number;
+    curated_section: string;
+    created_at: string;
+    curator_user_id: string | null;
+  }> = {},
+) {
+  return {
+    id: PATTERN_ID_1,
+    thread_id: "tttttttt-tttt-tttt-tttt-tttttttttttt",
+    title: "Title",
+    description: "Description text.",
+    evidence_snippets: [],
+    confidence: 0.9,
+    curated_section: "vertrieb/einwand-behandlung",
+    created_at: "2026-06-05T10:00:00.000Z",
+    curator_user_id: USER,
+    ...overrides,
+  };
+}
+
+describe("importToHandbook — Auth + Validation", () => {
+  it("rejects unauthenticated user", async () => {
+    mocks.userClientMock.mockImplementation(() => buildUserClient({ user: null }));
+    const result = await importToHandbook(RUN_ID);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/Nicht authentifiziert/);
+  });
+
+  it("rejects employee role", async () => {
+    mocks.userClientMock.mockImplementation(() =>
+      buildUserClient({
+        profile: { id: USER, tenant_id: TENANT, role: "employee" },
+      }),
+    );
+    const result = await importToHandbook(RUN_ID);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/Tenant-Admins/);
+  });
+
+  it("rejects invalid UUID", async () => {
+    mocks.userClientMock.mockImplementation(() => buildUserClient({}));
+    const result = await importToHandbook("not-uuid");
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/Ungueltige bulk_run_id/);
+  });
+});
+
+describe("importToHandbook — Cross-Tenant + Status-Gate", () => {
+  beforeEach(() => {
+    mocks.userClientMock.mockImplementation(() => buildUserClient({}));
+  });
+
+  it("rejects Cross-Tenant Bulk-Run", async () => {
+    mocks.adminClientMock.mockImplementation(() =>
+      buildAdminClientForImport({
+        runRow: {
+          id: RUN_ID,
+          tenant_id: "different-tenant",
+          capture_session_id: CAPTURE_SESSION_ID,
+          source_file_name: "x.mbox",
+          status: "importing",
+        },
+      }),
+    );
+    const result = await importToHandbook(RUN_ID);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/Cross-Tenant/);
+  });
+
+  it("rejects status='pattern_extracted' (not yet in importing-state)", async () => {
+    mocks.adminClientMock.mockImplementation(() =>
+      buildAdminClientForImport({
+        runRow: {
+          id: RUN_ID,
+          tenant_id: TENANT,
+          capture_session_id: CAPTURE_SESSION_ID,
+          source_file_name: "x.mbox",
+          status: "pattern_extracted",
+        },
+      }),
+    );
+    const result = await importToHandbook(RUN_ID);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/erwartet 'importing'/);
+  });
+
+  it("accepts status='failed' for re-try", async () => {
+    mocks.adminClientMock.mockImplementation(() =>
+      buildAdminClientForImport({
+        runRow: {
+          id: RUN_ID,
+          tenant_id: TENANT,
+          capture_session_id: CAPTURE_SESSION_ID,
+          source_file_name: "x.mbox",
+          status: "failed",
+        },
+        patterns: [],
+      }),
+    );
+    const result = await importToHandbook(RUN_ID);
+    expect(result.ok).toBe(true);
+  });
+
+  it("rejects when capture_session_id is null", async () => {
+    mocks.adminClientMock.mockImplementation(() =>
+      buildAdminClientForImport({
+        runRow: {
+          id: RUN_ID,
+          tenant_id: TENANT,
+          capture_session_id: null,
+          source_file_name: "x.mbox",
+          status: "importing",
+        },
+      }),
+    );
+    const result = await importToHandbook(RUN_ID);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/keine capture_session_id/);
+  });
+});
+
+describe("importToHandbook — Idempotency + Re-Run", () => {
+  beforeEach(() => {
+    mocks.userClientMock.mockImplementation(() => buildUserClient({}));
+  });
+
+  it("0 pending patterns → status='completed' + no snapshot trigger + return stats=0", async () => {
+    const bulkRunUpdates: Array<Record<string, unknown>> = [];
+    const rpcCalls: Array<{ fn: string; params: Record<string, unknown> }> = [];
+
+    mocks.adminClientMock.mockImplementation(() =>
+      buildAdminClientForImport({
+        runRow: {
+          id: RUN_ID,
+          tenant_id: TENANT,
+          capture_session_id: CAPTURE_SESSION_ID,
+          source_file_name: "x.mbox",
+          status: "importing",
+        },
+        patterns: [],
+        bulkRunUpdates,
+        rpcCalls,
+      }),
+    );
+
+    const result = await importToHandbook(RUN_ID);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.patternsImported).toBe(0);
+      expect(result.knowledgeUnitsCreated).toBe(0);
+      expect(result.handbookSnapshotId).toBe("");
+    }
+    expect(rpcCalls).toHaveLength(0);
+    expect(bulkRunUpdates).toHaveLength(1);
+    expect(bulkRunUpdates[0]?.status).toBe("completed");
+  });
+});
+
+describe("importToHandbook — Happy Path", () => {
+  beforeEach(() => {
+    mocks.userClientMock.mockImplementation(() => buildUserClient({}));
+  });
+
+  it("3 patterns → 3 knowledge_units + RPC trigger + final-status='completed' + patterns_imported=3", async () => {
+    const bulkRunUpdates: Array<Record<string, unknown>> = [];
+    const patternUpdates: Array<{ id: string; patch: Record<string, unknown> }> = [];
+    const knowledgeUnitInserts: Array<Record<string, unknown>> = [];
+    const rpcCalls: Array<{ fn: string; params: Record<string, unknown> }> = [];
+
+    const patterns = [
+      makePatternRow({ id: PATTERN_ID_1 }),
+      makePatternRow({ id: PATTERN_ID_2, curated_section: "akquise/lead-qualifizierung" }),
+      makePatternRow({
+        id: "66666666-6666-6666-6666-666666666666",
+        curated_section: "team/onboarding",
+      }),
+    ];
+
+    mocks.adminClientMock.mockImplementation(() =>
+      buildAdminClientForImport({
+        runRow: {
+          id: RUN_ID,
+          tenant_id: TENANT,
+          capture_session_id: CAPTURE_SESSION_ID,
+          source_file_name: "x.mbox",
+          status: "importing",
+        },
+        patterns,
+        threads: [
+          {
+            id: patterns[0]!.thread_id,
+            participant_pseudonyms: { p1: "Person A" },
+          },
+        ],
+        newCheckpointId: "ck-1",
+        knowledgeUnitIds: ["ku-1", "ku-2", "ku-3"],
+        bulkRunUpdates,
+        patternUpdates,
+        knowledgeUnitInserts,
+        rpcCalls,
+      }),
+    );
+
+    const result = await importToHandbook(RUN_ID);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.patternsImported).toBe(3);
+      expect(result.knowledgeUnitsCreated).toBe(3);
+      expect(result.handbookSnapshotId).toBe(SNAPSHOT_ID);
+    }
+    expect(knowledgeUnitInserts).toHaveLength(3);
+    expect(knowledgeUnitInserts[0]?.source).toBe("email_bulk");
+    expect(knowledgeUnitInserts[0]?.unit_type).toBe("observation");
+    expect(knowledgeUnitInserts[0]?.status).toBe("accepted");
+    expect(patternUpdates).toHaveLength(3);
+    expect(patternUpdates[0]?.patch.imported_knowledge_unit_id).toBe("ku-1");
+    expect(rpcCalls).toHaveLength(1);
+    expect(rpcCalls[0]?.fn).toBe("rpc_trigger_handbook_snapshot");
+    expect(rpcCalls[0]?.params).toEqual({
+      p_capture_session_id: CAPTURE_SESSION_ID,
+    });
+    const finalUpdate = bulkRunUpdates[bulkRunUpdates.length - 1];
+    expect(finalUpdate?.status).toBe("completed");
+    expect(finalUpdate?.patterns_imported).toBe(3);
+  });
+});
+
+describe("importToHandbook — Failure-Rollback", () => {
+  beforeEach(() => {
+    mocks.userClientMock.mockImplementation(() => buildUserClient({}));
+  });
+
+  it("knowledge_unit INSERT failure → rollback all + status='failed'", async () => {
+    const bulkRunUpdates: Array<Record<string, unknown>> = [];
+    const knowledgeUnitInserts: Array<Record<string, unknown>> = [];
+    const knowledgeUnitDeletes: Array<string[]> = [];
+    const patternBulkUpdates: Array<{ ids: string[]; patch: Record<string, unknown> }> = [];
+
+    const patterns = [
+      makePatternRow({ id: PATTERN_ID_1 }),
+      makePatternRow({ id: PATTERN_ID_2 }),
+    ];
+
+    mocks.adminClientMock.mockImplementation(() =>
+      buildAdminClientForImport({
+        runRow: {
+          id: RUN_ID,
+          tenant_id: TENANT,
+          capture_session_id: CAPTURE_SESSION_ID,
+          source_file_name: "x.mbox",
+          status: "importing",
+        },
+        patterns,
+        threads: [],
+        newCheckpointId: "ck-1",
+        knowledgeUnitIds: ["ku-1"],
+        knowledgeUnitInsertFailIndex: 1, // 2. pattern fails
+        bulkRunUpdates,
+        knowledgeUnitInserts,
+        knowledgeUnitDeletes,
+        patternBulkUpdates,
+      }),
+    );
+
+    const result = await importToHandbook(RUN_ID);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error).toMatch(/knowledge_unit INSERT/);
+    }
+    // Rollback: 1 KU was inserted (1. pattern), then 2. pattern failed
+    expect(knowledgeUnitDeletes).toHaveLength(1);
+    expect(knowledgeUnitDeletes[0]).toEqual(["ku-1"]);
+    expect(patternBulkUpdates).toHaveLength(1);
+    expect(patternBulkUpdates[0]?.patch.imported_to_handbook_at).toBeNull();
+    const failedUpdate = bulkRunUpdates[bulkRunUpdates.length - 1];
+    expect(failedUpdate?.status).toBe("failed");
+    expect(failedUpdate?.failure_reason).toBe("handbook_import_ku_insert_error");
+  });
+
+  it("Snapshot-Trigger failure → rollback all + status='failed' + failure_reason='handbook_snapshot_trigger_failed'", async () => {
+    const bulkRunUpdates: Array<Record<string, unknown>> = [];
+    const knowledgeUnitInserts: Array<Record<string, unknown>> = [];
+    const knowledgeUnitDeletes: Array<string[]> = [];
+    const patternBulkUpdates: Array<{ ids: string[]; patch: Record<string, unknown> }> = [];
+
+    const patterns = [makePatternRow({ id: PATTERN_ID_1 })];
+
+    mocks.adminClientMock.mockImplementation(() =>
+      buildAdminClientForImport({
+        runRow: {
+          id: RUN_ID,
+          tenant_id: TENANT,
+          capture_session_id: CAPTURE_SESSION_ID,
+          source_file_name: "x.mbox",
+          status: "importing",
+        },
+        patterns,
+        threads: [],
+        newCheckpointId: "ck-1",
+        knowledgeUnitIds: ["ku-1"],
+        rpcError: { message: "rpc failed" },
+        bulkRunUpdates,
+        knowledgeUnitInserts,
+        knowledgeUnitDeletes,
+        patternBulkUpdates,
+      }),
+    );
+
+    const result = await importToHandbook(RUN_ID);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error).toMatch(/Snapshot-Trigger/);
+    }
+    expect(knowledgeUnitDeletes).toHaveLength(1);
+    expect(knowledgeUnitDeletes[0]).toEqual(["ku-1"]);
+    expect(patternBulkUpdates).toHaveLength(1);
+    const failedUpdate = bulkRunUpdates[bulkRunUpdates.length - 1];
+    expect(failedUpdate?.status).toBe("failed");
+    expect(failedUpdate?.failure_reason).toBe("handbook_snapshot_trigger_failed");
   });
 });

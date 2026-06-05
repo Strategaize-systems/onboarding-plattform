@@ -61,6 +61,7 @@ import {
   bulkAcceptPatterns,
   bulkRejectAll,
   finishCurationAndStartHandbookImport,
+  importToHandbook,
 } from "./actions";
 import { PatternCard } from "./components/PatternCard";
 import { EditPatternModal } from "./components/EditPatternModal";
@@ -169,20 +170,37 @@ export function CurationClient({
   function handleFinish() {
     clearMessages();
     startTransition(async () => {
-      const result = await finishCurationAndStartHandbookImport(bulkRunId);
-      if (!result.ok) {
-        setErrorMessage(result.error);
-      } else {
-        if (result.handbookImportStarted) {
-          setSuccessMessage("Curation abgeschlossen — Handbook-Import laeuft.");
-        } else {
-          setSuccessMessage(
-            result.pendingMessage ??
-              "Curation abgeschlossen. Status auf 'importing' gesetzt.",
-          );
-        }
-        router.refresh();
+      // SLC-167 → SLC-168 Chain:
+      //   1. finishCurationAndStartHandbookImport: Status auf 'importing' flippen
+      //      + Pre-Conditions validieren (min 1 accepted Pattern).
+      //   2. importToHandbook: knowledge_unit-Inserts + handbook_snapshot-Trigger.
+      // Bei Fehler in Schritt 2 setzt importToHandbook status='failed' mit
+      // failure_reason — Re-Try-Pfad via Button bleibt offen.
+      const finishResult = await finishCurationAndStartHandbookImport(bulkRunId);
+      if (!finishResult.ok) {
+        setErrorMessage(finishResult.error);
+        return;
       }
+
+      const importResult = await importToHandbook(bulkRunId);
+      if (!importResult.ok) {
+        setErrorMessage(
+          `Status auf 'importing' gesetzt, aber Handbook-Import fehlgeschlagen: ${importResult.error}`,
+        );
+        router.refresh();
+        return;
+      }
+
+      if (importResult.patternsImported === 0) {
+        setSuccessMessage(
+          "Keine neuen Patterns zu importieren — Status auf 'completed' gesetzt.",
+        );
+      } else {
+        setSuccessMessage(
+          `Handbook-Import gestartet: ${importResult.knowledgeUnitsCreated} Wissens-Einheiten angelegt, Snapshot ${importResult.handbookSnapshotId.slice(0, 8)}... laeuft.`,
+        );
+      }
+      router.refresh();
     });
   }
 
