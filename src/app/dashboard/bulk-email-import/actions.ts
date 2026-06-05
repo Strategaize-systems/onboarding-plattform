@@ -320,7 +320,7 @@ export async function getBulkRunById(
   const { data, error } = await supabase
     .from("email_bulk_run")
     .select(
-      "id, source_file_name, email_count, content_emails, thread_count, patterns_extracted, patterns_accepted, patterns_imported, total_cost_eur, status, failure_reason, created_at, updated_at",
+      "id, source_file_name, email_count, content_emails, thread_count, patterns_extracted, patterns_accepted, patterns_imported, pre_filter_cost_eur, pattern_extraction_cost_eur, total_cost_eur, status, failure_reason, created_at, updated_at, completed_at",
     )
     .eq("id", runId)
     .maybeSingle();

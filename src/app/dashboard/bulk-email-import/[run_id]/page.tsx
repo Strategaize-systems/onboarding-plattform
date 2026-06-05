@@ -317,6 +317,11 @@ function FilterReviewLinkBanner({ runId }: { runId: string }) {
 }
 
 function RunStats({ run }: { run: BulkRunSummary }) {
+  // SLC-168 MT-4 — Cost-Split (Pre-Filter + Pattern-Extraktion) und completed_at
+  // werden zusaetzlich angezeigt, sobald der Run terminal ist (completed). Bei
+  // status='failed' bleibt nur die Gesamt-Kosten-Zeile (Split aus dem Run-Lauf
+  // ist immer noch persistiert, wir verschweigen ihn aber nicht).
+  const isCompleted = run.status === "completed";
   return (
     <div className="space-y-1">
       <StatRow label="Datei" value={run.source_file_name} />
@@ -326,9 +331,20 @@ function RunStats({ run }: { run: BulkRunSummary }) {
       <StatRow label="Pattern extrahiert" value={run.patterns_extracted} />
       <StatRow label="Pattern akzeptiert" value={run.patterns_accepted} />
       <StatRow label="Pattern importiert" value={run.patterns_imported} />
+      <StatRow
+        label="Pre-Filter-Kosten (Haiku)"
+        value={formatEuro(run.pre_filter_cost_eur)}
+      />
+      <StatRow
+        label="Pattern-Extraktion-Kosten (Sonnet)"
+        value={formatEuro(run.pattern_extraction_cost_eur)}
+      />
       <StatRow label="Gesamt-Kosten" value={formatEuro(run.total_cost_eur)} />
       <StatRow label="Hochgeladen" value={formatDate(run.created_at)} />
       <StatRow label="Letzte Aenderung" value={formatDate(run.updated_at)} />
+      {isCompleted && run.completed_at ? (
+        <StatRow label="Abgeschlossen" value={formatDate(run.completed_at)} />
+      ) : null}
     </div>
   );
 }

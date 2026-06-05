@@ -91,11 +91,17 @@ export interface BulkRunSummary {
   patterns_extracted: number;
   patterns_accepted: number;
   patterns_imported: number;
+  /** Pre-Filter Bedrock-Calls Cost (Haiku). SLC-168 MT-4: Split-Anzeige. */
+  pre_filter_cost_eur: string;
+  /** Pattern-Extraktion Bedrock-Calls Cost (Sonnet). SLC-168 MT-4: Split-Anzeige. */
+  pattern_extraction_cost_eur: string;
   total_cost_eur: string;
   status: BulkRunStatus;
   failure_reason: string | null;
   created_at: string;
   updated_at: string;
+  /** SLC-168 MT-4: Pflicht-Timestamp fuer Final-Stats-Anzeige bei status='completed'. */
+  completed_at: string | null;
 }
 
 export type UploadResult =
