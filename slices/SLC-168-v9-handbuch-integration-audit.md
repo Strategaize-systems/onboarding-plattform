@@ -206,6 +206,43 @@ Output: V9.0 ist code-side komplett. Bulk-Run-Status=`completed`. Pattern sind i
 - **Branch**: `v9-bulk-email-import` (gleicher Cumulative-Branch, am Ende dieses Slices Master-Merge-Vorbereitung)
 - **Path**: `c:/strategaize/strategaize-onboarding-plattform-v9`
 
+## Path-A-Lite Annotation (DEC-193, 2026-06-05)
+
+Pre-MT-1 Discovery 2026-06-05 hat zwei Realitaets-Brueche gegenueber der urspruenglichen Spec aufgedeckt:
+
+1. **`knowledge_unit.metadata`-Feld nicht zuverlaessig vorhanden:** ARCHITECTURE.md Line 8075-8091 und MIG-106-Kommentar gehen davon aus, dass `knowledge_unit.metadata` als JSONB-Feld existiert und `source_type='email_bulk'` darin gehalten werden kann. Migration 021 (Initial-Schema, deployed) definiert die Tabelle ohne `metadata`-Feld. Migration 094 RPC `rpc_finalize_partner_diagnostic` INSERTet zwar `metadata`, aber kein `ALTER TABLE ADD COLUMN metadata` findet sich in den Migrations-Files. Live-DB-Status nicht verifiziert.
+2. **Worker `handle-snapshot-job.ts` Z.97 selectiert nur `id, block_key, source, unit_type, title, body, confidence, status`** — `metadata` wird gar nicht gelesen, Renderer rendert title/body als Markdown in ZIP, Reader laedt nur Markdown.
+3. **`block_checkpoint_id` NOT NULL FK** zwingt zu Pseudo-Checkpoint-Anlage. `source` CHECK 10 Werte (MIG-087/Migration 087) und `checkpoint_type` CHECK 4 Werte (MIG-034/Migration 091) lassen `email_bulk` / `email_bulk_import` nicht zu.
+
+Founder-Entscheidung 2026-06-05 fuer **Path A-Lite** (DEC-193):
+- **KEIN** SourceAttributionBlock-Reader-Component (MT-3 GESTRICHEN).
+- **KEIN** Worker-Renderer-Erweiterung.
+- **NUR** MIG-055 / Migration 110 mit 2 CHECK-Erweiterungen.
+- **Source-Attribution als Markdown-Block im `body`-Feld** der knowledge_unit (Pseudonym-Hinweis + Confidence-Pille + Run-Link + Datum) — wird vom bestehenden Worker als Markdown gerendert, vom bestehenden Reader sichtbar gemacht.
+- **Pseudo-block_checkpoint pro Bulk-Run** mit `checkpoint_type='email_bulk_import'`, `content='{}'::jsonb`, `content_hash=sha256(bulk_run_id)`.
+
+### MT-Anpassungen Path-A-Lite
+
+| MT | Status | Path-A-Lite-Anpassung |
+|---|---|---|
+| MT-1 | Aktiv | `mapPatternToKnowledgeUnit(pattern, bulkRun, captureSessionId, blockCheckpointId)` returns `KnowledgeUnitInsertInput`. body = pattern.description + Markdown-Source-Attribution-Block. `getOrCreatePseudoBlockCheckpoint(adminClient, captureSessionId, bulkRunId)` Helper. `triggerHandbookSnapshot(captureSessionId)` 1:1 Reuse aus `src/app/admin/handbook/actions.ts:35-101`. + Vitest gegen Coolify-DB. |
+| MT-2 | Aktiv | importToHandbook(bulkRunId): UPDATE bulk_run.status='importing' -> get-or-create Pseudo-Checkpoint -> SELECT pending accepted Patterns -> Loop: INSERT knowledge_unit + UPDATE email_pattern.imported_to_handbook_at + imported_knowledge_unit_id -> triggerHandbookSnapshot(capture_session_id) -> UPDATE bulk_run.status='completed', completed_at, patterns_imported. ROLLBACK on Snapshot-Trigger-Failure. **MIG-055 / Migration 110 LIVE-Apply via sql-migration-hetzner.md vor Vitest-Run.** + Vitest. INSERT-Code befuellt knowledge_unit.metadata defensiv (try-set, Spread-Pattern) — wenn metadata-Spalte LIVE existiert wird sie befuellt, wenn nicht wird der Spread-Key vor INSERT entfernt. |
+| MT-3 | **GESTRICHEN** | Source-Attribution liegt im body als Markdown. Reader rendert das automatisch. 0 neue Komponente, 0 Reader-Page-Aenderung, 0 Worker-Aenderung. AC-SLC-168-2/4/5 inhalts-aequivalent erfuellt. |
+| MT-4 | Aktiv | unveraendert zu Spec |
+| MT-5 | Aktiv | + DEC-193 + MIG-055 in MIGRATIONS.md + Slice-Spec-Korrektur-Marker + Carry-Over BL fuer ARCHITECTURE.md Line 8075-8091 Drift-Fix in /docs |
+
+### AC-Re-Mapping unter Path-A-Lite
+
+- **AC-SLC-168-2** (source_attribution-Metadata): inhalts-aequivalent als Markdown-Block im body (bulk_run_id, pattern_id, thread_id, participant_pseudonyms). Wenn knowledge_unit.metadata LIVE existiert, wird sie zusaetzlich als belt-and-suspenders befuellt.
+- **AC-SLC-168-4/5** (Reader-View + Pseudonym-Hinweis): inhalts-aequivalent als inline-Markdown. UX-Resultat identisch.
+- Alle anderen ACs unveraendert.
+
+### Aufwand-Anpassung
+
+~6-8h (Spec) -> ~5-6h (Path-A-Lite) — MT-3 entfaellt komplett, dafuer +30min in MT-1 (Markdown-Renderer) und MT-2 (Pseudo-Checkpoint-Logik).
+
+---
+
 ## Next After SLC-168
 
 **V9.0 Code-Side komplett**. Naechste Schritte:
