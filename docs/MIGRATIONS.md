@@ -33,6 +33,30 @@ Der uebernommene Blueprint-Stand ist noch nicht auf einer Onboarding-Plattform-I
 - Risk: S — additive Schema-Korrektur. Idempotent via DROP IF EXISTS. Kein Datenmigrations-Bedarf, View ist abgeleitet aus email_bulk_run. Code-Konsumenten existieren noch nicht (SLC-167 MT-3 ist der erste).
 - Rollback Notes: Original-View aus MIG-051/106 wiederherstellen (`CREATE OR REPLACE VIEW ... AS SELECT tenant_id, date_trunc('month', created_at) AS month, SUM(total_cost_eur) AS total_cost_eur, COUNT(*) AS run_count FROM email_bulk_run WHERE status != 'failed' GROUP BY tenant_id, date_trunc('month', created_at)` ohne security_invoker) — wuerde RLS-Bypass wiederherstellen aber View-Funktionalitaet erhalten. Nicht empfohlen.
 - Apply-Procedure: Per `.claude/rules/sql-migration-hetzner.md` Pattern, identisch zu MIG-052/053: base64 + ssh + `docker exec -i $(docker ps --format '{{.Names}}' | grep ^supabase-db) psql -U postgres -d postgres < /tmp/m109.sql`. Verify: `\d+ public.vw_bulk_email_cost_monthly` muss `Options: security_invoker=true` zeigen.
+### MIG-110 — V8.0.2 OP authenticated+anon search_path Storage-Defense (APPLIED 2026-06-03)
+- Date: 2026-06-03
+- Slice: V8.0.2 SLC-169 (Deviation-Rule-2-Erweiterung post-Live-Smoke MT-4)
+- Scope: `ALTER ROLE authenticated SET search_path = storage, public;` + `ALTER ROLE anon SET search_path = storage, public;`
+- Affected Areas: `pg_roles` rolconfig fuer authenticated + anon
+- Reason: Live-Smoke MT-4 hat aufgedeckt dass authenticated-Role nach `SET LOCAL ROLE` keinen storage-Schema im search_path hat. ALTER-ROLE-Default soll Cross-Repo-Symmetrie zu BS-search_path-Pattern herstellen.
+- Risk: LOW. Additive, idempotent (ueberschreibt bestehende Config). **In der Praxis ohne Effekt fuer Storage-Service-Knex-Pool** — Postgres `SET LOCAL ROLE` lade ALTER-ROLE-Default nur beim LOGIN, nicht beim mid-session-Role-Switch. Migration bleibt als Defense-in-Depth fuer kuenftige Pfade (PostgREST, direkte DB-Connections, etc.). search_path-Drift bei Storage-Service-Knex-Pool ist in [[ISSUE-088]] OP separat dokumentiert.
+- Verify: `SELECT rolname, rolconfig FROM pg_roles WHERE rolname IN ('authenticated','anon');` → beide haben rolconfig mit `search_path=storage, public`.
+- Rollback Notes: `ALTER ROLE authenticated RESET search_path; ALTER ROLE anon RESET search_path;` — wuerde OP auf Pre-MIG-110-State zurueckfuehren (war auch broken vorher).
+
+### MIG-109 — V8.0.2 OP Storage-Schema GRANTs Hotfix (Cross-Repo-Mirror BS MIG-043) (APPLIED 2026-06-03)
+- Date: 2026-06-03
+- Slice: V8.0.2 SLC-169
+- Scope: Idempotente Default-Supabase-GRANT-Setzung auf `storage.*`-Tabellen fuer `authenticated`+`anon`:
+  - `GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA storage TO authenticated, anon;` (5 Tables × 4 Privileges)
+  - `GRANT USAGE,SELECT ON ALL SEQUENCES IN SCHEMA storage TO authenticated, anon;` (defensive No-Op)
+  - 4 `ALTER DEFAULT PRIVILEGES` fuer postgres + supabase_storage_admin × TABLES+SEQUENCES (Future-Proofness)
+  - `NOTIFY pgrst, 'reload schema'` (PostgREST cache-flush)
+- Affected Areas: `information_schema.role_table_grants` fuer storage-Schema, `pg_default_acl` fuer storage-Schema.
+- Reason: Cross-Repo-Symmetrie zu BS V8.13 SLC-894 MIG-043. OP war schlimmer betroffen als BS — `authenticated`+`anon` hatten nur SELECT auf 2 unwichtige s3_-Tables, 0 GRANTs auf buckets/migrations/objects. Storage v1.11.13 + GoTrue v2.160 setzen Default-GRANTs nicht im Init-Script (v1.44+ tut das). [[ISSUE-087]] geschlossen.
+- Risk: LOW. Additive idempotent, kein REVOKE. RLS-Defense (18 bestehende storage.objects-Policies) bleibt aktiv. service_role unangetastet (20 CRUD-Rows persistent).
+- Verify: `SELECT grantee, COUNT(*) FROM information_schema.role_table_grants WHERE table_schema='storage' AND grantee IN ('authenticated','anon') AND privilege_type IN ('SELECT','INSERT','UPDATE','DELETE') GROUP BY grantee;` → 20 Rows je Rolle (5 Tables × 4 Privileges).
+- Rollback Notes: `REVOKE INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA storage FROM authenticated, anon;` — wuerde ISSUE-087-Bug reaktivieren. Nicht empfohlen.
+- Cross-Repo-Quelle: BS V8.13 SLC-894 / MIG-043 / RPT-574 / `docs/CROSS_REPO_V813_STORAGE_GRANTS.md`.
 
 ### MIG-053 — V9 SLC-166 MT-6 ai_cost_ledger role + ai_jobs.job_type CHECK extensions (Migration 108, applied)
 - Date: 2026-06-04 (LIVE — applied via ssh+base64+psql -U postgres auf 159.69.207.29 `supabase-db-bwkg80w04wgccos48gcws8cs-084548596447`, atomare BEGIN/ALTER×4/COMMIT durch. Post-Apply Verify: `ai_cost_ledger_role_check` 18 Werte incl. `email_bulk_pre_filter` + `email_bulk_pii_redact`, `ai_jobs_job_type_check` 18 Werte incl. `email_bulk_parse` + `email_bulk_pre_filter` + `email_bulk_thread_redact`. Pre-existing-Bug-Fix Live-erfolgreich. Live-Verifikations-Stack Step 1 PASS — siehe RPT-405.)

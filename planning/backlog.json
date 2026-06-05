@@ -1,6 +1,16 @@
 {
   "items": [
     {
+      "id": "BL-152",
+      "title": "V8.0.2 OP Storage-Schema-GRANTs Cross-Repo-Mirror (BS-V8.13-Symmetrie, ISSUE-087 resolved)",
+      "type": "fix",
+      "priority": "high",
+      "status": "done",
+      "version": "V8.0.2",
+      "description": "Cross-Repo-Mirror von BS V8.13 SLC-894 / MIG-043. OP-Pre-Check 2026-06-03 zeigt: authenticated+anon haben NUR SELECT auf 2 unwichtige s3_-Tables (s3_multipart_uploads + s3_multipart_uploads_parts), 0 GRANTs auf buckets/migrations/objects → schlimmer betroffen als BS vor MIG-043 (BS hatte wenigstens SELECT auf allen 5 Tables). Storage v1.11.13 castet PostgreSQL 42501 insufficient_privilege zu Misleading-Message 'new row violates row-level security policy' → diagnostische Verwirrung als RLS-Bug. Echte Wurzel: fehlende Default-Supabase-GRANTs. Fix: MIG-109 idempotent additive GRANT-Setzung (SELECT+INSERT+UPDATE+DELETE auf alle storage.*-Tables + ALTER DEFAULT PRIVILEGES + NOTIFY pgrst). auth.users.aud Pre-Check zeigt 0 Drift → KEIN MIG-044-Mirror noetig. 1 Slice SLC-169, 5 MTs, ~60-90 min Code+QA+Workflow-Closure. KEIN Coolify-Redeploy noetig (0 cockpit/src-Code-Change). Pattern-Reuse 1:1 aus BS V8.13 (Migration + Vitest + sql-migration-hetzner-Rule + coolify-test-setup-Rule + self-signed-JWT-Live-Smoke).",
+      "createdAt": "2026-06-03"
+    },
+    {
       "id": "BL-146",
       "title": "V9 Bulk-Import GF-Email → Pattern-Extraktion → Handbuch-Vervollstaendigung",
       "type": "feature",
