@@ -1,5 +1,15 @@
 # Known Issues
 
+### ISSUE-091 — V9 SLC-168 Source-Attribution Visual-Polish: knowledge_unit.body wird im Handbuch-Reader single-line gerendert
+- Status: open
+- Severity: Low
+- Area: V9 SLC-168 MT-1 Path-A-Lite (DEC-193) — `src/lib/bulk-email/handbook-import.ts` `renderSourceAttributionMarkdown` Output-Form vs `src/workers/handbook/sections.ts:542` `renderKnowledgeUnitsList`
+- Summary: Path-A-Lite (DEC-193) waehlt knowledge_unit-INSERT mit Source-Attribution als Multi-Line-Markdown-Block im body-Feld (Datum + Confidence + Pseudonym-Hinweis + Run-Link, getrennt durch `---` Horizontal-Rule). Worker-Renderer `renderKnowledgeUnitsList` macht beim Render `ku.body.trim().split("\n").join(" ")` → alle Zeilenumbrueche werden zu Leerzeichen. `escapeMd` (sections.ts:648) escaped NUR `|`, also Bold/Italic/Link rendern korrekt. Konsequenz: Source-Attribution-Block erscheint im Reader-Markdown-Render als single-line inline-Text statt block-formatiert. `---` Horizontal-Rule wird zu inline-Plain-Text (kein HR-Block). Bold-Felder + klickbarer Link bleiben funktional erhalten.
+- Impact: Visual-Polish im Handbuch-Reader. Source-Attribution-Info ist vollstaendig sichtbar und der "Quelle ansehen"-Link bleibt klickbar (escapeMd hat keinen Effekt auf `[Link](url)`-Syntax). Founder sieht alle Felder, aber als verlaengerte Bullet-Zeile statt als block-getrenntem Quote-Block. Nicht release-blockierend, aber Visual-Polish-Carry-Over zu V9.1+.
+- Workaround: Aktueller Markdown-Output ist funktional. Founder kann via Bulk-Run-Detail-Page (`/dashboard/bulk-email-import/<id>`) oder Admin-Audit-View (`/admin/audit/bulk-email`) alternativ direkt navigieren.
+- Next Action: V9.1+ Renderer-Erweiterung: `renderKnowledgeUnitsList` differenziert auf `ku.source` = `'email_bulk'` → Multi-Line-Body-Pass-through ohne `.split("\n").join(" ")`-Flatten (mit Indentation-Korrektur via 2-space-Prefix pro Line). Alternativ: Worker-Renderer-Branch fuer email_bulk-Source mit Block-Quote-Markdown-Render. Schaetzung ~30-45min Code-Side + Vitest. Backlog-Kandidat BL-XXX V9.1+ Polish-Slice.
+- Quelle: /qa SLC-168 RPT-416 L-1 — Worker-Render-Pfad-Verifikation in /qa entdeckt (zu Pre-MT-1 in DEC-193 nicht verifiziert). Cross-Reference: Dev-System IMP-1076 "Wenn DEC 0 Worker-Aenderung behauptet, muss Render-Pfad VOR DEC-Entscheidung verifiziert werden".
+
 ### ISSUE-090 — V9 vw_bulk_email_cost_monthly View ohne security_invoker (RLS-Bypass, MIG-051/106-Erbe)
 - Status: resolved
 - Resolution Date: 2026-06-04
