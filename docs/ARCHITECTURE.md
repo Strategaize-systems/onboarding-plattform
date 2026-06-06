@@ -8072,23 +8072,26 @@ Reuse bestehende `ai_cost_ledger`-Tabelle (V2 deployed, V8.1 in use). Neue featu
 
 `feature` ist ein freier text-DEFAULT, kein CHECK-Constraint — kein Migration-Bedarf.
 
-#### `knowledge_unit.metadata.source_type='email_bulk'` (DEC fuer Source-Attribution)
+#### `knowledge_unit.source='email_bulk'` + Source-Attribution-Markdown im `body` (Path-A-Lite per DEC-193)
 
-Bestehende `knowledge_unit`-Tabelle (V4.1 deployed) wird mit neuem Metadata-Wert genutzt:
+**Korrektur 2026-06-06 (L-V9-4 Carry-Over aus RPT-417):** Die urspruengliche Annahme (Source-Attribution via `knowledge_unit.metadata`-JSONB-Lookup + separate `SourceAttributionBlock.tsx`-Reader-Component) hat die Pre-Implementation-Discovery 2026-06-05 (DEC-193) ueberlebt **nicht**. Realitaet-Bruch-Befund:
 
-```json
-{
-  "source_type": "email_bulk",
-  "bulk_run_id": "...",
-  "pattern_id": "...",
-  "thread_id": "...",
-  "participant_pseudonyms": { "P1": "...", "P2": "..." },
-  "confidence": 0.9,
-  "extracted_at": "2026-06-01T..."
-}
-```
+1. **Worker `handle-snapshot-job.ts` Z.97** selektiert nur `id, block_key, source, unit_type, title, body, confidence, status` — **kein `metadata`, kein `evidence_refs`**. Worker rendert `title`/`body` als Markdown, packt in ZIP, V4.1-Reader laedt nur Markdown. Eine `metadata.source_type='email_bulk'`-JSONB-Lookup-Komponente waere im Worker-Render gar nicht angekommen.
+2. **`source` und `block_checkpoint.checkpoint_type` haben CHECK-Constraints** die `email_bulk` / `email_bulk_import` initial nicht zugelassen haben — Erweiterung per MIG-055/Migration 110 noetig.
 
-Schema-CHECK nicht erforderlich — JSONB ist generisch. Source-Attribution-View (FEAT-074 AC-4 + AC-5) lesen das.
+Implementierte Variante (**Path-A-Lite**, DEC-193 Option C):
+
+- **`knowledge_unit.source`** wird per MIG-055/Migration 110 von 10 auf 11 Werte erweitert: `+ 'email_bulk'`. Jede importierte Pattern-Row hat `source='email_bulk'`.
+- **`knowledge_unit.body`** enthaelt am Ende einen Markdown-Block mit Source-Attribution: Pseudonym-Hinweis ("Klarnamen wurden pseudonymisiert"), Confidence-Indikator (low/medium/high abgeleitet aus `pattern.confidence` ueber Schwellen 0.85 / 0.7), Datum aus `pattern.created_at` (`YYYY-MM-DD` de-DE), Link `[Quelle ansehen](/dashboard/bulk-email-import/<bulk_run_id>)`.
+- **`knowledge_unit.metadata`** (JSONB, `NOT NULL DEFAULT '{}'::jsonb`, real existent per LIVE-DB-Verify 2026-06-05) wird zusaetzlich defensiv mit Spread-Pattern befuellt (`bulk_run_id`, `pattern_id`, `thread_id`, `participant_pseudonyms`, `confidence`, `extracted_at`) — **nur als Audit-Hilfe**, **nicht als Render-Pfad**. Der Reader sieht es nie.
+- **`block_checkpoint.checkpoint_type`** wird per MIG-055/Migration 110 von 4 auf 5 Werte erweitert: `+ 'email_bulk_import'`. `importToHandbook()` legt vor dem Pattern-Loop einen **Pseudo-Checkpoint** pro Bulk-Run an (`content='{}'::jsonb`, `content_hash=sha256(bulk_run_id)`, `block_key=<curated_section>`).
+- **MT-3 (separater SourceAttributionBlock.tsx + Reader-Page-Update) wurde GESTRICHEN** — 0 Reader-Aenderung, 0 Component-Aenderung, 0 Worker-Aenderung. V4.1-Handbuch-Reader bleibt 100% unveraendert.
+
+Source-Attribution-View-Erfuellung (FEAT-074 AC-4 + AC-5: "Aus Email-Bulk-Import vom YYYY-MM-DD" + Pseudonym-Hinweis + Link) ist **inhalts-aequivalent** als inline-Markdown im `body`-Feld erfuellt. AC-SLC-168-2 ist auf `PASS-CODE-MODIFIED (DEC-193)` markiert (RPT-417 Line 153). AC-SLC-168-4 ist auf `PASS-CODE-WITH-LOW` markiert wegen Visual-Polish-Carry-Over (L-V9-2 / ISSUE-091).
+
+**Konsequenz fuer V9.1+**: Forward-Bucket-Email-Pipeline (V9.1) erbt das Path-A-Lite-Pattern — Pattern→knowledge_unit-INSERT laeuft via `mapPatternToKnowledgeUnit()` aus `src/lib/bulk-email/handbook-import.ts` ohne neue Worker/Reader-Erweiterung. **KEIN** Metadata-Render-Pfad rechnen, **KEIN** separate SourceAttributionBlock-Komponente vorsehen.
+
+**Quellen**: DEC-193 (DECISIONS.md Z.3-6), MIG-055/Migration 110 (sql/migrations/110_*.sql LIVE-applied 2026-06-05), `src/lib/bulk-email/handbook-import.ts` (`mapPatternToKnowledgeUnit` + `renderSourceAttributionMarkdown`), `src/workers/snapshot/handle-snapshot-job.ts` (Worker-Select-Spalten Z.97 unveraendert).
 
 ### Data Flow / Request Flow
 

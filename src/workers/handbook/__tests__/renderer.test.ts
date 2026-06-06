@@ -197,4 +197,74 @@ describe("renderHandbook", () => {
       walkthrough_count: 0,
     });
   });
+
+  // ISSUE-091 / L-V9-2 — V9 SLC-168 Path-A-Lite (DEC-193) Source-Attribution-Polish
+  it("ISSUE-091 — KU mit source='email_bulk' rendert Source-Attribution-Block multi-line (nicht single-line, nicht escapeMd-mangled)", () => {
+    const KU_EMAIL_BULK: import("../types").KnowledgeUnitRow = {
+      id: "ku-email-bulk-1",
+      block_key: "A",
+      source: "email_bulk",
+      unit_type: "observation",
+      title: "Wiederkehrendes Vertriebs-Muster",
+      // Body wie von src/lib/bulk-email/handbook-import.ts renderSourceAttributionMarkdown erzeugt:
+      // description + ---Trenner + 4 Bold-Label-Zeilen + Link.
+      body: [
+        "Kunden fragen wiederholt nach Rabatten bei Ratenzahlung.",
+        "",
+        "---",
+        "**Quelle**: Aus Email-Bulk-Import vom 2026-06-05 (Datei `mailbox.mbox`).",
+        "**Confidence**: high (raw 0.90)",
+        "**Pseudonyme**: Klarnamen wurden pseudonymisiert. Beteiligte: P1 | P2.",
+        "**Run-Detail**: [Quelle ansehen](/dashboard/bulk-email-import/run-abc)",
+      ].join("\n"),
+      confidence: "high",
+      status: "accepted",
+    };
+
+    const result = renderHandbook(baseInput({ knowledgeUnits: [KU_EMAIL_BULK] }));
+    const section = result.files["01_geschaeftsmodell.md"];
+
+    // Title bleibt im Bullet
+    expect(section).toContain("- **Wiederkehrendes Vertriebs-Muster** _(Block A, Konfidenz: high)_");
+
+    // Multi-Line-Block bleibt erhalten (NICHT flatten zu single-line).
+    expect(section).toContain("  Kunden fragen wiederholt nach Rabatten bei Ratenzahlung.");
+    expect(section).toContain("  ---");
+    expect(section).toContain("  **Quelle**: Aus Email-Bulk-Import vom 2026-06-05 (Datei `mailbox.mbox`).");
+    expect(section).toContain("  **Confidence**: high (raw 0.90)");
+    expect(section).toContain("  **Pseudonyme**: Klarnamen wurden pseudonymisiert. Beteiligte: P1 | P2.");
+    expect(section).toContain("  **Run-Detail**: [Quelle ansehen](/dashboard/bulk-email-import/run-abc)");
+
+    // Bold-Labels muessen markdown-funktional bleiben (nicht escaped wie \*\*Quelle\*\*).
+    expect(section).not.toContain("\\*\\*Quelle\\*\\*");
+    expect(section).not.toContain("\\*\\*Confidence\\*\\*");
+
+    // Anti-Regression: alte single-line-Form (alle Zeilen mit space joined) darf NICHT auftauchen.
+    expect(section).not.toContain(
+      "Kunden fragen wiederholt nach Rabatten bei Ratenzahlung.  --- ",
+    );
+  });
+
+  it("ISSUE-091 — KU mit source!=='email_bulk' behaelt bestehendes single-line escapeMd-Verhalten (kein Regress fuer questionnaire/employee_questionnaire/walkthrough/etc.)", () => {
+    const KU_MULTILINE_QUESTIONNAIRE: import("../types").KnowledgeUnitRow = {
+      id: "ku-q-multiline",
+      block_key: "A",
+      source: "questionnaire",
+      unit_type: "fact",
+      title: "Mehrzeilige Antwort",
+      body: "Zeile 1.\nZeile 2 mit Pipe |.\nZeile 3.",
+      confidence: "high",
+      status: "accepted",
+    };
+
+    const result = renderHandbook(baseInput({ knowledgeUnits: [KU_MULTILINE_QUESTIONNAIRE] }));
+    const section = result.files["01_geschaeftsmodell.md"];
+
+    // Bestehendes Verhalten: alle Zeilen mit Space joined, Pipe escaped (escapeMd
+    // ersetzt nur '|' fuer Tabellen-Safety, andere Markdown-Chars passen durch).
+    expect(section).toContain("Zeile 1. Zeile 2 mit Pipe \\|. Zeile 3.");
+    // Keine Multi-Line-Aufspaltung fuer Non-email_bulk: jede Zeile bekommt KEIN
+    // eigenes 2-space-Prefix (sondern alles in einer einzigen indented Bullet-Folge-Zeile).
+    expect(section).not.toContain("  Zeile 1.\n  Zeile 2");
+  });
 });

@@ -539,7 +539,17 @@ function renderKnowledgeUnitsList(kus: KnowledgeUnitRow[]): string[] {
   for (const ku of kus) {
     out.push(`- **${escapeMd(ku.title)}** _(Block ${ku.block_key}, Konfidenz: ${ku.confidence})_`);
     if (ku.body && ku.body.trim().length > 0) {
-      out.push(`  ${escapeMd(ku.body.trim().split("\n").join(" "))}`);
+      if (ku.source === "email_bulk") {
+        // Path-A-Lite (DEC-193): body enthaelt vorgerendertes Source-Attribution-
+        // Markdown (Description + ---Trenner + Bold-Labels + Link). Pass-through
+        // ohne Flatten und ohne escapeMd, damit die Block-Struktur erhalten bleibt.
+        // 2-space-Prefix haengt jede non-empty Zeile unter den parent-Bullet ein.
+        for (const line of ku.body.trim().split("\n")) {
+          out.push(line.length > 0 ? `  ${line}` : "");
+        }
+      } else {
+        out.push(`  ${escapeMd(ku.body.trim().split("\n").join(" "))}`);
+      }
     }
   }
   return out;
