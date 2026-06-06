@@ -208,3 +208,15 @@ V9-Scope (Requirements DONE 2026-06-01 via RPT-374 + Architecture DONE 2026-06-0
 | FEAT-072 | Thread-Aggregation + PII-Redaction-Pipeline (V5-Reuse) | deployed | [Spec](FEAT-072-thread-aggregation-pii-redaction.md) | 2026-06-01 |
 | FEAT-073 | Pattern-Extraktion (Sonnet eu-central-1) + Curation-UI | deployed | [Spec](FEAT-073-pattern-extraktion-sonnet-curation.md) | 2026-06-01 |
 | FEAT-074 | Handbuch-Integration + Audit/Cost-Tracking | deployed | [Spec](FEAT-074-handbuch-integration-audit-cost.md) | 2026-06-01 |
+
+## V9.1 Features (Bulk-Import Forward-Bucket-Email Continuous-Stream)
+
+V9.1-Scope (Requirements-Skeleton angelegt 2026-06-06 via RPT-425, basierend auf /discovery RPT-424). Status NOT-FINAL — 4 BLOCKING-Pre-Conditions + 2 BLOCKING-OQs (Q-V9.1-E + Q-V9.1-G) offen. Continuous-Inbound-Erweiterung von V9.0: GF richtet einmalig Mail-Forward-Regel ein, Plattform empfaengt passive ueber Vendor-Webhook, akkumuliert und triggert V9.0-Pipeline periodisch. 80% V9.0-Code wiederverwendbar, ~20% V9.1-spezifisch (Inbound-SMTP-Adapter + Catchall-Routing + Continuous-Cost-Cap + Retention-Cron + Forward-Validation). Persona = GF im eigenen Tenant (Q-V9.1-G bestaetigt das pending). Detail-Specs entstehen mit /architecture V9.1 (Skeleton-Status, Files noch nicht angelegt).
+
+| ID | Feature | Status | Spec | Created |
+|----|---------|--------|------|---------|
+| FEAT-075 | Inbound-SMTP-Vendor + Catchall-Routing + Tenant-Lookup (Bulk-Inbound-Foundation) | planned | (Spec entsteht in /architecture V9.1) | 2026-06-06 |
+| FEAT-076 | Forward-Validation-Layer + Spam-Defense (Header-Token / Sender-Allowlist / DKIM) | planned | (Spec entsteht in /architecture V9.1) | 2026-06-06 |
+| FEAT-077 | Continuous-Cost-Cap-Service (Daily-Threshold + Monthly-Cap + Per-Email-Approval) | planned | (Spec entsteht in /architecture V9.1) | 2026-06-06 |
+| FEAT-078 | Storage-Retention-Cron (DSGVO-Lifecycle, Soft-Delete + Hard-Delete) | planned | (Spec entsteht in /architecture V9.1) | 2026-06-06 |
+| FEAT-079 | Admin-Audit Forward-Source-Statistik + Setup-UI mit Conversational-First-Pattern | planned | (Spec entsteht in /architecture V9.1) | 2026-06-06 |

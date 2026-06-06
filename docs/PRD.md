@@ -2345,3 +2345,150 @@ Reihenfolge linear (SLC-V9-A -> SLC-V9-B -> SLC-V9-C -> SLC-V9-D -> SLC-V9-E). /
 
 ### Detail-Spec
 V9-Requirements-Completion-Report wird in dieser Session erstellt als RPT-374. Feature-Specs unter `/features/FEAT-070..074-*.md`. /architecture-Schritt klaert Q-V9-A..J und definiert /slice-planning V9-Vorbereitung. Naechster Schritt nach diesem Skill: /architecture V9.
+
+## V9.1 — Bulk-Import Forward-Bucket-Email (Continuous-Stream)
+
+Requirements-Skeleton angelegt 2026-06-06 via RPT-425, basierend auf /discovery RPT-424 2026-06-06. **Status: NOT-FINAL** — 4 BLOCKING-Pre-Conditions offen (V9.0 T+24h STABLE, Real-Mbox-Pre-Filter-Validation, Vendor-Vergleichs-Notiz, Founder-Entscheidungen Q-V9.1-E + Q-V9.1-G). Per Founder-Direktive 2026-06-06 Skeleton trotzdem angelegt, damit naechste Sessions ohne Discovery-Re-Pass an der korrekten Stelle einsteigen koennen. V9.1 ist die kontinuierliche Erweiterung von V9.0: Email kommt nicht mehr per `.mbox`-Batch, sondern flie&szlig;t passive ueber Mail-Forward-Regel des GF in einen dedizierten Bulk-Inbox-Endpoint.
+
+### Problem Statement
+
+V9.0 .mbox-Upload erfordert vom GF (1) bewusste Export-Aktion aus dem Mail-Client (Gmail-Takeout, Outlook-Export, etc.) (2) bewusste Upload-Aktion ins OP. Beides ist Friction. Operatives Wissen entsteht aber kontinuierlich im laufenden Email-Strom, nicht in episodischen Bulk-Exporten. V9.1 schliesst die Friction-Luecke: GF richtet einmalig eine Mail-Forward-Regel im eigenen Mail-Client ein (z.B. "Alle gesendeten Mails an `kunden@firma.de`-Domain weiterleiten nach `bulk-<tenant-slug>@bulk.strategaizetransition.com`"), Plattform empfaengt, klassifiziert, threadet, redactet, extrahiert Pattern, GF kuratiert in der gewohnten V9.0-Curation-UI.
+
+### Goal / Intended Outcome
+
+GF richtet einmalig Forward-Regel ein. Plattform akkumuliert Forwarded-Emails passiv ueber Tage/Wochen. Periodisch (z.B. wenn Threshold erreicht oder per Manual-Trigger) startet die V9.0-Pipeline auf dem akkumulierten Korpus. Output identisch zu V9.0: kuratierte Pattern als knowledge_unit-Rows im V4.1-Handbuch-Snapshot. Aufwand-Reduktion fuer GF: kein wiederkehrender Bulk-Export, kein Bulk-Upload.
+
+### Target Users (V9.1)
+
+- **GF im eigenen Tenant (tenant_admin)**: einzige Persona V9.1 (Q-V9.1-G BLOCKING-OQ — Persona-Reinheit-Bestaetigung Founder-Input erforderlich vor /architecture).
+- **strategaize_admin (sekundaer)**: sieht Cross-Tenant Forward-Source-Statistik (Vendor + Volume + Cost + Spam-Rate) im erweiterten admin/audit/bulk-email-View.
+- **Mitarbeiter / Mandanten / Customer-Service-Mitarbeiter**: explizit ausgeschlossen V9.1 (V9.2+ / V10+ / V12+).
+
+### V9.1 In Scope
+
+1. **Inbound-SMTP-Vendor + Catchall-Routing (FEAT-075)**: **AWS SES Inbound Ireland (eu-west-1)** per DEC-194 2026-06-06. Catchall-Subdomain `bulk.strategaizetransition.com` mit MX-Record auf `inbound-smtp.eu-west-1.amazonaws.com`. SES Receipt-Rule-Set mit Wildcard `bulk.strategaizetransition.com` → S3-Bucket `bulk-email-inbound` (Path-Prefix `<tenant-slug>/...` fuer RLS-Trennung). Lambda-Bridge `forward-ses-to-op-webhook` transformiert SES-Event → HMAC-signed-POST an OP `/api/inbound/email`. Tenant-Lookup via Empfaenger-Local-Part (`bulk-<tenant-slug>@bulk.strategaizetransition.com` → Tenant-ID). Adapter-Pattern (Interface `InboundEmailVendor`) kapselt SES, damit Plan-B-Wechsel zu Mailgun EU ohne Business-Logic-Refactor moeglich bleibt. mailparser-Reuse aus V9.0 `src/lib/bulk-email/parser.ts` Hard-Reuse-Pflicht.
+2. **Forward-Validation-Layer + Spam-Defense (FEAT-076)**: Mehrschicht-Validierung damit kein Spam / Unsolicited-PII / Fremd-Sender in den Tenant-Bucket gelangt. 3 Validation-Optionen Q-V9.1-D + Q-V9.1-H in /architecture: (a) Header-Token (GF haengt Setup-Token an Forward-Regel), (b) Sender-Allowlist (Tenant pflegt Allowlist erlaubter Forward-Source-Domains), (c) DKIM-Re-Sign-Verifikation (DKIM-Signatur des Forward-Senders prueft). Reject-Pfad: Email wird verworfen + audit_log Entry + optional Bounce-Mail an Sender.
+3. **Continuous-Cost-Cap-Service (FEAT-077)**: V9.0-Cost-Cap-3-Schichten-Defense bleibt, aber neues Continuous-Stream-Modell (Q-V9.1-B in /architecture): Daily-Threshold (z.B. 5 EUR/Tag) + Monthly-Cap (Reuse V9.0 100 EUR/Tenant/Monat) + Per-Email-Approval-Schwelle (z.B. ueber 0.50 EUR/Email → Pre-Approval-Modal beim GF). Bei Threshold-Erreichung: Pipeline pausiert, GF bekommt Notification.
+4. **Storage-Retention-Cron (FEAT-078)**: Continuous-Inbound-Strom impliziert dauerhaft wachsenden Storage. Daily Cron loescht Raw-Emails nach konfigurabler Retention-Policy (Q-V9.1-C in /architecture — 30/60/90 Tage, Soft-Delete vs Hard-Delete). Bereits in knowledge_unit eingespielte Pattern bleiben unangetastet (idempotent: knowledge_unit referenziert nur pattern_id, nicht raw email_message). DSGVO-Loesch-Anspruch-Compliance.
+5. **Admin-Audit Forward-Source-Statistik + Setup-UI (FEAT-079)**: Erweiterung der V9.0 admin/audit/bulk-email-Page um Forward-Source-Vendor-Statistik (Vendor + Volume + Spam-Reject-Rate + Cost-pro-Tenant). Setup-UI fuer GF unter `/dashboard/bulk-email-import/forward-setup` mit Conversational-First-Pattern ("Mit KI beschreiben"-Button per [[feedback-strategaize-conversational-first-ux]]) + 4-Schritt-Anleitung pro Mail-Client (Gmail, Outlook, Thunderbird, Apple Mail) + Setup-Token-Display + DSGVO-Pflicht-Disclaimer (GF bestaetigt: "Ich darf diese Emails an Strategaize weiterleiten") + Test-Send-Button (verifiziert Forward-Regel End-to-End).
+
+### V9.1 Out of Scope (verschoben nach V9.2+/V10+)
+
+- **Multi-Mitarbeiter-Forward-Buckets (V9.2+)**: jeder Mitarbeiter kriegt eigene `bulk-emp-<id>-<tenant>@bulk.strategaizetransition.com`-Adresse. RLS-Erweiterung, separate UI-Sektion.
+- **Multi-Vendor-Failover (V9.3+)**: V9.1 ist 1-Vendor-Lock-in. Wenn Vendor faellt, ist Inbound down. Multi-Vendor-Routing kommt spaeter.
+- **Real-Time-UI-Stream (V9.3+)**: V9.1 zeigt Forward-Stream nur retrospektiv (Bulk-Run-Liste). Live-Inbox-View mit WebSocket / Server-Sent-Events kommt spaeter.
+- **IMAP-Live-Sync (V10+)**: Connection-Pool, OAuth pro Provider, Inbox-Watch via IMAP IDLE.
+- **PST / Outlook-Archiv (V10+)**: Legacy-Archiv-Formate.
+- **Customer-Service-Ticket-Stream-Inbound (V10+)**: separate Discovery, andere Persona.
+- **IS-Knowledge-Push (V11+)**: wartet auf IS V3.5 SLC-352 Knowledge-API + Anwalts-Sign-off (analog V9.0 Out-of-Scope-Klausel).
+- **CRM-Pipeline-Connector (V11+)**: andere Daten-Quelle.
+- **Auto-Bounce-Mail an Reject-Sender (V9.1+)**: optionale Erweiterung der FEAT-076 Reject-Pfad — fuer V9.1 Initial-Release reicht silent-drop + audit_log.
+
+### Core Features (V9.1)
+
+| ID | Feature | Zweck |
+|----|---------|-------|
+| FEAT-075 | Inbound-SMTP-Vendor + Catchall-Routing + Tenant-Lookup | Inbound-Foundation: Webhook empfaengt, Routing entscheidet Tenant, Storage persistiert Raw-Email |
+| FEAT-076 | Forward-Validation-Layer + Spam-Defense | Mehrschicht-Validierung (Header-Token / Sender-Allowlist / DKIM-Re-Sign — /architecture entscheidet) damit nur GF-genehmigte Forwards rein |
+| FEAT-077 | Continuous-Cost-Cap-Service (Daily + Monthly + Per-Email-Approval) | V9.0-Cap-Pattern erweitert um Continuous-Stream-Modell — Plattform pausiert Pipeline bei Threshold |
+| FEAT-078 | Storage-Retention-Cron (DSGVO-Lifecycle) | Daily-Cron loescht Raw-Emails nach Retention-Policy. Pattern bleiben in KU persistent (idempotent). DSGVO-Loesch-Compliance |
+| FEAT-079 | Admin-Audit Forward-Source-Statistik + Setup-UI mit Conversational-First | Erweiterung admin/audit/bulk-email + neuer GF-Setup-Flow (Mit KI beschreiben + 4-Mail-Client-Anleitungen + DSGVO-Disclaimer + Test-Send) |
+
+Detail-Specs entstehen mit /architecture V9.1 unter `/features/FEAT-075..079-*.md` (Skeleton-Status).
+
+### Constraints
+
+#### Technologie
+- **Vendor-EU-Pflicht (data-residency.md)**: Vendor MUSS EU-DPA + EU-Hosting bieten. **Entschieden DEC-194 2026-06-06: AWS SES Inbound Ireland (eu-west-1)**. Mailgun EU bleibt dokumentierter Plan-B. Postmark (US-East-1 only) raus.
+- **Region-Drift Bedrock eu-central-1 (Frankfurt) ↔ SES Inbound eu-west-1 (Ireland)**: beide EU, Cross-Region-Transfer innerhalb EU = DSGVO-konform, aber formell TIA-Punkt. In /architecture V9.1 als ADR-Audit-Punkt dokumentieren.
+- **Vendor-Webhook-Auth Pflicht**: HMAC-Signatur-Verifikation (Vendor-spezifisch) im `/api/inbound/email`-Endpoint. Reuse V9.0-Pattern verifyWebhookSignature (sofern existiert) oder neuer Helper.
+- **Pipeline-Reuse Pflicht (80% V9.0)**: Pre-Filter (FEAT-071), Thread-Aggregation + PII-Redaction (FEAT-072), Pattern-Extraktion (FEAT-073), Curation-UI (FEAT-073), Handbuch-Integration (FEAT-074) sind 1:1 wiederverwendbar. KEIN paralleler Pipeline-Stack.
+- **Storage-Reuse Pflicht**: V9.0-Bucket per default. Q-V9.1-F entscheidet ob Catchall (1 Bucket, alle Tenants per RLS) vs Per-Tenant-Bucket vs neuer `bulk-email-inbound`-Bucket.
+
+#### Organisatorisch
+- **GF-Curation bleibt Pflicht (V9.1)**: kein Auto-Import von Pattern ohne GF-Review (analog V9.0).
+- **Continuous-Cost-Cap-Pflicht**: Daily-Threshold + Monthly-Cap + Per-Email-Approval — Plattform pausiert Pipeline statt unkontrolliert weiterzulaufen.
+- **DSGVO-Disclaimer im Setup-UI Pflicht**: GF bestaetigt explizit, dass er die Forward-Mails verarbeiten / weiterleiten darf. Audit-Log dieser Zustimmung 7 Jahre unloeschbar.
+- **Setup-UI Conversational-First Pflicht** ([[feedback-strategaize-conversational-first-ux]]): "Mit KI beschreiben"-Button als Default-Flow.
+- **Audit-Trail bleibt Pflicht (DSGVO + COMPLIANCE.md)**: jeder LLM-Call + jede Vendor-Inbound-Reception + jeder Validation-Reject + jeder Cron-Loesch-Run mit timestamp + tenant + entscheidung + payload-hash dokumentiert.
+
+#### Sprache / Inhalt
+- V9.1 default deutsch + englisch (analog V9.0 V5-PII-Stand). Multi-Lingual-Pre-Filter erst V9.2+.
+
+### Risks / Assumptions
+
+#### Risiken
+- **R1 — V9.0-Pre-Filter-Quality UNVALIDATED**: 9 DEFERRED-LIVE-ACs aus V9.0 /qa (RPT-417) inkl. Pre-Filter-Recall + Pattern-Quality. Wenn V9.0-Pre-Filter "alles rein"-tauglich ist: V9.1-Continuous-Stream funktioniert. Wenn nicht: V9.1 muss eigenen Vor-Filter / Sender-Allowlist als Default-On bauen. Q-V9.1-E BLOCKING-OQ + Real-Mbox-Pre-Filter-Validation Pre-Condition.
+- **R2 — Vendor-DSGVO-Risiko**: Mailgun EU-Region + AWS SES Inbound Ireland sind DSGVO-konform, aber DPA-Details (Sub-Processor-Liste, Auftragsdaten-Verarbeitungs-Vertrag) muessen pro Vendor reviewed werden. Founder-Anwalts-Light-Konsultation moeglich.
+- **R3 — Spam-Influx**: dedicated Forward-Bucket-Adressen sind potenziell leakable / discoverable. Spam-Volumen koennte LLM-Cost-Cap aushebeln wenn Validation-Layer (FEAT-076) loechrig ist. Mehrschicht-Defense Pflicht.
+- **R4 — Vendor-Lock-in**: V9.1 ist 1-Vendor (Q-V9.1-A). Bei Vendor-Ausfall ist Inbound-Stream down. Mitigation: Adapter-Pattern (analog Bedrock-Adapter), Vendor-Wechsel-DEC dokumentiert. Multi-Vendor erst V9.3.
+- **R5 — Storage-Wachstum**: Continuous-Stream kann Storage-Quota schnell ausnutzen wenn Retention-Cron nicht greift oder Retention-Policy zu lang. Q-V9.1-C entscheidet Default-Retention (Vorschlag 60 Tage Soft-Delete + 90 Tage Hard-Delete).
+- **R6 — Unsolicited-PII-Risk**: GF leitet Mails von Dritten weiter (Kunden, Lieferanten). Dritte haben nicht aktiv zugestimmt. DSGVO-Risiko (PII-Verarbeitung ohne Einwilligung) muss durch (a) GF-Disclaimer im Setup-UI (b) PII-Redaction (FEAT-072-Reuse) (c) Anwalts-Sign-off vor erstem realen Forward-Bucket-Customer mitigiert werden. Anwalts-Sign-off ist Pre-Cond fuer Customer-Live ueber V9.1 (per [[module-lifecycle-discipline]] + [[feedback-no-strategaize-live-until-all-systems-ready]] sowieso strikt deferred bis Modul 1+2+3 komplett).
+
+#### Annahmen
+- V9.0 T+24h STABLE-PASS und Pre-Filter-Quality > Schwelle (Q-V9.1-E) sind Pre-Conditions.
+- Vendor-Vergleichs-Notiz (Mailgun EU vs SES Ireland) liegt vor /architecture vor.
+- V9.0-Pipeline (Pre-Filter + Threading + PII + Pattern + Curation + Handbuch-Insert) bleibt strukturell unveraendert in V9.1 (nur Worker-Trigger-Source aendert sich: V9.0 = Upload-Action, V9.1 = Continuous-Webhook-Stream + periodischer Pipeline-Trigger).
+- ai_cost_ledger + audit_log + error_log + Bedrock-Client + Storage-Bucket-Pattern bleiben 1:1 reused.
+
+### Success Criteria (V9.1 Gesamt)
+
+- SC-V9.1-1: GF kann im Setup-UI per Conversational-First-Pattern ("Mit KI beschreiben") oder klassischer 4-Schritt-Anleitung eine Forward-Regel im eigenen Mail-Client (Gmail / Outlook / Thunderbird / Apple Mail) einrichten und per Test-Send-Button End-to-End verifizieren.
+- SC-V9.1-2: GF-Setup-UI fordert DSGVO-Pflicht-Disclaimer-Bestaetigung ("Ich darf diese Emails an Strategaize weiterleiten") + Audit-Log dieser Zustimmung unloeschbar 7 Jahre.
+- SC-V9.1-3: Vendor-Webhook empfaengt Forwarded-Email, validiert per Validation-Layer (Q-V9.1-D-Option), routet zur korrekten Tenant-Bucket, persistiert Raw-Email + email_message-Row mit Pflicht-Headern.
+- SC-V9.1-4: Validation-Reject (z.B. Sender nicht in Allowlist, fehlender Header-Token) wird silent-dropped + audit_log + erscheint in admin/audit/bulk-email Reject-Statistik.
+- SC-V9.1-5: Periodischer Pipeline-Trigger (Threshold-erreicht oder Manual-Trigger durch GF) startet V9.0-Pipeline auf akkumuliertem Korpus, Pattern landen in V9.0-Curation-UI.
+- SC-V9.1-6: Continuous-Cost-Cap pausiert Pipeline bei Daily-Threshold (Vorschlag 5 EUR/Tag) oder Monthly-Cap (Vorschlag 100 EUR/Tenant/Monat).
+- SC-V9.1-7: Per-Email-Approval-Modal erscheint bei Threshold (Vorschlag >0.50 EUR/Email) bevor Sonnet-Pattern-Extraktion startet.
+- SC-V9.1-8: Daily Storage-Retention-Cron loescht Raw-Emails nach Retention-Policy (Q-V9.1-C-Default 60 Tage Soft-Delete + 90 Tage Hard-Delete). Bereits in knowledge_unit eingespielte Pattern bleiben unangetastet.
+- SC-V9.1-9: admin/audit/bulk-email zeigt Forward-Source-Statistik pro Tenant (Vendor + Inbound-Volume + Spam-Reject-Rate + Cost) plus Cross-Tenant-Aggregat fuer strategaize_admin.
+- SC-V9.1-10: Audit-Trail-Vollstaendigkeit V9.1: Vendor-Inbound + Validation-Decision + Pipeline-Trigger + Pattern-Extraktion + Curation + Import + Retention-Cron-Run alle in audit_log + ai_cost_ledger mit Region (eu-central-1 Bedrock) + Cost.
+- SC-V9.1-11: Tenant-RLS verhindert Cross-Tenant-Read auf alle V9.1-Tabellen (Pen-Test-Erweiterung Pflicht in /qa V9.1).
+- SC-V9.1-12: 80%-Reuse-Quote V9.0-Code verifiziert (Pipeline-Workers + Curation-UI + Handbuch-Insert + Audit-View 1:1). Nur ~20% V9.1-spezifischer Code (Inbound-Adapter + Catchall-Routing + Continuous-Cost-Cap + Retention-Cron + Forward-Validation + Setup-UI).
+
+### Open Questions
+
+#### BLOCKING fuer /requirements V9.1 (Founder-Input erforderlich BEVOR /architecture startet)
+
+- **Q-V9.1-E — Pre-Filter-Quality-Validation-Gate**: Welche Accuracy-Schwelle (Recall + Precision) muss V9.0-Pre-Filter auf Real-Mbox-Test-Corpus erreichen, damit V9.1-Continuous-Stream "alles rein"-Workflow vertretbar ist? Wie gross ist die Stichprobe (n=100 / n=500 / n=1000)? Wer reviewt Stichprobe (Founder allein vs Founder + Strategaize-Operations)?
+- **Q-V9.1-G — Persona-Reinheit V9.1**: bleibt V9.1 strikt GF-only oder ist Multi-Mitarbeiter-Erweiterung schon V9.1-Scope (statt V9.2+)? Trade-off: Multi-Mitarbeiter-Foundation in V9.1 spart V9.2-Discovery-Round, kostet ~1 Woche zusaetzliche RLS-Erweiterung. Default-Empfehlung: GF-only V9.1, Multi-Mitarbeiter V9.2 (analog V9.0 Persona-Reinheit).
+
+#### BLOCKING-Pre-Conditions (extern, nicht agent-loesbar)
+
+- **PC-V9.1-1**: V9.0 T+24h STABLE-PASS (~2026-06-06 16:29 UTC). Aktuell INTERIM PASS T+~14h (RPT-423).
+- **PC-V9.1-2**: V9.0-Pre-Filter-Quality-Validation-Smoke mit Real-Mbox-Test-Corpus (~100 anonymisierte Founder-Emails). Founder-Pflicht.
+- ~~PC-V9.1-3: Vendor-Vergleichs-Notiz (Mailgun EU DPA + Pricing vs AWS SES Inbound Ireland DPA + Pricing). Founder-Pflicht.~~ **ERFUELLT 2026-06-06 via Web-Recherche-ADR-Skizze RPT-426 + DEC-194 (AWS SES Inbound Ireland eu-west-1).**
+
+#### Fuer /architecture V9.1 (entscheidbar nach BLOCKING-OQs durch)
+
+- **Q-V9.1-A — Vendor-Wahl** → **DECIDED 2026-06-06 per DEC-194**: AWS SES Inbound Ireland (eu-west-1). Gruende: ~50-150x guenstiger fuer V9.1-Volumen (1k Mails/Mo: $0.11 vs Mailgun-Basic $15/Mo Plan-Mindestgebuehr), 0 neue Vendor-Beziehung (bestehender AWS-Account + AWS-DPA), mailparser-Reuse aus V9.0 (S3-Raw-Email → mailparser-Worker exakt wie V9.0). Trade-offs akzeptiert: Region-Drift Ireland eu-west-1 statt Frankfurt eu-central-1 (Cross-Region-TIA-Punkt, beide EU), +2-4h Setup-Aufwand SES+S3+SNS+Lambda+IAM. Plan-B Mailgun EU dokumentiert. Quelle: RPT-426 Vendor-Vergleichs-Recherche 2026-06-06.
+- **Q-V9.1-B — Continuous-Cost-Cap-Modell**: Daily-Threshold-Default (Vorschlag 5 EUR/Tag/Tenant), Monthly-Cap-Default (Reuse V9.0 100 EUR/Tenant/Monat), Per-Email-Approval-Schwelle (Vorschlag >0.50 EUR/Email).
+- **Q-V9.1-C — Storage-Retention-Policy**: Default-Retention-Tage (Vorschlag 60 Tage Soft-Delete + 90 Tage Hard-Delete), Soft-Delete-Semantik (status='deleted' + delete_at-Timestamp + tatsaechliches Hard-Delete erst nach Hard-Delete-Window).
+- **Q-V9.1-D — Forward-Validation-Mechanik**: Header-Token vs Sender-Allowlist vs DKIM-Re-Sign vs Kombination. Default-Empfehlung: Setup-Token im Forward-Header (einfach implementierbar) PLUS Sender-Allowlist (Tenant pflegt erlaubte Forward-Source-Domains).
+- **Q-V9.1-F — Address-Routing-Pattern**: Catchall `bulk-<tenant-slug>@bulk.strategaizetransition.com` vs Explicit-Aliases pro Tenant via Vendor-API-Provisioning. Default-Empfehlung: Catchall (einfachste Skalierung, kein per-Tenant-Vendor-API-Call).
+- **Q-V9.1-H — Spam-Defense**: Sender-Allowlist (FEAT-076) + Vendor-Built-In-Spam-Filter (Mailgun/SES haben Built-In) als 2-Schicht-Defense. Q-V9.1-H entscheidet ob zusaetzliche eigene Spam-Heuristik (z.B. Subject-Pattern-Block) Default-On oder Opt-In.
+
+### Delivery Mode
+
+**SaaS Product** — unveraendert. Strengste TDD-Disziplin (Validation-Layer + Cost-Cap-Logik + Tenant-RLS + Retention-Cron). Mandatory atomic commits pro Micro-Task ([[git-release]] Rule). Eigener Worktree (SaaS-Mode-Pflicht). Internal-Test-Mode bleibt — kein Customer-Live ueber V9.1 vor Modul 1+2+3-Vollstaendigkeit per [[module-lifecycle-discipline]] + [[feedback-no-strategaize-live-until-all-systems-ready]].
+
+### Slice-Sketch (vorlaeufig, /architecture + /slice-planning entscheiden)
+
+Geschaetzt **3-4 Slices, ~2-3 Wochen Implementations-Zeit**. Cumulative-Single-Branch-Worktree analog V8.1/V9.0-Pattern (`v9-1-forward-bucket-email`).
+
+- **SLC-V9.1-A (geplant) — FEAT-075 + FEAT-076 Inbound-Foundation**: Vendor-Webhook-Endpoint + HMAC-Verifikation + Tenant-Lookup + Catchall-Routing + Validation-Layer + Storage-Persistierung + audit_log. Pre-Cond: Q-V9.1-A + Q-V9.1-D + Q-V9.1-F entschieden.
+- **SLC-V9.1-B (geplant) — FEAT-077 Continuous-Cost-Cap-Service**: Daily-Threshold + Monthly-Cap (Reuse V9.0 100 EUR) + Per-Email-Approval-Modal + Pipeline-Pause-Logik + GF-Notification. Pre-Cond: Q-V9.1-B entschieden.
+- **SLC-V9.1-C (geplant) — FEAT-078 Storage-Retention-Cron**: Daily Coolify-Scheduled-Task + Retention-Policy-Engine + Soft-Delete + Hard-Delete + audit_log + idempotency-Check gegen knowledge_unit-Referenzen. Pre-Cond: Q-V9.1-C entschieden.
+- **SLC-V9.1-D (geplant) — FEAT-079 Admin-Audit + Setup-UI**: Setup-UI mit Conversational-First ("Mit KI beschreiben") + 4-Mail-Client-Anleitungen + Setup-Token-Display + DSGVO-Disclaimer + Test-Send-Button + Admin-Audit-Erweiterung Forward-Source-Statistik. Pre-Cond: GF-Curation-UI-Pattern aus V9.0-Reuse stabil.
+
+Reihenfolge linear SLC-A → SLC-B → SLC-C → SLC-D. /architecture pruft ob SLC-A+B als 1 Slice zusammenlegbar (FEAT-075+76+77 alle Inbound-Path).
+
+### Pre-Conditions
+
+- **V9.0 T+24h STABLE-Bestaetigung** (~2026-06-06 16:29 UTC). Aktuell INTERIM PASS T+~14h.
+- **V9.0-Pre-Filter-Quality-Validation-Smoke** mit Real-Mbox-Test-Corpus (~100 anonymisierte Founder-Emails). Founder-Pflicht.
+- ~~Vendor-Vergleichs-Notiz (Mailgun EU DPA + Pricing vs AWS SES Inbound Ireland DPA + Pricing) als ADR-Input fuer Q-V9.1-A.~~ **ERFUELLT 2026-06-06 via Web-Recherche-ADR-Skizze RPT-426 + DEC-194 (AWS SES Inbound Ireland eu-west-1).**
+- **Founder-Entscheidungen Q-V9.1-E + Q-V9.1-G** vor /architecture (Accuracy-Schwelle Pre-Filter + Persona-Reinheit V9.1).
+
+### Detail-Spec
+V9.1-Requirements-Skeleton-Report erstellt in dieser Session als RPT-425. Status NOT-FINAL — 4 BLOCKING-Pre-Conditions + 2 BLOCKING-OQs offen. /architecture V9.1 darf erst starten wenn Founder alle 4 Pre-Conditions + Q-V9.1-E + Q-V9.1-G beantwortet hat. Feature-Skeleton-Specs entstehen mit /architecture V9.1 unter `/features/FEAT-075..079-*.md`. Naechster Schritt nach diesem Skill (Skeleton): Pre-Conditions abarbeiten (insb. T+24h STABLE und Real-Mbox-Validation), DANN /architecture V9.1.
