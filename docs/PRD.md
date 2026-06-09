@@ -2348,7 +2348,12 @@ V9-Requirements-Completion-Report wird in dieser Session erstellt als RPT-374. F
 
 ## V9.1 — Bulk-Import Forward-Bucket-Email (Continuous-Stream)
 
-Requirements-Skeleton angelegt 2026-06-06 via RPT-425, basierend auf /discovery RPT-424 2026-06-06. **Status: NOT-FINAL** — 4 BLOCKING-Pre-Conditions offen (V9.0 T+24h STABLE, Real-Mbox-Pre-Filter-Validation, Vendor-Vergleichs-Notiz, Founder-Entscheidungen Q-V9.1-E + Q-V9.1-G). Per Founder-Direktive 2026-06-06 Skeleton trotzdem angelegt, damit naechste Sessions ohne Discovery-Re-Pass an der korrekten Stelle einsteigen koennen. V9.1 ist die kontinuierliche Erweiterung von V9.0: Email kommt nicht mehr per `.mbox`-Batch, sondern flie&szlig;t passive ueber Mail-Forward-Regel des GF in einen dedizierten Bulk-Inbox-Endpoint.
+Requirements-Skeleton angelegt 2026-06-06 via RPT-425, basierend auf /discovery RPT-424 2026-06-06. **Closure 2026-06-09 via RPT-428** — alle 4 BLOCKING-Pre-Conditions + 2 BLOCKING-OQs (Q-V9.1-E + Q-V9.1-G) erledigt. **Status: READY fuer /architecture V9.1**. V9.1 ist die kontinuierliche Erweiterung von V9.0: Email kommt nicht mehr per `.mbox`-Batch, sondern flie&szlig;t passive ueber Mail-Forward-Regel des GF in einen dedizierten Bulk-Inbox-Endpoint.
+
+**Closure-Entscheidungen Founder 2026-06-09:**
+- **PC-V9.1-2 ERSETZT durch Synthetic-Corpus mit Ground-Truth-Labels** (statt Real-Mbox-Test-Corpus). Synthetisches Test-Fixture `test-fixtures/v91-mbox-corpus/synthetic.yaml` mit 45 Emails (~22 valuable / ~23 skip) und expliziten Labels (expected_classification + expected_pattern + reasoning). Begruendung: Real-Mbox ohne Ground-Truth-Labels haette manuelle Klassifikation pro Email erfordert (~30 Min Founder-Aufwand fuer 100 Emails) und keine messbare Precision/Recall-Statistik geliefert. Synthetic-Corpus mit Labels macht Haiku-Accuracy direkt messbar. Echte Pre-Filter-Validation auf Real-Traffic erfolgt post-deploy via Telemetry (siehe Q-V9.1-E unten).
+- **Q-V9.1-E DECIDED**: keine harte Accuracy-Schwelle Code-Side. Pre-Filter laeuft mit Haiku-Confidence-Default 0.7. ai_cost_ledger + email_bulk_run loggen jede Klassifikations-Entscheidung mit Confidence-Score. Justierung der Schwelle erfolgt post-deploy in V9.1.x oder V9.2 auf Basis Real-Traffic-Telemetry (~2 Wochen Live-Window).
+- **Q-V9.1-G DECIDED**: V9.1 strikt **GF-only**. Multi-Mitarbeiter-Erweiterung verschoben nach V9.2+. Persona-Reinheit-Default (analog V9.0).
 
 ### Problem Statement
 
@@ -2448,15 +2453,15 @@ Detail-Specs entstehen mit /architecture V9.1 unter `/features/FEAT-075..079-*.m
 
 ### Open Questions
 
-#### BLOCKING fuer /requirements V9.1 (Founder-Input erforderlich BEVOR /architecture startet)
+#### DECIDED 2026-06-09 (Closure-Session RPT-428)
 
-- **Q-V9.1-E — Pre-Filter-Quality-Validation-Gate**: Welche Accuracy-Schwelle (Recall + Precision) muss V9.0-Pre-Filter auf Real-Mbox-Test-Corpus erreichen, damit V9.1-Continuous-Stream "alles rein"-Workflow vertretbar ist? Wie gross ist die Stichprobe (n=100 / n=500 / n=1000)? Wer reviewt Stichprobe (Founder allein vs Founder + Strategaize-Operations)?
-- **Q-V9.1-G — Persona-Reinheit V9.1**: bleibt V9.1 strikt GF-only oder ist Multi-Mitarbeiter-Erweiterung schon V9.1-Scope (statt V9.2+)? Trade-off: Multi-Mitarbeiter-Foundation in V9.1 spart V9.2-Discovery-Round, kostet ~1 Woche zusaetzliche RLS-Erweiterung. Default-Empfehlung: GF-only V9.1, Multi-Mitarbeiter V9.2 (analog V9.0 Persona-Reinheit).
+- ~~**Q-V9.1-E — Pre-Filter-Quality-Validation-Gate**~~ **DECIDED**: keine harte Accuracy-Schwelle Code-Side. Pre-Filter laeuft mit Haiku-Confidence-Default 0.7. ai_cost_ledger + email_bulk_run loggen jede Klassifikations-Entscheidung mit Confidence-Score fuer Post-Deploy-Telemetry-Justierung. Begruendung: Real-Traffic-Telemetry liefert belastbarere Schwellen-Daten als ein einzelner Pre-Release-Corpus-Run. Validation-Schritt im /architecture V9.1 oder MT-0 V9.1-Slice: Run Haiku gegen `test-fixtures/v91-mbox-corpus/synthetic.yaml` und protokolliere Precision/Recall/F1 gegen Ground-Truth-Labels als Skeleton-Validation (nicht harte Gate-Schwelle).
+- ~~**Q-V9.1-G — Persona-Reinheit V9.1**~~ **DECIDED**: V9.1 strikt **GF-only**. Multi-Mitarbeiter-Erweiterung verschoben nach V9.2+. Persona-Reinheit-Default analog V9.0.
 
-#### BLOCKING-Pre-Conditions (extern, nicht agent-loesbar)
+#### Erledigte BLOCKING-Pre-Conditions (Closure 2026-06-09)
 
-- **PC-V9.1-1**: V9.0 T+24h STABLE-PASS (~2026-06-06 16:29 UTC). Aktuell INTERIM PASS T+~14h (RPT-423).
-- **PC-V9.1-2**: V9.0-Pre-Filter-Quality-Validation-Smoke mit Real-Mbox-Test-Corpus (~100 anonymisierte Founder-Emails). Founder-Pflicht.
+- ~~**PC-V9.1-1**: V9.0 T+24h STABLE-PASS~~ **ERFUELLT 2026-06-07 08:55 UTC** (RPT-427, V9 = Last Stable Version).
+- ~~**PC-V9.1-2**: V9.0-Pre-Filter-Quality-Validation-Smoke mit Real-Mbox-Test-Corpus (~100 anonymisierte Founder-Emails)~~ **ERSETZT 2026-06-09 durch Synthetic-Corpus mit Ground-Truth-Labels** (`test-fixtures/v91-mbox-corpus/synthetic.yaml`, 45 Emails, ~22 valuable / ~23 skip, expected_classification + expected_pattern + reasoning pro Email). Begruendung: messbare Precision/Recall-Statistik ohne Founder-Manual-Klassifikations-Aufwand; Real-Traffic-Validation post-deploy via Telemetry. Founder-Direktive 2026-06-09.
 - ~~PC-V9.1-3: Vendor-Vergleichs-Notiz (Mailgun EU DPA + Pricing vs AWS SES Inbound Ireland DPA + Pricing). Founder-Pflicht.~~ **ERFUELLT 2026-06-06 via Web-Recherche-ADR-Skizze RPT-426 + DEC-194 (AWS SES Inbound Ireland eu-west-1).**
 
 #### Fuer /architecture V9.1 (entscheidbar nach BLOCKING-OQs durch)
@@ -2485,10 +2490,10 @@ Reihenfolge linear SLC-A → SLC-B → SLC-C → SLC-D. /architecture pruft ob S
 
 ### Pre-Conditions
 
-- **V9.0 T+24h STABLE-Bestaetigung** (~2026-06-06 16:29 UTC). Aktuell INTERIM PASS T+~14h.
-- **V9.0-Pre-Filter-Quality-Validation-Smoke** mit Real-Mbox-Test-Corpus (~100 anonymisierte Founder-Emails). Founder-Pflicht.
+- ~~V9.0 T+24h STABLE-Bestaetigung~~ **ERFUELLT 2026-06-07 08:55 UTC** (RPT-427 T+~40h STABLE, V9 = Last Stable Version).
+- ~~V9.0-Pre-Filter-Quality-Validation-Smoke mit Real-Mbox-Test-Corpus~~ **ERSETZT 2026-06-09 durch Synthetic-Corpus mit Ground-Truth-Labels** (`test-fixtures/v91-mbox-corpus/synthetic.yaml`).
 - ~~Vendor-Vergleichs-Notiz (Mailgun EU DPA + Pricing vs AWS SES Inbound Ireland DPA + Pricing) als ADR-Input fuer Q-V9.1-A.~~ **ERFUELLT 2026-06-06 via Web-Recherche-ADR-Skizze RPT-426 + DEC-194 (AWS SES Inbound Ireland eu-west-1).**
-- **Founder-Entscheidungen Q-V9.1-E + Q-V9.1-G** vor /architecture (Accuracy-Schwelle Pre-Filter + Persona-Reinheit V9.1).
+- ~~Founder-Entscheidungen Q-V9.1-E + Q-V9.1-G~~ **ERFUELLT 2026-06-09 via RPT-428 Closure-Session** (Q-V9.1-E: keine harte Schwelle, Telemetry-Justierung post-deploy; Q-V9.1-G: GF-only V9.1).
 
 ### Detail-Spec
-V9.1-Requirements-Skeleton-Report erstellt in dieser Session als RPT-425. Status NOT-FINAL — 4 BLOCKING-Pre-Conditions + 2 BLOCKING-OQs offen. /architecture V9.1 darf erst starten wenn Founder alle 4 Pre-Conditions + Q-V9.1-E + Q-V9.1-G beantwortet hat. Feature-Skeleton-Specs entstehen mit /architecture V9.1 unter `/features/FEAT-075..079-*.md`. Naechster Schritt nach diesem Skill (Skeleton): Pre-Conditions abarbeiten (insb. T+24h STABLE und Real-Mbox-Validation), DANN /architecture V9.1.
+V9.1-Requirements-Skeleton-Report 2026-06-06 als RPT-425, Closure-Report 2026-06-09 als RPT-428. **Status: READY fuer /architecture V9.1**. Alle 4 BLOCKING-Pre-Conditions + 2 BLOCKING-OQs (Q-V9.1-E + Q-V9.1-G) erledigt. Feature-Skeleton-Specs entstehen mit /architecture V9.1 unter `/features/FEAT-075..079-*.md`. Naechster Schritt: `/architecture V9.1` (~2-3h fresh Session) mit DEC-194 als Vendor-Anker + DEC-195 (Synthetic-Corpus-Validation-Approach) + Q-V9.1-B/C/D/F/H + Region-Drift-TIA-DEC + IAM-Policy-Layout + Pflicht-Founder-Step-Liste (SES-Subdomain-Verify + MX-Record-Eintragung).

@@ -1,0 +1,1302 @@
+# V9.1 Synthetic Email Corpus with Ground-Truth Labels
+# Purpose: Validate Bedrock Haiku Pre-Filter accuracy (Precision / Recall / F1)
+# Generated: 2026-06-09 by Claude Code (V9.1 /requirements Closure, OP repo)
+# DO NOT use as real-email surrogate — synthetic content only
+# Total emails: 45 (22 valuable / 23 skip)
+# Format: corpus[].id / expected_classification / expected_pattern / reasoning / subject / from / to / date / body
+
+corpus:
+  - id: "001"
+    expected_classification: valuable
+    expected_pattern: "StB-Kanzlei-Lizenzanfrage fuer Mandanten-Onboarding (Multi-Mandant-Setup, Preisstruktur Kanzlei-Lizenz)"
+    reasoning: "Konkrete Lizenzanfrage von Steuerberatungskanzlei mit 47 Mandanten. Enthaelt entscheidungs-relevante Information zu Preismodell-Erwartung und gewuenschtem Onboarding-Flow."
+    subject: "Anfrage Strategaize-Lizenz fuer unsere Mandanten — Kanzlei Hoffmann & Partner"
+    from: "p.hoffmann@hoffmann-stb.de"
+    to: "immo@bellaerts.de"
+    date: "2026-04-03"
+    body: |
+      Sehr geehrter Herr Bellaerts,
+
+      ueber einen Hinweis von Kollegen beim letzten Steuerberatertag bin ich auf Strategaize aufmerksam geworden. Wir betreuen aktuell 47 mittelstaendische Mandanten, von denen rund ein Drittel in den naechsten fuenf Jahren vor einer Nachfolgeregelung steht.
+
+      Mich interessiert konkret, ob Sie eine Kanzlei-Lizenz anbieten, mit der wir Strategaize als beratungs-vorbereitendes Tool im Mandantengespraech einsetzen koennen. Idealerweise so, dass der Mandant einen Erstzugang bekommt, das Wissen strukturiert hinterlegt und wir als Kanzlei eine Read-Only-Sicht haben, um den Nachfolge-Prozess fachlich begleiten zu koennen.
+
+      Konkret stellen sich mir drei Fragen:
+
+      1. Gibt es ein Lizenzmodell fuer Steuerberater (z.B. Staffelpreis nach Mandantenzahl)?
+      2. Wie schnell laesst sich ein neuer Mandant onboarden — wir denken an ein Pilot-Setup mit drei Mandanten bis Ende Q3.
+      3. §9 StBerG schraenkt unsere Verguetungsmoeglichkeiten ein; sind Sie mit dieser Vorgabe vertraut?
+
+      Ueber einen Telefontermin in der naechsten Woche wuerde ich mich freuen.
+
+      Mit freundlichen Gruessen
+      Peter Hoffmann
+      Hoffmann & Partner Steuerberatungsgesellschaft mbB
+
+  - id: "002"
+    expected_classification: skip
+    expected_pattern: null
+    reasoning: "Standard-Newsletter Heise mit aggregierter Tech-News. Kein founder-spezifisches Wissen extrahierbar."
+    subject: "heise online Top-News: KI-Verordnung in Kraft, GitHub Copilot Update, neue CPU-Generation"
+    from: "newsletter@heise.de"
+    to: "immo@bellaerts.de"
+    date: "2026-04-04"
+    body: |
+      Diese Woche im Fokus: KI-Verordnung in Kraft, GitHub Copilot Update, neue CPU-Generation
+
+      Liebe Leserinnen und Leser,
+
+      die wichtigsten IT-News der Woche im Ueberblick.
+
+      Top-Themen:
+      - EU-KI-Verordnung tritt fuer General-Purpose-AI-Modelle in Kraft. Was Anbieter jetzt beachten muessen.
+      - GitHub Copilot bekommt erweiterten Agenten-Modus mit besserer Kontextverarbeitung.
+      - AMD und Intel praesentieren neue Server-CPU-Generationen mit Fokus auf AI-Workloads.
+      - Cybersecurity-Studie: Mittelstand unterschaetzt Risiken durch unsichere Lieferketten.
+      - Microsoft kuendigt erweiterten Azure-Region-Ausbau in Deutschland an.
+
+      Mehr Tech-Themen unter heise.de/top-news
+
+      Newsletter abbestellen: heise.de/newsletter/unsubscribe
+
+  - id: "003"
+    expected_classification: valuable
+    expected_pattern: "SME-Geschaeftsfuehrer Exit-Readiness-Anfrage mit konkretem Zeitfenster und Branchenkontext (Maschinenbau)"
+    reasoning: "Geschaeftsfuehrer eines Familienunternehmens beschreibt konkrete Nachfolgesituation mit 4-Jahres-Horizont. Klassischer Strategaize-Zielkunde, Pattern fuer Sales-Spielbuch wertvoll."
+    subject: "Vorbereitung Unternehmensuebergabe — Erstgespraech moeglich?"
+    from: "m.werner@werner-praezisionstechnik.de"
+    to: "immo@bellaerts.de"
+    date: "2026-04-06"
+    body: |
+      Sehr geehrter Herr Bellaerts,
+
+      mein Steuerberater hat mir empfohlen, mich rechtzeitig mit dem Thema strukturierte Nachfolge zu beschaeftigen. Ich fuehre seit 28 Jahren ein Familienunternehmen mit 64 Mitarbeitern im Bereich Praezisionsteilefertigung fuer den Maschinenbau. Mein Sohn hat klar gemacht, dass er nicht in die Firma einsteigen wird; mein Plan ist daher eine externe Nachfolge ueber einen MBI oder eine strategische Beteiligung.
+
+      Mein Zeithorizont ist etwa vier Jahre. In dieser Zeit moechte ich das Unternehmen so aufstellen, dass es nicht von meinem persoenlichen Wissen abhaengig ist — alle Kundenbeziehungen, Lieferanten, Sondermaschinen-Spezifika und das ueber Jahrzehnte aufgebaute Auftragswesen sind heute zu grossen Teilen in meinem Kopf.
+
+      Konkret moechte ich verstehen:
+
+      Wie schnell laesst sich Strategaize bei einem Unternehmen unserer Groesse einfuehren? Welche Zeit muss ich realistisch selbst investieren, um mein Wissen einzupflegen? Gibt es Referenzen aus der Fertigungsbranche?
+
+      Fuer ein Erstgespraech stehe ich Dienstag oder Donnerstag in der naechsten Woche zur Verfuegung.
+
+      Mit freundlichen Gruessen
+      Martin Werner
+      Werner Praezisionstechnik GmbH
+
+  - id: "004"
+    expected_classification: skip
+    expected_pattern: null
+    reasoning: "Cold-Outreach von Analytics-SaaS-Vendor. Kein relevanter Inhalt, klassische BDR-Template-Mail."
+    subject: "Quick question, Immo — boost Strategaize conversions by 23%?"
+    from: "sarah.kim@growthmetrics-hq.com"
+    to: "immo@bellaerts.de"
+    date: "2026-04-07"
+    body: |
+      Hey Immo,
+
+      I came across Strategaize on LinkedIn and saw you're scaling your B2B SaaS in the German mid-market. Impressive growth!
+
+      Quick question: are you currently tracking conversion drop-offs in your onboarding flow with a dedicated product-analytics tool? Most founders we work with were leaving 20-30% revenue on the table before plugging in GrowthMetrics.
+
+      We've helped 400+ B2B SaaS scale-ups including names like Pipedrive, Personio, and Mollie. Our event-tracking and funnel-analytics typically pay for themselves within 60 days.
+
+      Worth a 15-min chat next week? Here's my calendar: calendly.com/sarahkim-gm
+
+      Best,
+      Sarah Kim
+      Senior Account Executive | GrowthMetrics
+
+      P.S. We have a special launch-promo for German SaaS startups — first 3 months 50% off.
+
+  - id: "005"
+    expected_classification: valuable
+    expected_pattern: "Customer-Setup-Frage zu Wissens-Struktur eines bestehenden Mandanten (B2B-Dienstleistung, Solopreneur-Phase, Team-Wachstum)"
+    reasoning: "Bestehender Customer fragt nach konkreter Strukturierung der Blueprint-Hierarchie. Antwort-Pattern wertvoll fuer Onboarding-Playbook anderer Kunden."
+    subject: "Frage zur Strukturierung unserer Akquise-Wissensbasis in Strategaize"
+    from: "t.bauer@bauer-consulting-partners.de"
+    to: "immo@bellaerts.de"
+    date: "2026-04-09"
+    body: |
+      Hallo Immo,
+
+      wir sind nun seit drei Wochen mit Strategaize aktiv und kommen gut voran. Eine konzeptionelle Frage stellt sich uns gerade.
+
+      Aktuell strukturieren wir unsere Akquise-Prozesse in Strategaize entlang der drei Phasen "Ansprache", "Qualifizierung" und "Abschluss". Innerhalb jeder Phase haben wir Sub-Patterns angelegt. Wir merken aber, dass viele unserer Akquise-Entscheidungen davon abhaengen, ob ein Lead aus dem Empfehlungs-Netzwerk kommt oder ueber Outbound-Kanal. Die Patterns unterscheiden sich erheblich.
+
+      Wuerden Sie empfehlen, diese Unterscheidung als zweite Top-Level-Achse zu modellieren (Empfehlung vs. Outbound, jeweils mit den drei Phasen darunter), oder als Tag/Attribut innerhalb der bestehenden Phasen-Struktur?
+
+      Hintergrund: Wir sind aktuell 4 Personen, planen aber bis Q4 auf 9 zu wachsen, und das Wissen soll dann von neuen Teammitgliedern in den ersten 4-6 Wochen vollstaendig nutzbar sein.
+
+      Vielen Dank vorab fuer Ihre Einschaetzung.
+
+      Viele Gruesse
+      Thomas Bauer
+      Bauer Consulting Partners
+
+  - id: "006"
+    expected_classification: skip
+    expected_pattern: null
+    reasoning: "Automatisierte GitHub-Notification ohne menschliche Entscheidungsinhalte."
+    subject: "[strategaize/onboarding-plattform] PR #1247: refactor email-classifier mock-mode"
+    from: "notifications@github.com"
+    to: "immo@bellaerts.de"
+    date: "2026-04-10"
+    body: |
+      A pull request was opened in strategaize/onboarding-plattform by rbellaerts.
+
+      #1247 refactor email-classifier mock-mode
+
+      Branch: feature/email-classifier-mock-mode
+      Base: main
+
+      Description:
+      Refactors the email classifier to support deterministic mock-mode via BEDROCK_MOCK_MODE env variable. Adds 7 Vitest drift tests against real Bedrock response schema. No production behavior changes.
+
+      Files changed: 4
+      Additions: +287
+      Deletions: -42
+
+      View it on GitHub:
+      https://github.com/strategaize/onboarding-plattform/pull/1247
+
+      —
+      You are receiving this because you are subscribed to this repository.
+      Reply directly to this email to comment on this pull request.
+
+  - id: "007"
+    expected_classification: valuable
+    expected_pattern: "Pricing-Pushback Customer mit konkretem Wert-Vergleich (interner FTE vs. Strategaize-Lizenz)"
+    reasoning: "Praeziser ROI-Vergleich des Kunden ist Gold-Material fuer Sales-Spielbuch / Pricing-Anker-Argumente in kuenftigen Verhandlungen."
+    subject: "Re: Strategaize Angebot — kurze Rueckmeldung"
+    from: "s.maier@maier-fertigung.de"
+    to: "immo@bellaerts.de"
+    date: "2026-04-11"
+    body: |
+      Sehr geehrter Herr Bellaerts,
+
+      vielen Dank fuer Ihr Angebot vom 8. April. Ich habe es mir nochmal in Ruhe angesehen und moechte offen sein: 2.400 EUR pro Monat fuer die Enterprise-Lizenz erscheint mir fuer ein Unternehmen unserer Groesse (38 Mitarbeiter) ambitioniert.
+
+      Mein Vergleichsmassstab ist folgender: Wenn ich heute eine halbe Stelle Wissensmanager / Assistent der Geschaeftsfuehrung einstelle, kostet mich das rund 35.000 EUR pro Jahr. Strategaize liegt mit 28.800 EUR/Jahr deutlich unter dieser Schwelle, aber der Vergleich hinkt — eine halbe Stelle gibt mir reine Arbeitszeit, Strategaize gibt mir Struktur. Das ist nicht 1:1 vergleichbar.
+
+      Was mir bei der Entscheidung helfen wuerde:
+
+      Welche realistische Zeitersparnis erreichen vergleichbare Kunden in den ersten 6-12 Monaten? Gibt es Cases, in denen Strategaize tatsaechlich eine Personalentscheidung beeinflusst hat (verzoegerte oder vermiedene Einstellung)?
+
+      Ich bin nicht grundsaetzlich gegen das Angebot. Aber ich brauche fuer den naechsten Schritt eine handfeste Argumentation, die ich auch meinem Beirat im naechsten Quartal verteidigen kann.
+
+      Beste Gruesse
+      Stefan Maier
+      Maier Fertigungs GmbH
+
+  - id: "008"
+    expected_classification: skip
+    expected_pattern: null
+    reasoning: "AWS-Monatsrechnung — automatisierter Buchhaltungs-Vorgang, kein founder-relevantes Wissen."
+    subject: "Your AWS bill for April 2026 is now available"
+    from: "no-reply-aws@amazon.com"
+    to: "immo@bellaerts.de"
+    date: "2026-05-02"
+    body: |
+      Greetings,
+
+      Your AWS bill for the billing period of April 1 — April 30, 2026 is now available.
+
+      Account: 471829356104
+      Account name: Strategaize Production
+
+      Total amount due: USD 487.32
+      Billing period: 2026-04-01 — 2026-04-30
+      Due date: 2026-05-15
+
+      Breakdown:
+      - Amazon EC2: USD 124.18
+      - Amazon S3: USD 18.40
+      - AWS Bedrock: USD 286.71
+      - AWS Lambda: USD 12.04
+      - CloudWatch: USD 31.99
+      - Data Transfer: USD 14.00
+
+      View invoice: https://console.aws.amazon.com/billing/home
+
+      This is an automated message. Please do not reply.
+
+  - id: "009"
+    expected_classification: valuable
+    expected_pattern: "Talent-Pitch B2B-Sales-DACH mit StB-Kanzlei-Vertriebs-Erfahrung (Channel-Partner-Pattern direkt anschlussfaehig)"
+    reasoning: "Bewerber bringt genau das Distribution-Channel-Know-How mit, das fuer Strategaize-StB-Multiplikator-Strategie zentral ist. Pattern fuer kuenftige Hiring-Entscheidungen wertvoll."
+    subject: "Initiativbewerbung — Aufbau Steuerberater-Partnerprogramm bei Strategaize"
+    from: "j.thomas@protonmail.com"
+    to: "immo@bellaerts.de"
+    date: "2026-04-15"
+    body: |
+      Sehr geehrter Herr Bellaerts,
+
+      ueber LinkedIn bin ich auf Strategaize gestossen und finde Ihr Konzept eines strukturierten Wissens-Transfers fuer die Unternehmensnachfolge sehr ueberzeugend, gerade in Verbindung mit der Multiplikator-Strategie ueber Steuerberater.
+
+      Mein Hintergrund: Acht Jahre B2B-Sales im DACH-Raum, davon die letzten vier Jahre bei einer Software-Firma im Bereich Kanzlei-Software. Dort habe ich ein Partnerprogramm mit ueber 180 aktiven Steuerberatungs-Kanzleien aufgebaut. Die Mechanik kenne ich praktisch: §9 StBerG-konforme Verguetungs-Modelle (also keine Cash-Provisionen sondern Sachleistungen, Lead-Sharing, Schulungs-Pakete), DATEV-Marktplatz-Integration, Verbandsmessen wie der Steuerberatertag.
+
+      Was ich an Strategaize sehe: Sie haben ein Produkt, fuer das Steuerberater einen klaren Beratungsanlass mit ihren Mandanten haben, naemlich die strukturierte Nachfolge-Vorbereitung. Das ist eine andere Verkaufslogik als reines Kanzlei-Software-Tooling und meiner Einschaetzung nach ein offenes Marktfenster von 12 bis 24 Monaten, bis groessere Anbieter aufmerksam werden.
+
+      Ich wuerde gerne in einem ersten Gespraech mit Ihnen ausloten, ob ein Channel-Aufbau bei Strategaize ein Thema fuer 2026/2027 ist.
+
+      Mit freundlichen Gruessen
+      Julian Thomas
+
+  - id: "010"
+    expected_classification: skip
+    expected_pattern: null
+    reasoning: "Konferenz-Marketing mit Standard-CTAs. Kein extraktionswuerdiges Wissen."
+    subject: "Last chance: SaaStr Europa 2026 Early-Bird endet morgen"
+    from: "events@saastr-europa.com"
+    to: "immo@bellaerts.de"
+    date: "2026-04-16"
+    body: |
+      Don't miss it — Early-Bird ticket pricing ends tomorrow at midnight CET!
+
+      SaaStr Europa 2026
+      September 14-16, 2026
+      RAI Amsterdam
+
+      Join 6,000+ SaaS executives, founders, and investors for three days of:
+      - 150+ sessions from category-defining SaaS leaders
+      - Networking with 400+ VCs actively investing in European SaaS
+      - The Builder Hall: 200 SaaS tools showcasing what's next
+      - The famous SaaStr Pavilion party
+
+      Confirmed speakers include CEOs from Notion, Monday.com, Personio, Pipedrive, Mollie, Hopin, and more.
+
+      Early-Bird ticket: EUR 1,495
+      Tomorrow regular price: EUR 1,995
+
+      Secure your spot now: saastr.com/europa-tickets
+
+      Special group rates available for teams of 5+.
+
+      See you in Amsterdam,
+      The SaaStr Europa Team
+
+  - id: "011"
+    expected_classification: valuable
+    expected_pattern: "Vendor-Discussion Coolify-Kapazitaets-Planung (Container-Limits Hetzner CCX33, Cost-Tradeoff Up-Scaling vs. Hetzner-Bare-Metal)"
+    reasoning: "Konkrete technische Entscheidung mit Cost-Impact (~150 EUR/Monat). Architektur-Pattern direkt wiederverwendbar fuer V10+."
+    subject: "Re: Coolify Resource Usage — Recommendation zur naechsten Stufe"
+    from: "alex@coolify.io"
+    to: "immo@bellaerts.de"
+    date: "2026-04-18"
+    body: |
+      Hi Immo,
+
+      thanks for the detailed monitoring data you sent over. I had a look at your current Coolify instance and the resource utilisation pattern of the last 30 days.
+
+      Quick summary of what I see:
+
+      Your CCX33 (8 vCPU / 32 GB RAM) is running comfortably at 35-45 percent CPU average, but peak utilisation during your nightly cron jobs and Bedrock pre-processing reaches 78-82 percent for roughly 90 minutes. Memory is steady at 21 GB, with the supabase-db container being the largest consumer.
+
+      My recommendation depends on your 6-month outlook:
+
+      Option A — stay on CCX33: works fine until you cross roughly 4-5 active customers running parallel onboarding flows. The bottleneck will be Bedrock-API-throughput, not Coolify itself.
+
+      Option B — upgrade to CCX43 (16 vCPU / 64 GB RAM): ~150 EUR more per month, gives you headroom for 12-15 active customers plus comfortable cron-job parallelism.
+
+      Option C — split workloads: keep the app+supabase on CCX33, move Bedrock-pre-processing and cron-workers to a dedicated CX42. Approximately same cost as Option B but better isolation if the worker crashes.
+
+      My honest take: stay on CCX33 until you cross 3 paying customers. Then go straight to Option C — the isolation argument becomes important the moment one customer's nightly job impacts another customer's interactive session.
+
+      Happy to jump on a call if helpful.
+
+      Best,
+      Alex
+
+  - id: "012"
+    expected_classification: skip
+    expected_pattern: null
+    reasoning: "Stripe-Payment-Notification — Standard-Transaktions-Mail, kein Wissens-Wert."
+    subject: "Payment received: EUR 297.00 from customer cust_R7nQ4xz"
+    from: "stripe@notifications.stripe.com"
+    to: "immo@bellaerts.de"
+    date: "2026-04-19"
+    body: |
+      A payment has been successfully processed.
+
+      Amount: EUR 297.00
+      Customer: cust_R7nQ4xz
+      Payment method: SEPA Direct Debit
+      Subscription: Strategaize Professional (monthly)
+      Period: 2026-04-19 to 2026-05-19
+
+      The funds will be available in your Stripe balance within 5-7 business days and transferred to your linked bank account on the next scheduled payout.
+
+      View this payment: https://dashboard.stripe.com/payments/pi_3Nx8YzD2eZvKYlo21mNqWxR4
+      View this subscription: https://dashboard.stripe.com/subscriptions/sub_NxL8yz9Hk2eZvK
+
+      Stripe Inc.
+      354 Oyster Point Blvd
+      South San Francisco, CA 94080
+
+  - id: "013"
+    expected_classification: valuable
+    expected_pattern: "Customer-Success-Story 'Knowledge-Lock-In aufgeloest' (konkrete Vorher-Nachher-Story, Sales-Material)"
+    reasoning: "Konkrete Erfolgsgeschichte mit messbarer Wirkung (Urlaubs-Faehigkeit fuer den Inhaber). Hoechst wertvoll als Reference-Story und fuer Spec-Validierung."
+    subject: "Erfolgsmeldung — Strategaize hat unsere Firma veraendert"
+    from: "k.fischer@fischer-haustechnik.de"
+    to: "immo@bellaerts.de"
+    date: "2026-04-22"
+    body: |
+      Lieber Herr Bellaerts,
+
+      ich wollte mir kurz die Zeit nehmen, Ihnen ein konkretes Feedback zu geben — nach jetzt vier Monaten mit Strategaize.
+
+      Ausgangssituation im Januar: Mein Vater (62) hat die Firma vor 30 Jahren gegruendet. Er kennt jeden Kunden, jeden Mitarbeiter, jede Sondersituation. Wenn er drei Tage nicht erreichbar war, stand die Firma. Im Dezember hatte er einen leichten Herzinfarkt — das war fuer uns als Familie der Weckruf.
+
+      Wir haben Anfang Februar mit Strategaize gestartet, parallel zur normalen Geschaeftstaetigkeit. Mein Vater hat in den ersten 6 Wochen rund 80 Stunden investiert, um die wichtigsten Kundenbeziehungen, Lieferanten-Konditionen und unsere ungeschriebenen Service-Standards zu hinterlegen. Ich (Sohn, 29, in der Firma seit drei Jahren) habe die Strukturierung uebernommen.
+
+      Das messbare Ergebnis: Im Maerz war mein Vater zum ersten Mal seit 18 Jahren zwei Wochen im Urlaub ohne taegliche Telefonate. Es gab in den zwei Wochen drei Situationen, in denen unsere zwei Werkstattleiter normalerweise nachgefragt haetten — diesmal haben sie selbst entschieden, basierend auf den in Strategaize hinterlegten Praezedenzfaellen.
+
+      Das war fuer uns die Validierung, dass es funktioniert. Mein Vater hat sich gerade entschieden, den Uebergabe-Prozess auf 3 Jahre statt geplanter 6 Jahre zu verkuerzen.
+
+      Falls Sie eine Referenz brauchen, koennen Sie uns nennen. Wir stehen mit unserer Geschichte zur Verfuegung.
+
+      Mit besten Gruessen
+      Klaus Fischer
+      Fischer Haustechnik GmbH
+
+  - id: "014"
+    expected_classification: skip
+    expected_pattern: null
+    reasoning: "LinkedIn-Standard-Connection-Request-Notification. Triggers keine direkten Founder-Entscheidungen."
+    subject: "Markus Lehmann hat Sie zu seinem Netzwerk eingeladen"
+    from: "invitations@linkedin.com"
+    to: "immo@bellaerts.de"
+    date: "2026-04-23"
+    body: |
+      Markus Lehmann moechte sich mit Ihnen vernetzen.
+
+      Markus Lehmann
+      Account Executive bei Salesforce DACH
+      Frankfurt, Deutschland
+
+      Persoenliche Nachricht:
+      "Hallo Immo, habe Ihren Beitrag zur Nachfolgeregelung im Mittelstand gesehen — sehr spannender Ansatz. Wuerde mich gerne vernetzen!"
+
+      Einladung annehmen:
+      https://www.linkedin.com/comm/invitations?accept=AQQ&invitedId=abc123
+
+      Sie haben 12 ausstehende Einladungen.
+
+      Sie erhalten diese Nachricht, weil Sie ein Mitglied von LinkedIn sind.
+      Einstellungen | Abmelden
+
+  - id: "015"
+    expected_classification: valuable
+    expected_pattern: "Strategic-Decision Beirat-Diskussion zu Pricing-Modell (Pro-Mandant-Lizenz vs. Kanzlei-Flatrate) mit konkretem Vor-Nachteils-Argument"
+    reasoning: "Strategische Beirats-Diskussion mit konkreten Argumentations-Linien. Direkt wertvoll fuer Pricing-Entscheidungen und Markt-Strategie."
+    subject: "Pricing-Modell StB-Kanzlei — meine Sicht"
+    from: "konstantin@beirat-konstantin.de"
+    to: "immo@bellaerts.de"
+    date: "2026-04-25"
+    body: |
+      Lieber Immo,
+
+      ich habe ueber das Pricing-Modell-Thema fuer die StB-Kanzlei-Lizenz nachgedacht, ueber das wir Donnerstag gesprochen haben. Hier meine Sicht.
+
+      Du erwaegst zwei Modelle:
+
+      Modell A — Pro-Mandant-Lizenz: 197 EUR/Monat pro aktivem Mandanten in Strategaize, Kanzlei zahlt fuer die Read-Only-Sicht zusaetzlich 99 EUR/Monat Grundgebuehr.
+
+      Modell B — Kanzlei-Flatrate: 1.490 EUR/Monat fuer die gesamte Kanzlei, unbegrenzte Mandanten, fuer Mandanten ist die Nutzung kostenlos waehrend des Beratungs-Prozesses.
+
+      Meine Empfehlung: Modell B, mit Caveat.
+
+      Pro-Argumente Modell B:
+      - Einfacher zu verkaufen — eine Zahl, klare Kalkulationsbasis fuer die Kanzlei
+      - Skaliert mit dem Beratungs-Volumen, nicht mit der Mandanten-Aktivitaet (was du eh nicht sauber kontrollieren kannst)
+      - Kein Provisionskonflikt mit §9 StBerG — Kanzlei zahlt fuer ein Tool, nicht fuer Empfehlungen
+      - Mandanten-Akzeptanz hoeher, da fuer den Mandanten kostenlos
+
+      Caveat: Du musst sehr klar definieren, was passiert, wenn der Mandant nach Beendigung der Beratung Strategaize weiter nutzen moechte. Vorschlag: dann konvertiert er auf eine normale Direkt-Lizenz (Standard 297 EUR oder Professional 497 EUR/Monat), die Kanzlei bekommt keine Provision (StBerG), aber einen Sachleistungs-Bonus (z.B. Schulungs-Credits oder Marketing-Materialien). Das ist sauber und macht den Funnel langfristig nachhaltig.
+
+      Risiko Modell A waere, dass die Kanzleien als Gatekeeper das Onboarding bremsen, weil jeder Mandant eine zusaetzliche monatliche Position auf der Rechnung ist.
+
+      Lass uns das in der naechsten Beiratssitzung am 8.5. final entscheiden.
+
+      Beste Gruesse
+      Konstantin
+
+  - id: "016"
+    expected_classification: skip
+    expected_pattern: null
+    reasoning: "Cold-Outreach CRM-Vendor mit Persoenlichkeit-Pretend. Standard-BDR-Vorgehen, kein Inhalt."
+    subject: "Strategaize + Pipedrive = match made in heaven?"
+    from: "ben.morris@pipedrive-partners.com"
+    to: "immo@bellaerts.de"
+    date: "2026-04-26"
+    body: |
+      Hi Immo,
+
+      I see you're scaling Strategaize and building out a sales organisation focused on the German mid-market and tax advisor channel. Congrats on the traction!
+
+      Most of our SaaS partners in your stage (10-50 EUR ARR) tell us the same story: they outgrew their first CRM (often HubSpot Free or notion) within 6-12 months and needed a more sales-process-focused tool. That's where Pipedrive shines.
+
+      Three reasons we think you'd love it:
+      1. Built specifically for sales-led growth (not marketing-led)
+      2. Native DACH-region support including SEPA invoicing
+      3. Strong integration with Slack, Linear, and Notion — your likely stack
+
+      We've got a special offer for European SaaS founders: 6 months free on the Professional plan if you sign before end of Q2.
+
+      Open to a 20-min call to explore fit? Here's my calendar:
+      calendly.com/ben-morris-pipedrive
+
+      Best,
+      Ben Morris
+      Senior Partner Manager DACH, Pipedrive
+
+  - id: "017"
+    expected_classification: valuable
+    expected_pattern: "Customer-Feedback UI-Klarheit Onboarding-Schritt 4 (Pattern-Hierarchie unverstaendlich) + konkreter Verbesserungs-Vorschlag"
+    reasoning: "Konkretes UI-Feedback mit Vorschlag. Wertvoll fuer Produktentwicklung und zeigt typische User-Verstaendnis-Huerden."
+    subject: "Feedback Onboarding Schritt 4 — Pattern-Hierarchie"
+    from: "n.gruber@gruber-elektro.de"
+    to: "immo@bellaerts.de"
+    date: "2026-04-28"
+    body: |
+      Hallo Herr Bellaerts,
+
+      ich melde mich, weil ich beim Onboarding meiner Frau (uebernimmt nach und nach die kaufmaennische Leitung) gemerkt habe, dass der vierte Schritt in der Einrichtung deutlich unklarer ist als die anderen drei.
+
+      Konkret: Im Schritt "Pattern-Hierarchie definieren" wird der User aufgefordert, eine Top-Level-Achse und Sub-Achsen zu definieren. Das Konzept "Pattern" ist fuer jemanden ohne Software-Hintergrund nicht greifbar. Meine Frau hat fast 20 Minuten gebraucht, bis sie verstanden hat, dass damit so etwas wie "Kategorien" oder "Themenfelder" gemeint ist.
+
+      Mein konkreter Vorschlag:
+
+      Den Begriff "Pattern" in der Benutzeroberflaeche durch "Themenfeld" oder "Wissensgebiet" ersetzen — zumindest im Onboarding. In der spaeteren Power-User-Sicht koennt ihr "Pattern" beibehalten, aber im Erstkontakt ist es ein unnoetiges Bremsklotz.
+
+      Zusaetzlich waere ein 30-Sekunden-Erklaer-Video an dieser Stelle Gold wert. Idealerweise mit einem konkreten Beispiel — etwa eine Handwerksfirma, die "Kundenbeziehungen", "Lieferanten-Konditionen" und "Auftragsbearbeitung" als drei Themenfelder definiert.
+
+      Drei der vier Onboarding-Schritte sind im Uebrigen exzellent — gerade der erste Schritt mit dem KI-Interview ist hervorragend.
+
+      Beste Gruesse
+      Norbert Gruber
+      Gruber Elektro GmbH
+
+  - id: "018"
+    expected_classification: skip
+    expected_pattern: null
+    reasoning: "Vercel-Deployment-Notification, automatisierter Build-Status, keine Founder-Entscheidung."
+    subject: "[Vercel] Production deployment ready: strategaize.com"
+    from: "no-reply@vercel.com"
+    to: "immo@bellaerts.de"
+    date: "2026-04-30"
+    body: |
+      Your production deployment is ready.
+
+      Project: strategaize-marketing-site
+      Production: strategaize.com
+      Build duration: 47s
+      Commit: a8f4c2e — "Update pricing page hero copy"
+      Author: rbellaerts
+      Branch: main
+
+      Deployment details:
+      https://vercel.com/strategaize/marketing-site/deployments/dpl_8nx2Mz3kQp
+
+      All checks passed:
+      - Build: succeeded
+      - Type checking: succeeded
+      - Lint: succeeded
+      - 12 unit tests: passed
+
+      Configure email notifications:
+      https://vercel.com/account/notifications
+
+  - id: "019"
+    expected_classification: valuable
+    expected_pattern: "Customer-Inquiry SME-GF mit Geschwister-Konflikt-Hintergrund Nachfolge (psychologische Familienunternehmen-Dimension)"
+    reasoning: "Beschreibt die emotional-relational Komponente der Nachfolge, die in einer Spec-Sammlung selten dokumentiert ist. Pattern wertvoll fuer Sales-Empathie und Produktentwicklung."
+    subject: "Anfrage Erstgespraech — Nachfolge in der Familie schwierig"
+    from: "a.berger@berger-textilien.de"
+    to: "immo@bellaerts.de"
+    date: "2026-05-02"
+    body: |
+      Sehr geehrter Herr Bellaerts,
+
+      ich melde mich auf Empfehlung meines Steuerberaters, Dr. Eichinger, der mir Strategaize empfohlen hat. Ich beschreibe Ihnen kurz die Situation, damit Sie einschaetzen koennen, ob Ihr Ansatz fuer uns passt.
+
+      Ich fuehre seit 22 Jahren ein Textil-Grosshandelsunternehmen mit 31 Mitarbeitern. Wir liefern an etwa 280 Stoff-Fachhaendler in Deutschland und Oesterreich. Mein juengerer Bruder, Christian, ist seit 9 Jahren in der Firma als kaufmaennischer Leiter taetig und wuerde die Firma uebernehmen.
+
+      Soweit der einfache Teil. Der komplizierte Teil: Mein Bruder und ich haben sehr unterschiedliche Vorstellungen davon, wie die Kundenbeziehungen funktionieren. Ich pflege jeden grossen Kunden persoenlich, telefoniere mit jedem Inhaber mindestens viermal im Jahr, kenne die Familien, Kinder, Hochzeiten. Mein Bruder ist datengetriebener, will mit CRM-Daten und Analysen arbeiten.
+
+      Beide Ansaetze haben ihre Berechtigung. Was uns aktuell trennt, ist meine Sorge, dass mein implizites Wissen — wer wann was braucht, welche Sondersituationen Toleranz erfordern, wo wir mit welchem Kunden 1990 angefangen haben — beim Uebergang verloren geht, und wir damit das wichtigste Asset des Unternehmens beschaedigen.
+
+      Mein Bruder findet das in Teilen romantisierend.
+
+      Koennen Sie sich vorstellen, dass Strategaize uns hilft, beide Sichtweisen produktiv zusammenzubringen? Falls ja, wuerde ich gerne ein Gespraech vereinbaren — gerne auch zu dritt mit meinem Bruder.
+
+      Mit freundlichen Gruessen
+      Andreas Berger
+      Berger Textilien GmbH
+
+  - id: "020"
+    expected_classification: skip
+    expected_pattern: null
+    reasoning: "Anthropic-API-Invoice — Standard-Buchhaltungsbeleg ohne Entscheidungs-Inhalt."
+    subject: "Anthropic invoice INV-2026-04-29483 — April 2026"
+    from: "billing@anthropic.com"
+    to: "immo@bellaerts.de"
+    date: "2026-05-03"
+    body: |
+      Dear Customer,
+
+      Your invoice for the billing period April 1 — April 30, 2026 is now available.
+
+      Invoice number: INV-2026-04-29483
+      Account: Strategaize GmbH
+      Billing period: 2026-04-01 — 2026-04-30
+      Due date: 2026-05-17
+
+      Total: USD 1,247.83
+
+      Usage summary:
+      - Claude 3.5 Sonnet (input tokens): 47,283,401
+      - Claude 3.5 Sonnet (output tokens): 8,912,047
+      - Claude 3.5 Haiku (input tokens): 12,847,209
+      - Claude 3.5 Haiku (output tokens): 1,983,402
+
+      View and download invoice:
+      https://console.anthropic.com/billing/invoices/INV-2026-04-29483
+
+      Payment will be automatically charged to your card ending in 4471 on the due date.
+
+      Thank you for using Anthropic.
+
+  - id: "021"
+    expected_classification: valuable
+    expected_pattern: "Channel-Partner-Inquiry DATEV-Marketplace-Anbieter (potenzielle Distributions-Hebel-Konstruktion)"
+    reasoning: "Konkretes Marketplace-Angebot mit Reichweiten-Argument. Strategisch hochrelevant fuer Distribution-Channel-Entscheidungen."
+    subject: "DATEV-Marketplace-Listing — Anfrage zu Strategaize-Partnerschaft"
+    from: "h.kreuzer@datev-partners.de"
+    to: "gruender@strategaizetransition.com"
+    date: "2026-05-05"
+    body: |
+      Sehr geehrter Herr Bellaerts,
+
+      ich melde mich als Partner-Manager im DATEV-Marketplace-Team. Wir kuratieren ergaenzende Software-Loesungen, die fuer unsere ueber 40.000 Steuerberater-Kanzleien in Deutschland einen klaren Mehrwert bieten.
+
+      Strategaize haben wir ueber zwei unserer Kunden-Kanzleien zur Kenntnis genommen, die Ihr Tool im Mandanten-Beratungsgespraech zur Nachfolgevorbereitung einsetzen. Das ist ein Anwendungsfall, der uns strategisch interessiert: Wir sehen aktuell eine Welle von rund 380.000 Nachfolge-Faellen im deutschen Mittelstand bis 2030, und unsere Kanzleien suchen aktiv nach Tools, die sie ihren Mandanten an die Hand geben koennen.
+
+      Mein Vorschlag fuer ein Erstgespraech: Wir koennten Strategaize als Partner-Loesung im DATEV-Marketplace listen. Das hat fuer Sie drei konkrete Hebel:
+
+      1. Sichtbarkeit: Ueber 12.000 Kanzleien besuchen den Marketplace monatlich.
+      2. Vertrauen: Eine DATEV-Empfehlung ist im StB-Kontext ein starker Trust-Anker.
+      3. Co-Marketing: Wir bewerben fuehrende Partner in unserem Newsletter (Reichweite ca. 35.000 Kanzlei-Mitarbeiter) und auf der DATEV-Bilanz-Konferenz.
+
+      Voraussetzungen sind eine technische DATEV-Schnittstelle (z.B. Mandanten-Stammdaten-Import via DATEV Connect) und ein Partnerschafts-Vertrag mit Provisions-Modell (10-15 Prozent vom Erstjahresumsatz, im Rahmen StBerG-konform).
+
+      Haben Sie Interesse an einem Erstgespraech in den naechsten 2-3 Wochen? Gerne auch persoenlich in Nuernberg.
+
+      Mit freundlichen Gruessen
+      Henning Kreuzer
+      DATEV eG, Partner Management
+
+  - id: "022"
+    expected_classification: skip
+    expected_pattern: null
+    reasoning: "Standard-Newsletter t3n mit aggregierten Tech-/Business-News, kein extrahierbarer founder-spezifischer Inhalt."
+    subject: "t3n Wochenrueckblick: KI-Regulierung, Mittelstand-Digitalisierung, neue Tools"
+    from: "newsletter@t3n.de"
+    to: "immo@bellaerts.de"
+    date: "2026-05-08"
+    body: |
+      Diese Woche im t3n-Wochenrueckblick:
+
+      📈 KI-Regulierung: Die EU-Kommission veroeffentlicht neue Leitlinien fuer Hochrisiko-KI-Systeme. Was Anbieter jetzt umsetzen muessen.
+
+      🚀 Mittelstand-Digitalisierung: Eine neue Bitkom-Studie zeigt, dass nur 23 Prozent der deutschen Mittelstaendler eine konkrete KI-Strategie haben. Wo die Probleme liegen.
+
+      💼 Founder-Stories: Wie ein Hamburger Startup mit 12 Mitarbeitern es schaffte, von einer 4 Mio EUR Series A direkt zur Profitabilitaet zu kommen.
+
+      🛠️ Tool-Tipps: 8 neue AI-Coding-Tools, die deine Productivity steigern.
+
+      📊 Investments: Die wichtigsten Funding-Rounds der Woche im DACH-Raum.
+
+      🎙️ Podcast-Tipp: Unser t3n-Podcast diese Woche mit dem CEO von Personio ueber HR-Tooling-Strategie im Scaleup.
+
+      Mehr lesen: t3n.de/wochenrueckblick
+
+      Newsletter abbestellen: t3n.de/newsletter-abbestellen
+
+  - id: "023"
+    expected_classification: valuable
+    expected_pattern: "Customer-Setup-Discussion Datenraum-Strukturierung bei Multi-Standort-Unternehmen (Wissens-Silos zwischen Standorten)"
+    reasoning: "Bestehender Customer mit konkreter Multi-Standort-Frage. Antwort-Pattern direkt wiederverwendbar fuer aehnliche Kunden."
+    subject: "Setup-Frage: Strategaize-Datenraum-Strukturierung bei 3 Standorten"
+    from: "c.schmitt@schmitt-logistik.de"
+    to: "immo@bellaerts.de"
+    date: "2026-05-09"
+    body: |
+      Hallo Immo,
+
+      eine Frage zur Strategaize-Strukturierung in unserer Situation: Wir haben drei Standorte (Hauptsitz Dortmund, Zweigstellen Bremen und Stuttgart), jeweils mit eigenem Standort-Leiter, die operativ weitestgehend autonom arbeiten. Die Standorte unterscheiden sich erheblich:
+
+      - Dortmund: Kontraktlogistik, 38 Mitarbeiter, langjaehrige Industrie-Kunden, Wissen sehr stark beim Geschaeftsfuehrer (mir).
+      - Bremen: Hafen-affine Logistik, 14 Mitarbeiter, mehr operative Standardisierung, Wissen ueberwiegend prozessual hinterlegt.
+      - Stuttgart: Automotive-Just-in-Time, 22 Mitarbeiter, Wissen stark beim Standort-Leiter Marcus K.
+
+      Mein Ziel ist, dass jeder Standort sein Wissen selbst strukturiert und pflegt, aber wir im Hauptsitz eine Gesamtsicht haben, um Best Practices zwischen den Standorten zu uebertragen.
+
+      Konkret stelle ich mir vor:
+
+      Drei separate Strategaize-Bereiche (einer pro Standort), jeder mit eigenem Admin (Standort-Leiter), aber alle drei sichtbar fuer mich als Geschaeftsfuehrer. Beim Hauptsitz Dortmund waere ich der primaere Pflege-Verantwortliche.
+
+      Geht das in der Standard-Konfiguration, oder brauche ich dafuer eine Mehrfach-Lizenz, eine Enterprise-Konfiguration mit Multi-Workspace-Setup?
+
+      Vielen Dank fuer eine kurze Einschaetzung, gerne auch mit Empfehlung, ob eine andere Strukturierung sinnvoller waere.
+
+      Viele Gruesse
+      Christoph Schmitt
+      Schmitt Logistik GmbH
+
+  - id: "024"
+    expected_classification: skip
+    expected_pattern: null
+    reasoning: "Sentry-Invoice — Routine-Buchhaltungsbeleg ohne Founder-Inhalt."
+    subject: "Sentry billing for May 2026 — invoice attached"
+    from: "billing@sentry.io"
+    to: "immo@bellaerts.de"
+    date: "2026-05-10"
+    body: |
+      Hi there,
+
+      Your Sentry invoice for May 2026 is ready.
+
+      Invoice: INV-29384-2026-05
+      Plan: Team
+      Organization: strategaize
+      Billing period: 2026-05-01 — 2026-05-31
+
+      Charges:
+      - Team plan base: USD 26.00
+      - Additional errors (200K): USD 24.00
+      - Performance events (1M): USD 30.00
+      - Replay events (10K): USD 9.00
+
+      Total: USD 89.00
+
+      Auto-charged to card ending in 4471.
+
+      View invoice and download PDF:
+      sentry.io/settings/strategaize/billing/
+
+      Update payment method or billing details:
+      sentry.io/settings/strategaize/payments/
+
+  - id: "025"
+    expected_classification: valuable
+    expected_pattern: "Vendor-Discussion Bedrock-Cost-Optimization (Haiku-vs-Sonnet Routing-Strategy, konkrete Token-Economics)"
+    reasoning: "Konkrete technische Architektur-Entscheidung mit messbarer Cost-Wirkung. Direkt umsetzbares Pattern fuer V9.1 Pre-Filter und kuenftige Bedrock-Optimierungen."
+    subject: "Re: Bedrock cost optimisation review — meine drei Empfehlungen"
+    from: "j.weiss@bedrock-consulting.de"
+    to: "immo@bellaerts.de"
+    date: "2026-05-12"
+    body: |
+      Hi Immo,
+
+      ich habe euren AWS-Bedrock-Usage der letzten 60 Tage analysiert. Drei konkrete Empfehlungen, gewichtet nach Cost-Impact.
+
+      Empfehlung 1 — Pre-Filter mit Haiku vor Sonnet (groesster Hebel)
+
+      Aktuell schickt ihr alle eingehenden Emails direkt an Claude Sonnet zur Pattern-Extraktion. Bei einem typischen Mix sind aber 60-70 Prozent der Emails nicht extraktionswuerdig (Newsletter, Notifications, Marketing). Mein Vorschlag: ein Haiku-Pre-Filter, der entscheidet "extraction-worthy ja/nein" und nur valuable Emails an Sonnet weiterleitet.
+
+      Token-Economics:
+      - Sonnet: ~3 USD pro 1 Mio Input-Tokens
+      - Haiku: ~0.25 USD pro 1 Mio Input-Tokens
+      - Pre-Filter-Prompt: ~400 Tokens pro Email
+      - Klassifizierung 1000 Emails: Haiku ca. 0.10 USD, Sonnet ca. 1.20 USD
+
+      Bei 60 Prozent Skip-Rate spart ihr ca. 65 Prozent der Sonnet-Kosten fuer die Klassifizierungs-Stufe. Bei eurem aktuellen Volumen waeren das geschaetzt 180-220 USD pro Monat.
+
+      Empfehlung 2 — Prompt-Caching aggressiver nutzen
+
+      Eure Sonnet-System-Prompts sind 4.200 Tokens. Bedrock unterstuetzt seit Q4-2025 Prompt-Caching mit 90 Prozent Rabatt auf gecachte Tokens. Wenn ihr den Cache richtig nutzt (System-Prompt cachen, dynamic content nicht), spart ihr nochmals ca. 35-40 Prozent.
+
+      Empfehlung 3 — Output-Token-Limits enger setzen
+
+      Eure aktuellen Sonnet-Calls haben max_tokens=4096. Tatsaechlich sind 85 Prozent der Antworten unter 1200 Tokens. Setzt max_tokens=1500 mit klarer Truncation-Strategy. Spart wenig Cost, aber reduziert Latenz spuerbar.
+
+      Setzt ihr alle drei um, sehe ich realistische 45-50 Prozent Bedrock-Cost-Reduktion innerhalb von 4-6 Wochen.
+
+      Gerne kurzes Follow-Up-Call.
+
+      Beste Gruesse
+      Jens Weiss
+
+  - id: "026"
+    expected_classification: skip
+    expected_pattern: null
+    reasoning: "Recruiter-Spam fuer komplett irrelevante PHP-Junior-Position."
+    subject: "PHP Senior Developer — 80k EUR bei Hamburger E-Commerce-Marktfuehrer"
+    from: "lara.kuhn@techrecruiters-hamburg.de"
+    to: "immo@bellaerts.de"
+    date: "2026-05-13"
+    body: |
+      Hallo Immo,
+
+      ueber XING ist mir Ihr Profil aufgefallen — sehr interessanter Background!
+
+      Mein Kunde, einer der drei groessten E-Commerce-Player in Hamburg (ueber 400 Mitarbeiter, 180 Mio EUR Umsatz), sucht aktuell einen Senior PHP Developer fuer ihr internes Plattform-Team. Symfony 6, Doctrine, Redis, RabbitMQ, AWS — modernes Stack.
+
+      Eckdaten:
+      - 80.000 EUR Fixgehalt + 8.000 EUR Bonus
+      - Hybrid-Modell (2 Tage Home Office, 3 Tage Hamburg-City)
+      - 30 Tage Urlaub
+      - Sabbatical-Option nach 3 Jahren
+      - Top-Equipment, Mobility-Budget
+
+      Auch wenn Sie aktuell vielleicht nicht aktiv suchen — manchmal lohnt sich ein Blick. Haetten Sie Interesse an einem unverbindlichen 15-Min-Telefonat?
+
+      Beste Gruesse
+      Lara Kuhn
+      TechRecruiters Hamburg GmbH
+
+  - id: "027"
+    expected_classification: valuable
+    expected_pattern: "Talent-Pitch StB mit Tech-Affinitaet (Hybrid-Profil StB-Beratungs-Know-How + Software-Entwicklung)"
+    reasoning: "Sehr seltenes Hybrid-Profil, das fuer Strategaize-StB-Channel-Aufbau enorm wertvoll ware. Pattern fuer Hiring-Pipeline relevant."
+    subject: "Initiativbewerbung — Steuerberater mit Coding-Hintergrund"
+    from: "f.lindemann@gmail.com"
+    to: "immo@bellaerts.de"
+    date: "2026-05-15"
+    body: |
+      Sehr geehrter Herr Bellaerts,
+
+      ich habe Ihre Roadmap fuer den Strategaize-Steuerberater-Vertriebskanal mit grossem Interesse gelesen — die Verbindung von Beratungs-Workflow und Software-Tooling ist genau die Schnittstelle, an der ich seit Jahren arbeite.
+
+      Mein Hintergrund ist ungewoehnlich: Ich bin seit 11 Jahren bestellter Steuerberater, war 6 Jahre Partner einer mittelstaendischen Kanzlei in Frankfurt mit Fokus auf Nachfolgeberatung. Parallel habe ich vor 4 Jahren angefangen, eigene kleine Tools fuer unsere Kanzlei zu bauen — Python, ein paar Next.js-Frontends, mittlerweile auch Bedrock-Anbindung. Aus diesen Tools ist letztes Jahr ein eigenes Mini-SaaS entstanden (3 Kanzlei-Kunden, ca. 2.400 EUR ARR — bewusst klein gehalten, um zu lernen).
+
+      Warum Strategaize: Sie loesen das Problem, das ich in den letzten 11 Jahren bei nahezu jedem Nachfolge-Mandat beobachtet habe — der Inhaber hat das Wissen ueber sein Unternehmen, kann es aber nicht uebertragen. Steuerberater haben dafuer kein Tool an der Hand, und Beratung allein loest das Problem nicht.
+
+      Was ich Strategaize anbieten kann: Tiefe Expertise im Mandanten-Beratungsprozess, ein direktes Netzwerk in 40-60 Kanzleien (mein Berufsverband ist aktiv), und genug Tech-Verstaendnis, um sowohl in Sales-Gespraechen als auch in Produkt-Diskussionen Sinnvolles beizutragen.
+
+      Rolle: Offen — von Channel-Lead bis Founders-Associate. Vollzeit, Teilzeit, Beratungs-Mandat — kein Dogma.
+
+      Ueber ein erstes Gespraech wuerde ich mich sehr freuen.
+
+      Mit besten Gruessen
+      Felix Lindemann
+
+  - id: "028"
+    expected_classification: skip
+    expected_pattern: null
+    reasoning: "Konferenz-Marketing Steuerberatertag-Werbung mit Standard-Promo, kein Entscheidungs-Inhalt."
+    subject: "Steuerberatertag 2026 in Berlin — Fruehbucher-Tarif bis 31. Mai"
+    from: "info@steuerberatertag-event.de"
+    to: "immo@bellaerts.de"
+    date: "2026-05-16"
+    body: |
+      Sehr geehrte Damen und Herren,
+
+      der Steuerberatertag 2026 findet in diesem Jahr vom 13. bis 15. September in Berlin statt — Deutschlands wichtigstes Branchenevent fuer Steuerberater, Wirtschaftspruefer und Kanzleien.
+
+      Highlights des Programms:
+      - 80+ Fachvortraege aus Steuerrecht, Mandantenberatung und Kanzleifuehrung
+      - Aussteller-Forum mit 200+ Anbietern (Software, Beratung, Recruiting)
+      - Keynote: Bundesfinanzminister
+      - Networking-Abend mit 4.500+ Teilnehmern
+
+      Fruehbucher-Tarif bis 31. Mai 2026:
+      - Drei-Tages-Ticket: 690 EUR (statt 890 EUR)
+      - Aussteller-Pakete ab 4.900 EUR
+
+      Anmeldung und Programm:
+      www.steuerberatertag-event.de/2026
+
+      Hinweis: Die ersten 500 Anmeldungen erhalten ein kostenloses Premium-Networking-Upgrade.
+
+      Mit freundlichen Gruessen
+      Das Team vom Steuerberatertag 2026
+
+  - id: "029"
+    expected_classification: valuable
+    expected_pattern: "Strategic-Decision Founder-Beirat zu Internationaler-Expansion (DACH-First vs. Early-Europe, Zeitfenster und Resource-Argumente)"
+    reasoning: "Strategische Beirats-Diskussion mit klaren Pro-/Contra-Argumenten. Spec-Material fuer Wachstumsentscheidungen."
+    subject: "Re: Internationalisierung — meine Sicht zur DACH-vs-Europa-Entscheidung"
+    from: "j.schaefer@beirat-strategaize.com"
+    to: "immo@bellaerts.de"
+    date: "2026-05-18"
+    body: |
+      Lieber Immo,
+
+      ich habe ueber unsere Diskussion vom Mittwoch nachgedacht und moechte meine Sicht zur Internationalisierungs-Frage konsolidieren.
+
+      Du erwaegst zwei Pfade:
+
+      Pfad A — DACH-First fuer 24-36 Monate, dann Europa
+      Pfad B — DACH plus parallel Niederlande/Belgien ab Q3-2026
+
+      Mein Argument fuer Pfad A:
+
+      Die deutsche StB-Multiplikator-Strategie ist eure entscheidende Differenzierung. §9 StBerG, DATEV-Marktplatz, Steuerberatertag, der gesamte regulatorische Rahmen — das ist DACH-spezifisches Spielfeld, in dem ihr 12-24 Monate Vorsprung habt, bevor ein internationaler Player das Modell kopieren koennte. Diesen Vorsprung gibt man nicht her, indem man die Kraefte zerstreut.
+
+      Konkret: 47 zahlende Mandanten in DACH bis Ende 2026 sind realistischer und wirtschaftlich gesuender als 30 in DACH plus 8 in Benelux. Die 8 in Benelux verursachen disproportional viele Anpassungskosten (Sprache, lokale Beratungs-Equivalents, andere KMU-Regulierung), waehrend ihr in DACH den Channel-Effekt noch nicht ausgeschoepft habt.
+
+      Mein einziges Caveat: Wenn ein konkreter Customer-Pull aus den Niederlanden kommt — etwa ein deutscher Holding-Konzern mit niederlaendischer Tochter, oder ein niederlaendischer StB mit DACH-Mandanten — dann wuerde ich opportunistisch reagieren, aber nicht proaktiv aufbauen.
+
+      Ich plaediere fuer Pfad A mit klarem Re-Assessment im Q3-2027.
+
+      Beste Gruesse
+      Johanna Schaefer
+
+  - id: "030"
+    expected_classification: skip
+    expected_pattern: null
+    reasoning: "Out-of-Office-Reply ohne Entscheidungsrelevanz."
+    subject: "Re: Strategaize Onboarding-Frage — Abwesenheit bis 28.05."
+    from: "g.mueller@hoffmann-stb.de"
+    to: "immo@bellaerts.de"
+    date: "2026-05-19"
+    body: |
+      Sehr geehrte Damen und Herren,
+
+      vielen Dank fuer Ihre Email.
+
+      Ich bin vom 19. bis einschliesslich 28. Mai 2026 im Urlaub und in dieser Zeit nicht erreichbar. Ihre Email wird nicht weitergeleitet.
+
+      In dringenden Faellen wenden Sie sich bitte an meine Kollegin Frau Dr. Annika Wernecke unter a.wernecke@hoffmann-stb.de oder unter +49 89 1234 5678.
+
+      Ihre Anfrage werde ich nach meiner Rueckkehr ab 30. Mai 2026 bearbeiten. Vielen Dank fuer Ihr Verstaendnis.
+
+      Mit freundlichen Gruessen
+      Greta Mueller
+      Hoffmann & Partner Steuerberatungsgesellschaft mbB
+
+  - id: "031"
+    expected_classification: valuable
+    expected_pattern: "Customer-Success-Story Verkauf eines Mittelstandsunternehmens mit Strategaize-Wissensbasis als Due-Diligence-Asset"
+    reasoning: "Exemplarische Success-Story mit messbarem Outcome (Verkaufspreis-Komponente). Hoechst wertvoll fuer Sales-Material und ROI-Berechnung."
+    subject: "Verkauf unseres Unternehmens — Strategaize als Game-Changer in der Due Diligence"
+    from: "h.dietrich@dietrich-praezision.de"
+    to: "immo@bellaerts.de"
+    date: "2026-05-20"
+    body: |
+      Sehr geehrter Herr Bellaerts,
+
+      ich melde mich heute mit einer Erfolgsgeschichte, an der Strategaize einen erheblichen Anteil hat.
+
+      Sie erinnern sich: Im Sommer 2025 habe ich begonnen, mein Lebenswerk in Strategaize zu strukturieren. Vier Jahrzehnte Praezisions-Werkzeugbau, 89 Mitarbeiter, ueber 400 dokumentierte Kundenbeziehungen, viele davon mit Sondervereinbarungen, die nirgendwo offiziell festgehalten waren.
+
+      Anfang dieses Jahres hat sich ein strategischer Kaeufer gemeldet, ein boersennotierter Mittelstaendler aus dem benachbarten Segment. Im April und Mai lief die Due Diligence. Drei Punkte aus diesem Prozess moechte ich Ihnen weitergeben:
+
+      Erstens: Die strukturierte Strategaize-Wissensbasis wurde vom Kaeufer als ungewoehnlich detailliert und vor allem als veraeusserbares Asset bewertet. In der Verkaufsverhandlung wurde explizit ein Aufschlag begruendet mit "dokumentierte Wissens-Uebertragbarkeit nach dem Closing reduziert das Integrations-Risiko". Mein Berater Dr. Eichinger schaetzte den Aufschlag auf rund 1.4 Mio EUR vom finalen Kaufpreis (8 Prozent).
+
+      Zweitens: Mein Verbleib im Unternehmen wurde von 36 Monaten auf 18 Monate verkuerzt, weil mein Wissen ueber die Mandanten-Strategaize-Sicht "in einer Weise dokumentiert ist, die einen schnelleren Transfer ermoeglicht" (Originalformulierung aus dem Letter of Intent).
+
+      Drittens: Der Datenraum-Prozess war deutlich entspannter als bei vergleichbaren Transaktionen meiner Berater-Kollegen. Strukturierte Information war auf Knopfdruck abrufbar.
+
+      Sie duerfen diese Geschichte gerne anonymisiert in Ihrer Kommunikation verwenden. Wenn Sie eine namentliche Referenz brauchen, melden Sie sich.
+
+      Vielen Dank fuer das Produkt und die Begleitung.
+
+      Mit freundlichsten Gruessen
+      Heinrich Dietrich
+
+  - id: "032"
+    expected_classification: skip
+    expected_pattern: null
+    reasoning: "Google-Calendar-Reminder ohne Entscheidungs-Inhalt."
+    subject: "Reminder: Beirats-Sitzung Q2 morgen 14:00-16:00"
+    from: "calendar-noreply@google.com"
+    to: "immo@bellaerts.de"
+    date: "2026-05-21"
+    body: |
+      This is a reminder for your upcoming event.
+
+      Beirats-Sitzung Q2
+
+      When: Thursday, 22 May 2026, 14:00 — 16:00 CET
+      Where: Strategaize HQ — Konferenzraum 2
+
+      Organiser: immo@bellaerts.de
+
+      Attendees:
+      - Konstantin Behrens
+      - Johanna Schaefer
+      - Marcus Petersen
+      - Immo Bellaerts
+
+      Description:
+      Q2-Review: Roadmap, Pricing-Entscheidung StB-Kanzlei-Lizenz, Internationalisierungs-Diskussion.
+
+      Add to calendar:
+      https://calendar.google.com/event?action=TEMPLATE&...
+
+      You can change your reminder settings in Google Calendar.
+
+  - id: "033"
+    expected_classification: valuable
+    expected_pattern: "Customer-Inquiry Geschaeftsfuehrer mit Krankheits-bedingtem Notfall-Nachfolge-Szenario (Urgency und Use-Case-Dimensionalisierung)"
+    reasoning: "Beschreibt einen Notfall-Use-Case, den Strategaize bisher nicht explizit adressiert. Pattern wertvoll fuer Produkt-Roadmap und Notfall-Onboarding-Spec."
+    subject: "Dringend — schnelle Wissens-Sicherung wegen gesundheitlicher Situation"
+    from: "u.kraus@kraus-spezialfahrzeuge.de"
+    to: "immo@bellaerts.de"
+    date: "2026-05-22"
+    body: |
+      Sehr geehrter Herr Bellaerts,
+
+      ich schreibe Ihnen unter gewissem Zeitdruck. Ich fuehre seit 31 Jahren einen Spezialfahrzeugbau mit 23 Mitarbeitern. Letzte Woche hat man bei mir eine schwere Krebserkrankung diagnostiziert. Die Aerzte geben mir nach erster Einschaetzung 12-18 Monate, in denen ich zunehmend weniger arbeitsfaehig sein werde.
+
+      Meine Frau und meine Tochter (26, in der Firma) wollen die Firma weiterfuehren. Beide sind im operativen Geschaeft, koennen aber den Auftrags-Konfigurations-Prozess und die langjaehrigen Lieferanten-Sondervereinbarungen nicht uebernehmen. Das alles ist in meinem Kopf.
+
+      Konkret: Wir haben 47 aktive Lieferanten, davon 14 mit Rahmenvertraegen, die nirgendwo niedergeschrieben sind, sondern auf jahrzehntelangen persoenlichen Vereinbarungen basieren. Aehnliches bei Kunden — etwa 80 mit aktiven Auftragsbeziehungen, die jeweils Sonderkonditionen, Toleranzwerte und Anlieferungs-Spezifika haben, die nirgendwo formal hinterlegt sind.
+
+      Mein Steuerberater hat Strategaize empfohlen. Meine Frage: Ist es realistisch, in 3-4 Monaten die kritischsten 70-80 Prozent dieses Wissens strukturiert zu erfassen, in einem Modus, in dem ich keine 80 Stunden pro Woche reinstecken kann, sondern realistisch 10-15 Stunden? Gibt es ein Express-Onboarding mit aktiver Begleitung? Was kostet das?
+
+      Ich brauche eine ehrliche Einschaetzung, ob das machbar ist. Wenn nicht, suche ich nach Alternativen, aber ich glaube, das Strategaize-Konzept passt am ehesten zu unserem Bedarf.
+
+      Vielen Dank im Voraus.
+
+      Mit freundlichen Gruessen
+      Ulrich Kraus
+      Kraus Spezialfahrzeuge GmbH
+
+  - id: "034"
+    expected_classification: skip
+    expected_pattern: null
+    reasoning: "X/Twitter-Mention-Notification, automatisierte Social-Notification."
+    subject: "@strategaize wurde von @felixbrueck in einem Beitrag erwaehnt"
+    from: "info@twitter.com"
+    to: "immo@bellaerts.de"
+    date: "2026-05-23"
+    body: |
+      Felix Brueck (@felixbrueck) hat Sie in einem Beitrag erwaehnt:
+
+      "Spannender Ansatz von @strategaize zur strukturierten Nachfolge-Vorbereitung. Sehe das als unterschaetzten Markt im DACH-Mittelstand. Die naechsten 5 Jahre werden hier viel passieren."
+
+      Antworten | Retweeten | Liken
+
+      Auf X anzeigen:
+      https://twitter.com/felixbrueck/status/1769284756392847362
+
+      Sie erhalten diese Nachricht, weil Sie ueber Erwaehnungen benachrichtigt werden moechten.
+      Einstellungen aendern: twitter.com/settings/notifications
+
+  - id: "035"
+    expected_classification: valuable
+    expected_pattern: "Borderline-Pitch Bewerbung mit unscheinbarem Auftakt aber relevanter Strategaize-Domaen-Erfahrung in Absatz 3 (Bewerbung-mit-versteckter-Tiefe)"
+    reasoning: "BORDERLINE: Bewerbung wirkt auf den ersten Blick generisch, hat aber in Absatz 3 sehr relevante Strategaize-Domain-Erfahrung. Test-Case fuer Pre-Filter-Tiefe."
+    subject: "Initiativbewerbung Produktmanager"
+    from: "m.hauser@gmx.de"
+    to: "immo@bellaerts.de"
+    date: "2026-05-24"
+    body: |
+      Sehr geehrte Damen und Herren,
+
+      mit grossem Interesse habe ich von Strategaize erfahren und moechte mich initiativ als Produktmanager bewerben. Ich bringe 7 Jahre Berufserfahrung in der Software-Branche mit, davon die letzten 3 Jahre als Senior Produktmanager in einem Berliner SaaS-Unternehmen.
+
+      Meine Schwerpunkte liegen im Anforderungsmanagement, der agilen Produktentwicklung und der Stakeholder-Kommunikation. Ich habe in meiner aktuellen Position das B2B-Onboarding-Modul von Grund auf neu konzipiert und die Time-to-Value von 14 auf 4 Tage reduziert. Mit Methoden wie Jobs-to-be-Done und Continuous Discovery bin ich vertraut, ebenso mit den ueblichen Tools (Linear, Figma, Mixpanel, Notion).
+
+      Was mich aber wirklich auf Strategaize aufmerksam gemacht hat: Mein Vater hat 2019 sein Unternehmen — eine kleine Maschinenbau-Firma mit 28 Mitarbeitern — an einen externen Nachfolger uebergeben. Der Prozess hat 6 Jahre gedauert und war fuer alle Beteiligten eine Quaelerei. Mein Vater hat versucht, sein 35-jaehriges Erfahrungswissen ueber Powerpoint-Charts und 1:1-Gespraeche zu uebertragen — es ging zu 60-70 Prozent verloren. Der Nachfolger hat nach 18 Monaten drei der wichtigsten Schluessel-Kunden verloren, weil er die historisch gewachsenen Sonder-Konditionen nicht kannte. Das hat die Firma in eine 2-Jahres-Krise gebracht.
+
+      Genau diesen Schmerzpunkt loest Strategaize. Und ich glaube, ich bin einer von wenigen Produktmanagern in Deutschland, die diesen Anwendungsfall nicht nur theoretisch verstehen.
+
+      Ueber ein erstes Kennenlernen wuerde ich mich sehr freuen.
+
+      Mit freundlichen Gruessen
+      Maximilian Hauser
+
+  - id: "036"
+    expected_classification: skip
+    expected_pattern: null
+    reasoning: "Loyalty-Program-Promotion ohne Founder-Relevanz."
+    subject: "✈️ 25% Bonus-Meilen auf alle Lufthansa-Fluege diesen Monat"
+    from: "miles-more@lufthansa.com"
+    to: "immo@bellaerts.de"
+    date: "2026-05-25"
+    body: |
+      Lieber Senator Status-Kunde,
+
+      diesen Monat schenken wir Ihnen 25 Prozent Bonus-Meilen auf alle Lufthansa-Fluege.
+
+      Die Aktion gilt fuer:
+      - Alle Lufthansa-Fluege gebucht zwischen 25. Mai und 30. Juni 2026
+      - Fluege durchgefuehrt bis 31. Dezember 2026
+      - Alle Buchungsklassen, inkl. Light & Economy
+
+      Beispiel: Frankfurt-New York Business Class
+      - Standard-Meilen: 16.480
+      - Mit 25% Bonus: 20.600
+      - Senator-Multiplier eingerechnet: 26.780 Meilen
+
+      Jetzt buchen und Bonus sichern: lufthansa.com/promo-25
+      Ihren Aktions-Code MM2026-25BONUS-SENATOR im Buchungsprozess eingeben.
+
+      Schoene Reisen wuenscht Ihnen
+      Ihr Miles & More Team
+
+      Newsletter abbestellen: miles-and-more.com/newsletter-settings
+
+  - id: "037"
+    expected_classification: valuable
+    expected_pattern: "Borderline-Customer Small-Talk-Auftakt mit relevanter strategischer Pricing-Entscheidung in Absatz 3 (Small-Talk-mit-Substanz)"
+    reasoning: "BORDERLINE: Beginnt mit Small Talk ueber Wochenende, enthaelt in Absatz 3 eine fundamentale Preisstruktur-Entscheidung mit unmittelbarer Auswirkung auf Strategaize-Pricing-Spec."
+    subject: "Hallo aus dem Schwarzwald + eine Entscheidung, die wir getroffen haben"
+    from: "p.weber@weber-holzbau.de"
+    to: "immo@bellaerts.de"
+    date: "2026-05-26"
+    body: |
+      Lieber Immo,
+
+      hoffentlich hatten Sie ein schoenes Pfingstwochenende. Wir waren mit der Familie im Schwarzwald wandern — das Wetter war fantastisch, der Sohn wollte zum ersten Mal eine richtige Tagesetappe machen und hat sich tapfer geschlagen.
+
+      Wie versprochen melde ich mich nochmal zu unserem Onboarding-Stand. Wir haben jetzt 7 Wochen mit Strategaize hinter uns, und ich bin zufrieden mit dem Fortschritt. Das Team hat sich erstaunlich schnell auf das Tool eingelassen, gerade die juengeren Mitarbeiter sehen den Nutzen sofort.
+
+      Etwas Wichtiges, das wir intern entschieden haben: Wir werden ab August unser Preismodell fuer unsere Sondertueren-Linie komplett umstellen — weg von Stundensaetzen plus Material, hin zu Festpreis-Paketen. Das ist eine fundamentale Aenderung, mit der wir 25 Jahre alte Praktiken brechen. Der entscheidende Grund: Wir haben in Strategaize systematisch die letzten 200 Kalkulationen analysiert und festgestellt, dass wir bei rund 60 Prozent der Auftraege unter unseren eigenen Standardsaetzen liegen, weil wir Sonderwuensche zu billig einrechnen. Mit Festpreis-Paketen koennen wir das verhindern und gleichzeitig den Verkaufsprozess fuer den Kunden vereinfachen.
+
+      Ich wollte das mit Ihnen teilen, weil Strategaize diese Entscheidung tatsaechlich ermoeglicht hat. Ohne die strukturierte Wissensbasis haetten wir nie diese 200-Kalkulationen-Analyse machen koennen. Falls Sie dafuer eine Case Study bauen wollen, lassen Sie es mich wissen.
+
+      Bis bald.
+
+      Beste Gruesse
+      Peter Weber
+      Weber Holzbau GmbH
+
+  - id: "038"
+    expected_classification: skip
+    expected_pattern: null
+    reasoning: "Domain-Renewal-Notification — Routine-Administration, kein Entscheidungs-Inhalt."
+    subject: "Domain renewal reminder: strategaize.com expires in 30 days"
+    from: "renewals@inwx.com"
+    to: "immo@bellaerts.de"
+    date: "2026-05-27"
+    body: |
+      Dear customer,
+
+      this is a reminder that your domain registration will expire in 30 days:
+
+      Domain: strategaize.com
+      Expires: 2026-06-26
+      Auto-renewal: enabled (next charge in 30 days)
+      Registration period: 1 year
+      Cost: EUR 14.99
+
+      If auto-renewal is enabled, no action is required. Your domain will be automatically renewed and your registered payment method (SEPA — DE...4471) will be charged.
+
+      If you want to disable auto-renewal or modify settings:
+      https://inwx.com/domains/strategaize.com
+
+      If you have any questions, please contact our support:
+      support@inwx.com
+
+      Best regards,
+      INWX GmbH & Co. KG
+
+  - id: "039"
+    expected_classification: valuable
+    expected_pattern: "Customer-Feedback Bedrock-Pattern-Extraktion zu generisch (konkretes Prompt-Engineering-Feedback)"
+    reasoning: "Konkretes Produkt-Feedback zur Qualitaet der Pattern-Extraktion. Direkt umsetzbar fuer Prompt-Engineering-Verbesserungen."
+    subject: "Feedback Pattern-Extraktion — Vorschlaege sind zu generisch"
+    from: "k.lang@lang-engineering.de"
+    to: "immo@bellaerts.de"
+    date: "2026-05-28"
+    body: |
+      Hallo Immo,
+
+      mein Team hat in den letzten 4 Wochen 47 Pattern-Vorschlaege aus der KI-Analyse durchgesehen. Ich teile mein ehrliches Feedback, weil ich glaube, dass dies fuer euer Produkt wichtig ist.
+
+      Stand der Dinge:
+
+      Von 47 Vorschlaegen waren 8 hochwertig, 23 mittelmaessig brauchbar, 16 zu generisch. Die hochwertigen Vorschlaege betrafen alle sehr spezifische Kunden-Interaktionen oder konkrete Auftragsabwicklungs-Schritte. Die generischen Vorschlaege waren typischerweise auf der Meta-Ebene und lasen sich wie aus einem Lehrbuch fuer Mittelstaender — "Definieren Sie klare Kommunikationswege", "Etablieren Sie ein konsistentes Onboarding".
+
+      Das Problem ist, dass die generischen Vorschlaege zwar nicht falsch sind, aber nicht das Wissen abbilden, das wir konkret in Strategaize haben wollen. Wir wollen unsere Eigenheiten dokumentieren, nicht ein generisches Beratungsbuch nacherzaehlen.
+
+      Mein konkreter Vorschlag fuer das Prompt-Engineering:
+
+      Die KI sollte nur dann Patterns vorschlagen, wenn sie aus den Quelldaten konkrete Belege heranziehen kann — Zitate, Namen, Beispiele. Ohne solche Verankerung sollte sie den Vorschlag zurueckhalten, statt zu generalisieren.
+
+      Zweitens: Eine Bewertungs-Skala "konkretheits-grad 1-5" auf jedem Vorschlag. Vorschlaege mit Konkretheits-Grad unter 3 koennten standardmaessig ausgeblendet werden, mit Option "Show generic suggestions".
+
+      Drittens: Bei Pattern-Vorschlaegen sollte die KI 1-3 konkrete Belegstellen aus den Quelldaten anfuehren ("Vorschlag basiert auf den E-Mails vom 14.2. und 03.4. an Kunde X").
+
+      Ist das umsetzbar? Wir wuerden uns ueber eine Roadmap-Notiz freuen.
+
+      Beste Gruesse
+      Klara Lang
+      Lang Engineering
+
+  - id: "040"
+    expected_classification: skip
+    expected_pattern: null
+    reasoning: "Newsletter Steuerberater-Magazin-digital mit Branchen-News, kein Inhalt mit Founder-Entscheidungs-Relevanz."
+    subject: "[STBmagazin] Themen der Woche: Grundsteuerreform, DATEV-Update, KI in der Kanzlei"
+    from: "newsletter@stbmagazin-digital.de"
+    to: "immo@bellaerts.de"
+    date: "2026-05-29"
+    body: |
+      Sehr geehrte Leserinnen und Leser,
+
+      die wichtigsten Themen der Woche fuer Steuerberater im Ueberblick:
+
+      📊 GRUNDSTEUERREFORM
+      Die Finanzverwaltung praezisiert weitere Anwendungsregeln zur Grundsteuerreform — was Mandanten jetzt beachten muessen.
+
+      💻 DATEV-UPDATE
+      DATEV kuendigt fuer Q3 2026 eine ueberarbeitete Belegabholung an. Erste Beta-Tester berichten von 40 Prozent weniger Klick-Aufwand.
+
+      🤖 KI IN DER KANZLEI
+      Eine neue STBV-Umfrage zeigt: 67 Prozent der Kanzleien haben bereits KI-Tools im Einsatz. Welche und wie — der Praxis-Report.
+
+      📚 BERUFSRECHT
+      Wichtige BFH-Urteile vom Mai 2026 mit direkter Auswirkung auf die Mandanten-Beratung.
+
+      🎓 SEMINARE
+      Unsere kuratierten Webinar-Empfehlungen fuer Juni 2026 — Schwerpunkt Nachfolgeberatung und Personengesellschaften.
+
+      Newsletter abbestellen: stbmagazin-digital.de/newsletter
+
+      Mit freundlichen Gruessen
+      Die Redaktion STBmagazin
+
+  - id: "041"
+    expected_classification: valuable
+    expected_pattern: "Channel-Partner-Inquiry Software-Reseller mit StB-Bestandskundschaft (regionale Vertriebs-Hebel-Konstruktion)"
+    reasoning: "Konkreter Reseller-Vorschlag mit definierter Kundenbasis. Strategisch wertvoll fuer Channel-Aufbau und Reseller-Modell-Spec."
+    subject: "Strategaize als Vertriebspartner-Tool — Anfrage Kanzlei-Software-Reseller"
+    from: "m.koehler@kanzlei-it-partner.de"
+    to: "immo@bellaerts.de"
+    date: "2026-05-30"
+    body: |
+      Sehr geehrter Herr Bellaerts,
+
+      ich bin Geschaeftsfuehrer von Kanzlei-IT-Partner GmbH, einem regionalen Software-Reseller mit Schwerpunkt auf Steuerberatungs- und Wirtschaftspruefer-Kanzleien in Sueddeutschland. Wir betreuen aktuell 287 Kanzleien als Stamm-Kunden mit ueblicherweise DATEV-Hardware-Konfiguration, Cybersecurity und Cloud-Migrations-Beratung.
+
+      Strategaize ist bei uns mehrfach durch Mandanten-Anfragen aus unseren Kanzleien aufgekommen. Das Interessante: Nicht die Kanzlei selbst will Strategaize als Tool, sondern hat einen Mandanten, der mit einer Nachfolgesituation kommt. Aktuell verweisen wir diese Anfragen auf Sie direkt — was schade ist, weil wir damit ein Cross-Sell-Potenzial in unserem eigenen Kanzlei-Stamm verschenken.
+
+      Mein Vorschlag: Eine Reseller-Vereinbarung. Wir bauen einen "Strategaize-Onboarding-Service" als Dienstleistung in unserem Portfolio auf — wir wuerden den initialen Setup, die DATEV-Schnittstellen-Konfiguration und das erste Mandanten-Coaching uebernehmen, Sie liefern die Software-Lizenz.
+
+      Kommerziell stelle ich mir vor:
+      - 15-20 Prozent Reseller-Marge auf die Software-Lizenz (waehrend des Erstjahres)
+      - Wir bringen eine Pipeline von 30-50 Kanzleien pro Jahr ein, die Strategaize ihren Mandanten anbieten koennten
+      - Pro Kanzlei rechnen wir mit 2-4 Mandanten in den ersten 18 Monaten
+
+      Falls Interesse besteht, wuerde ich gerne ein 30-Minuten-Gespraech vorschlagen, idealerweise im Juni, um die Modalitaeten zu erkunden.
+
+      Mit freundlichen Gruessen
+      Markus Koehler
+      Kanzlei-IT-Partner GmbH
+
+  - id: "042"
+    expected_classification: skip
+    expected_pattern: null
+    reasoning: "Coolify-Alert-Notification, automatisierter Infrastruktur-Hinweis ohne Founder-Wissen."
+    subject: "[Coolify Alert] Container restart: supabase-db-k9f5pn5upfq7etoefb5ukbcg"
+    from: "alerts@coolify.io"
+    to: "immo@bellaerts.de"
+    date: "2026-05-31"
+    body: |
+      Alert: Container restart detected.
+
+      Container: supabase-db-k9f5pn5upfq7etoefb5ukbcg-091846591112
+      Status: running (after restart)
+      Reason: out-of-memory (OOM-killed)
+      Duration of downtime: 47 seconds
+      Recovery: automatic
+
+      Resource snapshot at restart:
+      - Memory at limit: 7.8 GB / 8 GB
+      - CPU at restart: 92%
+      - Active connections: 47
+
+      Top queries by memory before restart:
+      1. Vector similarity search on knowledge_chunks (2.1 GB)
+      2. Knowledge graph traversal (1.4 GB)
+      3. Bedrock pre-processing batch (0.9 GB)
+
+      Recommendation: increase container memory limit or optimize queries.
+
+      View full incident details:
+      https://coolify.strategaize.com/alerts/incident/2026-05-31-23184
+
+  - id: "043"
+    expected_classification: valuable
+    expected_pattern: "Customer-Inquiry Multi-Generations-Familienunternehmen mit Cousin-Cousine-Eigentums-Struktur (komplexe Stakeholder-Konstellation)"
+    reasoning: "Ungewoehnliche Mehrfach-Eigner-Struktur erweitert den Spec-Horizont fuer Stakeholder-Management im Produkt. Wertvoller Use-Case fuer Roadmap."
+    subject: "Anfrage Strategaize-Eignung — Familienunternehmen 4. Generation, mehrere Eigentuemer"
+    from: "k.althaus@althaus-baustoffe.de"
+    to: "immo@bellaerts.de"
+    date: "2026-05-31"
+    body: |
+      Sehr geehrter Herr Bellaerts,
+
+      auf Empfehlung von Frau Dr. Karoline Werth (Beraterin fuer Familien-Governance) schreibe ich Ihnen wegen einer komplexen Konstellation, fuer die wir nach einem Strukturierungs-Tool suchen.
+
+      Unser Unternehmen, ein Baustoff-Grosshandel mit 134 Mitarbeitern, ist seit der 4. Generation in Familienbesitz. Aktuell haben wir 7 Eigentuemer aus drei Familienzweigen — meine Schwester und ich, drei Cousins, ein Onkel und eine Tante. Im operativen Geschaeft sind nur ich (Geschaeftsfuehrer, 51) und mein Cousin Tilmann (Vertriebsleiter, 47). Die anderen 5 sind passive Gesellschafter.
+
+      Die Herausforderung: Wir bereiten gerade den Uebergang in die 5. Generation vor. Aus der naechsten Generation sind aktuell 4 Personen in einem Alter (24-32 Jahre), in dem sie potenziell mitspielen koennen. Zwei davon arbeiten bereits in der Firma, zwei studieren noch.
+
+      Was wir suchen: Ein Tool, in dem wir das "Familien-Unternehmens-Wissen" strukturieren koennen, in einer Weise, die auch fuer passive Gesellschafter nachvollziehbar ist (Reporting an die Familie) und gleichzeitig die naechste Generation in das implizite Wissen einfuehrt. Idealerweise mit Rollen-Sichten:
+
+      - "Operative Sicht" fuer Geschaeftsfuehrung und Bereichsleiter (volle Tiefe)
+      - "Familien-Sicht" fuer passive Gesellschafter (aggregierte, strategische Ebene)
+      - "Nachfolger-Onboarding-Sicht" mit progressivem Tiefen-Aufbau
+
+      Ist eine solche Differenzierung in Strategaize abbildbar? Falls ja, wuerde ich gerne ein Erstgespraech mit Ihnen vereinbaren — gerne auch im Rahmen einer Familien-Strategie-Sitzung im Juli.
+
+      Mit freundlichen Gruessen
+      Klaus Althaus
+      Althaus Baustoffe GmbH & Co. KG
+
+  - id: "044"
+    expected_classification: skip
+    expected_pattern: null
+    reasoning: "Cold-Outreach Marketing-Automation-Tool mit Standard-Reichweiten-Argument."
+    subject: "Immo, kennst du schon eine bessere Marketing-Automation als ActiveCampaign?"
+    from: "tobias.fischer@sendmail-pro.com"
+    to: "immo@bellaerts.de"
+    date: "2026-05-31"
+    body: |
+      Hi Immo,
+
+      ich habe deine Strategaize-Landingpage gesehen — sauberer Auftritt!
+
+      Schnelle Frage: Wie automatisierst du aktuell euer B2B-Email-Marketing? Falls du noch mit Mailchimp, ActiveCampaign oder einer ueberteuerten Salesforce-Loesung arbeitest, schaust du dir bitte SendmailPro an.
+
+      Was wir besser machen:
+      ✓ Vollstaendig DSGVO-konform (Server in Deutschland)
+      ✓ 70 Prozent guenstiger als ActiveCampaign bei identischem Feature-Set
+      ✓ Native HubSpot- und Pipedrive-Integration
+      ✓ AI-gestuetzte Subject-Line-Optimierung mit nachweislich +18 Prozent Open-Rate
+
+      Spezialangebot fuer DACH-SaaS-Founder bis Ende Juni:
+      - 50 Prozent Rabatt fuer 12 Monate
+      - Kostenlose Migration deiner bestehenden Kampagnen
+      - 30-Minuten-Personal-Demo
+
+      Magst du uns kurz testen? calendly.com/tobias-sendmailpro/15min
+
+      Beste Gruesse
+      Tobias Fischer
+      Senior Sales DACH | SendmailPro GmbH
+
+  - id: "045"
+    expected_classification: valuable
+    expected_pattern: "Borderline-Talent StB-Verband-Kontakt mit moeglicher Vortrag-Einladung (Distribution-Hebel ueber Verbandsstrukturen)"
+    reasoning: "BORDERLINE: Wirkt zunaechst wie reine Vernetzung, enthaelt aber eine konkrete Vortrags-Einladung mit ueber 800 Teilnehmern - hoechst relevant fuer Channel-Aufbau."
+    subject: "Vernetzung — und eine moegliche Anfrage"
+    from: "r.lederer@stbv-bayern.de"
+    to: "gruender@strategaizetransition.com"
+    date: "2026-05-31"
+    body: |
+      Sehr geehrter Herr Bellaerts,
+
+      mein Name ist Reinhard Lederer, ich bin Geschaeftsfuehrer des Steuerberaterverbands Bayern. Ueber gemeinsame Kontakte (zuletzt ueber Frau Schaefer von Ihrem Beirat) ist mir Strategaize ein Begriff geworden, und ich wollte mich mit Ihnen vernetzen.
+
+      Wir beobachten in unserem Verband eine deutliche Veraenderung: Nachfolge-Beratung wird fuer unsere knapp 4.200 Mitglieder zu einem strategischen Beratungsfeld, in dem klassische Steuer-Werkzeuge nicht ausreichen. Wir spueren das in den Anfragen unserer Mitglieder nach Weiterbildungs-Angeboten, in den Pruefungs-Schwerpunkten beim Berufsexamen, und in den Themen, die unsere Mitglieder auf unseren Jahres-Tagungen sehen wollen.
+
+      Konkret koennte ich mir vorstellen — und damit kommt der eigentliche Anlass meiner Mail — dass Strategaize ein Thema fuer unseren Steuerberatertag Bayern 2026 ist. Das ist unsere Jahres-Hauptveranstaltung mit typischerweise 800-1.000 Teilnehmern aus ganz Bayern. Wir suchen jaehrlich zwei bis drei Vortraege im Schwerpunkt "Zukunfts-Themen der Beratung", und die strukturierte Nachfolge-Vorbereitung mit Software-Unterstuetzung ist ein Format, das wir bisher nicht abgebildet haben.
+
+      Die Veranstaltung findet vom 22. bis 23. Oktober 2026 in Nuernberg statt. Das Programm wird Mitte Juli final festgelegt — entsprechend muesste eine grundsaetzliche Bereitschaftserklaerung Ihrerseits bis Ende Juni vorliegen.
+
+      Waeren Sie offen fuer ein Erstgespraech in den naechsten 2-3 Wochen? Ich wuerde dann gerne klaeren, wie ein passender Vortrags-Slot aussehen koennte (typischerweise 45 Minuten plus Q&A), und welche Form von Aussteller-Praesenz fuer Strategaize sinnvoll waere.
+
+      Mit besten Gruessen
+      Reinhard Lederer
+      Steuerberaterverband Bayern, Geschaeftsfuehrer
