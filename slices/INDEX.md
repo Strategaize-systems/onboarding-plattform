@@ -899,3 +899,33 @@ V9 = 4 Slices SLC-165..168 (Konsolidierung 5 -> 4 per /architecture RPT-375). GF
 | Strategaize-Vorstellungs-Text-Freigabe | SLC-162 MT-3 | Founder schreibt 2-3 Absaetze in Strategaize-Wir-Voice |
 | StB-Notification-Wording-Freigabe | SLC-163 MT-4 | Founder freigibt 4-Saetze-Body fuer DEC-169 neutral-informativ |
 | `STRATEGAIZE_CTA_TOKEN_SECRET` Produktions-Generation | SLC-163 MT-1 | `openssl rand -hex 64` + in Coolify-Resource-ENV setzen |
+
+## V9.1 Slices (Continuous-Stream Forward-Bucket-Email)
+
+V9.1 = 4 Slices SLC-V9.1-A..D (Naming-Konvention version-anchored statt fortlaufend per ARCHITECTURE.md V9.1 Section Slice-Empfehlung). GF richtet einmalig Mail-Forward-Regel ein -> AWS SES Inbound Ireland eu-west-1 -> Lambda -> OP-Webhook `/api/inbound/email` -> 3-Schicht-Validation-Layer -> Storage-Persist + email_message INSERT + email_bulk_run Daily-Roll-Over -> periodischer Pipeline-Trigger triggert V9.0-Pipeline (~80% V9-Code-Reuse). Cumulative-Single-Branch-Worktree `v9-1-forward-bucket-email`. Reihenfolge linear (SLC-V9.1-A → B → C → D). Aufwand ~19-22 MTs, ~12-16 Tage Code-Side. Internal-Test-Mode (Founder-only Pilot) per [[module-lifecycle-discipline]] + [[feedback-no-strategaize-live-until-all-systems-ready]] BLOCKING — kein Customer-Outreach.
+
+| ID | Slice | Feature | Status | Priority | Created |
+|----|-------|---------|--------|----------|---------|
+| SLC-V9.1-A | [Inbound-Foundation + Validation-Layer + 3 Tables + MT-0 Skeleton-Validation](SLC-V9.1-A-inbound-foundation-validation.md) | FEAT-075 + FEAT-076 / BL-154 + BL-155 | planned | High | 2026-06-09 |
+| SLC-V9.1-B | [Continuous-Cost-Cap-Service + Pipeline-Trigger-Cron](SLC-V9.1-B-continuous-cost-cap.md) | FEAT-077 / BL-156 | planned | High | 2026-06-09 |
+| SLC-V9.1-C | [Storage-Retention-Cron (DSGVO-Lifecycle)](SLC-V9.1-C-storage-retention-cron.md) | FEAT-078 / BL-157 | planned | High | 2026-06-09 |
+| SLC-V9.1-D | [Setup-UI Conversational-First + Admin-Audit + Master-Merge](SLC-V9.1-D-setup-ui-admin-audit.md) | FEAT-079 / BL-158 | planned | High | 2026-06-09 |
+
+### V9.1 Execution Order (strikt sequentiell)
+- **SLC-V9.1-A zuerst** (Foundation-Layer: 3 neue Tabellen + 2 ALTER + Webhook-Endpoint + Validation-Layer + Synthetic-Corpus-Skeleton-Validation — Pre-Cond fuer alle nachfolgenden)
+- **SLC-V9.1-B nach SLC-V9.1-A** (Cost-Cap braucht email_bulk_run `status='continuous'` + `inbound_source='forward_bucket'` Spalten)
+- **SLC-V9.1-C nach SLC-V9.1-A** (Retention braucht email_bulk_run + email_message `retention_until` + `deleted_at` Spalten — parallel zu SLC-V9.1-B moeglich, aber sequentiell fuer Cumulative-Branch-Disziplin)
+- **SLC-V9.1-D zuletzt** (Setup-UI integriert alle vorigen Slice-Outputs + Master-Merge nach Gesamt-V9.1-/qa PASS)
+- Reihenfolge fix: V9.1-A → V9.1-B → V9.1-C → V9.1-D (Hard-Dependency-Kette via ARCHITECTURE.md V9.1 Section Slice-Empfehlung)
+- **Worktree-Setup `v9-1-forward-bucket-email`** als SLC-V9.1-A MT-0 (Pre-Slice, echtes `npm install` per [[feedback-worktree-npm-install-not-symlink]] BLOCKING)
+- **Master-Merge** `v9-1-forward-bucket-email` → `main` in SLC-V9.1-D MT-7 nach Gesamt-V9.1-/qa PASS
+
+### V9.1 Pre-Slice User-Pflichten
+
+| Pflicht | Blockiert | Aktion |
+|---|---|---|
+| AWS-Founder-Setup (DNS + SES Receipt-Rule + S3 + SNS + Lambda + IAM + Secrets Manager) per ARCHITECTURE.md Section "Pflicht-Founder-Step-Liste" | SLC-V9.1-A MT-6 Live-Smoke | ~2-4h einmalig, Agent assistiert Schritt-fuer-Schritt; ggf. AWS-SES-Sandbox-Production-Approval-Request (~24h Standard-Approval) |
+| Coolify-ENV-Sync mit AWS Secrets Manager `INBOUND_WEBHOOK_HMAC_SECRET` | SLC-V9.1-A MT-6 Live-Smoke | `openssl rand -hex 32` + identischer Wert in AWS Secrets Manager + Coolify-Resource-ENV |
+| Coolify-Scheduled-Task-Eintrag `/api/cron/email-bulk-pipeline-trigger` (stuendlich) | SLC-V9.1-B MT-5 Live-Smoke | Coolify-UI Resource -> Scheduled-Tasks -> `0 * * * *` POST mit CRON_SECRET-Header |
+| Coolify-Scheduled-Task-Eintrag `/api/cron/bulk-email-retention-sweep` (taeglich 02:00 UTC) | SLC-V9.1-C MT-3 Live-Smoke | Coolify-UI Resource -> Scheduled-Tasks -> `0 2 * * *` POST mit CRON_SECRET-Header |
+| Founder-Conversational-First-UX-Wording-Freigabe (Setup-Assistant-Prompt + DSGVO-Disclaimer-Text) | SLC-V9.1-D MT-3 + MT-4 | ~1h: 2 Text-Bausteine final freigeben |
