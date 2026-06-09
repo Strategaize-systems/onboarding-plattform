@@ -8361,3 +8361,755 @@ Eine Implementation ist regelkonform wenn:
 1. V8.1 STABLE-Bestaetigung via /post-launch nach Burn-In ~2026-06-02 08:00 UTC
 2. Test-Email-Corpus von Founder bereit (~100 anonymisierte .mbox-Emails fuer SLC-V9-A MT-1 Cost-Validation)
 3. `mailparser ^3.7.0` lokal validiert (npm-Install + Smoke-Parse-Test)
+
+## V9.1 Architecture Addendum — Continuous-Stream Forward-Bucket-Email (RPT-429, 2026-06-09)
+
+### Context
+
+V9.1 setzt auf V9 RELEASED (REL-030, 2026-06-07 STABLE) auf. V9 war episodische `.mbox`-Batch-Uploads durch den GF. V9.1 oeffnet den **kontinuierlichen Stream**: GF richtet einmalig eine Mail-Forward-Regel in seinem Mail-Client ein, Inbound-Vendor empfaengt forwarded-Mails ueber Tage/Wochen, die V9.0-Pipeline laeuft periodisch auf dem akkumulierten Korpus. Pipeline (Pre-Filter + Threading + PII + Pattern + Curation + Handbuch-Insert) bleibt **strukturell unveraendert** — nur die Trigger-Source wechselt von Upload-Action zu Continuous-Webhook-Stream + periodischem Pipeline-Trigger.
+
+V9.1 schliesst die Friction-Luecke zwischen "operativem Wissen entsteht kontinuierlich" und "GF muss bewusst exportieren + uploaden". Per [[module-lifecycle-discipline]] + [[feedback-no-strategaize-live-until-all-systems-ready]] bleibt V9.1 strikt Internal-Test-Mode (Founder-only Pilot) — kein Customer-Outreach, kein Pilot-Multiplikator, kein Anwalts-Sign-off-Trigger.
+
+5 neue Features: FEAT-075 Inbound-SMTP-Vendor + Catchall-Routing, FEAT-076 Forward-Validation-Layer + Spam-Defense, FEAT-077 Continuous-Cost-Cap-Service, FEAT-078 Storage-Retention-Cron, FEAT-079 Admin-Audit + Setup-UI mit Conversational-First.
+
+Vendor + Validation-Approach sind bereits via DEC-194 (AWS SES Inbound Ireland eu-west-1) + DEC-195 (Synthetic-Corpus Ground-Truth-Labels) entschieden. /architecture V9.1 entscheidet die verbleibenden 5 Open Questions (Q-V9.1-B Cost-Cap-Modell + Q-V9.1-C Retention-Policy + Q-V9.1-D Forward-Validation + Q-V9.1-F Address-Routing + Q-V9.1-H Spam-Defense) und legt die Region-Drift-TIA-Dokumentation, das IAM-Policy-Layout, die Pflicht-Founder-Step-Liste und den MT-0-Skeleton-Validation-Plan fest.
+
+### Architecture Summary
+
+V9.1 fuegt **5 neue Schichten** ueber V9 hinzu — die V9-Pipeline-Stages 1-8 (Parse + Pre-Filter + Thread-Redact + Pattern-Extract + Curation + Handbuch-Import) bleiben 1:1 unveraendert (~80% V9-Code-Reuse erreicht):
+
+1. **AWS SES Inbound Foundation** (External AWS-Resources, NICHT in App-Repo) — SES Receipt-Rule-Set in eu-west-1 (Ireland) catched `bulk.strategaizetransition.com`-Subdomain, schreibt Raw-Email in S3-Bucket `bulk-email-inbound-eu-west-1`, triggert SNS-Topic, SNS pusht an Lambda `forward-ses-to-op-webhook`, Lambda transformiert SES-Event in HMAC-signierten POST an `/api/inbound/email` der OP-App. Setup-Aufwand: ~2-4h einmalig, danach Standard-AWS-Operations. AWS-Standard-DPA bereits aktiv via bestehendes AWS-Account.
+
+2. **InboundEmailVendor Adapter** (`src/lib/inbound-email/`) — Interface `InboundEmailVendor` + SES-Implementation (`vendors/aws-ses.ts`). Adapter-Pattern analog Bedrock-Client (DEC-194). Plan-B-Vendor Mailgun EU dokumentiert, kein Code, bei Bedarf 2-3 Wochen Vendor-Switch. Webhook-Endpoint `src/app/api/inbound/email/route.ts` ist Vendor-agnostisch — laedt Adapter aus ENV `INBOUND_VENDOR=ses-ireland`.
+
+3. **Forward-Validation-Layer** (`src/lib/inbound-email/validation/`) — 3-Schicht-Defense gegen Spam / Unsolicited-PII / Fremd-Forwards. Schicht 1: SES-Built-In-Spam-Score (SES Receipt-Rule lehnt Spam vor S3-Persistierung ab). Schicht 2: Setup-Token-Validation (Mandatory in V9.1 — GF muss Token im Forward-Header `X-Strategaize-Forward-Token` setzen). Schicht 3: Optional Sender-Allowlist (Tenant pflegt erlaubte Forward-Source-Domains, Default-Off — wenn aktiv ueberprueft sie den Original-Header `From:`). DKIM-Re-Sign-Verifikation deferred V9.2+ (komplexer, externer DKIM-Resolver, ~2-3 Wochen Aufwand).
+
+4. **Continuous-Cost-Cap-Service** (`src/lib/bulk-email/continuous-cost-cap.ts`) — Erweiterung der V9.0-Cost-Cap (`src/lib/bulk-email/cost-cap.ts`) um Continuous-Stream-Modell. Drei Schichten: Daily-Threshold (5 EUR/Tag/Tenant, Default), Monthly-Cap (100 EUR/Tenant/Monat, Reuse V9.0 DEC-182), Per-Email-Approval-Schwelle (>0.50 EUR/Email triggert Pre-Approval-Modal beim GF). Bei Threshold-Erreichung: Pipeline pausiert, GF bekommt Notification via Email + admin/audit/bulk-email Banner.
+
+5. **Storage-Retention-Cron + Setup-UI** (`src/workers/retention/handle-bulk-email-retention-sweep.ts` + `src/app/dashboard/bulk-email-import/forward-setup/`) — Daily Coolify-Scheduled-Task loescht Raw-Emails nach Retention-Policy (60 Tage Soft-Delete + 90 Tage Hard-Delete, Default — per Tenant ENV-overridable). Idempotent: pruefe `email_pattern.imported_to_handbook_at IS NOT NULL` vor Hard-Delete (bereits in knowledge_unit eingespielte Pattern bleiben unangetastet). Setup-UI mit Conversational-First-Pattern ("Mit KI beschreiben"-Button), 4-Mail-Client-Anleitungen (Gmail / Outlook / Thunderbird / Apple Mail), Setup-Token-Display, DSGVO-Pflicht-Disclaimer, Test-Send-Button (End-to-End-Verifikation der Forward-Regel).
+
+### Main Components
+
+#### Component-Diagram (textuell)
+
+```
++----------------------------------------------------------------------+
+| V9.1 Continuous-Stream Forward-Bucket Pipeline                       |
+|                                                                      |
+| GF Mail-Client                                                       |
+|   |                                                                  |
+|   v  forward-rule: alle gesendeten Mails -> bulk-<slug>@bulk.*       |
+|                                                                      |
+| +========================== AWS eu-west-1 ===================+       |
+| |  bulk.strategaizetransition.com  (MX -> SES Inbound)        |       |
+| |        |                                                    |       |
+| |        v                                                    |       |
+| |  SES Receipt-Rule-Set "bulk-strategaize"                    |       |
+| |    - Built-In-Spam-Reject (Schicht 1 Validation)            |       |
+| |    - WriteToS3-Action                                       |       |
+| |        |                                                    |       |
+| |        v                                                    |       |
+| |  S3 Bucket bulk-email-inbound-eu-west-1                     |       |
+| |    Path: <tenant-slug>/<message-id>.eml                     |       |
+| |        |                                                    |       |
+| |        v  EventBridge / S3-Notification                     |       |
+| |  SNS Topic ses-inbound-forward                              |       |
+| |        |                                                    |       |
+| |        v                                                    |       |
+| |  Lambda forward-ses-to-op-webhook                           |       |
+| |    - read S3-object                                         |       |
+| |    - sign HMAC-SHA256 (shared secret)                       |       |
+| |    - POST https://onboarding.strategaizetransition.com/     |       |
+| |          api/inbound/email                                  |       |
+| +=============================================================+       |
+|                       |                                              |
+|                       v  HMAC-signed POST                            |
+|         +---------------------------------------+                    |
+|         | /api/inbound/email (Webhook-Endpoint) |                    |
+|         | - HMAC-verify (InboundEmailVendor)    |                    |
+|         | - Schicht 2: Setup-Token-Validation   |                    |
+|         | - Schicht 3: Sender-Allowlist (opt.)  |                    |
+|         | - Tenant-Lookup via Local-Part        |                    |
+|         | - PUT in bulk-email Bucket            |                    |
+|         | - INSERT email_message                |                    |
+|         | - email_bulk_run continuous-mode      |                    |
+|         | - audit_log Entry                     |                    |
+|         +---------------------------------------+                    |
+|                       |                                              |
+|                       v   silent-drop on validation-reject           |
+|                       |   + INSERT email_validation_reject_log       |
+|                       |                                              |
+|         +---------------------------------------+                    |
+|         | Periodischer Pipeline-Trigger          |                    |
+|         | (Continuous-Cost-Cap + Threshold)      |                    |
+|         |  - Daily 5 EUR / Monthly 100 EUR       |                    |
+|         |  - Per-Email-Approval >0.50 EUR        |                    |
+|         |  - Pause + GF-Notify on Threshold      |                    |
+|         +---------------------------------------+                    |
+|                       |                                              |
+|                       v   trigger V9.0-Pipeline                      |
+|         +---------------------------------------+                    |
+|         | V9.0 Pipeline (UNVERAENDERT)          |                    |
+|         |  Pre-Filter -> Thread-Redact ->       |                    |
+|         |  Pattern-Extract -> Curation ->       |                    |
+|         |  Handbuch-Import                      |                    |
+|         +---------------------------------------+                    |
+|                                                                      |
+|         +---------------------------------------+                    |
+|         | Daily Cron: handle-retention-sweep    |                    |
+|         |  - 60d Soft-Delete (deleted_at set)   |                    |
+|         |  - 90d Hard-Delete (S3 + DB)          |                    |
+|         |  - idempotent: skip imported patterns |                    |
+|         +---------------------------------------+                    |
++----------------------------------------------------------------------+
+```
+
+#### Component Responsibilities
+
+| Component | Path | Responsibility |
+|---|---|---|
+| AWS SES Receipt-Rule-Set | AWS Console eu-west-1 | Catchall `bulk.*`, Spam-Reject, S3-Write |
+| AWS S3 Bucket `bulk-email-inbound-eu-west-1` | AWS Console eu-west-1 | Raw-Email-Persistierung pro Tenant-Slug |
+| AWS Lambda `forward-ses-to-op-webhook` | AWS Lambda eu-west-1 | S3-Read + HMAC-Sign + POST an OP-Webhook |
+| Inbound-Webhook-Endpoint | `src/app/api/inbound/email/route.ts` | HMAC-Verify, Validation-Layer-Call, Tenant-Lookup, Storage-Persist, audit_log |
+| InboundEmailVendor Adapter | `src/lib/inbound-email/vendors/aws-ses.ts` (+ `index.ts` factory) | Vendor-spezifische Event-Parsing + HMAC-Verify-Schema-Definition |
+| Forward-Validation-Layer | `src/lib/inbound-email/validation/setup-token.ts` + `sender-allowlist.ts` | Setup-Token-Check + Optional Allowlist-Check |
+| Tenant-Lookup-Service | `src/lib/inbound-email/tenant-lookup.ts` | Local-Part-Pattern `bulk-<slug>@bulk.*` -> Tenant-ID + email_inbound_endpoint-Row |
+| Continuous-Cost-Cap-Service | `src/lib/bulk-email/continuous-cost-cap.ts` | Daily + Monthly + Per-Email-Approval-Logik. Wrapt V9.0 cost-cap.ts. |
+| Pipeline-Trigger-Cron | `src/workers/inbound/handle-pipeline-trigger.ts` | Periodisch (z.B. stuendlich) pruefen: gibt es genug akkumulierte Emails pro Tenant? Cost-Cap OK? -> V9.0-Pipeline starten |
+| Storage-Retention-Cron | `src/workers/retention/handle-bulk-email-retention-sweep.ts` | Daily 02:00 UTC: Soft-Delete bei >60d, Hard-Delete bei >90d, idempotent vs knowledge_unit |
+| Setup-UI Forward-Setup | `src/app/dashboard/bulk-email-import/forward-setup/page.tsx` | Conversational-First "Mit KI beschreiben" + 4-Mail-Client-Anleitungen + Setup-Token-Display + DSGVO-Disclaimer + Test-Send-Button |
+| Setup-UI Server-Actions | `src/app/dashboard/bulk-email-import/forward-setup/actions.ts` | `createInboundEndpoint`, `regenerateSetupToken`, `updateAllowlist`, `sendTestEmail`, `confirmDsgvoDisclaimer` |
+| Admin-Audit-Erweiterung | `src/app/admin/audit/bulk-email/page.tsx` (Erweiterung V9.0) | Forward-Source-Statistik pro Tenant: Vendor + Inbound-Volume + Validation-Reject-Rate + Cost. Cross-Tenant-Aggregat fuer strategaize_admin. |
+
+### Data Model / Storage Direction
+
+V9.1 fuegt **3 neue Tabellen** + **2 ALTER-Erweiterungen** auf bestehenden V9-Tabellen hinzu. Pipeline-Tabellen (`email_message`, `email_thread`, `email_pattern`) bleiben strukturell unveraendert — V9.0-Pipeline-Code laeuft 1:1 weiter.
+
+#### `email_inbound_endpoint` (Tenant -> Routing-Token-Map)
+
+```sql
+CREATE TABLE email_inbound_endpoint (
+  id                         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id                  uuid NOT NULL REFERENCES tenants ON DELETE CASCADE,
+  vendor                     text NOT NULL CHECK (vendor IN ('ses-ireland', 'mailgun-eu')),
+  local_part                 text NOT NULL,                                    -- z.B. 'bulk-acme'
+  domain                     text NOT NULL,                                    -- z.B. 'bulk.strategaizetransition.com'
+  setup_token                text NOT NULL,                                    -- 32-byte URL-safe Random, GF setzt im Forward-Header
+  setup_token_created_at     timestamptz NOT NULL DEFAULT now(),
+  status                     text NOT NULL CHECK (status IN ('pending_setup', 'active', 'paused', 'revoked')) DEFAULT 'pending_setup',
+  dsgvo_consent_text_version text NOT NULL,                                    -- Bezug auf COMPLIANCE.md-Version
+  dsgvo_consent_accepted_at  timestamptz NOT NULL,                             -- GF-Disclaimer-Bestaetigung Audit
+  dsgvo_consent_user_id      uuid NOT NULL,                                    -- FK auth.users (who bestaetigt)
+  created_at                 timestamptz NOT NULL DEFAULT now(),
+  updated_at                 timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (vendor, local_part, domain)
+);
+
+CREATE INDEX idx_email_inbound_endpoint_tenant ON email_inbound_endpoint(tenant_id);
+CREATE INDEX idx_email_inbound_endpoint_lookup ON email_inbound_endpoint(local_part, domain) WHERE status = 'active';
+```
+
+Idempotenz-Story: UNIQUE-Constraint `(vendor, local_part, domain)` verhindert Doppel-Setup desselben Aliases. Setup-Token-Rotation per `regenerateSetupToken`-Action: UPDATE setup_token + setup_token_created_at, keine neue Row.
+
+#### `email_forward_allowlist` (Optional Sender-Allowlist pro Tenant)
+
+```sql
+CREATE TABLE email_forward_allowlist (
+  id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id           uuid NOT NULL REFERENCES tenants ON DELETE CASCADE,
+  endpoint_id         uuid NOT NULL REFERENCES email_inbound_endpoint ON DELETE CASCADE,
+  allowed_pattern     text NOT NULL,                                    -- Domain '*.example.com' oder Email 'specific@example.com'
+  pattern_type        text NOT NULL CHECK (pattern_type IN ('domain', 'email')),
+  enabled             boolean NOT NULL DEFAULT true,
+  notes               text,
+  created_at          timestamptz NOT NULL DEFAULT now(),
+  created_by          uuid NOT NULL,                                     -- FK auth.users
+  UNIQUE (endpoint_id, allowed_pattern)
+);
+
+CREATE INDEX idx_email_forward_allowlist_endpoint ON email_forward_allowlist(endpoint_id) WHERE enabled = true;
+```
+
+Semantik: Wenn **keine** Allowlist-Rows fuer einen Endpoint existieren -> Allowlist deaktiviert (Schicht 3 skipped). Wenn mindestens 1 Row existiert -> Allowlist aktiv, nur Mails mit `From:`-Header-Match passieren.
+
+#### `email_validation_reject_log` (Audit pro Validation-Reject)
+
+```sql
+CREATE TABLE email_validation_reject_log (
+  id                   uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id            uuid,                                            -- nullable: bei Pre-Tenant-Lookup-Reject
+  endpoint_id          uuid REFERENCES email_inbound_endpoint ON DELETE SET NULL,
+  vendor               text NOT NULL,
+  recipient_local_part text,                                            -- bulk-acme
+  recipient_domain     text,
+  sender_address       text,                                            -- From:-Header (Klartext, kein Pseudonym — Audit-Pflicht)
+  message_id           text,
+  spam_score           numeric,                                         -- vendor-supplied score
+  reject_layer         text NOT NULL CHECK (reject_layer IN (
+                          'hmac_invalid', 'spam_score', 'setup_token_missing',
+                          'setup_token_invalid', 'tenant_not_found',
+                          'endpoint_inactive', 'allowlist_mismatch'
+                        )),
+  reject_reason        text,                                            -- frei-text Details
+  raw_headers          jsonb,                                           -- vendor-supplied original Headers (Audit-Beweis)
+  created_at           timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_email_validation_reject_log_tenant ON email_validation_reject_log(tenant_id, created_at DESC) WHERE tenant_id IS NOT NULL;
+CREATE INDEX idx_email_validation_reject_log_reject_layer ON email_validation_reject_log(reject_layer, created_at DESC);
+```
+
+Persistierungs-Politik: Original-Sender-Adresse + Headers bleiben Klartext (Audit-Pflicht — DSGVO erlaubt bei Spam-Defense-Zweck). Body wird **nicht** persistiert (silent-drop). 90-Tage-Retention via separate Retention-Pass (analog email_message Hard-Delete).
+
+#### ALTER `email_bulk_run` (V9-Tabelle)
+
+```sql
+ALTER TABLE email_bulk_run
+  ADD COLUMN inbound_source       text NOT NULL DEFAULT 'mbox_upload' CHECK (inbound_source IN ('mbox_upload', 'forward_bucket')),
+  ADD COLUMN endpoint_id          uuid REFERENCES email_inbound_endpoint ON DELETE SET NULL,
+  ADD COLUMN retention_until      timestamptz,                                    -- 90d nach created_at
+  ADD COLUMN deleted_at           timestamptz;                                    -- Soft-Delete (60d)
+
+CREATE INDEX idx_email_bulk_run_retention ON email_bulk_run(retention_until) WHERE deleted_at IS NULL;
+CREATE INDEX idx_email_bulk_run_inbound ON email_bulk_run(inbound_source, created_at DESC);
+```
+
+`inbound_source='forward_bucket'`-Rows haben `source_file_name='<endpoint>-continuous'` + `storage_path='bulk-email/<tenant_id>/<bulk_run_id>/continuous/'` (Subverzeichnis statt Single-File). Continuous-Mode: 1 bulk_run_id pro Tag pro Tenant pro endpoint (Daily-Roll-Over).
+
+#### ALTER `email_message` (V9-Tabelle)
+
+```sql
+ALTER TABLE email_message
+  ADD COLUMN raw_storage_path     text,                                          -- Pfad in bulk-email/<tenant_id>/forward-bucket/<endpoint_id>/<message_id>.eml
+  ADD COLUMN retention_until      timestamptz,                                   -- 90d nach received_at
+  ADD COLUMN deleted_at           timestamptz;                                   -- Soft-Delete (60d)
+
+CREATE INDEX idx_email_message_retention ON email_message(retention_until) WHERE deleted_at IS NULL;
+```
+
+`raw_storage_path` ist nur bei `inbound_source='forward_bucket'` gesetzt — V9-mbox-Uploads haben weiter Single-File-Path im `email_bulk_run.storage_path`.
+
+#### CHECK-Constraint-Extensions
+
+```sql
+-- ai_jobs.job_type erweitert um V9.1-Worker-Typen
+ALTER TABLE ai_jobs DROP CONSTRAINT IF EXISTS ai_jobs_job_type_check;
+ALTER TABLE ai_jobs ADD CONSTRAINT ai_jobs_job_type_check
+  CHECK (job_type IN (
+    /* ... 17 bestehende V9-Typen aus MIG-053/MIG-054/MIG-056 ... */
+    'email_bulk_pipeline_trigger',         -- V9.1: periodischer Trigger
+    'email_bulk_retention_sweep'           -- V9.1: Daily Retention-Cron
+  ));
+
+-- email_bulk_run.status erweitert um 'continuous' fuer Daily-Roll-Over-Run im Forward-Bucket-Modus
+ALTER TABLE email_bulk_run DROP CONSTRAINT IF EXISTS email_bulk_run_status_check;
+ALTER TABLE email_bulk_run ADD CONSTRAINT email_bulk_run_status_check
+  CHECK (status IN (
+    /* ... bestehende V9-Werte ... */
+    'continuous'                           -- V9.1: noch nicht-getriggerter Forward-Bucket-Run (akkumuliert)
+  ));
+```
+
+#### Storage-Bucket-Reuse: `bulk-email` (DEC-200)
+
+V9.1 nutzt den bestehenden V9 `bulk-email`-Bucket. **Kein** neuer `bulk-email-inbound`-OP-Bucket — AWS S3-Bucket `bulk-email-inbound-eu-west-1` ist der primaere Raw-Email-Drop (AWS-Side), Lambda kopiert auf OP-Side in `bulk-email/<tenant_id>/forward-bucket/<endpoint_id>/<message_id>.eml`. Begruendung: Tenant-RLS-Pattern, Storage-Quota-Aggregation, Cost-Cap-Visibility, einheitliche Loesch-Cron-Logik.
+
+Pfad-Konvention V9.1:
+- `bulk-email/<tenant_id>/<bulk_run_id>/source.mbox` (V9 mbox-Upload, unveraendert)
+- `bulk-email/<tenant_id>/forward-bucket/<endpoint_id>/<YYYY-MM-DD>/<message_id>.eml` (V9.1 continuous-stream, neuer Subbaum)
+
+### Data Flow / Request Flow
+
+#### Flow A: Inbound (AWS SES -> Webhook -> OP)
+
+1. GF Mail-Client forwarded eine Email an `bulk-acme@bulk.strategaizetransition.com` (Original-`From:`-Header bleibt, neuer `To:`-Header bulk-Adresse, neuer `X-Strategaize-Forward-Token`-Header mit Setup-Token).
+2. DNS-MX-Record `bulk.strategaizetransition.com` zeigt auf `inbound-smtp.eu-west-1.amazonaws.com` -> AWS SES Inbound-Server empfaengt.
+3. SES Receipt-Rule "bulk-strategaize" matched Wildcard `*@bulk.strategaizetransition.com`, prueft Built-In-Spam-Score (SES-Default `spam-action: REJECT` bei Score > Threshold). Bei Spam: SMTP-550-Reject, nichts in S3, nichts an OP. Sender bekommt Bounce-Mail (SES-Standard).
+4. Bei Pass: SES schreibt Raw-Email als `<message-id>.eml` in S3-Bucket `bulk-email-inbound-eu-west-1` mit Path-Prefix `<recipient-local-part>/...`.
+5. S3-Notification triggert SNS-Topic `ses-inbound-forward`.
+6. SNS pusht JSON-Payload an Lambda `forward-ses-to-op-webhook` (Lambda-Invocation pro Email, max ~10s Laufzeit).
+7. Lambda liest S3-Object, berechnet HMAC-SHA256-Signatur ueber Body mit shared secret `INBOUND_WEBHOOK_HMAC_SECRET` (in AWS Secrets Manager), POSTet `{ raw_eml_base64, s3_key, message_id, recipient }` an `https://onboarding.strategaizetransition.com/api/inbound/email` mit Headers `X-Strategaize-Signature: sha256=...` + `X-Strategaize-Vendor: ses-ireland`.
+8. OP-Webhook `src/app/api/inbound/email/route.ts` verifiziert HMAC -> bei Mismatch: INSERT email_validation_reject_log (reject_layer='hmac_invalid') + 401-Response.
+9. Vendor-Adapter parsed Raw-Email (mailparser-Reuse V9). Extract Headers: `To:` (Recipient = `bulk-acme@bulk.*`), `From:` (Original-Sender), `X-Strategaize-Forward-Token:` (Setup-Token), `Message-ID:`.
+10. Tenant-Lookup-Service zerlegt `To:`-Local-Part `bulk-acme` -> SELECT FROM email_inbound_endpoint WHERE local_part='bulk-acme' AND domain='bulk.strategaizetransition.com' AND status='active'. Bei kein Match: INSERT reject_log (reject_layer='tenant_not_found') + 200-OK (silent-drop, kein Bounce). Bei status='paused' oder 'revoked': INSERT reject_log (reject_layer='endpoint_inactive') + 200-OK.
+11. Setup-Token-Validation: `X-Strategaize-Forward-Token`-Header vs endpoint.setup_token (constant-time compare). Bei Mismatch: INSERT reject_log + 200-OK silent-drop.
+12. Optional Sender-Allowlist (wenn min. 1 enabled Row in email_forward_allowlist fuer den Endpoint): pruefe `From:` gegen alle enabled patterns (Domain-Match `*.example.com` oder Email-exact). Kein Match: INSERT reject_log + 200-OK.
+13. Pass: Service-Role-Client schreibt Raw-Email in OP `bulk-email`-Bucket unter `bulk-email/<tenant_id>/forward-bucket/<endpoint_id>/<YYYY-MM-DD>/<message_id>.eml`. INSERT email_message-Row mit `tenant_id`, `bulk_run_id` (Daily-Roll-Over-Run), `message_id`, `raw_storage_path`, `from_address`, etc.
+14. INSERT/UPDATE `email_bulk_run` Daily-Roll-Over: SELECT bulk_run WHERE tenant_id + endpoint_id + DATE(created_at)=today AND status='continuous'. Wenn keine: INSERT mit `inbound_source='forward_bucket'`, `status='continuous'`. Wenn ja: UPDATE email_count += 1.
+15. INSERT audit_log (event_type='email_inbound_received', tenant_id, payload={message_id, sender_domain, endpoint_id, vendor}). 200-OK an Lambda. Lambda S3-Object kann via Lifecycle-Policy nach 7 Tagen geloescht werden (OP hat Kopie).
+
+#### Flow B: Periodischer Pipeline-Trigger (Cron -> V9.0-Pipeline)
+
+1. Coolify-Scheduled-Task feuert stuendlich `POST /api/cron/email-bulk-pipeline-trigger` mit `CRON_SECRET`-Header.
+2. Cron-Handler iteriert ueber alle `email_bulk_run` WHERE `inbound_source='forward_bucket'` AND `status='continuous'`.
+3. Pro Tenant: Continuous-Cost-Cap-Check (siehe Flow C). Bei Hit (Daily oder Monthly): skip, log.
+4. Pro Run: Pruefe Trigger-Bedingung — z.B. `email_count >= EMAIL_BULK_TRIGGER_MIN_COUNT` (Default 25) ODER `DATE(created_at) < today` (Daily-Roll-Over).
+5. Bei Trigger: UPDATE status='continuous' -> 'parsing'. Enqueue `email_bulk_parse`-Job in ai_jobs (V9-Worker laeuft 1:1). V9-Pipeline laeuft Stufen 2-8 ohne Aenderung.
+6. Per-Email-Approval-Schwelle (>0.50 EUR/Email Schaetzung) ist in V9-Pre-Cost-Estimate (`pattern-start/page.tsx`) bereits implementiert — Trigger fuer GF-Modal sind V9.1-konfigurierbare ENVs.
+
+#### Flow C: Continuous-Cost-Cap-Check (Service Layer)
+
+```typescript
+// src/lib/bulk-email/continuous-cost-cap.ts
+export async function checkContinuousCostCap(tenantId: string): Promise<CapCheckResult> {
+  const today = new Date().toISOString().substring(0, 10);
+  const month = today.substring(0, 7);
+
+  // Daily-Check
+  const { data: daily } = await admin
+    .from('vw_bulk_email_cost_daily')
+    .select('total_cost_eur')
+    .eq('tenant_id', tenantId)
+    .eq('day', today)
+    .maybeSingle();
+
+  if ((daily?.total_cost_eur ?? 0) >= EUR_CAP_DAILY) {
+    return { allowed: false, reason: 'daily_cap_hit', cap: EUR_CAP_DAILY, actual: daily.total_cost_eur };
+  }
+
+  // Monthly-Check (V9-Reuse vw_bulk_email_cost_monthly DEC-182)
+  const { data: monthly } = await admin
+    .from('vw_bulk_email_cost_monthly')
+    .select('total_cost_eur')
+    .eq('tenant_id', tenantId)
+    .eq('month', month)
+    .maybeSingle();
+
+  if ((monthly?.total_cost_eur ?? 0) >= EUR_CAP_MONTHLY) {
+    return { allowed: false, reason: 'monthly_cap_hit', cap: EUR_CAP_MONTHLY, actual: monthly.total_cost_eur };
+  }
+
+  return { allowed: true };
+}
+```
+
+ENV-Defaults (DEC-197): `V91_BULK_EMAIL_DAILY_CAP_EUR=5`, `V91_BULK_EMAIL_MONTHLY_CAP_EUR=100`, `V91_BULK_EMAIL_PER_EMAIL_APPROVAL_THRESHOLD_EUR=0.5`. Per-Tenant-Override via Tenant-Settings JSONB deferred V9.1.x.
+
+#### Flow D: Retention-Cron (Daily)
+
+1. Coolify-Scheduled-Task feuert taeglich 02:00 UTC `POST /api/cron/bulk-email-retention-sweep` mit CRON_SECRET.
+2. Soft-Delete-Phase: UPDATE email_message SET deleted_at=now() WHERE retention_until-`30 days` < now() AND deleted_at IS NULL (Soft-Delete bei created_at+60d). Symmetrisch fuer email_bulk_run.
+3. Hard-Delete-Phase: SELECT email_message WHERE retention_until < now() AND deleted_at IS NOT NULL. Per Row: pruefe `imported_to_handbook_at IS NULL OR FK-Pruefung kein knowledge_unit verweist drauf`. Bei pass: DELETE FROM Storage (bulk-email Bucket Path), DELETE FROM email_message. Bei imported: log skip, behalt Row (auch ueber 90d).
+4. INSERT audit_log (event_type='email_retention_sweep_run', payload={soft_deleted, hard_deleted, skipped_imported}).
+
+### External Dependencies
+
+#### Neue Dependencies
+
+- **AWS SES Inbound** in eu-west-1 (Ireland) — neue AWS-Service-Aktivierung. Region-Drift gegenueber Bedrock eu-central-1 ist akzeptiert (DEC-196 Region-Drift-TIA, beide EU). DPA: AWS-Standard-DPA via bestehendes AWS-Account.
+- **AWS S3 Bucket** `bulk-email-inbound-eu-west-1` mit Lifecycle-Policy 7d (Lambda-Side, NICHT OP-Side). Separates Bucket vom bestehenden AWS-S3-Usage (Logs etc).
+- **AWS SNS Topic** `ses-inbound-forward` — triggert Lambda. Default-Settings, kein Encryption noetig (kein PII im SNS-Payload, nur S3-Object-Reference).
+- **AWS Lambda** `forward-ses-to-op-webhook` (Node 20 Runtime, 256 MB Memory, 30s Timeout). Code: ~50 LOC + npm deps fuer SDK + HMAC. Deploy via AWS Console oder kleines `infra/lambda/`-Subverzeichnis im OP-Repo.
+- **AWS IAM Role** `op-ses-inbound-forwarder` — Permissions: `s3:GetObject` auf `bulk-email-inbound-eu-west-1/*`, `sns:Subscribe` auf `ses-inbound-forward`, `secretsmanager:GetSecretValue` auf `INBOUND_WEBHOOK_HMAC_SECRET`. Trust-Policy: nur Lambda-Service.
+- **AWS Secrets Manager Entry** `INBOUND_WEBHOOK_HMAC_SECRET` (32-byte Random). Lambda liest beim Cold-Start. OP-App liest via ENV (Coolify-Secret) — beide Werte muessen synchron sein.
+
+#### Reused Dependencies
+
+- **Bedrock eu-central-1** (Frankfurt) — Haiku + Sonnet, unveraendert.
+- **mailparser ^3.7.0** — V9-Reuse, kein neuer Versions-Pin.
+- **Coolify Scheduled-Tasks** — bestehender Cron-Mechanismus, neue Eintraege fuer pipeline-trigger + retention-sweep.
+
+#### Plan-B Vendor
+
+Mailgun EU Frankfurt — bei AWS-Lambda-Komplexitaet oder Vendor-Wechsel-Bedarf. Geschaetzter Wechsel-Aufwand: ~2-3 Wochen (neuer Adapter `vendors/mailgun-eu.ts`, neue HMAC-Schema, MX-Record-Update, DEC mit Migration-Plan).
+
+### Security / Privacy
+
+#### Cross-Region-TIA (DEC-196)
+
+Bedrock LLM-Calls (Haiku + Sonnet) laufen in Frankfurt eu-central-1. Inbound-Email-Storage liegt Ireland eu-west-1 (SES + S3 + Lambda). Beide AWS-Regions in der EU. Kein Dritt-Land-Transfer, kein TIA-Risiko nach EuGH Schrems II. Im DSGVO-Audit + COMPLIANCE.md dokumentiert als "Cross-Region innerhalb EU mit AWS-Standard-DPA + AWS-Europe-SARL-EU-Subsidiary-Vertrag (Bedrock-Praezedenz V5)".
+
+#### Webhook-Auth (HMAC)
+
+Webhook-Endpoint nutzt HMAC-SHA256 mit Shared Secret. Secret-Rotation-Plan: Quartalsweise per Founder-Maintenance-Window (synchron AWS Secrets Manager + Coolify-ENV neu). Kein Sliding-Window noetig in V9.1 — Cold-Start bei beiden Seiten reicht.
+
+#### Tenant-RLS
+
+Alle 3 neuen V9.1-Tabellen (`email_inbound_endpoint`, `email_forward_allowlist`, `email_validation_reject_log`) tragen Tenant-RLS via Standard-Helper `auth_tenant_id() = tenant_id`. `email_validation_reject_log` mit `tenant_id IS NULL`-Rows (Pre-Tenant-Lookup-Reject) nur fuer strategaize_admin lesbar.
+
+#### Rollen-Matrix V9.1
+
+| Rolle | email_inbound_endpoint | email_forward_allowlist | email_validation_reject_log | bulk-email-Bucket (V9.1-Subbaum) |
+|---|---|---|---|---|
+| strategaize_admin | ALL (Cross-Tenant) | ALL | ALL | ALL |
+| tenant_admin | OWN-TENANT INS/SEL/UPD | OWN-TENANT INS/SEL/UPD/DEL | OWN-TENANT SEL | OWN-TENANT R |
+| tenant_member | KEIN ACCESS V9.1 | KEIN ACCESS | KEIN ACCESS | KEIN ACCESS |
+| employee | KEIN ACCESS V9.1 | KEIN ACCESS | KEIN ACCESS | KEIN ACCESS |
+
+V9.2+: Multi-Mitarbeiter-Erweiterung bringt employee-INSERT-Rechte (per [[feedback-v87b-switch-true-internal-test-mode-without-anwalt]] aequivalent: Anwalts-Sign-off vor Customer-Live).
+
+#### Spam-Defense 3-Schicht (DEC-201)
+
+| Schicht | Mechanismus | Ort | Default |
+|---|---|---|---|
+| 1 | SES Built-In-Spam-Score-Reject | AWS Receipt-Rule | aktiv (SES-Default, kein Override) |
+| 2 | Setup-Token X-Strategaize-Forward-Token | OP-Webhook (`src/lib/inbound-email/validation/setup-token.ts`) | aktiv, Pflicht |
+| 3 | Sender-Allowlist (Domain oder Email exact) | OP-Webhook (`src/lib/inbound-email/validation/sender-allowlist.ts`) | inaktiv per Default, Tenant-optional |
+
+Eigene Spam-Heuristik (Subject-Pattern-Block, Bayesian-Score) deferred V9.2+.
+
+#### Disclaimer + Audit-Trail-Pflicht (DSGVO)
+
+- Setup-UI fordert vor Aktivierung explizite GF-Bestaetigung der DSGVO-Pflicht-Disclaimer-Sentence (z.B. "Ich bestaetige, dass ich die weitergeleiteten Emails verarbeiten und an Strategaize uebermitteln darf"). `email_inbound_endpoint.dsgvo_consent_*`-Felder dokumentieren Version + Timestamp + User unloeschbar.
+- audit_log-Event `email_inbound_received` pro empfangener Mail (mit `sender_domain` als Hash + `endpoint_id`, kein Klartext-Sender).
+- audit_log-Event `email_validation_rejected` pro Reject (mit reject_layer als facet).
+- audit_log-Event `email_retention_sweep_run` pro Daily-Cron mit Aggregat-Counts.
+- 7-Jahre-Aufbewahrung der audit_log-Eintraege analog V8.1 (Reuse).
+
+### Constraints und Tradeoffs
+
+| Trade-off | Entscheidung | Begruendung |
+|---|---|---|
+| AWS SES Lambda vs Mailgun Direct-Webhook | Lambda akzeptiert | DEC-194 Cost + DPA + V9.0-mailparser-Reuse |
+| Region-Drift Frankfurt vs Ireland | Akzeptiert | DEC-196: beide EU, kein TIA |
+| Setup-Token vs DKIM-Verify | Setup-Token in V9.1, DKIM V9.2+ | Setup-Token = 1-Tag-Bauzeit, DKIM = ~2-3 Wochen + externer Resolver |
+| Optional Sender-Allowlist Default-Off | Akzeptiert | UX-Friction-Reduktion: GF kann ohne Allowlist-Pflege starten, V9.1.x kann Default-On werden |
+| Daily-Roll-Over Continuous-Run vs Pro-Email-Run | Daily-Roll-Over | Reduziert ai_jobs-Volumen 100x, Pipeline-Trigger orientiert sich an Threshold + Cost-Cap |
+| Soft-Delete vor Hard-Delete | 60d + 90d | DEC-198: GF-Reverse-Window 30d, Storage-Wachstums-Begrenzung |
+| OP-Side S3 vs Direkt-S3-Read-from-Worker | OP-Side bulk-email-Bucket | Tenant-RLS + Cost-Aggregation + Loesch-Cron-Konsistenz |
+| Continuous-Mode in V9-email_bulk_run vs neue Tabelle | ALTER existing | Reuse V9-Pipeline-Trigger-Logik, Pre-Cost-Estimate-UI, Curation-UI |
+
+### V9.1 Open Questions Resolution
+
+Alle Open-Questions sind in /architecture entschieden. Cross-Reference in DECISIONS.md:
+
+| Q | Frage | Entscheidung | DEC |
+|---|---|---|---|
+| Q-V9.1-A | Vendor-Wahl | AWS SES Inbound Ireland eu-west-1 | DEC-194 (vor /architecture) |
+| Q-V9.1-B | Continuous-Cost-Cap-Modell | Daily 5 EUR + Monthly 100 EUR (V9-Reuse) + Per-Email-Approval > 0.50 EUR | DEC-197 |
+| Q-V9.1-C | Storage-Retention-Policy | 60d Soft-Delete + 90d Hard-Delete, Per-Tenant ENV-overridable | DEC-198 |
+| Q-V9.1-D | Forward-Validation-Mechanik | Setup-Token (Mandatory) + Optional Sender-Allowlist + DKIM-Verify deferred V9.2+ | DEC-199 |
+| Q-V9.1-E | Pre-Filter-Quality-Gate | keine harte Schwelle, Telemetry-Justierung post-deploy | DEC-195 (vor /architecture) |
+| Q-V9.1-F | Address-Routing | Catchall `bulk-<tenant-slug>@bulk.strategaizetransition.com` | DEC-200 |
+| Q-V9.1-G | Persona-Reinheit | GF-only V9.1, Multi-Mitarbeiter V9.2+ | PRD-Closure (vor /architecture) |
+| Q-V9.1-H | Spam-Defense-Tiefe | 3-Schicht (SES Built-In + Setup-Token + Optional Allowlist), eigene Heuristik V9.2+ | DEC-201 |
+| Q-V9.1-Region-Drift | Cross-Region-TIA Frankfurt ↔ Ireland | EU-intra-Region: kein TIA-Risiko, DPA-konform | DEC-196 |
+
+### Pflicht-Founder-Step-Liste (AWS + DNS Setup)
+
+Diese Steps muessen **VOR** SLC-V9.1-A `/backend` durchgefuehrt sein. Geschaetzter Aufwand: 2-4h. Bei Bedarf assistiert der Agent im AWS-Console-Walkthrough (per Screenshare oder Schritt-fuer-Schritt).
+
+#### Step 1: DNS-Vorbereitung (~30 Min)
+
+1. Bei DNS-Provider (vermutlich Hetzner DNS oder Strato): Subdomain `bulk.strategaizetransition.com` als CNAME oder direkter Subdomain-Eintrag anlegen.
+2. SES Domain-Verification: in AWS-SES-Console Region `eu-west-1` -> Identities -> Create Identity -> Domain `bulk.strategaizetransition.com` -> SES generiert `_amazonses.bulk.*` TXT-Record. **TXT-Record bei DNS-Provider eintragen.** Verifikation dauert ~5-30 Min.
+3. SES generiert DKIM-Records (3 CNAME-Records `_<token>._domainkey.bulk.*`). **Alle 3 CNAME-Records bei DNS-Provider eintragen** (auch wenn DKIM-Re-Sign-Verifikation erst V9.2+ aktiv ist — DKIM-Setup jetzt erspart spaeter Re-Verification).
+4. SPF-Record auf `bulk.strategaizetransition.com` (TXT `v=spf1 include:amazonses.com -all`). Optional aber empfohlen.
+
+#### Step 2: AWS SES Receipt-Rule-Set (~30 Min)
+
+1. AWS SES Console -> eu-west-1 -> Email Receiving -> Rule Sets -> Create new "bulk-strategaize-active".
+2. Receipt-Rule "catchall-bulk":
+   - Recipient: `bulk.strategaizetransition.com` (Wildcard)
+   - Actions: (a) Spam-Action `BOUNCE`, (b) S3-Action -> Bucket `bulk-email-inbound-eu-west-1` (created in Step 3), Prefix `inbound/`, KMS-Encryption optional.
+3. Set Rule Set as `active`.
+4. MX-Record bei DNS-Provider eintragen: `bulk.strategaizetransition.com` MX 10 `inbound-smtp.eu-west-1.amazonaws.com`. **Pflicht — ohne MX kein Empfang.**
+5. SES Sandbox-Mode pruefen — bei neuen AWS-Accounts ist SES initial in Sandbox (kein Production-Receiving). Ggf. Production-Access-Request stellen (Standard-Approval ~24h).
+
+#### Step 3: AWS S3 Bucket + Lifecycle (~15 Min)
+
+1. AWS S3 Console -> eu-west-1 -> Create Bucket `bulk-email-inbound-eu-west-1`.
+2. Settings: Block all public access (aktiv), Versioning disabled (kein Bedarf), Default-Encryption SSE-S3.
+3. Bucket-Policy: SES darf Write (`AWS:SourceAccount=<aws-account-id>`, SES-Service als Principal). Lambda darf Read (siehe IAM Step 5).
+4. Lifecycle-Policy: Rule "delete-after-7-days" auf Prefix `inbound/` -> Expiration nach 7 Tagen (Lambda forwarded an OP, OP haelt eigene Kopie im Coolify-S3-equivalent / Supabase-Storage).
+
+#### Step 4: AWS Secrets Manager (~5 Min)
+
+1. AWS Secrets Manager -> eu-west-1 -> Create Secret `INBOUND_WEBHOOK_HMAC_SECRET`.
+2. Value: 32-byte URL-safe Random (z.B. via `openssl rand -hex 32`).
+3. **Gleichen Value als ENV `INBOUND_WEBHOOK_HMAC_SECRET` im Coolify OP-Service eintragen** (sync-Pflicht).
+
+#### Step 5: AWS IAM Role + Lambda Deployment (~30-60 Min, Agent-Assist empfohlen)
+
+1. IAM Role `op-ses-inbound-forwarder`:
+   - Trust-Policy: Service `lambda.amazonaws.com`
+   - Permissions: `AWSLambdaBasicExecutionRole` + Custom-Policy {s3:GetObject auf `bulk-email-inbound-eu-west-1/*`, secretsmanager:GetSecretValue auf `INBOUND_WEBHOOK_HMAC_SECRET`}
+2. Lambda Function `forward-ses-to-op-webhook`:
+   - Runtime: Node 20.x
+   - Architecture: arm64 (Cost-Optimierung)
+   - Memory: 256 MB, Timeout: 30s
+   - Code: aus `infra/lambda/forward-ses-to-op-webhook/` (wird in SLC-V9.1-A MT-X angelegt, dann ZIP-Deploy via `aws lambda update-function-code`)
+   - Environment: `OP_WEBHOOK_URL=https://onboarding.strategaizetransition.com/api/inbound/email`, `HMAC_SECRET_ARN=<secret-arn>`
+3. SNS Topic `ses-inbound-forward` -> Subscription: Protocol `lambda`, Endpoint `<lambda-arn>`. Lambda muss SNS-Invoke-Permission haben (auto-set via Console).
+4. S3-Bucket-Event-Notification: bei ObjectCreated -> SNS Topic `ses-inbound-forward` mit Prefix `inbound/`.
+
+#### Step 6: OP-Coolify-ENVs (~5 Min)
+
+```bash
+# .env.deploy.example (V9.1)
+INBOUND_VENDOR=ses-ireland
+INBOUND_WEBHOOK_HMAC_SECRET=<32-byte-hex>           # AWS Secrets Manager synchron
+INBOUND_CATCHALL_DOMAIN=bulk.strategaizetransition.com
+V91_BULK_EMAIL_DAILY_CAP_EUR=5
+V91_BULK_EMAIL_MONTHLY_CAP_EUR=100
+V91_BULK_EMAIL_PER_EMAIL_APPROVAL_THRESHOLD_EUR=0.5
+V91_RETENTION_SOFT_DELETE_DAYS=60
+V91_RETENTION_HARD_DELETE_DAYS=90
+V91_BULK_EMAIL_TRIGGER_MIN_COUNT=25
+```
+
+Coolify -> OP-Service -> Environment-Variables -> alle obigen Werte setzen + Redeploy. **Vorbehalt: Setup-Steps 1-5 muessen vor SLC-V9.1-A MT-1-Live-Smoke abgeschlossen sein.**
+
+### IAM-Policy-Layout
+
+#### Lambda-Function-Role `op-ses-inbound-forwarder`
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ReadInboundS3",
+      "Effect": "Allow",
+      "Action": ["s3:GetObject"],
+      "Resource": "arn:aws:s3:::bulk-email-inbound-eu-west-1/inbound/*"
+    },
+    {
+      "Sid": "ReadHmacSecret",
+      "Effect": "Allow",
+      "Action": ["secretsmanager:GetSecretValue"],
+      "Resource": "arn:aws:secretsmanager:eu-west-1:<account-id>:secret:INBOUND_WEBHOOK_HMAC_SECRET-*"
+    },
+    {
+      "Sid": "Logs",
+      "Effect": "Allow",
+      "Action": ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"],
+      "Resource": "arn:aws:logs:eu-west-1:<account-id>:log-group:/aws/lambda/forward-ses-to-op-webhook:*"
+    }
+  ]
+}
+```
+
+#### S3-Bucket-Policy `bulk-email-inbound-eu-west-1`
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowSESWrite",
+      "Effect": "Allow",
+      "Principal": { "Service": "ses.amazonaws.com" },
+      "Action": "s3:PutObject",
+      "Resource": "arn:aws:s3:::bulk-email-inbound-eu-west-1/inbound/*",
+      "Condition": {
+        "StringEquals": {
+          "AWS:SourceAccount": "<account-id>",
+          "AWS:SourceArn": "arn:aws:ses:eu-west-1:<account-id>:receipt-rule-set/bulk-strategaize-active:receipt-rule/catchall-bulk"
+        }
+      }
+    },
+    {
+      "Sid": "AllowLambdaRead",
+      "Effect": "Allow",
+      "Principal": { "AWS": "arn:aws:iam::<account-id>:role/op-ses-inbound-forwarder" },
+      "Action": "s3:GetObject",
+      "Resource": "arn:aws:s3:::bulk-email-inbound-eu-west-1/inbound/*"
+    }
+  ]
+}
+```
+
+#### SNS-Topic-Policy `ses-inbound-forward`
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowS3Publish",
+      "Effect": "Allow",
+      "Principal": { "Service": "s3.amazonaws.com" },
+      "Action": "SNS:Publish",
+      "Resource": "arn:aws:sns:eu-west-1:<account-id>:ses-inbound-forward",
+      "Condition": {
+        "ArnLike": { "aws:SourceArn": "arn:aws:s3:::bulk-email-inbound-eu-west-1" },
+        "StringEquals": { "aws:SourceAccount": "<account-id>" }
+      }
+    },
+    {
+      "Sid": "AllowLambdaSubscribe",
+      "Effect": "Allow",
+      "Principal": { "Service": "lambda.amazonaws.com" },
+      "Action": ["SNS:Subscribe", "SNS:Receive"],
+      "Resource": "arn:aws:sns:eu-west-1:<account-id>:ses-inbound-forward"
+    }
+  ]
+}
+```
+
+### MT-0 Skeleton-Validation-Plan gegen synthetic.yaml
+
+V9.1 nutzt **DEC-195 Synthetic-Corpus** als Skeleton-Validation-Metric (KEINE harte Gate-Schwelle per Q-V9.1-E DECIDED). MT-0 wird als erster Micro-Task in SLC-V9.1-A platziert.
+
+#### Implementation
+
+```
+tests/integration/v91-pre-filter/
+  ├── corpus-to-eml.ts                      # YAML -> .eml conversion helper
+  ├── synthetic-corpus-validation.test.ts   # Vitest run
+  └── README.md                              # Run-Instruction + Telemetry-Doc
+```
+
+#### `corpus-to-eml.ts` (Reuse-Quelle)
+
+```typescript
+// Liest test-fixtures/v91-mbox-corpus/synthetic.yaml, baut RFC-5322-MIME-Strings
+import { readFileSync } from 'node:fs';
+import { parse as parseYaml } from 'yaml';
+
+export interface CorpusEntry {
+  id: string;
+  expected_classification: 'valuable' | 'skip';
+  expected_pattern: string | null;
+  reasoning: string;
+  subject: string;
+  from: string;
+  to: string;
+  date: string;
+  body: string;
+}
+
+export function loadCorpus(path: string): CorpusEntry[] {
+  const raw = readFileSync(path, 'utf-8');
+  return parseYaml(raw).corpus;
+}
+
+export function entryToEml(entry: CorpusEntry): string {
+  return [
+    `Message-ID: <synthetic-${entry.id}@bulk.strategaizetransition.com>`,
+    `Date: ${new Date(entry.date).toUTCString()}`,
+    `From: ${entry.from}`,
+    `To: ${entry.to}`,
+    `Subject: ${entry.subject}`,
+    `Content-Type: text/plain; charset=utf-8`,
+    '',
+    entry.body,
+  ].join('\r\n');
+}
+```
+
+#### `synthetic-corpus-validation.test.ts` (Skeleton-Validation)
+
+```typescript
+import { describe, it, expect } from 'vitest';
+import { loadCorpus, entryToEml } from './corpus-to-eml';
+import { invokeBedrockHaikuPreFilter } from '@/lib/ai/bedrock-haiku/email-pre-filter';
+
+const CORPUS = loadCorpus('test-fixtures/v91-mbox-corpus/synthetic.yaml');
+
+describe('V9.1 Pre-Filter Skeleton-Validation (DEC-195)', () => {
+  it('runs Haiku-Pre-Filter against synthetic corpus and reports Precision/Recall/F1', async () => {
+    const results = [];
+    for (const entry of CORPUS) {
+      const eml = entryToEml(entry);
+      const out = await invokeBedrockHaikuPreFilter(eml, { tenantId: 'test-tenant', useMock: false });
+      results.push({
+        id: entry.id,
+        expected: entry.expected_classification,
+        actual: out.label === 'content' ? 'valuable' : 'skip',
+        confidence: out.confidence,
+        cost_eur: out.cost_eur,
+      });
+    }
+
+    // Aggregate Precision/Recall/F1 vs ground truth
+    const tp = results.filter(r => r.expected === 'valuable' && r.actual === 'valuable').length;
+    const fp = results.filter(r => r.expected === 'skip' && r.actual === 'valuable').length;
+    const fn = results.filter(r => r.expected === 'valuable' && r.actual === 'skip').length;
+    const tn = results.filter(r => r.expected === 'skip' && r.actual === 'skip').length;
+
+    const precision = tp / (tp + fp);
+    const recall = tp / (tp + fn);
+    const f1 = (2 * precision * recall) / (precision + recall);
+    const totalCost = results.reduce((s, r) => s + r.cost_eur, 0);
+
+    console.log('=== V9.1 Skeleton-Validation Telemetry ===');
+    console.log(`Corpus-Size: ${results.length}`);
+    console.log(`Precision: ${precision.toFixed(3)}`);
+    console.log(`Recall: ${recall.toFixed(3)}`);
+    console.log(`F1: ${f1.toFixed(3)}`);
+    console.log(`Total Cost: ${totalCost.toFixed(4)} EUR`);
+    console.log(`Per-Email-Cost: ${(totalCost / results.length).toFixed(4)} EUR`);
+
+    // Soft-Gate: warn if F1 < 0.7, no test fail
+    if (f1 < 0.7) {
+      console.warn(`[WARN] F1 < 0.7 — Consider IMP-Carry-Over to V9.1.x for Telemetry-based Justification`);
+    }
+
+    // Always-Pass — Skeleton-Validation, not Gate
+    expect(results.length).toBe(45);
+  }, 600_000); // 10min timeout for 45 Bedrock-Calls
+});
+```
+
+#### Outputs MT-0
+
+- Console-Log mit Precision/Recall/F1 + Total-Cost + Per-Email-Cost
+- README.md mit Re-Run-Instruction (gated via ENV `RUN_V91_SKELETON_VALIDATION=true`, kein CI-Auto-Run wegen Live-Bedrock-Cost)
+- BL-Carry-Over zu V9.1.x falls F1 < 0.7 oder Per-Email-Cost ueber DEC-179-V9-Schaetzung (>0.0002 EUR Haiku)
+
+### Slice-Empfehlung
+
+Geschaetzt **3-4 Slices, ~2-3 Wochen Implementations-Zeit**. Cumulative-Single-Branch-Worktree `v9-1-forward-bucket-email` analog V8.1/V9 (Worktree-Pattern aus [[feedback-worktree-npm-install-not-symlink]] BLOCKING — echtes `npm install`, kein Symlink).
+
+#### Final-Empfehlung Slice-Bundling (Architecture-Review nach DEC-194..201)
+
+PRD-Slice-Sketch (4 Slices) bleibt der Default. **SLC-V9.1-A bleibt das groesste Slice** und buendelt FEAT-075 + FEAT-076 (Inbound-Foundation + Validation-Layer). FEAT-077 (Continuous-Cost-Cap) und FEAT-078 (Retention-Cron) sind eigene Slices (klare Trennung Cost-Logic vs Retention-Logic, separate Test-Surfaces). FEAT-079 (Setup-UI + Admin-Audit-Erweiterung) ist das letzte Slice.
+
+| Slice | Scope | Pre-Conditions | Aufwand |
+|---|---|---|---|
+| SLC-V9.1-A | FEAT-075 + FEAT-076 — AWS-Setup (Founder-Steps 1-6) + Webhook-Endpoint + HMAC-Verify + Tenant-Lookup + Validation-Layer + Storage-Persist + 3 neue Tabellen + MT-0 Skeleton-Validation | Founder-Steps 1-6 (AWS Console + DNS), DEC-194..201 entschieden | ~1 Woche (Setup-Steps + 4-5 MTs) |
+| SLC-V9.1-B | FEAT-077 — Continuous-Cost-Cap-Service: Daily + Monthly + Per-Email-Approval-Logik + GF-Notification + Pipeline-Pause | SLC-V9.1-A DONE | ~3-4 Tage |
+| SLC-V9.1-C | FEAT-078 — Storage-Retention-Cron: Daily-Coolify-Task + Soft/Hard-Delete + Idempotency-Check vs knowledge_unit | SLC-V9.1-A DONE | ~2-3 Tage |
+| SLC-V9.1-D | FEAT-079 — Setup-UI mit Conversational-First + 4-Mail-Client-Anleitungen + DSGVO-Disclaimer + Test-Send + Admin-Audit-Erweiterung Forward-Source-Statistik | SLC-V9.1-A + B + C DONE | ~3-5 Tage |
+
+Reihenfolge linear A → B → C → D. SLC-V9.1-A enthaelt MT-0 (Synthetic-Corpus-Validation) als ersten Schritt (parallel zu AWS-Setup-Founder-Steps).
+
+### V9.1 Technische DECs (Cross-Reference)
+
+| Frage | Entscheidung | DEC | Datum |
+|---|---|---|---|
+| Q-V9.1-A Vendor | AWS SES Inbound Ireland eu-west-1 | DEC-194 | 2026-06-06 |
+| Pre-Filter-Validation-Approach | Synthetic-Corpus Ground-Truth-Labels | DEC-195 | 2026-06-09 |
+| Region-Drift Frankfurt ↔ Ireland TIA | EU-intra-Region, kein TIA | DEC-196 | 2026-06-09 |
+| Q-V9.1-B Continuous-Cost-Cap-Modell | Daily 5 + Monthly 100 + Per-Email >0.50 EUR | DEC-197 | 2026-06-09 |
+| Q-V9.1-C Storage-Retention | 60d Soft + 90d Hard, Per-Tenant ENV | DEC-198 | 2026-06-09 |
+| Q-V9.1-D Forward-Validation | Setup-Token Mandatory + Optional Allowlist, DKIM V9.2+ | DEC-199 | 2026-06-09 |
+| Q-V9.1-F Address-Routing | Catchall `bulk-<slug>@bulk.*` | DEC-200 | 2026-06-09 |
+| Q-V9.1-H Spam-Defense | 3-Schicht, eigene Heuristik V9.2+ | DEC-201 | 2026-06-09 |
+
+### Migration-Plan V9.1
+
+| MIG | Scope | Bezug |
+|---|---|---|
+| MIG-057 | 3 neue Tabellen + RLS + ai_jobs.job_type-CHECK + email_bulk_run.status-CHECK | SLC-V9.1-A MT-1 |
+| MIG-058 | ALTER email_bulk_run + email_message: inbound_source + retention_until + deleted_at + raw_storage_path + Indizes | SLC-V9.1-A MT-2 |
+
+Beide Migrationen idempotent (DROP CONSTRAINT IF EXISTS + CREATE INDEX IF NOT EXISTS Pattern). Apply via `sql-migration-hetzner.md` Standard. Coolify-Postgres-Container-Name dynamisch resolven (kein Hardcode per IMP-497).
+
+### V9.1-Reuse-Standard
+
+Eine V9.1-Implementation ist regelkonform wenn:
+
+- AWS SES Inbound laeuft in eu-west-1 (Audit per Region-Check im CI-Test)
+- HMAC-Webhook-Verify ist constant-time (kein Timing-Attack)
+- Setup-Token-Generierung nutzt `crypto.randomBytes(32)` mit URL-safe-Base64 (kein Math.random)
+- Validation-Reject INSERTs in email_validation_reject_log werden mit `try/catch` swallowed (kein Webhook-Fail bei Audit-INSERT-Fail) per [[feedback-audit-helper-admin-client-pattern]]
+- Tenant-RLS auf allen 3 neuen Tabellen + 4-Rollen-Matrix in Pen-Test verifiziert
+- Continuous-Cost-Cap-Service nutzt V9-Vw-bulk_email_cost_monthly + neue Vw-bulk_email_cost_daily (kein Duplikat)
+- Retention-Cron pruft email_pattern.imported_to_handbook_at vor Hard-Delete (Idempotency)
+- Setup-UI nutzt Conversational-First-Pattern (Mit-KI-beschreiben-Button) per [[feedback-strategaize-conversational-first-ux]]
+- Lambda-Code in `infra/lambda/forward-ses-to-op-webhook/` mit `package.json` + Lock-File (kein implizites Dep-Drift)
+- MT-0 Skeleton-Validation-Test laeuft erfolgreich mit synthetic.yaml und loggt Precision/Recall/F1
+- DSGVO-Disclaimer-Audit in email_inbound_endpoint persistiert (dsgvo_consent_text_version + accepted_at + user_id)
+- Audit-Trail vollstaendig: inbound_received + validation_rejected + retention_sweep_run + setup_token_regenerated + dsgvo_disclaimer_confirmed
+- Per-Email-Approval-Modal erscheint bei >0.50 EUR-Schaetzung (V9-Reuse + V9.1-Threshold)
+- Pipeline-Trigger-Cron pausiert Pipeline bei Cost-Cap-Hit + sendet GF-Notification
+
+**Naechster Schritt: /slice-planning V9.1** — SLC-V9.1-A/B/C/D Slice-Files mit Micro-Task-Decomposition + AC-Matrizen + Aufwand-Schaetzung. Pre-Conditions fuer /backend V9.1-Start:
+1. Founder-Steps 1-6 (AWS Console + DNS) durchgefuehrt + dokumentiert
+2. AWS Secrets Manager `INBOUND_WEBHOOK_HMAC_SECRET` + OP-Coolify-ENV synchron
+3. SES-Sandbox-Production-Access-Request gestellt (~24h)
+4. Worktree `v9-1-forward-bucket-email` mit echtem `npm install` per IMP-1112 BLOCKING
