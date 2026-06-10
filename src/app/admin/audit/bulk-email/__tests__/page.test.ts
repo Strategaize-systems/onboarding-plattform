@@ -99,6 +99,34 @@ function buildAdminClientEmpty() {
   };
 }
 
+function buildAdminClientWithRuns(
+  runRows: Record<string, unknown>[],
+  tenantRows: { id: string; name: string }[] = [],
+) {
+  return {
+    from: vi.fn((table: string) => {
+      if (table === "email_bulk_run") {
+        return {
+          select: () => ({
+            order: () => ({
+              limit: async () => ({ data: runRows, error: null }),
+            }),
+          }),
+        };
+      }
+      if (table === "tenants") {
+        return {
+          select: () => ({ in: async () => ({ data: tenantRows, error: null }) }),
+        };
+      }
+      if (table === "vw_bulk_email_cost_monthly") {
+        return { select: () => ({ eq: async () => ({ data: [], error: null }) }) };
+      }
+      throw new Error(`unexpected from(${table})`);
+    }),
+  };
+}
+
 beforeEach(() => {
   mocks.redirectMock.mockClear();
   mocks.userClientMock.mockReset();
@@ -176,6 +204,37 @@ describe("AdminBulkEmailAuditPage — strategaize_admin Render", () => {
         throw new Error("simulated DB-Error");
       },
     }));
+
+    const result = await AdminBulkEmailAuditPage();
+    expect(result).toBeDefined();
+    expect(mocks.redirectMock).not.toHaveBeenCalled();
+  });
+
+  // SLC-V9.1-B MT-4: Cap-Hit/Approval-Banner-Pfad baut ohne Crash (Banner-Logik
+  // selbst ist in banner-data.test.ts hermetisch getestet; voller Visual-Smoke
+  // ist Live-Smoke/Playwright).
+  it("baut den Banner-Pfad ohne Crash, wenn ein Run 'paused' ist", async () => {
+    mocks.userClientMock.mockImplementation(() => buildUserClient({}));
+    mocks.adminClientMock.mockImplementation(() =>
+      buildAdminClientWithRuns(
+        [
+          {
+            id: "run-paused",
+            tenant_id: "t-1",
+            source_file_name: "endpoint-continuous",
+            status: "paused",
+            email_count: 30,
+            patterns_extracted: 0,
+            patterns_accepted: 0,
+            patterns_imported: 0,
+            total_cost_eur: "6.00",
+            created_at: "2026-06-10T08:00:00Z",
+            completed_at: null,
+          },
+        ],
+        [{ id: "t-1", name: "Beta GmbH" }],
+      ),
+    );
 
     const result = await AdminBulkEmailAuditPage();
     expect(result).toBeDefined();

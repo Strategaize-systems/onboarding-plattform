@@ -20,6 +20,7 @@ import { ArrowLeft } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { selectFlaggedRuns, flaggedStatusLabel } from "./banner-data";
 import {
   Card,
   CardContent,
@@ -221,6 +222,10 @@ export default async function AdminBulkEmailAuditPage() {
     (a, b) => b.monthly_cost_eur - a.monthly_cost_eur,
   );
 
+  // SLC-V9.1-B MT-4: Cap-Hit / Approval-Banner. Quelle sind die geladenen Runs
+  // (letzte 200) — fuer den Founder-internen V9.1-Test ausreichend.
+  const flaggedRuns = selectFlaggedRuns(runs);
+
   return (
     <main
       className="mx-auto max-w-6xl space-y-6 px-4 py-8 sm:px-6 sm:py-10"
@@ -249,6 +254,45 @@ export default async function AdminBulkEmailAuditPage() {
           className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800"
         >
           Daten-Load fehlgeschlagen: {loadError}
+        </div>
+      ) : null}
+
+      {flaggedRuns.length > 0 ? (
+        <div
+          role="alert"
+          data-testid="cap-hit-banner"
+          className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900"
+        >
+          <p className="font-semibold">
+            {flaggedRuns.length} Run(s) benoetigen Aufmerksamkeit (Kostenlimit
+            erreicht oder Freigabe erforderlich).
+          </p>
+          <ul className="mt-2 space-y-1">
+            {flaggedRuns.map((run) => {
+              const meta = flaggedStatusLabel(run.status);
+              return (
+                <li
+                  key={run.id}
+                  data-flagged-run-id={run.id}
+                  data-flagged-status={run.status}
+                  className="flex items-center justify-between gap-3"
+                >
+                  <span>
+                    <span className="font-medium">
+                      {run.tenant_name ?? "(unbenannt)"}
+                    </span>{" "}
+                    — {meta.label}
+                  </span>
+                  <Link
+                    href={`/dashboard/bulk-email-import/${run.id}`}
+                    className="shrink-0 font-medium text-brand-primary hover:underline"
+                  >
+                    {meta.action}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
         </div>
       ) : null}
 
