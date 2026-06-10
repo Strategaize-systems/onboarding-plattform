@@ -68,6 +68,16 @@ import {
   type CostCapStore,
 } from "../../lib/bulk-email/cost-cap";
 import { USD_TO_EUR_APPROX } from "../../lib/bulk-email/cost-estimate";
+import {
+  estimatePatternExtractionCost,
+  requiresPerEmailApproval,
+  resolvePerEmailBaselineEur,
+  resolvePerEmailApprovalThresholdEur,
+} from "../../lib/bulk-email/per-email-approval";
+import {
+  notifyFounderApprovalRequired,
+  type FounderApprovalRequiredInput,
+} from "../../lib/bulk-email/notify-founder";
 import type { ClaimedJob } from "../condensation/claim-loop";
 
 const UUID_REGEX =
@@ -80,12 +90,19 @@ type AdminClient = ReturnType<typeof createAdminClient>;
 
 interface EmailBulkPatternExtractPayload {
   bulk_run_id: string;
+  /**
+   * V9.1 SLC-V9.1-B MT-3: GF-Freigabe-Token. Wenn gesetzt, ueberspringt der
+   * Per-Email-Approval-Gate (GF hat den teuren Run im Audit freigegeben).
+   */
+  approval_token?: string;
 }
 
 interface BulkRunRow {
   id: string;
   tenant_id: string;
   status: string;
+  /** V9.1 SLC-V9.1-B MT-3: fuer den Per-Email-Approval-Pre-Estimate. */
+  email_count: number | null;
   pattern_extraction_cost_eur: string | number | null;
 }
 
@@ -137,6 +154,12 @@ export interface HandleEmailBulkPatternExtractDeps {
   costStore?: CostCapStore;
   /** Pluggable for tests — defaults to ENV V9_BULK_EMAIL_RUN_CAP_EUR or 20. */
   runCapEur?: number;
+  /** V9.1 MT-3: Per-Email-Baseline (EUR). Default resolvePerEmailBaselineEur(). */
+  perEmailBaselineEur?: number;
+  /** V9.1 MT-3: Per-Email-Approval-Schwelle (EUR). Default resolve...(). */
+  perEmailApprovalThresholdEur?: number;
+  /** V9.1 MT-3: injectable Founder-Approval-Notify (Default notifyFounderApprovalRequired). */
+  notifyApprovalRequired?: (input: FounderApprovalRequiredInput) => Promise<unknown>;
 }
 
 interface PatternExtractionSummary {
@@ -190,7 +213,7 @@ export async function executeEmailBulkPatternExtract(
   // 1. Load bulk_run via service_role.
   const { data: runRow, error: loadError } = await adminClient
     .from("email_bulk_run")
-    .select("id, tenant_id, status, pattern_extraction_cost_eur")
+    .select("id, tenant_id, status, email_count, pattern_extraction_cost_eur")
     .eq("id", bulkRunId)
     .single();
   if (loadError || !runRow) {
@@ -224,6 +247,89 @@ export async function executeEmailBulkPatternExtract(
       );
     }
     return;
+  }
+
+  // 2b. Per-Email-Approval-Gate (V9.1 SLC-V9.1-B MT-3, DEC-197): vor dem teuren
+  //     Sonnet-Loop pruefen, ob die geschaetzten Per-Email-Kosten die Approval-
+  //     Schwelle reissen (Outlier-Guard, triggert bei ueblichen Runs nie). Wenn
+  //     ja UND kein approval_token im Payload -> Run auf 'awaiting_approval'
+  //     pausieren + GF benachrichtigen, KEIN Sonnet-Call. Mit approval_token
+  //     (GF hat im Audit freigegeben) -> proceed. Greift fuer mbox- UND
+  //     Continuous-Runs, weil beide ueber diesen Worker laufen.
+  if (!payload.approval_token) {
+    const perEmailBaseline =
+      deps.perEmailBaselineEur ?? resolvePerEmailBaselineEur();
+    const threshold =
+      deps.perEmailApprovalThresholdEur ?? resolvePerEmailApprovalThresholdEur();
+    const estimate = estimatePatternExtractionCost(
+      run.email_count ?? 0,
+      perEmailBaseline,
+    );
+    if (requiresPerEmailApproval(estimate, threshold)) {
+      const { error: pauseError } = await adminClient
+        .from("email_bulk_run")
+        .update({
+          status: "awaiting_approval",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", bulkRunId);
+      if (pauseError) {
+        throw new Error(
+          `email_bulk_pattern_extract: status='awaiting_approval' UPDATE failed: ${pauseError.message}`,
+        );
+      }
+      captureWarning(
+        `email_bulk_pattern_extract: bulk_run ${bulkRunId} awaiting per-email approval (${estimate.perEmailEur} EUR/email > ${threshold})`,
+        {
+          source: LOG_SOURCE,
+          metadata: {
+            category: "email_bulk_per_email_approval_requested",
+            jobId: job.id,
+            bulkRunId,
+            tenant_id: run.tenant_id,
+            estimated_total_eur: estimate.totalEur,
+            estimated_per_email_eur: estimate.perEmailEur,
+            threshold_eur: threshold,
+          },
+        },
+      );
+      const notifyApproval =
+        deps.notifyApprovalRequired ??
+        ((i: FounderApprovalRequiredInput) => notifyFounderApprovalRequired(i));
+      try {
+        await notifyApproval({
+          tenantId: run.tenant_id,
+          bulkRunId,
+          estimatedTotalEur: estimate.totalEur,
+          estimatedPerEmailEur: estimate.perEmailEur,
+          thresholdEur: threshold,
+        });
+      } catch (notifyErr) {
+        captureWarning(
+          "email_bulk_pattern_extract: founder approval notify failed (non-fatal)",
+          {
+            source: LOG_SOURCE,
+            metadata: {
+              bulkRunId,
+              error:
+                notifyErr instanceof Error
+                  ? notifyErr.message
+                  : String(notifyErr),
+            },
+          },
+        );
+      }
+      const { error: completeError } = await adminClient.rpc(
+        "rpc_complete_ai_job",
+        { p_job_id: job.id },
+      );
+      if (completeError) {
+        throw new Error(
+          `email_bulk_pattern_extract: rpc_complete_ai_job failed on approval-pause path: ${completeError.message}`,
+        );
+      }
+      return;
+    }
   }
 
   try {
