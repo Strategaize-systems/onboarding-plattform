@@ -41,3 +41,33 @@ export interface TenantLookupResult {
 export type ValidationResult =
   | { ok: true }
   | { ok: false; reason: RejectReason };
+
+/**
+ * Resolve-Modus eines Endpoints (DEC-R1-2 / DEC-R1-3). Steuert die tolerante
+ * Setup-Token-Logik im IMAP-Sync:
+ *   - 'single_mailbox': Default-Postfach-Modus (IONOS bulk@...). Forwarded Mails
+ *     tragen keinen X-Strategaize-Forward-Token-Header -> Setup-Token-Schicht
+ *     wird uebersprungen (DEC-R1-3). Defense = Sender-Allowlist + Mailbox-Auth.
+ *   - 'catchall': spaeterer Slug-Routing-Modus (bulk-<slug>@...). Setup-Token-
+ *     Pruefung ist hier wieder aktiv.
+ */
+export type EndpointResolveMode = "single_mailbox" | "catchall";
+
+/**
+ * Aufgeloester Default-Endpoint fuer den IMAP-Sync (endpoint-resolver.ts, MT-R4).
+ * Erweitert TenantLookupResult um den Resolve-Modus.
+ */
+export interface ResolvedEndpoint extends TenantLookupResult {
+  mode: EndpointResolveMode;
+}
+
+/**
+ * Ergebnis eines IMAP-Sync-Laufs (imap-sync.ts, MT-R5). Spiegelt die BS-
+ * SyncResult-Struktur (synced/skipped/errors/lastUid).
+ */
+export interface InboundSyncResult {
+  synced: number;
+  skipped: number;
+  errors: number;
+  lastUid: number;
+}
