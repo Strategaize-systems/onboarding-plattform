@@ -3,9 +3,9 @@
 // Slice: SLC-V9.1-B — Continuous-Cost-Cap-Service + Pipeline-Trigger
 // Spec:  slices/SLC-V9.1-B-continuous-cost-cap.md (MT-2)
 // DECs:  DEC-197 (3-Schichten-Cost-Cap), DEC-205 (Forward-Bucket-Continuous),
-//        DEC-206 (Pipeline-Entry-Mechanik — siehe unten).
+//        DEC-207 (Pipeline-Entry-Mechanik — siehe unten).
 //
-// DEC-206 (Pipeline-Entry, Founder-Entscheid 2026-06-10): Continuous-Forward-
+// DEC-207 (Pipeline-Entry, Founder-Entscheid 2026-06-10): Continuous-Forward-
 // Bucket-Runs haben bereits email_message-Rows (aus SLC-V9.1-A IMAP-Sync via
 // rpc_inbound_record_message) — die V9.0-'parse'-Stage (Storage-mbox-Download)
 // ist fuer sie irrelevant. Die V9.0-Worker chainen sich NICHT selbst (jeder

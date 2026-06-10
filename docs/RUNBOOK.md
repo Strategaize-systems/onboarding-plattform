@@ -121,3 +121,53 @@ Neue Seed-User gehoeren:
 - hier ins Runbook
 
 Neue Seed-Tenants gehoeren in eine neue SQL-Migration `02X_seed_<name>_tenant.sql` (analog 027) mit eigener fixer UUID.
+
+## V9.1 Continuous-Cost-Cap + Pipeline-Trigger
+
+Quelle: SLC-V9.1-B (FEAT-077), DEC-197 (Cost-Cap-Modell), DEC-207 (Pipeline-Entry), MIG-062.
+
+Der Continuous-Forward-Bucket-Modus laeuft autonom: der Cron `POST /api/cron/email-bulk-pipeline-trigger` (stuendlich, `x-cron-secret`) walkt jeden `inbound_source='forward_bucket'`-Run cost-cap-gated durch die V9.0-Pipeline. Bei Cap-Hit oder Per-Email-Approval pausiert ein Run und braucht einen manuellen Founder-Eingriff.
+
+### Coolify-Scheduled-Task (einmaliges Setup)
+
+In Coolify unter der `app`-Resource → Scheduled-Tasks:
+
+```
+Schedule: 0 * * * *
+Command/HTTP: POST https://onboarding.strategaizetransition.com/api/cron/email-bulk-pipeline-trigger
+Header: x-cron-secret: $CRON_SECRET
+```
+
+Optionale ENV-Tuning-Variablen (Defaults in Klammern): `V91_BULK_EMAIL_DAILY_CAP_EUR` (5), `V91_BULK_EMAIL_MONTHLY_CAP_EUR` (100), `V91_BULK_EMAIL_TRIGGER_MIN_COUNT` (25), `V91_BULK_EMAIL_PER_EMAIL_APPROVAL_THRESHOLD_EUR` (0.50), `FOUNDER_ALERT_EMAIL` (Fallback `ERROR_ALERT_EMAIL` / `SMTP_USER`).
+
+### Cap-Hit-Reset (Run-Status `paused`)
+
+Bei Daily/Monthly-Cap-Hit setzt der Cron den Run auf `status='paused'` und schickt eine Founder-Email. Nach manueller Kosten-Pruefung im Admin-Audit (`/admin/audit/bulk-email`, gelbes Banner) den Run wieder freigeben:
+
+```bash
+docker exec <supabase-db-container> psql -U postgres -d postgres -c \
+  "UPDATE email_bulk_run SET status='continuous', updated_at=now() WHERE status='paused' AND tenant_id='<TENANT_UUID>';"
+```
+
+Der naechste stuendliche Cron-Tick nimmt den Run wieder auf (sofern der Cap inzwischen unterschritten ist — sonst pausiert er erneut). Cap-Reset effektiv erst nach Tages-/Monatswechsel oder ENV-Cap-Erhoehung.
+
+### Per-Email-Approval-Reset (Run-Status `awaiting_approval`)
+
+Reisst die Per-Email-Schaetzung die Schwelle (Outlier-Run), pausiert der Pattern-Extract-Worker auf `status='awaiting_approval'` (kein Sonnet-Call) und schickt eine Founder-Email. Nach Freigabe den Pattern-Extract-Job mit `approval_token` im Payload neu anstossen:
+
+```bash
+docker exec <supabase-db-container> psql -U postgres -d postgres -c \
+  "UPDATE email_bulk_run SET status='pattern_extracting', updated_at=now() WHERE id='<BULK_RUN_ID>';"
+docker exec <supabase-db-container> psql -U postgres -d postgres -c \
+  "INSERT INTO ai_jobs (tenant_id, job_type, status, payload) VALUES ('<TENANT_UUID>','email_bulk_pattern_extract','pending', '{\"bulk_run_id\":\"<BULK_RUN_ID>\",\"approval_token\":\"founder-approved\"}'::jsonb);"
+```
+
+Der `approval_token` im Payload ueberspringt den Per-Email-Gate, der Worker laeuft mit dem Sonnet-Call durch.
+
+### Manueller Trigger / Smoke-Test
+
+```bash
+curl -X POST https://onboarding.strategaizetransition.com/api/cron/email-bulk-pipeline-trigger \
+  -H "x-cron-secret: <CRON_SECRET>"
+# Antwort: { success, runs_evaluated, runs_triggered, runs_advanced, runs_skipped_cap, runs_skipped_threshold }
+```
