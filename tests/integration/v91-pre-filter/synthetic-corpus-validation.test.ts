@@ -100,7 +100,7 @@ describe.runIf(RUN_FLAG)(
             cost_eur: callResult.costUsd * USD_TO_EUR_APPROX,
           });
 
-          // eslint-disable-next-line no-console
+           
           console.log(
             `[corpus_${entry.id}] truth=${entry.expected_classification} predicted=${predicted} (haiku=${haikuLabel} conf=${confidence.toFixed(2)}) cost=$${callResult.costUsd.toFixed(5)}`,
           );
@@ -133,7 +133,7 @@ describe.runIf(RUN_FLAG)(
         const perEmailEur = totalEur / results.length;
 
         // Telemetry-Output (per slice-spec, written to console for observability)
-        // eslint-disable-next-line no-console
+         
         console.log(
           `\n========== V9.1 Skeleton-Validation Telemetry ==========\n` +
             `  Emails:          ${results.length}\n` +
@@ -149,7 +149,7 @@ describe.runIf(RUN_FLAG)(
 
         // Soft-warn if F1 below 0.7 — surfaces in console but does not fail the test
         if (f1 < 0.7) {
-          // eslint-disable-next-line no-console
+           
           console.warn(
             `[V9.1 Skeleton-Validation] F1=${f1.toFixed(3)} < 0.7 threshold. Consider IMP-Carry-Over to V9.1.x for prompt-tuning.`,
           );
