@@ -51,3 +51,23 @@ export interface InboundEmailVendor {
   /** Constant-time HMAC-SHA256-Verify des rohen POST-Bodys gegen den Signatur-Header. */
   verifyHmac(rawBody: string, signature: string, secret: string): boolean;
 }
+
+/**
+ * Resultat des Tenant-Lookups via Catchall-Local-Part (tenant-lookup.ts).
+ * Mirror der relevanten email_inbound_endpoint-Spalten.
+ */
+export interface TenantLookupResult {
+  endpointId: string;
+  tenantId: string;
+  slug: string;
+  setupToken: string;
+  status: "active" | "paused" | "revoked";
+}
+
+/**
+ * Outcome der Validation-Pipeline im Webhook. Bei ok=false traegt reason den
+ * passenden reject_layer fuer den email_validation_reject_log-Eintrag.
+ */
+export type ValidationResult =
+  | { ok: true }
+  | { ok: false; reason: RejectReason };
