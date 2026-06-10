@@ -1,5 +1,14 @@
 # Known Issues
 
+### ISSUE-094 — V9 SLC-168 Admin-Audit Monats-Cost-Query nutzt nicht-existente Spalte `month_start`
+- Status: open
+- Severity: Low
+- Area: V9 SLC-168 Admin-Audit-Page (`src/app/admin/audit/bulk-email/page.tsx:173-174`)
+- Summary: Die Monats-Cost-Aggregat-Query selektiert + filtert auf `month_start` (`.select("tenant_id, month_start, ...").eq("month_start", monthStartIso)`), aber die View `vw_bulk_email_cost_monthly` (MIG-054/109) hat die Spalte `month` (nicht `month_start`). Die Query wirft `column month_start does not exist`, wird vom umgebenden try/catch geschluckt → `costRows` bleibt leer → "Cost-Aggregat aktueller Monat" zeigt 0/leer. Pre-existing aus V9 SLC-168, NICHT aus SLC-V9.1-B. Discovery durch SLC-V9.1-B /qa DB-vs-Code-Paritaets-Check (RPT-440).
+- Impact: Admin-Audit "Cost-Aggregat aktueller Monat"-Tabelle zeigt fuer alle Tenants 0 EUR / 0 Runs, obwohl Monatskosten existieren koennen. Nur Anzeige-Bug (Cross-Tenant-Admin-Sicht), kein Funktions-/Daten-Schaden. Cap-Enforcement (continuous-cost-cap.ts) liest korrekt `month` und ist NICHT betroffen.
+- Workaround: Keiner noetig — rein kosmetisch in der Audit-Anzeige.
+- Next Action: 1-Zeichen-Fix `month_start` → `month` (Select + .eq) in SLC-V9.1-D (beruehrt dieselbe Admin-Audit-Page) oder als Quick-Follow-up. Bewusst nicht in SLC-V9.1-B gefixt (out-of-slice-scope, surgical-changes-Disziplin).
+
 ### ISSUE-093 — V9 Bedrock-Haiku-3-Modell Legacy/Deprecation in eu-central-1
 - Status: open
 - Severity: High
