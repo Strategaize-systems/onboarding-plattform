@@ -4,6 +4,22 @@ Die aktuelle DB-Struktur entspricht dem Stand von Blueprint V3.4 (Migration 020)
 
 Der uebernommene Blueprint-Stand ist noch nicht auf einer Onboarding-Plattform-Instanz ausgefuehrt worden — die erste Hetzner-Migration geschieht mit SLC-001 (Schema-Fundament).
 
+### MIG-060 — V9.1 SLC-V9.1-A MT-4 rpc_inbound_record_message Postgres-Function (Migration 115, LIVE)
+- Date: 2026-06-10 (LIVE — applied via ssh+base64+psql -U postgres auf 159.69.207.29 `supabase-db-bwkg80w04wgccos48gcws8cs-162742842423`, BEGIN/CREATE-FUNCTION/REVOKE×3/GRANT/COMMIT durch. Verify: pg_proc count=1, has_function_privilege('anon',...)=false, ('service_role',...)=true, NOTIFY pgrst gefeuert.)
+- Scope: `CREATE OR REPLACE FUNCTION public.rpc_inbound_record_message(p_tenant_id uuid, p_endpoint_id uuid, p_anchor_date date, p_source_file_name text, p_file_hash text, p_storage_path text, p_message jsonb) RETURNS uuid` — atomarer Daily-Roll-Over (INSERT email_bulk_run forward_bucket/continuous ON CONFLICT (tenant_id,endpoint_id,daily_anchor_date) DO UPDATE email_count+1 RETURNING id) + INSERT email_message. SECURITY DEFINER, SET search_path=public. Berechtigung: REVOKE EXECUTE FROM PUBLIC+anon+authenticated, GRANT EXECUTE TO service_role.
+- Affected Areas: email_bulk_run, email_message (INSERT-Pfad Inbound-Webhook). Konsumiert von `src/app/api/inbound/email/route.ts`.
+- Reason: supabase-js kann email_count=email_count+1 nicht race-sicher; atomare Multi-Entity-Tx via Postgres-Function ist Strategaize-Standard (DEC-203, backend.md Decision-Tree).
+- Risk: Niedrig — additive Function, keine bestehende Logik beruehrt. Re-Run idempotent (CREATE OR REPLACE).
+- Rollback Notes: `DROP FUNCTION IF EXISTS public.rpc_inbound_record_message(uuid,uuid,date,text,text,text,jsonb);`
+
+### MIG-059 — V9.1 SLC-V9.1-A MT-4 email_bulk_run.uploader_user_id nullable (Migration 114, LIVE)
+- Date: 2026-06-10 (LIVE — applied via ssh+base64+psql -U postgres auf 159.69.207.29 `supabase-db-bwkg80w04wgccos48gcws8cs-162742842423`, BEGIN/ALTER/COMMIT durch. Verify: information_schema.columns is_nullable='YES', NOTIFY pgrst gefeuert.)
+- Scope: `ALTER TABLE public.email_bulk_run ALTER COLUMN uploader_user_id DROP NOT NULL`. forward_bucket-Continuous-Runs (System-Pfad, kein menschlicher Uploader) setzen NULL; mbox_upload-Runs setzen den Wert weiter.
+- Affected Areas: email_bulk_run (uploader_user_id Constraint). FK auf auth.users bleibt unveraendert.
+- Reason: DEC-202 — uploader_user_id ist mbox-Upload-spezifisch, forward_bucket-Runs haben keinen Uploader.
+- Risk: Niedrig — DROP NOT NULL ist additive Relaxation, idempotent. Bestehende Rows + V9-Pfad unveraendert.
+- Rollback Notes: `ALTER TABLE email_bulk_run ALTER COLUMN uploader_user_id SET NOT NULL` (nur moeglich wenn keine forward_bucket-NULL-Rows existieren).
+
 ### MIG-058 — V9.1 SLC-V9.1-A MT-2 ALTER email_bulk_run + email_message: inbound_source + retention + raw_storage_path (Migration 113, LIVE)
 - Date: 2026-06-09 (LIVE — applied 14:32 CEST via ssh+base64+psql -U postgres auf 159.69.207.29 `supabase-db-bwkg80w04wgccos48gcws8cs-162742842423`, BEGIN/ALTER×7/UPDATE×2/CREATE-INDEX×3/COMMIT atomar durch. Final-Schema (Implementation-Drift vs Spec): `soft_delete_at` statt `deleted_at` + neue Spalte `daily_anchor_date` fuer DEC-197 Daily-Roll-Over UNIQUE-Constraint. Backfill nur `retention_until` + `received_at` — `soft_delete_at` startet NULL. Indexe: `idx_email_bulk_run_retention_pending` (partial WHERE soft_delete_at IS NULL), `idx_email_bulk_run_forward_daily_roll` UNIQUE partial (WHERE inbound_source='forward_bucket' AND endpoint_id IS NOT NULL), `idx_email_message_raw_storage_path` partial WHERE NOT NULL.)
 - Scope:
