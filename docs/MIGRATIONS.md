@@ -4,6 +4,14 @@ Die aktuelle DB-Struktur entspricht dem Stand von Blueprint V3.4 (Migration 020)
 
 Der uebernommene Blueprint-Stand ist noch nicht auf einer Onboarding-Plattform-Instanz ausgefuehrt worden — die erste Hetzner-Migration geschieht mit SLC-001 (Schema-Fundament).
 
+### MIG-061 — V9.1 SLC-V9.1-A email_inbound_sync_state (IMAP-Reuse, DEC-205, PLANNED)
+- Date: PLANNED (2026-06-10 Draft im Rahmen der /architecture-Revision R1; LIVE-Apply mit dem IMAP-Sync-Backend-MT)
+- Scope: `CREATE TABLE email_inbound_sync_state` fuer inkrementellen IMAP-UID-Sync (Port aus BS `email_sync_state`, aber per-Endpoint): `endpoint_id uuid PRIMARY KEY REFERENCES email_inbound_endpoint(id) ON DELETE CASCADE`, `tenant_id uuid NOT NULL`, `folder text NOT NULL DEFAULT 'INBOX'`, `last_uid bigint NOT NULL DEFAULT 0`, `status text NOT NULL DEFAULT 'idle' CHECK (status IN ('idle','syncing','error'))`, `last_sync_at timestamptz`, `emails_synced_total int NOT NULL DEFAULT 0`, `error_message text`, `updated_at timestamptz NOT NULL DEFAULT now()`. + RLS (admin_all + tenant-scoped SELECT + service_role write) + GRANTs.
+- Affected Areas: NEU — konsumiert vom IMAP-Sync-Cron (`src/lib/inbound-email/imap-sync.ts`). Keine bestehende Tabelle beruehrt.
+- Reason: ImapFlow-inkrementeller Sync braucht persistente `last_uid`-State pro Mailbox/Endpoint (BS-Pattern). Ersetzt den zustandslosen SES-Push.
+- Risk: Niedrig — additive Tabelle.
+- Rollback Notes: `DROP TABLE IF EXISTS email_inbound_sync_state;`
+
 ### MIG-060 — V9.1 SLC-V9.1-A MT-4 rpc_inbound_record_message Postgres-Function (Migration 115, LIVE)
 - Date: 2026-06-10 (LIVE — applied via ssh+base64+psql -U postgres auf 159.69.207.29 `supabase-db-bwkg80w04wgccos48gcws8cs-162742842423`, BEGIN/CREATE-FUNCTION/REVOKE×3/GRANT/COMMIT durch. Verify: pg_proc count=1, has_function_privilege('anon',...)=false, ('service_role',...)=true, NOTIFY pgrst gefeuert.)
 - Scope: `CREATE OR REPLACE FUNCTION public.rpc_inbound_record_message(p_tenant_id uuid, p_endpoint_id uuid, p_anchor_date date, p_source_file_name text, p_file_hash text, p_storage_path text, p_message jsonb) RETURNS uuid` — atomarer Daily-Roll-Over (INSERT email_bulk_run forward_bucket/continuous ON CONFLICT (tenant_id,endpoint_id,daily_anchor_date) DO UPDATE email_count+1 RETURNING id) + INSERT email_message. SECURITY DEFINER, SET search_path=public. Berechtigung: REVOKE EXECUTE FROM PUBLIC+anon+authenticated, GRANT EXECUTE TO service_role.

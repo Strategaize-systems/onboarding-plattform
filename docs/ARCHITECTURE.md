@@ -8364,6 +8364,61 @@ Eine Implementation ist regelkonform wenn:
 
 ## V9.1 Architecture Addendum — Continuous-Stream Forward-Bucket-Email (RPT-429, 2026-06-09)
 
+> ### ⚠️ REVISION R1 (2026-06-10) — Inbound-Transport: AWS SES → IMAP-Reuse gegen IONOS
+>
+> **Founder-Direktive 2026-06-10 (Reuse-First):** Kein neues AWS-SES/S3/SNS/Lambda-Konstrukt. Stattdessen die **bereits laufende IMAP-Sync-Lösung aus dem Business-System wiederverwenden**, gegen ein **IONOS-Postfach** (DNS der Domain liegt verifiziert bei IONOS, nicht Hetzner — Nameserver `ns10xx.ui-dns.*`, Root-MX `mx0x.ionos.de`).
+>
+> **DEC-194 (AWS SES Inbound) → `superseded` durch DEC-205 (IMAP-Sync-Reuse).** Alle SES-/S3-/SNS-/Lambda-bezogenen Abschnitte weiter unten in diesem Addendum (Architecture-Summary Punkt 1, Component-Tabelle "AWS Lambda", Flow A Schritte 1-7, Section "AWS-Resources", "Pflicht-Founder-Step-Liste" Steps 1-5, "Lambda-Function-Role"/"SNS-Topic-Policy"-JSON) sind **OBSOLET** und nur noch als historischer Kontext zu lesen. Maßgeblich ist dieser Revision-Block.
+>
+> #### R1 Flow A (neu) — IMAP-Poll statt SES-Webhook
+>
+> ```
+> GF-Mail-Forward  →  IONOS-Postfach (bulk@strategaizetransition.com)
+>   →  Coolify-Cron POST /api/cron/inbound-email-imap-sync  (x-cron-secret)
+>        1. ImapFlow connect (IMAP_HOST/PORT/USER/PASSWORD) — secure 993
+>        2. email_inbound_sync_state.last_uid → inkrementeller UID-Fetch
+>        3. pro neue Mail: mailparser (simpleParser, schon in OP vorhanden)
+>        4. Ziel-Endpoint auflösen (s.u. Routing)
+>        5. Validation-Layer (REUSE MT-4): setup-token? + optional sender-allowlist
+>        6. Storage-PUT raw EML (REUSE storage-persist.ts)
+>        7. rpc_inbound_record_message (REUSE — atomic Daily-Roll-Over + email_message)
+>        8. last_uid persistieren + error_log-Audit (captureInfo)
+> ```
+>
+> **Kein HMAC, kein 401/200-silent-drop, kein Lambda-Retry-Loop** — der Pull-Mechanismus ersetzt den Push. Fehler pro Mail werden geloggt + übersprungen (BS-Pattern), `last_uid` wandert nur bei Erfolg/Skip weiter.
+>
+> #### R1 Routing — Single-Mailbox jetzt, Catchall später (kostenneutral vorbereitet)
+>
+> - **Jetzt (Internal-Test, Founder-only):** EIN normales IONOS-Postfach. Alle Mails → der **eine konfigurierte aktive `email_inbound_endpoint`** (per ENV `INBOUND_DEFAULT_ENDPOINT_SLUG` oder die einzige `status='active'`-Row). Keine Slug-Parsing-Pflicht.
+> - **Später (Multi-Tenant):** IONOS-**Catchall** auf `bulk.strategaizetransition.com` (ein Häkchen im IONOS-Panel) → alle `bulk-<slug>@…` landen im selben Postfach. Routing dann via Recipient-Slug aus den EML-Headern — die Extraktion (`bulk-<slug>` aus To/X-Forwarded-To/Delivered-To) existiert bereits aus **DEC-204** und wird wiederverwendet. **Kein Code-Umbau, nur Aktivierung.**
+>
+> #### R1 Komponente — IMAP-Sync-Service (Port aus Business-System)
+>
+> Reuse-Quelle (Pattern-Reuse-Rule, BLOCKING): `strategaize-business-system/cockpit/src/lib/imap/sync-service.ts` + `api/cron/imap-sync/route.ts` + `types/imapflow.d.ts` (Library `imapflow@^1.3.1`). Port nach OP `src/lib/inbound-email/imap-sync.ts` + Cron `src/app/api/cron/inbound-email-imap-sync/route.ts`. Anpassungen ggü. BS: (a) Persist nicht direkt in `email_messages`, sondern über die **V9.1-Pipeline** (Endpoint-Resolve → Validation → `rpc_inbound_record_message`); (b) `imapflow` neu als OP-Dependency (mailparser ist in OP bereits `^3.9.9`); (c) Cron-Auth über OP-Pattern `x-cron-secret` vs `process.env.CRON_SECRET` (wie `capture-reminders`).
+>
+> #### R1 Persistenz — neue Sync-State-Tabelle
+>
+> Neue Migration **MIG-061** `email_inbound_sync_state` (analog BS `email_sync_state`, aber **per Endpoint**): `endpoint_id uuid PK/FK`, `folder text DEFAULT 'INBOX'`, `last_uid bigint DEFAULT 0`, `status text`, `last_sync_at timestamptz`, `emails_synced_total int DEFAULT 0`, `error_message text`, `updated_at timestamptz`. Tenant-RLS analog der anderen V9.1-Inbound-Tabellen (admin_all + tenant-scoped read, service_role write).
+>
+> #### R1 ENV (Coolify, ersetzt SES-ENVs)
+>
+> `IMAP_HOST` / `IMAP_PORT=993` / `IMAP_USER` / `IMAP_PASSWORD` (IONOS-Postfach) + `IMAP_INITIAL_SYNC_DAYS=90` + `INBOUND_DEFAULT_ENDPOINT_SLUG`. **Entfällt:** `INBOUND_WEBHOOK_HMAC_SECRET`, `INBOUND_VENDOR`, AWS-SES-/Secrets-Manager-ENVs. `INBOUND_CATCHALL_DOMAIN` bleibt nur für den späteren Catchall-Modus dokumentiert.
+>
+> #### R1 Impact auf SLC-V9.1-A (für /slice-planning-Revision)
+>
+> | Baustein | R1-Schicksal |
+> |---|---|
+> | MT-2 Migrationen (3 Tabellen + ALTER, LIVE) | **bleibt** |
+> | Validation-Layer (setup-token, sender-allowlist, tenant-lookup, reject-log, storage-persist) | **bleibt** (Caller wechselt Webhook → Cron) |
+> | `rpc_inbound_record_message` (MIG-060, LIVE) | **bleibt** |
+> | Recipient-Slug-Extraktion (DEC-204) | **bleibt** (für Catchall-Modus) |
+> | MT-3 SES-Adapter (`vendors/aws-ses.ts`) + `hmac.ts` | **raus** (SES-/HMAC-spezifisch) |
+> | MT-4 Webhook `src/app/api/inbound/email/route.ts` | **ersetzt** durch IMAP-Cron; interne Validation/Persist-Logik wandert in `imap-sync.ts` |
+> | MT-5 Lambda `infra/lambda/forward-ses-to-op-webhook/` + `scripts/deploy-lambda.sh` | **gelöscht** |
+> | NEU | `src/lib/inbound-email/imap-sync.ts` (Port) + `api/cron/inbound-email-imap-sync/route.ts` + MIG-061 `email_inbound_sync_state` + `imapflow`-Dependency |
+>
+> **Vorteil:** Die LIVE-getesteten + ge-QA'ten Teile (Schema, Persist, Validation) überleben; nur der Transport (SES-Push → IMAP-Pull) wird getauscht und ist selbst ein Reuse aus BS. **Kein AWS-Sandbox-24h-Approval mehr nötig** — Live-Smoke gegen ein IONOS-Postfach ist sofort möglich. Details + MT-Decomposition in der /slice-planning-Revision.
+
 ### Context
 
 V9.1 setzt auf V9 RELEASED (REL-030, 2026-06-07 STABLE) auf. V9 war episodische `.mbox`-Batch-Uploads durch den GF. V9.1 oeffnet den **kontinuierlichen Stream**: GF richtet einmalig eine Mail-Forward-Regel in seinem Mail-Client ein, Inbound-Vendor empfaengt forwarded-Mails ueber Tage/Wochen, die V9.0-Pipeline laeuft periodisch auf dem akkumulierten Korpus. Pipeline (Pre-Filter + Threading + PII + Pattern + Curation + Handbuch-Insert) bleibt **strukturell unveraendert** — nur die Trigger-Source wechselt von Upload-Action zu Continuous-Webhook-Stream + periodischem Pipeline-Trigger.
