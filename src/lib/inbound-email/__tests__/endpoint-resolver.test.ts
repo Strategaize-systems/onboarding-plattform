@@ -24,7 +24,6 @@ function makeAdmin(result: { data: unknown; error: unknown }) {
   const eq = vi.fn().mockResolvedValue(result);
   const select = vi.fn(() => ({ eq }));
   const from = vi.fn(() => ({ select }));
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return { admin: { from } as any, from, select, eq };
 }
 
