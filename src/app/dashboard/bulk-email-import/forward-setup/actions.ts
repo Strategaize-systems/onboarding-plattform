@@ -26,6 +26,11 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { captureInfo, captureException } from "@/lib/logger";
 import { sendMail } from "@/lib/email";
 import { pollForInboundEmail } from "@/lib/bulk-email/poll-inbound";
+import {
+  summarizeSetupIntent,
+  SetupSuggestionError,
+  type SetupSuggestion,
+} from "@/lib/bulk-email/ai-assisted-setup";
 
 const LOG_SOURCE = "setup-ui:forward-setup";
 const SETUP_PATH = "/dashboard/bulk-email-import/forward-setup";
@@ -310,6 +315,53 @@ export async function sendTestEmail(
     },
   });
   return { ok: true, received: row !== null };
+}
+
+// ─── suggestSetup (Conversational-First Assistant, MT-3b) ───────────────────
+
+/**
+ * Client-facing Wrapper um summarizeSetupIntent (Bedrock-Sonnet, eu-central-1).
+ * Conversational-First (BLOCKING): der GF beschreibt in eigenen Worten, was er
+ * weiterleiten will; das Modell schlaegt Local-Part + Allowlist-Patterns vor.
+ * Auth-gated, damit der Bedrock-Call nicht oeffentlich ausloesbar ist.
+ */
+export async function suggestSetup(
+  description: string,
+): Promise<ActionResult<{ suggestion: SetupSuggestion }>> {
+  const auth = await authorizeTenantAdmin();
+  if ("error" in auth) return { ok: false, error: auth.error };
+
+  const trimmed = description.trim();
+  if (trimmed.length === 0) {
+    return { ok: false, error: "Bitte beschreibe zuerst, was du weiterleiten moechtest." };
+  }
+
+  try {
+    const suggestion = await summarizeSetupIntent(trimmed);
+    captureInfo("email_inbound_endpoint_setup_suggested", {
+      source: LOG_SOURCE,
+      userId: auth.admin.userId,
+      metadata: {
+        tenant_id: auth.admin.tenantId,
+        local_part: suggestion.suggestedLocalPart,
+        allowlist_count: suggestion.suggestedAllowlistPatterns.length,
+      },
+    });
+    return { ok: true, suggestion };
+  } catch (err) {
+    captureException(err, {
+      source: LOG_SOURCE,
+      userId: auth.admin.userId,
+      metadata: { action: "suggestSetup" },
+    });
+    if (err instanceof SetupSuggestionError) {
+      return {
+        ok: false,
+        error: "Der Assistent konnte keinen verwertbaren Vorschlag erzeugen. Bitte formuliere es etwas konkreter.",
+      };
+    }
+    return { ok: false, error: "Setup-Assistent ist momentan nicht erreichbar." };
+  }
 }
 
 // ─── confirmDsgvoDisclaimer ─────────────────────────────────────────────────
