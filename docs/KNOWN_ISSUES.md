@@ -1,5 +1,14 @@
 # Known Issues
 
+### ISSUE-095 — V9.1 SLC-V9.1-C Retention-Idempotency haengt an knowledge_unit.metadata->>bulk_run_id
+- Status: open
+- Severity: Low
+- Area: V9.1 SLC-V9.1-C Retention-Sweep (`src/lib/bulk-email/retention-idempotency.ts`)
+- Summary: `isRunImportedToHandbook` entscheidet ueber Hard-Delete-Skip allein via `knowledge_unit WHERE source='email_bulk' AND metadata->>'bulk_run_id' = runId`. `handbook-import.ts` dokumentiert (DEC-193), dass `metadata` defensiv optional ist und der INSERT bei fehlender Spalte OHNE metadata retry-t. Faende sich ein importierter Run, dessen knowledge_unit OHNE metadata persistiert wurde, gaebe der Check einen False-Negative → der Run wuerde nach 90d hart-geloescht.
+- Impact: Gering. Die live-DB hat `knowledge_unit.metadata` als V4-Foundation-Pflichtfeld mit `'{}'`-Default (V9.0 SLC-168), d.h. der Defensive-Retry-ohne-metadata-Pfad greift praktisch nicht. Selbst im Worst-Case bleibt die importierte knowledge_unit (das eigentliche Handbuch-Pattern) erhalten — nur die Raw-Source-Emails (email_bulk_run + email_message + Storage) gingen verloren; deren Loeschung ist DSGVO-erwuenscht. Verlust beschraenkt sich auf Source-Traceability eines importierten Runs.
+- Workaround: Keiner noetig im V9.1-Pilot (Founder-only).
+- Next Action: Live-Smoke (AC-9 in /deploy) verifiziert, dass importierte email_bulk-Patterns `metadata.bulk_run_id` gesetzt haben. Optionale Belt-and-Suspenders-Idempotency (zusaetzlicher body-Markdown-Run-Link-Match) als V9.2+.
+
 ### ISSUE-094 — V9 SLC-168 Admin-Audit Monats-Cost-Query nutzt nicht-existente Spalte `month_start`
 - Status: open
 - Severity: Low
