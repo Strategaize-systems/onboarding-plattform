@@ -75,7 +75,12 @@ import {
   updateAllowlist,
   sendTestEmail,
   confirmDsgvoDisclaimer,
+  suggestSetup,
 } from "../actions";
+import {
+  __setSetupCallerForTests,
+  __resetSetupCallerForTests,
+} from "@/lib/bulk-email/ai-assisted-setup";
 
 const OWNED = { data: { slug: "acme", status: "pending_setup" } };
 
@@ -192,6 +197,49 @@ describe("sendTestEmail", () => {
     const r = await sendTestEmail("ep-1");
     expect(r.ok).toBe(false);
     expect(pollMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("suggestSetup", () => {
+  beforeEach(() => __resetSetupCallerForTests());
+
+  it("rejects unauthenticated callers", async () => {
+    mockUser = null;
+    const r = await suggestSetup("alles vom steuerberater");
+    expect(r).toEqual({ ok: false, error: "Nicht authentifiziert" });
+  });
+
+  it("rejects an empty description", async () => {
+    const r = await suggestSetup("   ");
+    expect(r.ok).toBe(false);
+  });
+
+  it("returns a suggestion from the assistant on success", async () => {
+    __setSetupCallerForTests(async () => ({
+      text: JSON.stringify({
+        suggestedLocalPart: "bulk-steuerberater",
+        suggestedAllowlistPatterns: ["kanzlei-mueller.de"],
+        reasoning: "Mails vom Steuerberater werden gebuendelt.",
+      }),
+    }));
+    const r = await suggestSetup("alle mails von kanzlei-mueller.de");
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.suggestion.suggestedLocalPart).toBe("bulk-steuerberater");
+      expect(r.suggestion.suggestedAllowlistPatterns).toEqual(["kanzlei-mueller.de"]);
+    }
+    expect(captureInfoMock).toHaveBeenCalledWith(
+      "email_inbound_endpoint_setup_suggested",
+      expect.anything(),
+    );
+  });
+
+  it("maps a schema/JSON error to a friendly message and logs it", async () => {
+    __setSetupCallerForTests(async () => ({ text: "kein json hier" }));
+    const r = await suggestSetup("irgendwas");
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toMatch(/konkreter/);
+    expect(captureExceptionMock).toHaveBeenCalled();
   });
 });
 

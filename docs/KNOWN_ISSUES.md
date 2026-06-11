@@ -10,8 +10,9 @@
 - Next Action: Live-Smoke (AC-9 in /deploy) verifiziert, dass importierte email_bulk-Patterns `metadata.bulk_run_id` gesetzt haben. Optionale Belt-and-Suspenders-Idempotency (zusaetzlicher body-Markdown-Run-Link-Match) als V9.2+.
 
 ### ISSUE-094 — V9 SLC-168 Admin-Audit Monats-Cost-Query nutzt nicht-existente Spalte `month_start`
-- Status: open
+- Status: resolved
 - Severity: Low
+- Resolution: 2026-06-11 — Fix in SLC-V9.1-D MT-5 /backend (RPT-443): `src/app/admin/audit/bulk-email/page.tsx:179-180` selektiert + filtert jetzt auf `month` statt `month_start`. In SLC-V9.1-D /frontend-QA (RPT-445) code-verifiziert. Live-Smoke-Verifikation (echte Monatskosten sichtbar) bleibt /deploy-gated.
 - Area: V9 SLC-168 Admin-Audit-Page (`src/app/admin/audit/bulk-email/page.tsx:173-174`)
 - Summary: Die Monats-Cost-Aggregat-Query selektiert + filtert auf `month_start` (`.select("tenant_id, month_start, ...").eq("month_start", monthStartIso)`), aber die View `vw_bulk_email_cost_monthly` (MIG-054/109) hat die Spalte `month` (nicht `month_start`). Die Query wirft `column month_start does not exist`, wird vom umgebenden try/catch geschluckt → `costRows` bleibt leer → "Cost-Aggregat aktueller Monat" zeigt 0/leer. Pre-existing aus V9 SLC-168, NICHT aus SLC-V9.1-B. Discovery durch SLC-V9.1-B /qa DB-vs-Code-Paritaets-Check (RPT-440).
 - Impact: Admin-Audit "Cost-Aggregat aktueller Monat"-Tabelle zeigt fuer alle Tenants 0 EUR / 0 Runs, obwohl Monatskosten existieren koennen. Nur Anzeige-Bug (Cross-Tenant-Admin-Sicht), kein Funktions-/Daten-Schaden. Cap-Enforcement (continuous-cost-cap.ts) liest korrekt `month` und ist NICHT betroffen.
