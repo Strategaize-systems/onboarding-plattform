@@ -1,5 +1,14 @@
 # Known Issues
 
+### ISSUE-096 — V9.1 RLS-Behavioral-Pen-Test fehlt fuer 3 Inbound-Foundation-Tabellen
+- Status: open
+- Severity: Low
+- Area: V9.1 RLS-Test-Matrix (`src/__tests__/rls/`, `src/__tests__/migrations/112-v91-inbound-foundation.test.ts`)
+- Summary: Gesamt-V9.1-/qa (RPT-447) zeigte: ein voller Behavioral-4-Rollen-Pen-Test (withJwtContext SELECT/INSERT/UPDATE/DELETE pro Rolle, SAVEPOINT-Pattern) existiert nur fuer `email_inbound_sync_state` (`v91-inbound.rls.test.ts`, 10 Cases). Die 3 Foundation-Tabellen `email_inbound_endpoint`, `email_forward_allowlist`, `email_validation_reject_log` (MIG-112) haben nur Policy-Existenz- + Schema-Verifikation (Policy-Count + RLS-enabled + CHECK in `112-v91-inbound-foundation.test.ts`), keinen Cross-Tenant-Verhaltens-Test.
+- Impact: Gering im V9.1-Internal-Test-Mode (Founder-only, keine Kundendaten). Die Policies existieren, sind korrekt typisiert (admin_all + tenant-scoped) und folgen dem identischen V9-Standard-Pattern wie das behavioral getestete `email_inbound_sync_state` und `v9-bulk-email`. Risiko steigt erst vor Customer-Live, wenn diese Tabellen reale Kunden-Email-Daten + Sender-Allowlists tragen.
+- Workaround: Keiner noetig im V9.1-Pilot.
+- Next Action: Vor Customer-Live (Modul 1+2+3 komplett, module-lifecycle-discipline) Behavioral-4-Rollen-Matrix fuer die 3 Foundation-Tabellen ergaenzen (Pattern-Reuse aus `v91-inbound.rls.test.ts`). Nicht V9.1-Release-blockierend.
+
 ### ISSUE-095 — V9.1 SLC-V9.1-C Retention-Idempotency haengt an knowledge_unit.metadata->>bulk_run_id
 - Status: open
 - Severity: Low
