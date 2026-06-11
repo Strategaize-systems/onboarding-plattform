@@ -5,7 +5,7 @@
 > **Delivery Mode:** Multi-Tenant SaaS
 > **Domain:** `onboarding.strategaizetransition.com`
 > **Verantwortlicher:** Strategaize Transition BV (NL-Operativ) — Stammdaten siehe `/impressum`
-> **Status:** Beschreibender Stand nach Abschluss V6.2 (Compliance-Sprint)
+> **Status:** Beschreibender Stand nach Abschluss V6.2 (Compliance-Sprint). **Addendum Section 10** ergaenzt 2026-06-11 (V9.1 Forward-Bucket-Email, SLC-V9.1-D MT-7) — die Sektionen 1-9 bleiben V6.2-Stand, Section 10 beschreibt die V9.1-spezifische Inbound-Email-Verarbeitung.
 >
 > **Hinweis:** Diese Dokumentation ist eine pragmatische technische Standardvorlage und stellt **keine Rechtsberatung** dar. Sie beschreibt, wie das System personenbezogene Daten technisch verarbeitet. Vor produktivem Einsatz mit echten Partner-Kanzleien oder Mandanten ist eine **anwaltliche Pruefung** durch eine qualifizierte Datenschutzbeauftragte/einen qualifizierten Datenschutzbeauftragten erforderlich (BL-104, pending nach /deploy V6.2).
 
@@ -22,6 +22,7 @@
 7. [Loeschkonzept](#7-loeschkonzept)
 8. [Datenschutzkonforme Defaults](#8-datenschutzkonforme-defaults)
 9. [DPO-Bewertung (V6.2-spezifisch)](#9-dpo-bewertung-v62-spezifisch)
+10. [V9.1 Forward-Bucket-Email — Datenschutz-Addendum](#10-v91-forward-bucket-email--datenschutz-addendum)
 
 ---
 
@@ -468,9 +469,91 @@ Kontakt: siehe `[IMPRESSUM_EMAIL]` (Strategaize-Inhaberin direkt).
 
 ---
 
+## 10. V9.1 Forward-Bucket-Email — Datenschutz-Addendum
+
+> **Stand:** 2026-06-11 (SLC-V9.1-D MT-7). Beschreibt die V9.1-Funktion "Forward-Bucket-Email": ein Geschaeftsfuehrer (GF) leitet aus seinem eigenen Postfach geschaeftliche E-Mails per Weiterleitungs-Regel an eine dedizierte Strategaize-Adresse; die Plattform extrahiert daraus per KI wiederverwendbares Wissen (Pattern) und kann es ins Handbuch importieren.
+>
+> **Modus:** V9.1 ist **Internal-Test-Mode** (Founder-only Pilot) per `module-lifecycle-discipline`. Kein Customer-Onboarding, keine Partner-Kanzlei. Die anwaltliche Pruefung des hier beschriebenen Verarbeitungspfads (insb. Disclaimer-Wording) ist vor Customer-Live deferred (BL-104-Klasse).
+
+### 10.1 Neue verarbeitete Datenkategorie
+
+- **Weitergeleitete Geschaefts-E-Mails (Roh-EML)** — vollstaendige RFC-822-Nachricht (Header + Body + ggf. Anhaenge) aus dem GF-Postfach. Kann personenbezogene Daten Dritter enthalten (Absender/Empfaenger-Adressen, Namen, Freitext). Persistiert als Storage-Objekt + `email_message`-Row, gruppiert unter einem `email_bulk_run` (`run_kind='forward_bucket'`).
+- **Extrahierte Pattern** (`email_pattern`) — KI-verdichtete, pseudonymisierte Wissens-Snippets; Klarnamen werden bei der Verdichtung pseudonymisiert (Reuse des V9.0-Redaction-Pfads).
+- **DSGVO-Consent des GF** (`email_inbound_endpoint.dsgvo_consent_*`) — Bestaetigung, dass der GF die weitergeleiteten Mails verarbeiten und an Strategaize uebermitteln darf, mit Timestamp + User-ID, 7 Jahre aufbewahrt (Rechenschaftspflicht Art. 5(2) DSGVO).
+- **Setup-/Validierungs-Metadaten** — `setup_token` (32-byte URL-safe Random), optionale Sender-Allowlist (`email_forward_allowlist`), Reject-Log (`email_validation_reject_log`).
+
+- **Rechtsgrundlage** der Verarbeitung der weitergeleiteten Mails im Internal-Test-Mode: Art. 6(1)(f) DSGVO (berechtigtes Interesse des GF als Verantwortlicher fuer das eigene Wissensmanagement) in Verbindung mit der dokumentierten DSGVO-Consent-Bestaetigung (Section 10.4). Bei spaeterem Customer-Live ist die Rollen-Zuordnung (Verantwortlicher / Auftragsverarbeiter) anwaltlich zu praezisieren.
+
+### 10.2 Datenfluss + Speicherorte (as-built, DEC-205)
+
+```
+GF-Postfach (Weiterleitungs-Regel)
+   → IONOS-Postfach bulk@strategaizetransition.com (IONOS, Deutschland)
+   → Coolify-Cron POST /api/cron/inbound-email-imap-sync (x-cron-secret)
+   → IMAP-Pull via ImapFlow (inkrementeller UID-Fetch, email_inbound_sync_state)
+   → simpleParser (mailparser) → Endpoint-Resolve (single_mailbox) → Validation
+   → Storage-Persist (Supabase Storage, Hetzner Frankfurt) + rpc_inbound_record_message
+   → Pipeline-Trigger-Cron → Bedrock Claude (eu-central-1, Frankfurt) Pre-Filter + Pattern-Extract
+   → email_pattern → optionaler GF-Handbuch-Import → knowledge_unit
+```
+
+| Komponente | Anbieter | Region |
+|---|---|---|
+| Inbound-Transport (IMAP-Postfach) | **IONOS SE** | Deutschland |
+| Roh-EML-Storage + DB | Supabase (self-hosted in Coolify) | Hetzner Frankfurt (DE) |
+| KI-Verdichtung (Pre-Filter Haiku, Pattern-Extract Sonnet) | AWS Bedrock | `eu-central-1` (Frankfurt) |
+
+### 10.3 Cross-Region-TIA — Reconcile (DEC-196 → superseded durch DEC-205)
+
+Der urspruenglich geplante Inbound-Vendor war **AWS SES Inbound Ireland (`eu-west-1`)** (DEC-194/DEC-196). Das haette eine zweite AWS-Region neben Bedrock Frankfurt (`eu-central-1`) bedeutet und wurde als formeller **TIA-Punkt** (Transfer-Impact-Assessment) gefuehrt — mit dem Ergebnis "EU-intra-Region, kein Dritt-Land-Transfer, kein TIA-Risiko per EuGH Schrems II".
+
+**As-built ist diese Region-Drift entfallen.** DEC-205 (Founder-Reuse-Direktive, 2026-06-10) ersetzte den SES-Inbound durch die bestehende **IMAP-Sync-Loesung gegen IONOS (Deutschland)** — DEC-196 wurde dadurch `superseded` (was DEC-196 in seiner eigenen Consequence fuer einen EU-Frankfurt-Vendor-Switch bereits antizipiert hatte).
+
+Konsequenz fuer den Datenschutz:
+
+- **Kein Cross-Region-Transfer mehr.** Inbound-Transport liegt bei IONOS (Deutschland), KI-Verdichtung bei Bedrock (`eu-central-1`, Frankfurt). Beide in Deutschland, innerhalb der EU. Es gibt keine zweite AWS-Region und kein eu-west-1.
+- **Kein neuer Sub-Processor ueber den Bestand hinaus.** IONOS ist bereits aktiver Drittanbieter (SMTP-Versand, Section 5.1) — V9.1 nutzt zusaetzlich den **IMAP-Inbound** desselben Anbieters. Kein AWS-SES, kein S3, kein SNS, keine Lambda.
+- **Roh-Email verlaesst die EU zu keinem Zeitpunkt.** Konsistent mit `data-residency.md` (strikt EU).
+
+Der formelle TIA-Befund "kein Dritt-Land-Transfer, kein TIA-Risiko" bleibt damit gueltig und ist durch den Wegfall der Region-Drift sogar trivial erfuellt.
+
+### 10.4 Audit-Trail (4 Ereignis-Typen, as-built)
+
+**Wichtig — Reconcile gegen Slice-Spec/AC:** Die OP hat **keine `audit_log`-Tabelle** (DEC-208/DEC-209). Der Spec-Wortlaut "audit_log mit event_type=..." trifft auf die as-built Implementierung nicht zu. Audit laeuft durchgaengig ueber `error_log` (via `captureInfo`/`captureWarning`), Validierungs-Rejects zusaetzlich ueber die dedizierte Tabelle `email_validation_reject_log`. Die folgenden vier Ereignis-Typen sind nachweisbar:
+
+| # | Ereignis | Mechanismus (as-built) | Quelle |
+|---|---|---|---|
+| 1 | **Inbound-Mail empfangen** | `error_log` (`message='email_inbound_received'`) + persistierte `email_message`-Row via `rpc_inbound_record_message` | `src/lib/inbound-email/imap-sync.ts` |
+| 2 | **Validierung abgelehnt** | Row in **`email_validation_reject_log`** mit `reject_layer`-Facet (`setup_token_missing`/`setup_token_invalid`/`allowlist_mismatch`/`tenant_not_found`) — nicht als `error_log`-event_type, sondern als eigene Audit-Tabelle (Basis der Forward-Source-Reject-Statistik) | `src/lib/inbound-email/reject-log.ts` |
+| 3 | **Retention-Sweep gelaufen** | `error_log` (`level='info'`, `message='email_retention_sweep_run'`, `metadata`=Counts+Policy+duration_ms) je Tageslauf | `src/workers/retention/handle-bulk-email-retention-sweep.ts` |
+| 4 | **DSGVO-Consent bestaetigt** | `error_log` (`message='email_inbound_endpoint_dsgvo_consent'`) **plus** queryable Spalten `dsgvo_consent_text_version` + `dsgvo_consent_accepted_at` + `dsgvo_consent_user_id` auf `email_inbound_endpoint` (Query-Pfad; error_log = unveraenderlicher Trail) | `src/app/dashboard/bulk-email-import/forward-setup/actions.ts` |
+
+Zusaetzliche Setup-Lifecycle-Ereignisse im `error_log` (nicht in der 4er-Kernliste, aber Teil des Trails): `email_inbound_endpoint_created`, `email_inbound_endpoint_token_regenerated`, `email_forward_allowlist_added`, `email_inbound_endpoint_test_send`, `email_inbound_endpoint_setup_suggested`.
+
+### 10.5 Retention + Loeschung (DEC-198/DEC-208)
+
+- **Run-Level-Retention** (DEC-208): `email_bulk_run` traegt `retention_until` + `soft_delete_at`; `email_message` haengt per FK `ON DELETE CASCADE` am Run. Default **60 Tage Soft-Delete + 90 Tage Hard-Delete** (ENV-overridebar) gegen `email_bulk_run.created_at`.
+- **Import-Schutz:** Runs, deren Pattern bereits ins Handbuch importiert wurden (`knowledge_unit.metadata->>'bulk_run_id'`), werden **nie** hart-geloescht (Wissen bleibt; Roh-Mail-Loeschung beruehrt nur die Roh-EML, nicht das pseudonymisierte Pattern).
+- **DSGVO Art. 17 sofort:** Founder-Override per RUNBOOK (`DELETE FROM email_bulk_run WHERE id=...`, Cascade entfernt `email_message`) — siehe `docs/RUNBOOK.md` Section "V9.1 Storage-Retention-Cron".
+- **DSGVO-Consent-Eintrag** bleibt 7 Jahre (Rechenschaftspflicht), auch nach Loeschung der zugehoerigen Mails.
+
+### 10.6 Spam-/Missbrauchs-Defense (DEC-199/DEC-201/DEC-206)
+
+- **Setup-Token** (`X-Strategaize-Forward-Token`) ist im **Catchall-Modus** Pflicht (constant-time-Vergleich). Im aktuellen **Single-Mailbox-Modus** (DEC-206) tragen weitergeleitete Mails keinen Token-Header — die Token-Schicht wird tolerant uebersprungen; Defense sind dann die IONOS-Mailbox-Authentifizierung selbst + die optionale Sender-Allowlist. Restrisiko (Spam-Gap) akzeptiert weil Internal-Test-Mode + Reject-Log-Audit; im spaeteren Catchall-Modus kehrt die Token-Pruefung zurueck.
+- **Sender-Allowlist** (`email_forward_allowlist`, Default-Off): optionale Domain-/E-Mail-Pattern-Pruefung des `From:`-Headers.
+- Jeder Reject ist im `email_validation_reject_log` mit `reject_layer` nachvollziehbar (Forward-Source-Statistik im Admin-Audit).
+
+### 10.7 Was V9.1 nicht aendert
+
+- Keine neuen Tracking-/Analytics-Bibliotheken (Section 1.10 bleibt gueltig).
+- Keine besonderen Kategorien (Art. 9) — der GF wird angehalten, keine Gesundheits-/Sonderkategorien-Mails weiterzuleiten (organisatorisch, Internal-Test-Mode).
+- Datenresidenz bleibt strikt EU (Section 3). V9.1 fuegt keinen Nicht-EU-Endpoint hinzu.
+
+---
+
 ## Cross-References
 
-- [docs/DECISIONS.md](DECISIONS.md) — DEC-091 (Privacy-Pflicht-Checkbox), DEC-093 (Walkthrough-Cleanup), DEC-099 (RPC-SECURITY-DEFINER), DEC-100-113 (V6-Foundation), DEC-114-115 (V6.1), DEC-116-121 (V6.2)
+- [docs/DECISIONS.md](DECISIONS.md) — DEC-091 (Privacy-Pflicht-Checkbox), DEC-093 (Walkthrough-Cleanup), DEC-099 (RPC-SECURITY-DEFINER), DEC-100-113 (V6-Foundation), DEC-114-115 (V6.1), DEC-116-121 (V6.2), DEC-196 (Cross-Region-TIA, superseded), DEC-198/205/206/208/209 (V9.1 Forward-Bucket-Email)
 - [docs/ARCHITECTURE.md](ARCHITECTURE.md) — V6-Section (Multiplikator-Foundation), V6.1-Section, V6.2-Section (Compliance-Sprint)
 - [docs/legal/AVV-DE.md](legal/AVV-DE.md) — Standard-AVV-Template (SLC-121)
 - [docs/legal/AVV-NL.md](legal/AVV-NL.md) — NL-AVV-Template (SLC-121)

@@ -220,3 +220,45 @@ UPDATE public.email_bulk_run SET soft_delete_at = NULL WHERE id = '<bulk_run_id>
 ### Per-Tenant-Retention-Override
 
 Per-Tenant-Override via Tenant-Settings-JSONB ist V9.1.x (out of scope). Founder-Manuell bis dahin: einzelnen Run laenger behalten, indem `created_at` der Sweep-Logik entzogen wird — praktisch via Soft-Delete-Reset oben oder durch frueheres Handbook-Import (importierte Runs werden nie hart-geloescht).
+
+## V9.1 Setup-UI Founder-Walkthrough (SLC-V9.1-D / FEAT-079)
+
+So richtet der GF einen Forward-Bucket-Endpoint ein. **As-built-Stand (DEC-205/DEC-206):** Single-Mailbox-Modus — alle Weiterleitungen landen in **einem** IONOS-Postfach (`bulk@strategaizetransition.com`), das per IMAP-Sync-Cron abgeholt wird. Die UI zeigt eine `bulk-<slug>@…`-Adresse als Weiterleitungsziel; das Routing erfolgt aber ueber das eine Postfach (ENV `INBOUND_DEFAULT_ENDPOINT_SLUG`), nicht ueber echtes Catchall-Slug-Routing.
+
+> **Voraussetzung (OQ-R1-1, Founder-Action, gated):** Bis das IONOS-Postfach + die IMAP-ENVs (`IMAP_HOST/PORT/USER/PASSWORD/INITIAL_SYNC_DAYS`, `INBOUND_DEFAULT_ENDPOINT_SLUG`) + der Coolify-Scheduled-Task `inbound-email-imap-sync` live sind, kommt **keine** weitergeleitete Mail an. Bis dahin meldet der Test-Send-Button immer "nicht empfangen" — das ist erwartet, kein Bug (siehe Schritt 5).
+
+### Schritt 1 — Setup-UI oeffnen
+
+Als `tenant_admin` einloggen und `/dashboard/bulk-email-import/forward-setup` oeffnen. Nicht-`tenant_admin` werden auf `/dashboard` redirected (Auth-Gate in `page.tsx`). Existiert noch kein Endpoint, zeigt der Wizard die **Erstell-Phase** (Assistent + Form); existiert einer, die **Konfigurations-Phase** (Adresse, Anleitung, Allowlist, Test, DSGVO).
+
+### Schritt 2 — Endpoint anlegen (Conversational-First oder Form)
+
+- **Conversational (empfohlen):** Im "Mit KI beschreiben"-Assistenten per **Text oder Sprache** (Mikrofon → `/api/tenant/transcribe`) beschreiben, welche Mails man weiterleiten will. Der Assistent (Bedrock Sonnet, eu-central-1) schlaegt einen Local-Part (`bulk-<slug>`) + optionale Allowlist-Pattern vor. "Uebernehmen" befuellt die Form.
+- **Form-Fallback:** Local-Part direkt eintragen.
+- "Anlegen" ruft `createInboundEndpoint` → Row mit `status='pending_setup'` + frischem 32-byte `setup_token` + `error_log`-Audit (`email_inbound_endpoint_created`).
+
+### Schritt 3 — Weiterleitungs-Adresse (+ Setup-Token) kopieren
+
+Die UI zeigt das Weiterleitungsziel `bulk-<slug>@<INBOUND_CATCHALL_DOMAIN>` und — **einmalig** nach dem Anlegen/Regenerieren — den Setup-Token im Klartext (danach maskiert `…XXXX`). Token verloren → "Regenerieren" (Confirmation-Modal; invalidiert den alten Token sofort, `error_log`-Audit `email_inbound_endpoint_token_regenerated`).
+
+> **Hinweis Single-Mailbox-Modus:** Der Setup-Token wird in diesem Modus **nicht** als Mail-Header geprueft (DEC-206) — die Weiterleitungs-Regeln in Schritt 4 setzen daher nur ein einfaches "Weiterleiten an", **ohne** `X-Strategaize-Forward-Token`-Header. Der Token bleibt fuer den spaeteren Catchall-Modus relevant.
+
+### Schritt 4 — Weiterleitungs-Regel im Mail-Client setzen
+
+Die UI hat drei Tabs (`MailClientInstructions`): **Gmail**, **Outlook / Microsoft 365**, **IONOS Webmail**. Jeweils Schritt-fuer-Schritt: Weiterleitungsadresse = das Ziel aus Schritt 3. Optional gezielt per Filter (z.B. nach Absender) statt Voll-Weiterleitung.
+
+### Schritt 5 — Test-Send + DSGVO-Disclaimer bestaetigen
+
+- **Test-Send:** Button → `sendTestEmail` → Polling (`poll-inbound`, alle 3s, max 60s) auf eine eingegangene Mail. Erfolg → "Test-Mail empfangen". **Solange OQ-R1-1 nicht live ist, ist `received` immer `false`** — Fehler-Feedback erwartet, kein Code-Bug (L-1 in RPT-445).
+- **DSGVO-Disclaimer:** Modal mit Pflicht-Text + Checkbox + "Aktivieren". Bestaetigung → `confirmDsgvoDisclaimer(id, DSGVO_CONSENT_TEXT_VERSION)` → `status='active'` + `dsgvo_consent_*`-Spalten + `error_log`-Audit (`email_inbound_endpoint_dsgvo_consent`). Disclaimer-Wording + Version (`2026-06-11.v1`) in `src/lib/bulk-email/dsgvo-consent.ts`; bei Wording-Aenderung Version hochzaehlen (Audit-Nachvollziehbarkeit). **Die Aktivierung ist bewusst nicht an einen erfolgreichen Test-Send gekoppelt** (sonst waere sie ohne Live-IMAP nie moeglich) — re-evaluieren, sobald IONOS-Sync live ist.
+
+### Verifikation nach Live-Schaltung (OQ-R1-1)
+
+```sql
+-- Endpoint aktiv?
+SELECT slug, status, dsgvo_consent_accepted_at FROM public.email_inbound_endpoint WHERE status='active';
+-- Inbound angekommen? (nach echter Weiterleitung + Cron-Lauf)
+SELECT message FROM public.error_log WHERE message='email_inbound_received' ORDER BY created_at DESC LIMIT 5;
+-- Rejects (Spam/Allowlist) sichtbar?
+SELECT reject_layer, count(*) FROM public.email_validation_reject_log GROUP BY 1;
+```
