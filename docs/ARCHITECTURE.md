@@ -8743,10 +8743,12 @@ ENV-Defaults (DEC-197): `V91_BULK_EMAIL_DAILY_CAP_EUR=5`, `V91_BULK_EMAIL_MONTHL
 
 #### Flow D: Retention-Cron (Daily)
 
-1. Coolify-Scheduled-Task feuert taeglich 02:00 UTC `POST /api/cron/bulk-email-retention-sweep` mit CRON_SECRET.
-2. Soft-Delete-Phase: UPDATE email_message SET deleted_at=now() WHERE retention_until-`30 days` < now() AND deleted_at IS NULL (Soft-Delete bei created_at+60d). Symmetrisch fuer email_bulk_run.
-3. Hard-Delete-Phase: SELECT email_message WHERE retention_until < now() AND deleted_at IS NOT NULL. Per Row: pruefe `imported_to_handbook_at IS NULL OR FK-Pruefung kein knowledge_unit verweist drauf`. Bei pass: DELETE FROM Storage (bulk-email Bucket Path), DELETE FROM email_message. Bei imported: log skip, behalt Row (auch ueber 90d).
-4. INSERT audit_log (event_type='email_retention_sweep_run', payload={soft_deleted, hard_deleted, skipped_imported}).
+**RUN-LEVEL (DEC-208, korrigiert gegen as-built MIG-058):** Die Retention-Spalten `retention_until` + `soft_delete_at` leben auf `email_bulk_run`, NICHT auf `email_message` (das nur `raw_storage_path`/`received_at` traegt). `email_message.bulk_run_id` ist FK ON DELETE CASCADE. OP hat kein `audit_log` — Audit via `error_log`.
+
+1. Coolify-Scheduled-Task feuert taeglich 02:00 UTC `POST /api/cron/bulk-email-retention-sweep` mit CRON_SECRET (Header `x-cron-secret`).
+2. Soft-Delete-Phase: UPDATE email_bulk_run SET soft_delete_at=now() WHERE created_at < now()-`softDeleteDays` (Default 60d) AND soft_delete_at IS NULL.
+3. Hard-Delete-Phase: SELECT email_bulk_run WHERE created_at < now()-`hardDeleteDays` (Default 90d) AND soft_delete_at IS NOT NULL. Per Run: pruefe `isRunImportedToHandbook` (knowledge_unit WHERE source='email_bulk' AND metadata->>'bulk_run_id' = run.id). Bei pass (kein Import): DELETE Storage-Objekte aller email_message (bulk-email Bucket Path) -> DELETE FROM email_bulk_run (CASCADE entfernt email_message-Rows). Bei imported: log skip, behalt Run (auch ueber 90d). Storage-Fehler -> Run behalten, naechster Sweep-Retry (kein Orphan).
+4. INSERT error_log (level='info', message='email_retention_sweep_run', metadata={runs_evaluated, soft_deleted_runs, hard_deleted_runs, skipped_imported, deleted_storage_objects, storage_errors, policy, duration_ms}).
 
 ### External Dependencies
 

@@ -171,3 +171,52 @@ curl -X POST https://onboarding.strategaizetransition.com/api/cron/email-bulk-pi
   -H "x-cron-secret: <CRON_SECRET>"
 # Antwort: { success, runs_evaluated, runs_triggered, runs_advanced, runs_skipped_cap, runs_skipped_threshold }
 ```
+
+## V9.1 Storage-Retention-Cron (DSGVO-Lifecycle, SLC-V9.1-C / DEC-208)
+
+Run-Level-Retention (DEC-208): `email_bulk_run` traegt `retention_until` + `soft_delete_at` (MIG-058). `email_message` haengt per FK `ON DELETE CASCADE` am Run. Default-Policy 60d Soft-Delete + 90d Hard-Delete (ENV `V91_RETENTION_SOFT_DELETE_DAYS` / `V91_RETENTION_HARD_DELETE_DAYS`, gegen `email_bulk_run.created_at`). Runs, deren Pattern ins Handbuch importiert wurde (`knowledge_unit.metadata->>'bulk_run_id'`), bleiben dauerhaft erhalten. Audit je Lauf in `error_log` (`message='email_retention_sweep_run'`).
+
+### Coolify-Scheduled-Task (einmaliges Setup)
+
+Coolify-UI -> Resource -> Scheduled-Tasks -> neuer Task:
+
+```
+Command:   curl -fsS -X POST https://onboarding.strategaizetransition.com/api/cron/bulk-email-retention-sweep -H "x-cron-secret: $CRON_SECRET"
+Frequency: 0 2 * * *      # taeglich 02:00 UTC
+```
+
+### Manueller Trigger / Smoke-Test
+
+```bash
+curl -X POST https://onboarding.strategaizetransition.com/api/cron/bulk-email-retention-sweep \
+  -H "x-cron-secret: <CRON_SECRET>"
+# Antwort: { success, runs_evaluated, soft_deleted_runs, hard_deleted_runs,
+#            skipped_imported, deleted_storage_objects, storage_errors, duration_ms }
+# V9.1-Initial-State (kein Run > 60d): erwartet alle Counts = 0.
+```
+
+### Founder-Override: DSGVO-Loesch-Anspruch sofort (vor Ablauf der Retention)
+
+Loescht einen Run vorzeitig (DSGVO Art. 17). Container-Name per `docker ps --format '{{.Names}}' | grep '^supabase-db'`:
+
+```sql
+-- 1. Run hart loeschen (Cascade entfernt email_message); Storage-Objekte separat
+--    per Bucket-Cleanup, falls noetig.
+DELETE FROM public.email_bulk_run WHERE id = '<bulk_run_id>';
+-- 2. Audit-Eintrag.
+INSERT INTO public.error_log (level, source, message, metadata)
+VALUES ('info', 'manual:retention-override', 'email_retention_manual_override',
+        jsonb_build_object('bulk_run_id', '<bulk_run_id>', 'reason', 'dsgvo_art17'));
+```
+
+### Restore aus Soft-Delete (vor Hard-Delete-Schwelle)
+
+Solange ein Run nur soft-deleted ist (`soft_delete_at` gesetzt, `created_at` noch nicht 90d alt), kann er reaktiviert werden (Auto-Restore-UI ist V9.2+):
+
+```sql
+UPDATE public.email_bulk_run SET soft_delete_at = NULL WHERE id = '<bulk_run_id>';
+```
+
+### Per-Tenant-Retention-Override
+
+Per-Tenant-Override via Tenant-Settings-JSONB ist V9.1.x (out of scope). Founder-Manuell bis dahin: einzelnen Run laenger behalten, indem `created_at` der Sweep-Logik entzogen wird — praktisch via Soft-Delete-Reset oben oder durch frueheres Handbook-Import (importierte Runs werden nie hart-geloescht).

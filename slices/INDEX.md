@@ -908,13 +908,13 @@ V9.1 = 4 Slices SLC-V9.1-A..D (Naming-Konvention version-anchored statt fortlauf
 |----|-------|---------|--------|----------|---------|
 | SLC-V9.1-A | [Inbound-Foundation + Validation-Layer + IMAP-Sync (R1, DEC-205)](SLC-V9.1-A-inbound-foundation-validation.md) | FEAT-075 + FEAT-076 / BL-154 + BL-155 | in_progress | High | 2026-06-09 |
 | SLC-V9.1-B | [Continuous-Cost-Cap-Service + Pipeline-Trigger-Cron](SLC-V9.1-B-continuous-cost-cap.md) | FEAT-077 / BL-156 | in_progress | High | 2026-06-09 |
-| SLC-V9.1-C | [Storage-Retention-Cron (DSGVO-Lifecycle)](SLC-V9.1-C-storage-retention-cron.md) | FEAT-078 / BL-157 | planned | High | 2026-06-09 |
+| SLC-V9.1-C | [Storage-Retention-Cron (DSGVO-Lifecycle)](SLC-V9.1-C-storage-retention-cron.md) | FEAT-078 / BL-157 | in_progress | High | 2026-06-09 |
 | SLC-V9.1-D | [Setup-UI Conversational-First + Admin-Audit + Master-Merge](SLC-V9.1-D-setup-ui-admin-audit.md) | FEAT-079 / BL-158 | planned | High | 2026-06-09 |
 
 ### V9.1 Execution Order (strikt sequentiell)
 - **SLC-V9.1-A zuerst** (Foundation-Layer: 3 neue Tabellen + 2 ALTER + Webhook-Endpoint + Validation-Layer + Synthetic-Corpus-Skeleton-Validation — Pre-Cond fuer alle nachfolgenden)
 - **SLC-V9.1-B nach SLC-V9.1-A** (Cost-Cap braucht email_bulk_run `status='continuous'` + `inbound_source='forward_bucket'` Spalten)
-- **SLC-V9.1-C nach SLC-V9.1-A** (Retention braucht email_bulk_run + email_message `retention_until` + `deleted_at` Spalten — parallel zu SLC-V9.1-B moeglich, aber sequentiell fuer Cumulative-Branch-Disziplin)
+- **SLC-V9.1-C nach SLC-V9.1-A** (Retention nutzt `email_bulk_run.retention_until` + `soft_delete_at` aus MIG-058 — RUN-LEVEL, DEC-208; `email_message` haengt per FK ON DELETE CASCADE dran, hat KEINE eigenen Retention-Spalten — parallel zu SLC-V9.1-B moeglich, aber sequentiell fuer Cumulative-Branch-Disziplin)
 - **SLC-V9.1-D zuletzt** (Setup-UI integriert alle vorigen Slice-Outputs + Master-Merge nach Gesamt-V9.1-/qa PASS)
 - Reihenfolge fix: V9.1-A → V9.1-B → V9.1-C → V9.1-D (Hard-Dependency-Kette via ARCHITECTURE.md V9.1 Section Slice-Empfehlung)
 - **Worktree-Setup `v9-1-forward-bucket-email`** als SLC-V9.1-A MT-0 (Pre-Slice, echtes `npm install` per [[feedback-worktree-npm-install-not-symlink]] BLOCKING)

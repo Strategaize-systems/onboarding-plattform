@@ -43,9 +43,9 @@ Der uebernommene Blueprint-Stand ist noch nicht auf einer Onboarding-Plattform-I
     - `ALTER TABLE email_bulk_run ADD COLUMN IF NOT EXISTS inbound_source text NOT NULL DEFAULT 'mbox_upload' CHECK (inbound_source IN ('mbox_upload', 'forward_bucket'))`
     - `ALTER TABLE email_bulk_run ADD COLUMN IF NOT EXISTS endpoint_id uuid REFERENCES email_inbound_endpoint ON DELETE SET NULL`
     - `ALTER TABLE email_bulk_run ADD COLUMN IF NOT EXISTS retention_until timestamptz`
-    - `ALTER TABLE email_bulk_run ADD COLUMN IF NOT EXISTS deleted_at timestamptz`
+    - `ALTER TABLE email_bulk_run ADD COLUMN IF NOT EXISTS soft_delete_at timestamptz` (as-applied; Spec-Draft sagte `deleted_at`) — **konsumiert RUN-LEVEL von SLC-V9.1-C / DEC-208 (Retention-Sweep), KEIN neues Migration noetig**
     - `ALTER TABLE email_bulk_run DROP CONSTRAINT IF EXISTS email_bulk_run_status_check; ALTER TABLE email_bulk_run ADD CONSTRAINT email_bulk_run_status_check CHECK (status IN (... 13 V9-Werte ..., 'continuous'))` — neuer Wert fuer V9.1 Daily-Roll-Over-Run
-    - `CREATE INDEX IF NOT EXISTS idx_email_bulk_run_retention ON email_bulk_run(retention_until) WHERE deleted_at IS NULL`
+    - `CREATE INDEX IF NOT EXISTS idx_email_bulk_run_retention_pending ON email_bulk_run(retention_until) WHERE soft_delete_at IS NULL` (as-applied Name/Spalte; Fast-Path fuer SLC-V9.1-C Retention-Cron)
     - `CREATE INDEX IF NOT EXISTS idx_email_bulk_run_inbound ON email_bulk_run(inbound_source, created_at DESC)`
     - `ALTER TABLE email_message ADD COLUMN IF NOT EXISTS raw_storage_path text`
     - `ALTER TABLE email_message ADD COLUMN IF NOT EXISTS retention_until timestamptz`

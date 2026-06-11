@@ -20,6 +20,9 @@ Liefert die **DSGVO-Lifecycle-Schicht** fuer V9.1:
 
 Output: DSGVO-Loesch-Compliance fuer Forward-Bucket-Raw-Emails. Fertig fuer SLC-V9.1-D Setup-UI + Admin-Audit-Erweiterung.
 
+> **⚠ RUN-LEVEL RESOLUTION (DEC-208, 2026-06-11) — supersedes der message-level Prosa unten.**
+> Beim /backend-Pattern-Inspect zeigte sich: die as-built Foundation MIG-058 (SLC-V9.1-A) traegt `retention_until` + `soft_delete_at` AUSSCHLIESSLICH auf `email_bulk_run` — `email_message` hat KEIN `deleted_at`/`retention_until` (nur `raw_storage_path`+`received_at`), haengt aber per FK `ON DELETE CASCADE` am Run. `knowledge_unit` verknuepft per `metadata->>bulk_run_id` (kein `email_message_id`). OP hat kein `audit_log` (Audit via `error_log`). Der Sweep arbeitet daher **run-granular**: Soft/Hard-Delete auf `email_bulk_run` (Schwellen gegen `created_at`), Idempotency-Check pro Run, Storage-Delete je `email_message.raw_storage_path`, dann `DELETE email_bulk_run` (Cascade entfernt die Messages). Wo der MT-2/AC-Text unten `email_message.deleted_at` / `email_message_id` / `audit_log` sagt, gilt die korrigierte Run-Level-Variante (siehe DEC-208 + ARCHITECTURE Flow D). Implementierung: `src/workers/retention/handle-bulk-email-retention-sweep.ts`. KEIN neues Migration.
+
 ## In Scope
 
 - **`src/workers/retention/handle-bulk-email-retention-sweep.ts`** — Worker-Implementation per ARCHITECTURE.md V9.1 Flow D.
@@ -141,11 +144,11 @@ Output: DSGVO-Loesch-Compliance fuer Forward-Bucket-Raw-Emails. Fertig fuer SLC-
 ## Acceptance Criteria
 
 - **AC-V9.1-C-1**: Cron-Endpoint `/api/cron/bulk-email-retention-sweep` mit `verifyCronSecret` validiert CRON_SECRET.
-- **AC-V9.1-C-2**: Soft-Delete-Phase setzt `email_message.deleted_at = now()` fuer Rows mit `created_at < now() - softDeleteDays` UND `deleted_at IS NULL`, symmetrisch fuer email_bulk_run.
-- **AC-V9.1-C-3**: Hard-Delete-Phase loescht Storage-Object via `deleteStorageObject` + DELETE FROM email_message fuer Rows mit `created_at < now() - hardDeleteDays` UND `deleted_at IS NOT NULL` UND `isImportedToHandbook === false`.
-- **AC-V9.1-C-4**: Idempotency-Skip bei `isImportedToHandbook === true`: Row bleibt persistiert (auch ueber 90d), log entry zaehlt skippedImported.
-- **AC-V9.1-C-5**: email_bulk_run Hard-Delete nur wenn alle email_message-Rows hard-deleted (Cascade-Safety).
-- **AC-V9.1-C-6**: audit_log Entry mit event_type='email_retention_sweep_run' enthaelt alle 7 Counts + Policy + duration_ms.
+- **AC-V9.1-C-2** (run-level, DEC-208): Soft-Delete-Phase setzt `email_bulk_run.soft_delete_at = now()` fuer Runs mit `created_at < now() - softDeleteDays` UND `soft_delete_at IS NULL`.
+- **AC-V9.1-C-3** (run-level, DEC-208): Hard-Delete-Phase loescht je `email_message.raw_storage_path` via `deleteStorageObject` + `DELETE FROM email_bulk_run` (CASCADE entfernt email_message) fuer Runs mit `created_at < now() - hardDeleteDays` UND `soft_delete_at IS NOT NULL` UND `isRunImportedToHandbook === false`.
+- **AC-V9.1-C-4**: Idempotency-Skip bei `isRunImportedToHandbook === true` (knowledge_unit via `metadata->>bulk_run_id`): Run bleibt persistiert (auch ueber 90d), Counter `skipped_imported`.
+- **AC-V9.1-C-5**: email_bulk_run Hard-Delete loescht den Run als Ganzes (Cascade entfernt alle email_message atomar); importierte Runs bleiben komplett erhalten (Cascade-Safety intrinsisch).
+- **AC-V9.1-C-6**: Audit-Entry in `error_log` (level='info', message='email_retention_sweep_run', OP hat kein audit_log) enthaelt alle Counts (runs_evaluated, soft_deleted_runs, hard_deleted_runs, skipped_imported, deleted_storage_objects, storage_errors) + Policy + duration_ms.
 - **AC-V9.1-C-7**: ENV `V91_RETENTION_SOFT_DELETE_DAYS` + `V91_RETENTION_HARD_DELETE_DAYS` ueberschreibbar, Defaults 60/90.
 - **AC-V9.1-C-8**: Vitest gegen Coolify-DB mit Seed-Data simuliert alle 4 Phasen (skip/soft/hard/imported-skip) korrekt.
 - **AC-V9.1-C-9**: Live-Smoke Cron-Endpoint mit Production-CRON_SECRET liefert 0/0/0/0/0 (V9.1-Initial-State, kein Row > 60d).
