@@ -94,7 +94,62 @@ function buildAdminClientEmpty() {
           }),
         };
       }
+      // SLC-V9.1-D MT-5: Forward-Source-Stats-Tabellen (leer -> stats=[]).
+      if (table === "email_inbound_endpoint") {
+        return { select: async () => ({ data: [], error: null }) };
+      }
+      if (table === "email_message" || table === "email_validation_reject_log") {
+        return { select: () => ({ gt: async () => ({ data: [], error: null }) }) };
+      }
       throw new Error(`unexpected from(${table})`);
+    }),
+  };
+}
+
+function buildAdminClientWithForwardStats() {
+  return {
+    from: vi.fn((table: string) => {
+      switch (table) {
+        case "email_bulk_run":
+          return { select: () => ({ order: () => ({ limit: async () => ({ data: [], error: null }) }) }) };
+        case "tenants":
+          return {
+            select: () => ({
+              in: async () => ({ data: [{ id: "t-1", name: "Acme GmbH" }], error: null }),
+            }),
+          };
+        case "vw_bulk_email_cost_monthly":
+          return { select: () => ({ eq: async () => ({ data: [], error: null }) }) };
+        case "email_inbound_endpoint":
+          return {
+            select: async () => ({
+              data: [{ id: "ep-1", tenant_id: "t-1", slug: "acme", status: "active" }],
+              error: null,
+            }),
+          };
+        case "email_message":
+          return {
+            select: () => ({
+              gt: async () => ({
+                data: [
+                  { received_at: "2026-06-11T09:00:00Z", email_bulk_run: { endpoint_id: "ep-1" } },
+                ],
+                error: null,
+              }),
+            }),
+          };
+        case "email_validation_reject_log":
+          return {
+            select: () => ({
+              gt: async () => ({
+                data: [{ endpoint_id: "ep-1", reject_layer: "allowlist_mismatch" }],
+                error: null,
+              }),
+            }),
+          };
+        default:
+          throw new Error(`unexpected from(${table})`);
+      }
     }),
   };
 }
@@ -121,6 +176,12 @@ function buildAdminClientWithRuns(
       }
       if (table === "vw_bulk_email_cost_monthly") {
         return { select: () => ({ eq: async () => ({ data: [], error: null }) }) };
+      }
+      if (table === "email_inbound_endpoint") {
+        return { select: async () => ({ data: [], error: null }) };
+      }
+      if (table === "email_message" || table === "email_validation_reject_log") {
+        return { select: () => ({ gt: async () => ({ data: [], error: null }) }) };
       }
       throw new Error(`unexpected from(${table})`);
     }),
@@ -235,6 +296,19 @@ describe("AdminBulkEmailAuditPage — strategaize_admin Render", () => {
         [{ id: "t-1", name: "Beta GmbH" }],
       ),
     );
+
+    const result = await AdminBulkEmailAuditPage();
+    expect(result).toBeDefined();
+    expect(mocks.redirectMock).not.toHaveBeenCalled();
+  });
+
+  // SLC-V9.1-D MT-5 (AC-V9.1-D-7): Forward-Source-Statistik-Pfad baut fuer
+  // strategaize_admin ohne Crash, wenn Inbound-Endpoints + Inbound/Reject-Daten
+  // vorliegen. tenant_admin/member werden bereits oben weg-redirected (sehen die
+  // Section nie). Visueller Smoke ist Live-Smoke/Playwright.
+  it("baut den Forward-Source-Stats-Pfad ohne Crash, wenn Endpoints existieren", async () => {
+    mocks.userClientMock.mockImplementation(() => buildUserClient({}));
+    mocks.adminClientMock.mockImplementation(() => buildAdminClientWithForwardStats());
 
     const result = await AdminBulkEmailAuditPage();
     expect(result).toBeDefined();

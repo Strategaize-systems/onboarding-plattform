@@ -20,6 +20,10 @@ import { ArrowLeft } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  getForwardSourceStats,
+  type ForwardStatsRow,
+} from "@/lib/bulk-email/forward-source-stats";
 import { selectFlaggedRuns, flaggedStatusLabel } from "./banner-data";
 import {
   Card,
@@ -168,10 +172,12 @@ export default async function AdminBulkEmailAuditPage() {
     monthStart.setUTCHours(0, 0, 0, 0);
     const monthStartIso = monthStart.toISOString().slice(0, 10);
 
+    // Hinweis: vw_bulk_email_cost_monthly (MIG-054) hat die Spalte `month`,
+    // nicht `month_start` (Bug-Fix SLC-V9.1-D MT-5 — vorher silent leeres Aggregat).
     const { data: costRows } = await adminClient
       .from("vw_bulk_email_cost_monthly")
-      .select("tenant_id, month_start, total_cost_eur, run_count")
-      .eq("month_start", monthStartIso);
+      .select("tenant_id, month, total_cost_eur, run_count")
+      .eq("month", monthStartIso);
 
     for (const c of costRows ?? []) {
       monthlyCosts.set(c.tenant_id as string, {
@@ -184,6 +190,16 @@ export default async function AdminBulkEmailAuditPage() {
     loadError = err instanceof Error ? err.message : String(err);
     const { captureException } = await import("@/lib/logger");
     captureException(err, { source: "admin/audit/bulk-email/load" });
+  }
+
+  // SLC-V9.1-D MT-5: Forward-Source-Statistik (Inbound-Endpoints). Eigener Load,
+  // damit ein Stats-Fehler die uebrige Audit-Sicht nicht bricht.
+  let forwardStats: ForwardStatsRow[] = [];
+  try {
+    forwardStats = await getForwardSourceStats();
+  } catch (err) {
+    const { captureException } = await import("@/lib/logger");
+    captureException(err, { source: "admin/audit/bulk-email/forward-stats" });
   }
 
   // Per-Tenant-Aggregat fuer Cost-Cap-Sicht.
@@ -440,6 +456,96 @@ export default async function AdminBulkEmailAuditPage() {
                       </td>
                     </tr>
                   ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Forward-Source-Statistik (Inbound-Endpoints)</CardTitle>
+          <CardDescription>
+            Pro Tenant + Endpoint: Vendor, Inbound-Volumen (30 Tage), Reject-Rate
+            je Layer, Monats-Kosten, Last-Inbound. Reject-Rate &gt; 20% (Spam-Influx)
+            ist hervorgehoben.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {forwardStats.length === 0 ? (
+            <p className="text-sm text-slate-500">
+              Keine Inbound-Endpoints angelegt.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm" data-testid="forward-source-stats">
+                <thead>
+                  <tr className="border-b border-slate-200 text-left">
+                    <th className="py-2 font-medium text-slate-600">Tenant</th>
+                    <th className="py-2 font-medium text-slate-600">Endpoint</th>
+                    <th className="py-2 font-medium text-slate-600">Vendor</th>
+                    <th className="py-2 font-medium text-slate-600">Status</th>
+                    <th className="py-2 text-right font-medium text-slate-600">
+                      Inbound (30d)
+                    </th>
+                    <th className="py-2 text-right font-medium text-slate-600">
+                      Rejects (30d)
+                    </th>
+                    <th className="py-2 text-right font-medium text-slate-600">
+                      Kosten (Monat)
+                    </th>
+                    <th className="py-2 font-medium text-slate-600">
+                      Last-Inbound
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {forwardStats.map((s) => {
+                    const denom = s.inbound_count_30d + s.reject_count_30d_total;
+                    const rejectRate = denom > 0 ? s.reject_count_30d_total / denom : 0;
+                    const highReject = rejectRate > 0.2;
+                    const rejectDetail = Object.entries(s.reject_count_30d_by_layer)
+                      .map(([layer, n]) => `${layer}:${n}`)
+                      .join(", ");
+                    return (
+                      <tr
+                        key={s.endpoint_id}
+                        className="border-b border-slate-100 last:border-0"
+                        data-endpoint-id={s.endpoint_id}
+                        data-high-reject={highReject ? "true" : "false"}
+                      >
+                        <td className="py-2 text-slate-600">
+                          {s.tenant_name ?? "(unbenannt)"}
+                        </td>
+                        <td className="py-2 font-mono text-xs text-slate-500">
+                          bulk-{s.slug}
+                        </td>
+                        <td className="py-2 text-xs text-slate-500">{s.vendor}</td>
+                        <td className="py-2">
+                          <StatusPill status={s.endpoint_status} />
+                        </td>
+                        <td className="py-2 text-right tabular-nums">
+                          {s.inbound_count_30d}
+                        </td>
+                        <td
+                          className={`py-2 text-right tabular-nums ${
+                            highReject ? "font-semibold text-red-700" : ""
+                          }`}
+                          title={rejectDetail || undefined}
+                        >
+                          {s.reject_count_30d_total}
+                          {denom > 0 ? ` (${Math.round(rejectRate * 100)}%)` : ""}
+                        </td>
+                        <td className="py-2 text-right tabular-nums">
+                          {formatEuro(s.monthly_cost_eur)}
+                        </td>
+                        <td className="py-2 text-xs text-slate-500">
+                          {formatDate(s.last_inbound_at)}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
