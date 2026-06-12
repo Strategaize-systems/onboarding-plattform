@@ -1,5 +1,14 @@
 # Known Issues
 
+### ISSUE-100 — Stale Code-Default Bedrock-Modell-IDs in 4 Adaptern (V8.1-Augmentation potenziell latent broken)
+- Status: open
+- Severity: Medium
+- Area: LLM-Adapter Code-Defaults (`src/lib/ai/bedrock-sonnet/email-pattern.ts:51`, `src/lib/ai/bedrock-haiku/index.ts:42`, `src/lib/bulk-email/ai-assisted-setup.ts:24`, `src/lib/llm/v8-1-augmentation/augment.ts:46`)
+- Summary: Code-Audit 2026-06-12 (Modell-Inventar): 4 Dateien defaulten auf rohe, im AWS-Konto/eu-central-1 NICHT invokebare Modell-IDs (`anthropic.claude-3-5-sonnet-20241022-v2:0`, `anthropic.claude-3-haiku-20240307-v1:0`) — dieselbe Klasse wie ISSUE-099. Der Kern-Pfad (3-Agenten-Condensation + ~11 Worker) nutzt korrekt `eu.anthropic.claude-sonnet-4-20250514-v1:0` via `LLM_MODEL`. Die 3 V9-/V9.1-Adapter (email-pattern, bedrock-haiku, ai-assisted-setup) sind zur Laufzeit via Coolify-ENV `BEDROCK_V9_SONNET_MODEL_ID`/`BEDROCK_V9_HAIKU_MODEL_ID` (DEC-210) auf Sonnet 4 gepatcht → laufen. ABER die **V8.1-Handbuch-Augmentation** (`augment.ts`, ENV `BEDROCK_V8_1_MODEL_ID`) ist wahrscheinlich NICHT per ENV gepatcht → **latent broken**, falls die ENV in Coolify nicht gesetzt ist.
+- Impact: V8.1-Augmentation (LLM-Empfehlungs-Anreicherung im Mandanten-Report/Handbuch-Pfad) wirft beim naechsten Aufruf ggf. „invalid model identifier", non-fatal abgefangen → Augmentation still leer. V9-Bulk + V9.1-Setup laufen via ENV-Patch.
+- Workaround: Coolify-ENV `BEDROCK_V8_1_MODEL_ID=eu.anthropic.claude-sonnet-4-20250514-v1:0` setzen (analog DEC-210). Verify ob gesetzt: `docker exec <app> printenv BEDROCK_V8_1_MODEL_ID`.
+- Next Action: In V9.5 (Bulk-Deep-Extraction) die 4 Code-Defaults auf `eu.anthropic.claude-sonnet-4-20250514-v1:0` umstellen + Cost-Pricing-Konstanten (Sonnet 3.5 $3/$15) an Sonnet 4 anpassen (DEC-210-Follow-up, erweitert um V8.1). Vorab: BEDROCK_V8_1_MODEL_ID-ENV-Status pruefen.
+
 ### ISSUE-099 — V9 Bedrock-Modell-IDs ohne eu-Inference-Profile-Praefix (invalid model identifier)
 - Status: open
 - Severity: High
