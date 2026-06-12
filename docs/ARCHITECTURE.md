@@ -9170,3 +9170,122 @@ Eine V9.1-Implementation ist regelkonform wenn:
 2. AWS Secrets Manager `INBOUND_WEBHOOK_HMAC_SECRET` + OP-Coolify-ENV synchron
 3. SES-Sandbox-Production-Access-Request gestellt (~24h)
 4. Worktree `v9-1-forward-bucket-email` mit echtem `npm install` per IMP-1112 BLOCKING
+
+## V9.5 Architecture Addendum — Bulk-Import Deep-Extraction (Cross-Thread-Synthese + Critic-Gate) (RPT-454, 2026-06-12)
+
+Quelle: /discovery RPT-452 + /requirements RPT-453 (PRD §"V9.5"). Entscheidet Q-V9.5-A..E (→ DEC-214..218), skizziert MIG-111, entwirft die Synthese-/Critic-Prompts **frisch** (Prinzip-Reuse aus `condensation/*`, KEIN Code-1:1). Alle Befunde code-grounded (Files unten zitiert).
+
+### 1. Architektur-Summary
+
+V9.5 fuegt **eine additive Stage** in den bestehenden Bulk-Pfad ein, zwischen `pattern_extracted` und `curating`. Der flache Per-Thread-Extraktor (`handle-pattern-extraction-job.ts`) bleibt im Kern unveraendert; er produziert weiter rohe `email_pattern`-Rows. Die neue Stage liest **alle** rohen Patterns eines Runs, partitioniert sie deterministisch nach `suggested_section`, ruft pro Section **einen** Sonnet-Synthese-Call (Dedup/Merge/Evidenz-Aggregation/Frequenz-Gewichtung), danach **einen** Sonnet-Critic-Call ueber die konsolidierte Menge (Verwerfen von trivial/unbelegt/halluziniert), und persistiert die ueberlebenden Units in eine **neue Tabelle `email_synthesized_unit`** (+ Provenance-Join). Die GF-Curation kuratiert dann diese konsolidierten Units statt der n flachen Fragmente. Kosten bleiben bounded (fixe 2 LLM-Phasen, gleicher Hard-Cost-Cap).
+
+Kern-Prinzip: **bounded, nicht konvergent.** Anders als `iteration-loop.ts` (2–8 Iterationen bis `ACCEPTED`) ist V9.5 eine fixe 1+1-Pass-Pipeline ohne Konvergenz-Loop — das vermeidet Runaway-Kosten und passt zur SLC-167-Cost-Cap-Philosophie.
+
+### 2. Hauptkomponenten
+
+| Komponente | Verantwortung | Status |
+|---|---|---|
+| `email_synthesized_unit` (neue Tabelle) | Konsolidierte Kandidaten-Units; spiegelt die curierbaren Felder von `email_pattern` + Aggregat-Felder (`evidence_count`, `source_pattern_ids`, `synthesis`-Provenance) | NEU (MIG-111) |
+| `email_synthesized_unit_source` (Join) | Provenance: `(unit_id, pattern_id, thread_id)` — welche rohen Patterns/Threads belegen die Unit | NEU (MIG-111) |
+| `email_bulk_synthesis` Worker (`handle-synthesis-job.ts`) | Claim-Loop-Job: Partition → Synthese-Call(s) → Critic-Call → Filter → Persist → Status-Flip; Live-Cap-Check | NEU |
+| `bedrock-sonnet/email-synthesis.ts` + `-prompt.ts` | Frische Synthese-Pure-Function (analog `email-pattern.ts`-Struktur, eigener Prompt + zod-Schema) | NEU |
+| `bedrock-sonnet/email-critic.ts` + `-prompt.ts` | Frische Critic-Pure-Function (Verdict KEEP/REJECT pro Unit) | NEU |
+| Cost-Cap-Erweiterung (`cost-cap.ts`) | `getRunTotalCostEur(runId)` (liest `total_cost_eur`) + Live-Total-Cap-Check fuer die Synthese-Stage | ERWEITERT |
+| Curation-UI + `importAcceptedPatterns` (`curation/actions.ts`) | Liest/promotet `email_synthesized_unit` statt `email_pattern`; knowledge_unit-INSERT-Contract unveraendert | ANGEPASST (DEC-214-Folge) |
+| Per-Thread-Extraktor (`handle-pattern-extraction-job.ts`) | Kern unveraendert; **+1 Enqueue-Statement** am Success-Tail (enqueued `email_bulk_synthesis`) | MINIMAL-TOUCH |
+| 4 Modell-Default-Files (FEAT-082) | eu-Sonnet-4 / aktuelle eu-Haiku Defaults; ENV-Override-Mechanik unveraendert | GEAENDERT |
+
+### 3. Daten-Flow (Status-Maschine)
+
+```
+pattern_extracting --(Extraktor, KERN UNVERAENDERT)--> pattern_extracted
+        |
+        |  Extraktor enqueued am Success-Tail einen email_bulk_synthesis ai_job  (1 Statement)
+        v
+  [Worker email_bulk_synthesis]
+        status: pattern_extracted --> synthesizing
+        1. SELECT email_pattern WHERE bulk_run_id=X  (id, title, description, evidence_snippets, themes, confidence, suggested_section, thread_id)
+        2. Partition nach suggested_section (NULL/'andere' -> eigene Gruppe)
+        3. pro Section: 1 Sonnet-Synthese-Call -> Draft-Units (source_pattern_ids, evidence_count, merged evidence, aggregated_confidence)
+        4. 1 Sonnet-Critic-Call ueber alle Draft-Units -> Verdict KEEP/REJECT + reason je Unit
+        5. Filter: drop wenn evidence_count < 2 ODER verdict=REJECT
+        6. INSERT email_synthesized_unit (+ email_synthesized_unit_source) — pro Unit atomar
+        7. nach jedem LLM-Call: synthesis_cost_eur += cost (UPDATE) + Live-Cap-Check (total_cost_eur vs runCap) -> bei Hit status=failed
+        status: synthesizing --> synthesized
+        v
+  curating  (Curation-UI listet email_synthesized_unit; Guard akzeptiert jetzt 'synthesized'/'curating')
+        v
+  importing --> completed   (importAcceptedPatterns: accepted/edited synthesized_unit -> knowledge_unit; Snapshot-Trigger unveraendert)
+```
+
+`email_bulk_run.status` CHECK wird um **`synthesizing`, `synthesized`** erweitert (MIG-111).
+
+### 4. Decisions (Q-V9.5-A..E)
+
+- **DEC-214 (Q-A) — Repraesentation: NEUE Tabelle `email_synthesized_unit`** (Option a). Entscheidend code-grounded, nicht nur Sauberkeit:
+  - `email_pattern.thread_id` ist **`NOT NULL` Single-FK** (MIG-106 Z.230). Eine konsolidierte Unit spannt n Threads → kann nicht in `email_pattern` leben ohne `thread_id` nullable zu machen.
+  - **Pseudonyme P1/P2 sind thread-lokal** (`email_thread.participant_pseudonyms`, MIG-106 Z.199). Der Promotion-Mapper macht `pseudonymMap.get(pattern.thread_id)` **pro einzelnem Thread** (`curation/actions.ts:718,806`). Cross-Thread-Merge mischt disjunkte Pseudonym-Namensraeume (P1 in Thread A ≠ P1 in Thread B) → die konsolidierte Unit MUSS thread-agnostisch beschrieben werden + Evidenz pro-Snippet quellenattribuiert. Das ist eine genuin andere Entitaet, keine `email_pattern`-Variante. → In-Place (Option b) ist nicht nur invasiv, sondern semantisch gebrochen.
+- **DEC-215 (Q-B) — Granularitaet: deterministische Partition nach `suggested_section`, ein Synthese-Call pro Section-Gruppe.** `suggested_section` (V4.1-Pfad) ist die Theme-Achse, die bereits auf jedem Pattern liegt → deterministisch, bounded Payload pro Call, kohaerente Cross-Thread-Reichweite innerhalb eines Themas. Kein LLM-getriebenes Clustering (Nicht-Determinismus), kein Single-Giant-Call (Context-Blowup bei grossen Runs). `NULL`/`'andere'` → eigene Gruppe.
+- **DEC-216 (Q-C) — Bounded-Passes: 1 Synthese + 1 Critic, EIN Worker, zwei sequentielle LLM-Phasen.** Accept-Kriterium: Unit verworfen wenn `evidence_count < 2` ODER Critic-Verdict `REJECT`. Keine Konvergenz, harte Obergrenze (Synthese 1 Call/Section, Critic 1 Call/Run). Minimale Status-Maschine (2 neue Werte), Cost-Cap an einer Stelle.
+- **DEC-217 (Q-D) — Cost: neue Spalte `synthesis_cost_eur numeric(8,4)`; `total_cost_eur` GENERATED erweitert auf `pre_filter + pattern_extraction + synthesis`.** Der Synthese-Worker inkrementiert `synthesis_cost_eur` nach jedem LLM-Call und prueft Live-Cap gegen `total_cost_eur` (volle Run-Kosten) vs `V9_BULK_EMAIL_RUN_CAP_EUR`. Der Extraktor bleibt auf `pattern_extraction_cost_eur` (unveraendert).
+- **DEC-218 (Q-E) — Modell-Cleanup: alle 4 Files** auf eu-inference-profile-Default, ENV-Override unveraendert. v8-1-augmentation priorisiert (latent-broken).
+
+### 5. Migrations-Skizze (MIG-111 → `sql/migrations/119_v95_synthesis_stage.sql`)
+
+1. `ALTER TABLE email_bulk_run` Status-CHECK um `'synthesizing'`, `'synthesized'` erweitern (Drop+Add, idempotent).
+2. `ADD COLUMN synthesis_cost_eur numeric(8,4) NOT NULL DEFAULT 0;` + **DROP+RECREATE** der GENERATED-Spalte `total_cost_eur` (eine generierte Spalte kann ihren Ausdruck nicht per ALTER aendern) auf `(pre_filter_cost_eur + pattern_extraction_cost_eur + synthesis_cost_eur) STORED`.
+3. `CREATE TABLE email_synthesized_unit` — `id, tenant_id NOT NULL FK tenants, bulk_run_id NOT NULL FK email_bulk_run ON DELETE CASCADE, title, description, evidence_snippets jsonb, themes text[], aggregated_confidence numeric(3,2), evidence_count int NOT NULL, suggested_section text, curation_status default 'pending_curation' CHECK(pending_curation|accepted|rejected|edited), curated_section, curator_user_id FK auth.users, curated_at, imported_to_handbook_at, imported_knowledge_unit_id FK knowledge_unit ON DELETE SET NULL, created_at`. (Spiegelt die curierbaren `email_pattern`-Felder → Curation-UI-Anbindung ist ein Near-Clone, kein Rewrite.)
+4. `CREATE TABLE email_synthesized_unit_source` — `(id, synthesized_unit_id NOT NULL FK email_synthesized_unit ON DELETE CASCADE, pattern_id NOT NULL FK email_pattern ON DELETE CASCADE, thread_id uuid, tenant_id NOT NULL)` + `UNIQUE(synthesized_unit_id, pattern_id)`.
+5. RLS auf beide neue Tabellen analog MIG-106-Matrix (`strategaize_admin` SELECT cross-tenant; `tenant_admin` SELECT/INSERT/UPDATE own-tenant via `auth.user_role()` + `auth.user_tenant_id()`); GRANTs authenticated + service_role; Indizes auf `(bulk_run_id)`, `(bulk_run_id, curation_status)`, `(tenant_id)`.
+- Apply-Pattern: `sql-migration-hetzner.md` (base64 → `psql -U postgres`). LIVE-Apply ist /backend-Sache, nicht /architecture.
+
+### 6. Synthese-Prompt-Entwurf (frisch — System, gekuerzt)
+
+> Du bist ein Geschaeftsanalyst. Du erhaeltst **bereits extrahierte** Email-Pattern-Fragmente eines Unternehmens (alle aus demselben Themenbereich) und verdichtest sie zu **konsolidierten Handbuch-Bausteinen**. Mehrere Fragmente, die dieselbe wiederkehrende Aussage/Entscheidung/Antwort belegen, werden zu **einer** Unit gemerged.
+> **Vorgaben:** (1) Schreibe jede konsolidierte `description` **thread-agnostisch** und generisch ("der Kunde", "wir") — die Eingabe-Pseudonyme P1/P2 sind thread-lokal und ueber Fragmente hinweg NICHT vergleichbar; uebernimm KEINE P1/P2-Token in die Ausgabe. (2) Strategaize-Wir-Voice, sachlich, verkaufsfrei, keine Pricing-Hinweise. (3) Aggregiere Evidenz: jede Unit listet `source_pattern_ids` (die belegenden Eingabe-Pattern-IDs) + `evidence_count` (Anzahl distinkter belegender Patterns) + bis zu 5 repraesentative `evidence_snippets` (jeweils mit `source_pattern_id` getaggt). (4) `aggregated_confidence` = belegdichte-gewichtet, nicht naives Mittel. (5) Verwirf bei der Synthese noch nichts — Trivialitaet/Halluzination prueft der Critic.
+> **Strict-JSON:** `{ "units": [ { "title", "description", "themes":[…], "suggested_section", "source_pattern_ids":[…], "evidence_count":N, "evidence_snippets":[{ "text", "source_pattern_id" }], "aggregated_confidence":0.0-1.0 } ] }`. Beginne mit `{`, ende mit `}`.
+
+User-Prompt: Section-Name + JSON-Array der kompakten Patterns der Gruppe (`id, title, description, evidence_snippets, themes, confidence, thread_id`).
+
+### 7. Critic-Prompt-Entwurf (frisch — System, gekuerzt)
+
+> Du bist ein **kritischer Pruefer** konsolidierter Handbuch-Bausteine. Du erhaeltst die synthetisierten Units und gibst pro Unit ein Verdict. **`REJECT`** wenn: trivial / nicht durch die Evidenz belegt (Halluzination) / redundant zu einer anderen Unit / `evidence_count < 2`. Sonst **`KEEP`**. Keine Umformulierung, nur Urteil + knappe Begruendung.
+> **Strict-JSON:** `{ "verdicts": [ { "unit_ref": <index>, "verdict": "KEEP"|"REJECT", "reason": "…" } ] }`.
+
+Worker-Filter: `KEEP && evidence_count>=2` ueberlebt; Rest verworfen (geloggt fuer Reduktions-Statistik).
+
+### 8. Modell-Cleanup (FEAT-082) — konkrete Targets
+
+| File:Line | Aktueller Default | Ziel |
+|---|---|---|
+| `src/lib/ai/bedrock-sonnet/email-pattern.ts:51` | `anthropic.claude-3-5-sonnet-20241022-v2:0` | `eu.anthropic.claude-sonnet-4-20250514-v1:0` (= condensation-Core, `iteration-loop.ts:21`) |
+| `src/lib/bulk-email/ai-assisted-setup.ts:24` | `anthropic.claude-3-5-sonnet-20241022-v2:0` | `eu.anthropic.claude-sonnet-4-20250514-v1:0` |
+| `src/lib/llm/v8-1-augmentation/augment.ts:44-46` | `anthropic.claude-3-5-sonnet-20241022-v2:0` (latent-broken) | `eu.anthropic.claude-sonnet-4-20250514-v1:0` — **priorisiert** |
+| `src/lib/ai/bedrock-haiku/index.ts:42` | `anthropic.claude-3-haiku-20240307-v1:0` | aktuelle eu-Haiku Inference-Profile (`eu.anthropic.claude-haiku-*`) — **exakte ID + Pricing-Konstanten /backend-Sache** |
+
+Pricing-Hinweis: Sonnet-4 = Sonnet-3.5 Bedrock-Pricing ($3/$15) → die `COST_PER_*_TOKEN`-Konstanten der Sonnet-Files bleiben. **Haiku-Tier-Wechsel aendert das Pricing** → bedrock-haiku Cost-Konstanten muessen im /backend mit-aktualisiert werden (R4). Exakte Bedrock-eu-Modell-IDs verifiziert das /backend gegen `claude-api`-Skill + Bedrock-eu-central-1-Verfuegbarkeit; ENV-Override (`BEDROCK_V9_*_MODEL_ID`) bleibt das Sicherheitsnetz.
+
+### 9. Security / Privacy
+
+- Alle Synthese-/Critic-Calls ueber Bedrock **eu-central-1** (data-residency.md), `ai_cost_ledger`-Audit mit Region+Modell-ID+Cost+`job_id`, roles `email_bulk_synthesis` / `email_bulk_critic`.
+- Der Synthese-Worker ist ein **echter Claim-Loop-Job** → er hat eine regulaere `ai_jobs`-Row ueber das normale Enqueue; das **synthetic-ai_jobs-INSERT-Pattern (backend.md) entfaellt** (das gilt nur fuer synchrone Nicht-Worker-Calls). `ai_cost_ledger.job_id` = die Synthese-Job-ID.
+- Pseudonyme P1/P2 duerfen NICHT in `email_synthesized_unit.description` landen (thread-lokal, Re-Identifikations-/Verwechslungs-Risiko) — im Synthese-Prompt verboten, in /qa zu pruefen.
+- Tenant-RLS auf beide neue Tabellen; Cross-Tenant-Read-Pen-Test in /qa (SC-V9.5-8).
+
+### 10. Constraints & Tradeoffs
+
+- **Cost-Cap-Leak (R2, BLOCKING):** Synthese-Calls MUESSEN unter den Run-Hard-Cap fallen → Live-Cap auf `total_cost_eur` (DEC-217). Ohne das umgeht ein grosser Run den Cap.
+- **Over-Merge (R3):** zu aggressives Dedup verliert Nuance. Mitigation: `evidence_count>=2`-Schwelle + Critic-`REJECT` fuer Redundanz, NICHT fuer Merge-Aggressivitaet; Merge-Schwelle bewusst konservativ (lieber 2 Units als 1 ueber-gemergte). /qa-Vorher-Nachher-Fixture.
+- **SC-V9.5-7 Nuance:** der Extraktor-Algorithmus + Cost-Loop bleibt unveraendert; **eine** Enqueue-Zeile am Success-Tail ist der einzige Touch. Im Completion-Report/QA als bewusster Minimal-Touch zu fuehren, nicht als „0 Touch".
+- **Curation-Contract-Shift (R5, DEC-214-Folge):** Curation-UI-Query + `importAcceptedPatterns`-Status-Guard + Source-Tabelle wechseln auf `email_synthesized_unit`. Der knowledge_unit-INSERT + Snapshot-Trigger bleiben strukturell; nur die Multi-Thread-Pseudonym-Assembly entfaellt (Pseudonyme werden in der Synthese bereits entfernt → der Promotion-Mapper braucht den Single-`thread_id`-Pseudonym-Lookup nicht mehr).
+
+### 11. Offene technische Punkte (→ /slice-planning)
+
+- **OQ-1 (Enqueue-Punkt):** Extraktor-Success-Tail vs continuous-pipeline-trigger (V9.1) vs .mbox-start-action. Empfehlung: Extraktor-Tail (uniform fuer beide Run-Typen, da beide ueber den Extraktor zu `pattern_extracted` laufen). /slice-planning fixiert.
+- **OQ-2 (Slice-Schnitt):** SLC-V9.5-A Modell-Cleanup → SLC-V9.5-B Synthese-Stage (Migration+Worker+Curation-Anbindung) → SLC-V9.5-C Critic-Phase. Pruefen, ob B+C als 1 Slice sinnvoll (ein Worker, Critic ist nur eine zweite LLM-Phase + Filter vor Persist).
+- **OQ-3 (Curation-UI-Tiefe):** zeigt die UI nur die konsolidierten Units oder auch Drill-Down auf die rohen `email_pattern` via `email_synthesized_unit_source`? V9.5-Default: konsolidierte Units curieren; Drill-Down optional/read-only.
+- **OQ-4 (Re-Run-Idempotenz):** Synthese-Worker-Idempotenz bei Re-Run (skip wenn `email_synthesized_unit` fuer `bulk_run_id` existiert, analog Extraktor-thread_id-Skip).
+
+### 12. Empfohlener naechster Schritt
+
+`/slice-planning V9.5` — SLC-V9.5-A/B/C mit Micro-Task-Decomposition, AC-Matrizen, Cumulative-Single-Branch-Worktree `v9-5-bulk-deep-extraction`. Pre-Cond (Koordination, kein Code-Block): V9.1 `/post-launch` T+24h STABLE.
