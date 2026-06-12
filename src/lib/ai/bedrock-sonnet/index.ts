@@ -28,12 +28,27 @@ export {
 
 export { buildSynthesisUserPrompt } from "./email-synthesis-prompt";
 
+// V9.5 SLC-V9.5-C MT-1 — Bounded-Critic (FEAT-081)
+export {
+  critiqueUnits,
+  BEDROCK_CRITIC_REGION,
+  V95_CRITIC_PROMPT_VERSION,
+  V95_CRITIC_SYSTEM_PROMPT,
+  __setCriticCallerForTests,
+  __resetCriticCallerForTests,
+} from "./email-critic";
+
+export { buildCriticUserPrompt } from "./email-critic-prompt";
+export type { CriticInputUnit } from "./email-critic-prompt";
+
 export {
   PatternSchema,
   PatternExtractionResultSchema,
   SynthesizedUnitSchema,
   SynthesizedEvidenceSnippetSchema,
   SynthesisResultSchema,
+  CriticVerdictSchema,
+  CriticVerdictsSchema,
   SonnetSchemaError,
 } from "./types";
 
@@ -44,6 +59,8 @@ export type {
   SynthesizedEvidenceSnippet,
   SynthesisResult,
   SynthesisInputPattern,
+  CriticVerdict,
+  CriticVerdicts,
   SonnetCallAuditEntry,
   SonnetCallResult,
   SonnetInvocationOptions,

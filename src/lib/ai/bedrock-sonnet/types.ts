@@ -159,6 +159,26 @@ export type SynthesizedEvidenceSnippet = z.infer<typeof SynthesizedEvidenceSnipp
 export type SynthesizedUnit = z.infer<typeof SynthesizedUnitSchema>;
 export type SynthesisResult = z.infer<typeof SynthesisResultSchema>;
 
+// ─── Bounded-Critic Schema (V9.5 SLC-V9.5-C / FEAT-081, DEC-216) ──────────────
+//
+// Strict-JSON-Output des Critic-Calls (genau 1 Call pro Run). `unit_ref` ist
+// der 0-basierte Index der Draft-Unit in der Eingabe-Liste des Calls — der
+// Worker mappt die Verdicts darueber zurueck auf die Draft-Units und filtert
+// `KEEP && evidence_count >= 2` (selectSurvivingUnits).
+
+export const CriticVerdictSchema = z.object({
+  unit_ref: z.number().int().min(0),
+  verdict: z.enum(["KEEP", "REJECT"]),
+  reason: z.string().min(1).max(500),
+});
+
+export const CriticVerdictsSchema = z.object({
+  verdicts: z.array(CriticVerdictSchema).max(100),
+});
+
+export type CriticVerdict = z.infer<typeof CriticVerdictSchema>;
+export type CriticVerdicts = z.infer<typeof CriticVerdictsSchema>;
+
 /**
  * Kompaktes Input-Pattern fuer den Synthese-Call (Teilmenge der email_pattern-
  * Row). Der Worker projiziert die geladenen Patterns auf diese Form, bevor er
