@@ -1,5 +1,10 @@
 # Decisions
 
+## DEC-211 — V9.1 Forward-Setup-UI Weiterleitungs-Adresse via ENV-Modus-Schalter (Single-Mailbox vs Catchall)
+- Status: accepted
+- Reason: V9.1-Deploy-Live-Use (2026-06-12, ISSUE-098/RPT-450) deckte auf: die Setup-UI baute das Weiterleitungs-Ziel hart als `bulk-<slug>@bulk.strategaizetransition.com` (Catchall-Form). Diese Subdomain hat keinen MX-Record → alle Weiterleitungen und die Test-Mail bouncen. As-built ist Single-Mailbox: alle Forwards laufen ueber EIN reales IONOS-Postfach (das der IMAP-Sync via IMAP_USER abholt; resolveDefaultEndpoint ordnet ohne To-Matching zu). Optionen: (a) Catchall-MX→IONOS einrichten (Infra, nicht gewaehlt), (b) UI zeigt im Single-Mailbox-Modus das reale Postfach via ENV — gewaehlt, weil reversibel und ohne DNS-Aenderung.
+- Consequence: Neue ENV `INBOUND_MAILBOX_ADDRESS` als expliziter Modus-Schalter. Gesetzt → Single-Mailbox: Weiterleitungs-Adresse + Test-Send-Ziel = das reale Postfach (slug-unabhaengig). Nicht gesetzt → Catchall-Fallback (Zukunft, wenn `bulk.strategaizetransition.com` einen MX hat). Zentralisiert in `src/lib/inbound-email/forward-address.ts` (`resolveForwardAddress`), genutzt von page.tsx + actions.ts (Create + Test-Send) + ForwardSetupWizard-Hint. Founder-Action vor Live-Verify: `INBOUND_MAILBOX_ADDRESS=bulk@strategaizetransition.com` in Coolify setzen + Redeploy. Kein expliziter Fallback auf IMAP_USER (vermeidet implizites Modus-Flippen via Credential-Var).
+
 ## DEC-210 — V9 Bedrock-LLM nutzt eu-Inference-Profile Claude Sonnet 4 (einziges im Konto invokebares Modell)
 - Status: accepted
 - Reason: V9.1-Deploy-Live-Use (2026-06-12, ISSUE-099/RPT-450) deckte auf: die V9-Adapter-Defaults (`anthropic.claude-3-5-sonnet-20241022-v2:0`, `anthropic.claude-3-haiku-20240307-v1:0`) sind im AWS-Konto/eu-central-1 nicht invokebar (raw-Format „invalid"; 3.5 Sonnet v2 = invalid; Haiku 3 = Legacy/Access-denied). Live-`ListInferenceProfiles`+Test-`Converse` ergab: nur `eu.anthropic.claude-sonnet-4-20250514-v1:0` ist nutzbar (auch das Haupt-LLM `src/lib/llm.ts` nutzt es).

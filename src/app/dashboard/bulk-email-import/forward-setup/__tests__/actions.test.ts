@@ -5,7 +5,7 @@
 // supabase/server + supabase/admin + email + poll-inbound + logger und verifizieren
 // Validierung, Status-Lifecycle, Audit-Calls und Error-Mapping (AC-V9.1-D-3/-5/-6).
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // ─── Mock-State ─────────────────────────────────────────────────────────────
 interface MockUser {
@@ -89,6 +89,12 @@ beforeEach(() => {
   mockUser = { id: "user-1" };
   mockProfile = { tenant_id: "tenant-1", role: "tenant_admin" };
   adminResolve = () => ({ data: null, error: null });
+  // Default-Modus der Tests = Catchall (kein reales Postfach gesetzt).
+  delete process.env.INBOUND_MAILBOX_ADDRESS;
+});
+
+afterEach(() => {
+  delete process.env.INBOUND_MAILBOX_ADDRESS;
 });
 
 describe("authorization gate", () => {
@@ -128,6 +134,18 @@ describe("createInboundEndpoint", () => {
       "email_inbound_endpoint_created",
       expect.objectContaining({ metadata: expect.objectContaining({ slug: "acme" }) }),
     );
+  });
+
+  it("returns the real mailbox address in single-mailbox mode (ISSUE-098)", async () => {
+    process.env.INBOUND_MAILBOX_ADDRESS = "bulk@strategaizetransition.com";
+    adminResolve = (ctx) =>
+      ctx.op === "insert"
+        ? { data: { id: "ep-1" }, error: null }
+        : { data: null, error: null };
+
+    const r = await createInboundEndpoint({ localPart: "bulk-acme" });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.address).toBe("bulk@strategaizetransition.com");
   });
 
   it("maps a unique-violation to a friendly error", async () => {
@@ -181,6 +199,17 @@ describe("sendTestEmail", () => {
     expect(r).toEqual({ ok: true, received: true });
     expect(sendMailMock).toHaveBeenCalledWith(
       expect.objectContaining({ to: "bulk-acme@bulk.strategaizetransition.com" }),
+    );
+  });
+
+  it("sends to the real mailbox in single-mailbox mode, not the bouncing catchall (ISSUE-098)", async () => {
+    process.env.INBOUND_MAILBOX_ADDRESS = "bulk@strategaizetransition.com";
+    adminResolve = (ctx) => (ctx.op === "select" ? OWNED : { data: null });
+    pollMock.mockResolvedValue({ id: "msg-1" });
+    const r = await sendTestEmail("ep-1");
+    expect(r).toEqual({ ok: true, received: true });
+    expect(sendMailMock).toHaveBeenCalledWith(
+      expect.objectContaining({ to: "bulk@strategaizetransition.com" }),
     );
   });
 

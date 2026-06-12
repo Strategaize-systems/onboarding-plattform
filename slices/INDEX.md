@@ -910,6 +910,7 @@ V9.1 = 4 Slices SLC-V9.1-A..D (Naming-Konvention version-anchored statt fortlauf
 | SLC-V9.1-B | [Continuous-Cost-Cap-Service + Pipeline-Trigger-Cron](SLC-V9.1-B-continuous-cost-cap.md) | FEAT-077 / BL-156 | deployed | High | 2026-06-09 |
 | SLC-V9.1-C | [Storage-Retention-Cron (DSGVO-Lifecycle)](SLC-V9.1-C-storage-retention-cron.md) | FEAT-078 / BL-157 | deployed | High | 2026-06-09 |
 | SLC-V9.1-D | [Setup-UI Conversational-First + Admin-Audit + Master-Merge](SLC-V9.1-D-setup-ui-admin-audit.md) | FEAT-079 / BL-158 | deployed | High | 2026-06-09 |
+| SLC-V9.1-E | [Forward-Address Single-Mailbox-Display-Fix (ISSUE-098)](SLC-V9.1-E-forward-address-single-mailbox.md) | FEAT-079 / BL-504 | in_progress | Medium | 2026-06-12 |
 
 ### V9.1 Execution Order (strikt sequentiell)
 - **SLC-V9.1-A zuerst** (Foundation-Layer: 3 neue Tabellen + 2 ALTER + Webhook-Endpoint + Validation-Layer + Synthetic-Corpus-Skeleton-Validation — Pre-Cond fuer alle nachfolgenden)

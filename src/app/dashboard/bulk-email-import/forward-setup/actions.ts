@@ -13,10 +13,11 @@
 // explizitem tenant_id-Scope (Pattern aus src/app/dashboard/diagnose/actions.ts).
 // Audit durchgaengig via error_log (captureInfo) — OP hat kein audit_log (DEC-208/209).
 //
-// Inbound-Modell (as-built, IMP-1189-validiert): Single-IONOS-Mailbox, Endpoint-Resolve
-// ueber To-Adress-Slug (bulk-<slug>@<INBOUND_CATCHALL_DOMAIN>), slug ist OHNE bulk--Prefix
-// gespeichert, kein Token-Header (DEC-R1-3). Test-Send mailt die Catchall-Adresse von
-// SMTP_FROM; Validierung = Sender-Allowlist im IMAP-Sync.
+// Inbound-Modell (as-built, IMP-1189-validiert): Single-IONOS-Mailbox, slug ist OHNE
+// bulk--Prefix gespeichert, kein Token-Header (DEC-R1-3). Die Weiterleitungs-/Test-
+// Adresse liefert resolveForwardAddress (ISSUE-098): im Single-Mailbox-Modus
+// (INBOUND_MAILBOX_ADDRESS) das reale Postfach, sonst die Catchall-Adresse
+// bulk-<slug>@<INBOUND_CATCHALL_DOMAIN>. Validierung = Sender-Allowlist im IMAP-Sync.
 
 import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
@@ -26,6 +27,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { captureInfo, captureException } from "@/lib/logger";
 import { sendMail } from "@/lib/email";
 import { pollForInboundEmail } from "@/lib/bulk-email/poll-inbound";
+import { resolveForwardAddress } from "@/lib/inbound-email/forward-address";
 import {
   summarizeSetupIntent,
   SetupSuggestionError,
@@ -39,10 +41,6 @@ const SETUP_PATH = "/dashboard/bulk-email-import/forward-setup";
 const LOCAL_PART_RE = /^bulk-[a-z0-9-]{3,40}$/;
 const ALLOWLIST_PATTERN_TYPES = ["domain", "email_exact"] as const;
 type AllowlistPatternType = (typeof ALLOWLIST_PATTERN_TYPES)[number];
-
-function inboundDomain(): string {
-  return process.env.INBOUND_CATCHALL_DOMAIN ?? "bulk.strategaizetransition.com";
-}
 
 function senderAddress(): string {
   return process.env.SMTP_FROM ?? "noreply@strategaize.de";
@@ -165,7 +163,7 @@ export async function createInboundEndpoint(input: {
     ok: true,
     endpointId,
     setupToken,
-    address: `${localPart}@${inboundDomain()}`,
+    address: resolveForwardAddress(slug),
   };
 }
 
@@ -279,7 +277,9 @@ export async function sendTestEmail(
   const owned = await loadOwnedEndpoint(db, endpointId, auth.admin.tenantId);
   if (!owned) return { ok: false, error: "Endpoint nicht gefunden." };
 
-  const address = `bulk-${owned.slug}@${inboundDomain()}`;
+  // Single-Mailbox-Modus (ISSUE-098): Test-Mail an das reale Postfach, sonst bounct
+  // sie an der MX-losen Catchall-Subdomain und die Einrichtung scheint kaputt.
+  const address = resolveForwardAddress(owned.slug);
   // sinceIso VOR dem Versand, damit das Polling nur die Test-Mail erfasst.
   const sinceIso = new Date().toISOString();
 

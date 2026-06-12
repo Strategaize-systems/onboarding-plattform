@@ -59,7 +59,12 @@ export interface ExistingEndpoint {
 }
 
 interface ForwardSetupWizardProps {
-  inboundDomain: string;
+  /**
+   * Reales IONOS-Postfach im Single-Mailbox-Modus (ISSUE-098). Wenn gesetzt, ist
+   * die Weiterleitungs-Adresse fuer alle Endpoints dieses feste Postfach; der Name
+   * dient nur als Bezeichnung. null = Catchall-Modus (bulk-<slug>@domain).
+   */
+  inboundMailboxAddress: string | null;
   endpoint: ExistingEndpoint | null;
 }
 
@@ -67,6 +72,11 @@ interface ForwardSetupWizardProps {
 function inferPatternType(pattern: string): "domain" | "email_exact" {
   return pattern.includes("@") ? "email_exact" : "domain";
 }
+
+// Nur fuer den Catchall-Modus-Hint (Zukunft) — Default-Domain konsistent mit dem
+// Server-Resolver in @/lib/inbound-email/forward-address. Im aktiven Single-Mailbox-
+// Modus (ISSUE-098) wird dieser Hint nicht gerendert.
+const CATCHALL_DOMAIN_HINT = "bulk.strategaizetransition.com";
 
 const STATUS_BADGE: Record<
   ExistingEndpoint["status"],
@@ -78,7 +88,10 @@ const STATUS_BADGE: Record<
   revoked: { label: "Deaktiviert", className: "bg-red-100 text-red-700" },
 };
 
-export function ForwardSetupWizard({ inboundDomain, endpoint }: ForwardSetupWizardProps) {
+export function ForwardSetupWizard({
+  inboundMailboxAddress,
+  endpoint,
+}: ForwardSetupWizardProps) {
   const router = useRouter();
 
   // Endpoint-State: aus Prop initialisiert, nach Anlage lokal gesetzt.
@@ -88,7 +101,7 @@ export function ForwardSetupWizard({ inboundDomain, endpoint }: ForwardSetupWiza
   if (!current) {
     return (
       <CreatePhase
-        inboundDomain={inboundDomain}
+        inboundMailboxAddress={inboundMailboxAddress}
         onCreated={(ep, token) => {
           setCurrent(ep);
           setFreshToken(token);
@@ -121,10 +134,10 @@ export function ForwardSetupWizard({ inboundDomain, endpoint }: ForwardSetupWiza
 // ─── Phase A: Anlage ─────────────────────────────────────────────────────────
 
 function CreatePhase({
-  inboundDomain,
+  inboundMailboxAddress,
   onCreated,
 }: {
-  inboundDomain: string;
+  inboundMailboxAddress: string | null;
   onCreated: (endpoint: ExistingEndpoint, token: string) => void;
 }) {
   const [name, setName] = useState("");
@@ -210,7 +223,9 @@ function CreatePhase({
         <CardHeader>
           <CardTitle>Posteingang anlegen</CardTitle>
           <CardDescription>
-            Aus dem Namen entsteht deine Weiterleitungs-Adresse.
+            {inboundMailboxAddress
+              ? "Der Name dient als Bezeichnung; die Weiterleitungs-Adresse zeigen wir dir nach dem Anlegen."
+              : "Aus dem Namen entsteht deine Weiterleitungs-Adresse."}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -226,11 +241,21 @@ function CreatePhase({
                 disabled={isPending}
                 className="max-w-xs"
               />
-              <span className="text-sm text-slate-500">@{inboundDomain}</span>
+              {!inboundMailboxAddress && (
+                <span className="text-sm text-slate-500">@{CATCHALL_DOMAIN_HINT}</span>
+              )}
             </div>
             <p className="text-xs text-slate-400">
               Erlaubt: 3&ndash;40 Zeichen, Kleinbuchstaben, Ziffern, Bindestrich.
             </p>
+            {inboundMailboxAddress && (
+              <p className="text-xs text-slate-500">
+                Weiterleitungs-Adresse (fest):{" "}
+                <code className="rounded bg-slate-100 px-1 py-0.5 font-mono">
+                  {inboundMailboxAddress}
+                </code>
+              </p>
+            )}
           </div>
 
           <div className="space-y-1.5">

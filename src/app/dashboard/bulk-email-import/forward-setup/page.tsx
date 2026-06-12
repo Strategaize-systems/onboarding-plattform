@@ -14,6 +14,10 @@ import Link from "next/link";
 import { ArrowLeft, Inbox } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
+import {
+  resolveForwardAddress,
+  singleMailboxAddress,
+} from "@/lib/inbound-email/forward-address";
 
 import {
   ForwardSetupWizard,
@@ -25,10 +29,6 @@ export const metadata = {
   description:
     "Posteingang fuer automatische Email-Weiterleitung per Assistent einrichten.",
 };
-
-function inboundDomain(): string {
-  return process.env.INBOUND_CATCHALL_DOMAIN ?? "bulk.strategaizetransition.com";
-}
 
 const VALID_STATUS = ["pending_setup", "active", "paused", "revoked"] as const;
 type EndpointStatus = (typeof VALID_STATUS)[number];
@@ -76,7 +76,7 @@ export default async function ForwardSetupPage() {
       slug: endpointRow.slug as string,
       status: normalizeStatus(endpointRow.status),
       displayName: (endpointRow.display_name as string | null) ?? null,
-      address: `bulk-${endpointRow.slug}@${inboundDomain()}`,
+      address: resolveForwardAddress(endpointRow.slug as string),
       allowlist: (allowlistRows ?? []).map((r) => ({
         id: r.id as string,
         pattern: r.pattern as string,
@@ -113,7 +113,10 @@ export default async function ForwardSetupPage() {
         </div>
       </header>
 
-      <ForwardSetupWizard inboundDomain={inboundDomain()} endpoint={endpoint} />
+      <ForwardSetupWizard
+        inboundMailboxAddress={singleMailboxAddress()}
+        endpoint={endpoint}
+      />
     </main>
   );
 }

@@ -1549,6 +1549,16 @@
       "version": null,
       "description": "Pre-existing ESLint-Error im ESLint-Repo-Sweep waehrend V7.7 SLC-147 /qa entdeckt (RPT-346 F-1). Quelle: `src/app/admin/text-overrides/page.tsx:263:55` — unescaped `\"` in JSX-Text. Letzter Touch des Files war SLC-144 (V7.5, commit 8793448) — NICHT V7.7-Regression. Trivial-Fix (`&quot;` oder `&ldquo;/rdquo;` Paar). Aufwand <2min. Ideal als Mini-Polish-Item in der naechsten Polish-Iteration (V7.8 oder spaeter) oder als One-Off-Commit aufs main.",
       "createdAt": "2026-05-28"
+    },
+    {
+      "id": "BL-504",
+      "title": "ISSUE-098 Fix: Forward-Setup-UI zeigt reale Single-Mailbox-Adresse statt bouncender Catchall (SLC-V9.1-E)",
+      "type": "fix",
+      "priority": "medium",
+      "status": "in_progress",
+      "version": "V9.1",
+      "description": "Setup-UI baute das Weiterleitungs-Ziel hart als bulk-<slug>@bulk.strategaizetransition.com (Catchall ohne MX -> bounct). Fix via ENV-Modus-Schalter INBOUND_MAILBOX_ADDRESS (DEC-211) + zentralem resolveForwardAddress; im Single-Mailbox-Modus zeigt/testet die UI das reale IONOS-Postfach. Code + /qa Code-Side PASS (RPT-451); Deploy + Live-Verify Founder-gated (ENV setzen + Redeploy, gebuendelt mit /post-launch V9.1).",
+      "createdAt": "2026-06-12"
     }
   ]
 }
