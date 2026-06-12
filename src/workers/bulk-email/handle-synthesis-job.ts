@@ -1,10 +1,13 @@
 // V9.5 SLC-V9.5-B MT-4 — Worker Handler `email_bulk_synthesis` (FEAT-080, MIG-111)
+// V9.5 SLC-V9.5-C MT-2 — Bounded-Critic-Phase (FEAT-081, MIG-112): 1 Critic-Call
+//       zwischen Draft-Assembly und Persist; Filter KEEP && evidence>=2 (AC-C-2).
 //
 // Spec: slices/SLC-V9.5-B-synthesis-stage-backend.md (MT-4 Expected behavior)
+//       + slices/SLC-V9.5-C-bounded-critic-gate.md (MT-2)
 // DECs: DEC-214 (neue Tabelle email_synthesized_unit), DEC-215 (Partition nach
-//       suggested_section, 1 Synthese-Call/Section), DEC-216 (bounded,
-//       Persist-Filter evidence>=2 — Critic kommt in SLC-V9.5-C), DEC-217
-//       (synthesis_cost_eur + total_cost_eur Live-Cap, R-B-2 BLOCKING).
+//       suggested_section, 1 Synthese-Call/Section), DEC-216 (bounded:
+//       1 Synthese-Call/Section + 1 Critic-Call/Run, Filter KEEP && evidence>=2),
+//       DEC-217 (synthesis_cost_eur + total_cost_eur Live-Cap, R-B-2 BLOCKING).
 //
 // Echter Claim-Loop-Job (regulaere ai_jobs-Row via Enqueue-Tail des Extraktors,
 // MT-5). Das synthetic-ai_jobs-INSERT-Pattern (backend.md) ENTFAELLT — es gilt
@@ -39,10 +42,13 @@ import { createAdminClient } from "../../lib/supabase/admin";
 import { captureException, captureInfo, captureWarning } from "../../lib/logger";
 import {
   synthesizeSection,
+  critiqueUnits,
   SonnetSchemaError,
   type SynthesisInputPattern,
   type SynthesisResult,
   type SynthesizedUnit,
+  type CriticInputUnit,
+  type CriticVerdicts,
 } from "../../lib/ai/bedrock-sonnet";
 import {
   DEFAULT_RUN_CAP_EUR,
@@ -58,6 +64,8 @@ const UUID_REGEX =
 
 const LOG_SOURCE = "email_bulk_synthesis";
 const AI_COST_LEDGER_ROLE = "email_bulk_synthesis";
+/** SLC-V9.5-C: Critic-Phase schreibt mit eigener role (MIG-112), job_id = Synthese-Job-ID. */
+const AI_COST_LEDGER_CRITIC_ROLE = "email_bulk_critic";
 /** Section-Bucket fuer NULL/leere suggested_section (DEC-215). */
 const FALLBACK_SECTION = "andere";
 
@@ -115,10 +123,39 @@ const defaultSectionSynthesizer: SectionSynthesizer = async (section, patterns) 
   };
 };
 
+/**
+ * Test-Injection-Hook fuer den bounded Critic-Call (SLC-V9.5-C, DEC-216).
+ * Production setzt das nicht — Default delegiert an critiqueUnits (eu-central-1).
+ */
+export type UnitCritic = (units: CriticInputUnit[]) => Promise<{
+  data: CriticVerdicts;
+  tokensIn: number;
+  tokensOut: number;
+  costUsd: number;
+  latencyMs: number;
+  modelId: string;
+  region: string;
+}>;
+
+const defaultUnitCritic: UnitCritic = async (units) => {
+  const result = await critiqueUnits(units);
+  return {
+    data: result.data,
+    tokensIn: result.tokensIn,
+    tokensOut: result.tokensOut,
+    costUsd: result.costUsd,
+    latencyMs: result.latencyMs,
+    modelId: result.modelId,
+    region: result.region,
+  };
+};
+
 export interface HandleEmailBulkSynthesisDeps {
   adminClient: AdminClient;
   /** Pluggable for tests — defaults to synthesizeSection Sonnet-Call. */
   synthesizer?: SectionSynthesizer;
+  /** Pluggable for tests — defaults to critiqueUnits Sonnet-Call (SLC-V9.5-C). */
+  critic?: UnitCritic;
   /** Pluggable for tests — defaults to createCostCapStoreFromSupabase(adminClient). */
   costStore?: CostCapStore;
   /** Pluggable for tests — defaults to ENV V9_BULK_EMAIL_RUN_CAP_EUR or 20. */
@@ -164,17 +201,19 @@ function sectionKey(suggested: string | null): string {
 }
 
 /**
- * Filter-Hook (DEC-216). SLC-V9.5-C haengt hier die Critic-Phase ein, indem es
- * das optionale `criticVerdicts`-Argument fuellt (Verdict-Filter VOR dem
- * evidence-Filter). In SLC-V9.5-B bleibt es ungenutzt — nur der
- * evidence>=2-Schwellwert.
+ * Filter-Hook (DEC-216, finalisiert in SLC-V9.5-C / AC-C-2): eine Unit
+ * ueberlebt gdw. `verdict=KEEP` UND `evidence_count >= 2`. Der Verdict-Filter
+ * laeuft VOR dem evidence-Filter. Strikt: fehlt ein Verdict fuer einen Index
+ * (Modell hat die Unit ausgelassen), ist das NICHT KEEP → Unit faellt raus
+ * (im Worker als no_verdict geloggt). Ohne `criticVerdicts` (kein Critic-Lauf,
+ * z.B. 0 Drafts) greift nur der evidence>=2-Schwellwert.
  */
 export function selectSurvivingUnits(
   draftUnits: ReconciledUnit[],
   criticVerdicts?: Map<number, "KEEP" | "REJECT">,
 ): ReconciledUnit[] {
   return draftUnits.filter((r, idx) => {
-    if (criticVerdicts && criticVerdicts.get(idx) === "REJECT") return false;
+    if (criticVerdicts && criticVerdicts.get(idx) !== "KEEP") return false;
     return r.evidenceCount >= 2;
   });
 }
@@ -213,6 +252,7 @@ export async function executeEmailBulkSynthesis(
 ): Promise<void> {
   const { adminClient } = deps;
   const synthesizer = deps.synthesizer ?? defaultSectionSynthesizer;
+  const critic = deps.critic ?? defaultUnitCritic;
   const costStore = deps.costStore ?? createCostCapStoreFromSupabase(adminClient);
   const runCapEur = resolveRunCap(deps.runCapEur);
   const startMs = Date.now();
@@ -421,10 +461,140 @@ export async function executeEmailBulkSynthesis(
       return;
     }
 
-    // 9. Filter-Hook (DEC-216): evidence>=2-Schwelle (Critic kommt in SLC-V9.5-C).
-    const surviving = selectSurvivingUnits(draftReconciled);
+    // 9. Bounded Critic (SLC-V9.5-C, DEC-216): GENAU 1 Call ueber alle
+    //    Draft-Units des Runs (AC-C-4). Wirft der Critic (SonnetSchemaError /
+    //    Bedrock-Error), greift der Run-Level try/catch → status='failed',
+    //    KEIN Persist un-kritisierter Units (R-C-2). Bei 0 Drafts entfaellt
+    //    der Call (nichts zu kritisieren, 0 LLM-Calls).
+    let criticVerdictsMap: Map<number, "KEEP" | "REJECT"> | undefined;
+    if (draftReconciled.length > 0) {
+      const criticInput: CriticInputUnit[] = draftReconciled.map((r) => ({
+        title: r.unit.title,
+        description: r.unit.description,
+        themes: r.unit.themes ?? [],
+        suggested_section: r.unit.suggested_section,
+        // REKONZILIIERTE evidence_count (nicht der LLM-Rohwert) — der Critic
+        // urteilt ueber dieselbe Zahl, gegen die der Worker-Filter prueft.
+        evidence_count: r.evidenceCount,
+        evidence_snippets: r.unit.evidence_snippets,
+      }));
 
-    // 10. Persist surviving units + Provenance-Rows.
+      const criticResult = await critic(criticInput);
+      totalUsdCost += criticResult.costUsd;
+      accumulatedSynthEur += criticResult.costUsd * USD_TO_EUR_APPROX;
+
+      // 9a. Critic-Cost in synthesis_cost_eur akkumulieren (AC-C-3).
+      const { error: criticCostError } = await adminClient
+        .from("email_bulk_run")
+        .update({
+          synthesis_cost_eur: accumulatedSynthEur,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", bulkRunId);
+      if (criticCostError) {
+        throw new Error(
+          `email_bulk_synthesis: synthesis_cost_eur UPDATE failed (critic): ${criticCostError.message}`,
+        );
+      }
+
+      // 9b. ai_cost_ledger (role email_bulk_critic, MIG-112). Non-fatal.
+      const { error: criticLedgerError } = await adminClient
+        .from("ai_cost_ledger")
+        .insert({
+          tenant_id: run.tenant_id,
+          job_id: job.id,
+          model_id: criticResult.modelId,
+          tokens_in: criticResult.tokensIn,
+          tokens_out: criticResult.tokensOut,
+          usd_cost: criticResult.costUsd,
+          duration_ms: criticResult.latencyMs,
+          iteration: 1,
+          role: AI_COST_LEDGER_CRITIC_ROLE,
+        });
+      if (criticLedgerError) {
+        captureException(
+          new Error(
+            `email_bulk_synthesis: ai_cost_ledger INSERT failed (critic, non-fatal): ${criticLedgerError.message}`,
+          ),
+          { source: LOG_SOURCE, metadata: { jobId: job.id, bulkRunId, phase: "critic" } },
+        );
+      }
+
+      // 9c. Live-Total-Cap nach dem Critic-Call (DEC-217, R-C-2): Cap-Hit
+      //     zwischen Critic und Persist → status='failed', kein Persist.
+      const criticCap = await checkLiveTotalCapInWorker(bulkRunId, runCapEur, costStore);
+      if (criticCap.exceeded) {
+        captureWarning(
+          `email_bulk_synthesis: bulk_run ${bulkRunId} STOPPED via cost-cap after critic (total=${criticCap.currentEur.toFixed(
+            4,
+          )} EUR > cap ${runCapEur} EUR)`,
+          {
+            source: LOG_SOURCE,
+            metadata: { jobId: job.id, bulkRunId, totalEur: criticCap.currentEur, runCapEur },
+          },
+        );
+        await failRun(
+          adminClient,
+          bulkRunId,
+          `cost_cap_run_exceeded (critic): total > cap ${runCapEur} EUR`,
+        );
+        await completeJob(adminClient, job.id, "cost-cap-exceeded-critic");
+        return;
+      }
+
+      // 9d. Verdict-Index-Mapping: unit_ref → Verdict. Out-of-range Refs werden
+      //     verworfen, bei Duplikaten gewinnt das erste Verdict.
+      criticVerdictsMap = new Map();
+      let outOfRangeRefs = 0;
+      for (const v of criticResult.data.verdicts) {
+        if (v.unit_ref >= draftReconciled.length) {
+          outOfRangeRefs += 1;
+          continue;
+        }
+        if (!criticVerdictsMap.has(v.unit_ref)) {
+          criticVerdictsMap.set(v.unit_ref, v.verdict);
+        }
+      }
+      if (outOfRangeRefs > 0) {
+        captureWarning(
+          `email_bulk_synthesis: critic returned ${outOfRangeRefs} out-of-range unit_ref(s) — ignored`,
+          { source: LOG_SOURCE, metadata: { jobId: job.id, bulkRunId, outOfRangeRefs } },
+        );
+      }
+    }
+
+    // 10. Filter-Hook (DEC-216 / AC-C-2): KEEP && evidence>=2.
+    const surviving = selectSurvivingUnits(draftReconciled, criticVerdictsMap);
+
+    // 10a. Reject-Logging (Reduktions-Statistik, AC-C-1/AC-C-2).
+    if (criticVerdictsMap) {
+      let rejectedByCritic = 0;
+      let noVerdict = 0;
+      let droppedByEvidence = 0;
+      draftReconciled.forEach((r, idx) => {
+        const verdict = criticVerdictsMap!.get(idx);
+        if (verdict === "REJECT") rejectedByCritic += 1;
+        else if (verdict === undefined) noVerdict += 1;
+        else if (r.evidenceCount < 2) droppedByEvidence += 1;
+      });
+      captureInfo(
+        `email_bulk_synthesis: critic gate for bulk_run=${bulkRunId}: drafts=${draftReconciled.length}, surviving=${surviving.length}, rejected_by_critic=${rejectedByCritic}, no_verdict=${noVerdict}, dropped_by_evidence=${droppedByEvidence}`,
+        {
+          source: LOG_SOURCE,
+          metadata: {
+            jobId: job.id,
+            bulkRunId,
+            draftCount: draftReconciled.length,
+            survivingCount: surviving.length,
+            rejectedByCritic,
+            noVerdict,
+            droppedByEvidence,
+          },
+        },
+      );
+    }
+
+    // 11. Persist surviving units + Provenance-Rows.
     let unitsInserted = 0;
     let sourcesInserted = 0;
     for (const r of surviving) {
@@ -473,7 +643,7 @@ export async function executeEmailBulkSynthesis(
       }
     }
 
-    // 11. Status synthesizing -> synthesized + complete.
+    // 12. Status synthesizing -> synthesized + complete.
     await flipStatus(adminClient, bulkRunId, "synthesized");
     await completeJob(adminClient, job.id, "done");
 

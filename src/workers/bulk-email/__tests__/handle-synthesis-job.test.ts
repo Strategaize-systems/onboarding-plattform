@@ -37,9 +37,14 @@ import {
   executeEmailBulkSynthesis,
   selectSurvivingUnits,
   type SectionSynthesizer,
+  type UnitCritic,
 } from "../handle-synthesis-job";
 import { SonnetSchemaError } from "../../../lib/ai/bedrock-sonnet/email-synthesis";
-import type { SynthesisResult } from "../../../lib/ai/bedrock-sonnet";
+import type {
+  CriticInputUnit,
+  CriticVerdicts,
+  SynthesisResult,
+} from "../../../lib/ai/bedrock-sonnet";
 import type { CostCapStore } from "../../../lib/bulk-email/cost-cap";
 import type { ClaimedJob } from "../../condensation/claim-loop";
 
@@ -228,6 +233,51 @@ function makeSynthesizer(
   };
 }
 
+// ─── Critic-Stubs (SLC-V9.5-C MT-2) ──────────────────────────────────────────
+
+interface CriticStub {
+  critic: UnitCritic;
+  calls: CriticInputUnit[][];
+}
+
+/** Critic-Stub mit festen Verdicts (oder Error). Trackt Calls (Bounded-Assertion). */
+function makeCritic(
+  verdictsOrFn:
+    | CriticVerdicts["verdicts"]
+    | ((units: CriticInputUnit[]) => CriticVerdicts["verdicts"])
+    | Error,
+  costUsd = 0.005,
+): CriticStub {
+  const calls: CriticInputUnit[][] = [];
+  const critic: UnitCritic = async (units) => {
+    calls.push(units);
+    if (verdictsOrFn instanceof Error) throw verdictsOrFn;
+    const verdicts =
+      typeof verdictsOrFn === "function" ? verdictsOrFn(units) : verdictsOrFn;
+    return {
+      data: { verdicts },
+      tokensIn: 80,
+      tokensOut: 20,
+      costUsd,
+      latencyMs: 15,
+      modelId: "eu.anthropic.claude-sonnet-4-20250514-v1:0",
+      region: "eu-central-1",
+    };
+  };
+  return { critic, calls };
+}
+
+/** KEEP-alles-Critic fuer Tests, deren Fokus nicht der Critic ist. */
+function keepAllCritic(): CriticStub {
+  return makeCritic((units) =>
+    units.map((_, idx) => ({
+      unit_ref: idx,
+      verdict: "KEEP" as const,
+      reason: "ok",
+    })),
+  );
+}
+
 function makeCostStore(totalEurSeq: number[] | number = 0): CostCapStore {
   let i = 0;
   return {
@@ -286,7 +336,8 @@ describe("executeEmailBulkSynthesis", () => {
       executeEmailBulkSynthesis(makeJob({ payload: {} }), {
         adminClient: client as never,
         synthesizer: makeSynthesizer({}),
-        costStore: makeCostStore(),
+        critic: keepAllCritic().critic,
+      costStore: makeCostStore(),
       }),
     ).rejects.toThrow(/bulk_run_id missing or not a UUID/);
 
@@ -294,7 +345,8 @@ describe("executeEmailBulkSynthesis", () => {
       executeEmailBulkSynthesis(makeJob({ payload: { bulk_run_id: "not-a-uuid" } }), {
         adminClient: client as never,
         synthesizer: makeSynthesizer({}),
-        costStore: makeCostStore(),
+        critic: keepAllCritic().critic,
+      costStore: makeCostStore(),
       }),
     ).rejects.toThrow(/not a UUID/);
   });
@@ -305,7 +357,8 @@ describe("executeEmailBulkSynthesis", () => {
       executeEmailBulkSynthesis(makeJob(), {
         adminClient: client as never,
         synthesizer: makeSynthesizer({}),
-        costStore: makeCostStore(),
+        critic: keepAllCritic().critic,
+      costStore: makeCostStore(),
       }),
     ).rejects.toThrow(/not found/);
   });
@@ -315,6 +368,7 @@ describe("executeEmailBulkSynthesis", () => {
     await executeEmailBulkSynthesis(makeJob(), {
       adminClient: client as never,
       synthesizer: makeSynthesizer({}),
+      critic: keepAllCritic().critic,
       costStore: makeCostStore(),
     });
     expect(state.updates.find((u) => u.patch.status === "synthesizing")).toBeUndefined();
@@ -330,6 +384,7 @@ describe("executeEmailBulkSynthesis", () => {
     await executeEmailBulkSynthesis(makeJob(), {
       adminClient: client as never,
       synthesizer: makeSynthesizer({}),
+      critic: keepAllCritic().critic,
       costStore: makeCostStore(),
     });
     expect(state.updates.find((u) => u.patch.status === "synthesizing")).toBeUndefined();
@@ -351,6 +406,7 @@ describe("executeEmailBulkSynthesis", () => {
       synthesizer: makeSynthesizer({
         "lieferung/zeiten": oneUnitResult("lieferung/zeiten", [P1, P2, P3]),
       }),
+      critic: keepAllCritic().critic,
       costStore: makeCostStore(0),
     });
 
@@ -366,7 +422,12 @@ describe("executeEmailBulkSynthesis", () => {
 
     expect(state.updates.find((u) => u.patch.status === "synthesizing")).toBeDefined();
     expect(state.updates.find((u) => u.patch.status === "synthesized")).toBeDefined();
-    expect(state.inserts.filter((i) => i.table === "ai_cost_ledger")).toHaveLength(1);
+    // 2 Ledger-Rows: 1x Synthese (email_bulk_synthesis) + 1x Critic (email_bulk_critic).
+    const ledgerInserts = state.inserts.filter((i) => i.table === "ai_cost_ledger");
+    expect(ledgerInserts).toHaveLength(2);
+    expect(
+      ledgerInserts.map((i) => (i.rows as Record<string, unknown>).role).sort(),
+    ).toEqual(["email_bulk_critic", "email_bulk_synthesis"]);
     expect(state.rpcs.map((r) => r.name)).toContain("rpc_complete_ai_job");
   });
 
@@ -380,6 +441,7 @@ describe("executeEmailBulkSynthesis", () => {
       synthesizer: makeSynthesizer({
         "sec/a": oneUnitResult("sec/a", [P1]), // only 1 source → evidence 1
       }),
+      critic: keepAllCritic().critic,
       costStore: makeCostStore(0),
     });
     expect(state.inserts.filter((i) => i.table === "email_synthesized_unit")).toHaveLength(0);
@@ -411,6 +473,7 @@ describe("executeEmailBulkSynthesis", () => {
     await executeEmailBulkSynthesis(makeJob(), {
       adminClient: client as never,
       synthesizer,
+      critic: keepAllCritic().critic,
       costStore: makeCostStore(0),
     });
     expect(calledSections.sort()).toEqual(["sec/a", "sec/b"]);
@@ -427,6 +490,7 @@ describe("executeEmailBulkSynthesis", () => {
       synthesizer: makeSynthesizer({
         "sec/a": oneUnitResult("sec/a", [P1, P2, HALLUCINATED]),
       }),
+      critic: keepAllCritic().critic,
       costStore: makeCostStore(0),
     });
     const unitRow = state.inserts.find((i) => i.table === "email_synthesized_unit")!
@@ -443,6 +507,7 @@ describe("executeEmailBulkSynthesis", () => {
     await executeEmailBulkSynthesis(makeJob(), {
       adminClient: client as never,
       synthesizer: makeSynthesizer({ "sec/a": oneUnitResult("sec/a", [P1, P2]) }),
+      critic: keepAllCritic().critic,
       costStore: makeCostStore(999), // total cost over cap
       runCapEur: 20,
     });
@@ -459,6 +524,7 @@ describe("executeEmailBulkSynthesis", () => {
     await executeEmailBulkSynthesis(makeJob(), {
       adminClient: client as never,
       synthesizer: makeSynthesizer({}),
+      critic: keepAllCritic().critic,
       costStore: makeCostStore(0),
     });
     expect(state.updates.find((u) => u.patch.status === "synthesized")).toBeDefined();
@@ -475,6 +541,7 @@ describe("executeEmailBulkSynthesis", () => {
     await executeEmailBulkSynthesis(makeJob(), {
       adminClient: client as never,
       synthesizer: makeSynthesizer({ "sec/a": oneUnitResult("sec/a", [P1, P2]) }),
+      critic: keepAllCritic().critic,
       costStore: makeCostStore(0),
     });
     // still synthesized + unit inserted
@@ -497,6 +564,7 @@ describe("executeEmailBulkSynthesis", () => {
         "sec/good": oneUnitResult("sec/good", [P1, P2]),
         "sec/bad": new SonnetSchemaError("drift", "raw", null),
       }),
+      critic: keepAllCritic().critic,
       costStore: makeCostStore(0),
     });
     expect(state.updates.find((u) => u.patch.status === "synthesized")).toBeDefined();
@@ -504,21 +572,258 @@ describe("executeEmailBulkSynthesis", () => {
   });
 });
 
-describe("selectSurvivingUnits (filter-hook, DEC-216)", () => {
+describe("selectSurvivingUnits (filter-hook, DEC-216 / AC-C-2)", () => {
   const mk = (evidenceCount: number) => ({
     unit: {} as never,
     evidenceCount,
     sourceRows: [],
   });
 
-  it("keeps units with evidence_count >= 2", () => {
+  it("without verdicts: keeps units with evidence_count >= 2", () => {
     const result = selectSurvivingUnits([mk(1), mk(2), mk(3)]);
     expect(result.map((r) => r.evidenceCount)).toEqual([2, 3]);
   });
 
-  it("Critic verdict REJECT removes a unit even with sufficient evidence (SLC-V9.5-C hook)", () => {
-    const verdicts = new Map<number, "KEEP" | "REJECT">([[1, "REJECT"]]);
+  it("Critic verdict REJECT removes a unit even with sufficient evidence", () => {
+    const verdicts = new Map<number, "KEEP" | "REJECT">([
+      [0, "KEEP"],
+      [1, "REJECT"],
+      [2, "KEEP"],
+    ]);
     const result = selectSurvivingUnits([mk(2), mk(3), mk(4)], verdicts);
     expect(result.map((r) => r.evidenceCount)).toEqual([2, 4]); // idx 1 (evidence 3) rejected
+  });
+
+  it("survives gdw KEEP && evidence>=2: KEEP+evidence<2 and missing verdict both drop", () => {
+    const verdicts = new Map<number, "KEEP" | "REJECT">([
+      [0, "KEEP"], // evidence 1 → drop (evidence filter)
+      [1, "KEEP"], // evidence 2 → survive
+      // idx 2: kein Verdict (Modell hat Unit ausgelassen) → drop (strict, AC-C-2)
+    ]);
+    const result = selectSurvivingUnits([mk(1), mk(2), mk(5)], verdicts);
+    expect(result.map((r) => r.evidenceCount)).toEqual([2]);
+  });
+});
+
+// ─── SLC-V9.5-C MT-2 — Critic-Gate im Worker (AC-C-1..4) ─────────────────────
+
+/** SynthesisResult mit n Units (eine pro source-id-Liste) in einer Section. */
+function multiUnitResult(section: string, sourceIdLists: string[][]): SynthesisResult {
+  return {
+    units: sourceIdLists.map((ids, i) => ({
+      title: `Unit ${i}`,
+      description: `Beschreibung ${i}.`,
+      themes: ["t"],
+      suggested_section: section,
+      source_pattern_ids: ids,
+      evidence_count: ids.length,
+      evidence_snippets: ids.slice(0, 2).map((id) => ({
+        text: `snippet ${id.slice(0, 4)}`,
+        source_pattern_id: id,
+      })),
+      aggregated_confidence: 0.8,
+    })),
+  };
+}
+
+describe("executeEmailBulkSynthesis — critic gate (SLC-V9.5-C MT-2)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  function threePatternStub() {
+    return makeAdminStub({
+      bulkRun: runningBulkRun(),
+      patterns: [
+        pat(P1, "sec/a", "t-a"),
+        pat(P2, "sec/a", "t-b"),
+        pat(P3, "sec/a", "t-c"),
+      ],
+    });
+  }
+
+  it("(C1 / AC-C-1+2) fixture: 4 drafts, critic REJECTs 1, 1 has evidence<2 → 2 survive", async () => {
+    const { client, state } = threePatternStub();
+    // Drafts: ev [2, 3, 2, 1]
+    const result = multiUnitResult("sec/a", [
+      [P1, P2],
+      [P1, P2, P3],
+      [P2, P3],
+      [P1],
+    ]);
+    const criticStub = makeCritic([
+      { unit_ref: 0, verdict: "KEEP", reason: "belegt" },
+      { unit_ref: 1, verdict: "REJECT", reason: "redundant zu unit_ref 0" },
+      { unit_ref: 2, verdict: "KEEP", reason: "belegt" },
+      { unit_ref: 3, verdict: "KEEP", reason: "ok, aber nur 1 Beleg" },
+    ]);
+    await executeEmailBulkSynthesis(makeJob(), {
+      adminClient: client as never,
+      synthesizer: makeSynthesizer({ "sec/a": result }),
+      critic: criticStub.critic,
+      costStore: makeCostStore(0),
+    });
+
+    // Reduktions-Quote: 4 Drafts → 2 Survivors (1 Critic-REJECT, 1 evidence<2).
+    const unitInserts = state.inserts.filter((i) => i.table === "email_synthesized_unit");
+    expect(unitInserts).toHaveLength(2);
+    const titles = unitInserts.map((i) => (i.rows as Record<string, unknown>).title);
+    expect(titles.sort()).toEqual(["Unit 0", "Unit 2"]);
+    expect(state.updates.find((u) => u.patch.status === "synthesized")).toBeDefined();
+    // Critic sah alle 4 Drafts mit rekonziliierter evidence_count.
+    expect(criticStub.calls).toHaveLength(1);
+    expect(criticStub.calls[0]).toHaveLength(4);
+    expect(criticStub.calls[0].map((u) => u.evidence_count)).toEqual([2, 3, 2, 1]);
+  });
+
+  it("(C2 / AC-C-4) bounded: 2 sections → 2 synthesizer calls but exactly 1 critic call", async () => {
+    const { client } = makeAdminStub({
+      bulkRun: runningBulkRun(),
+      patterns: [
+        pat(P1, "sec/a", "t-a"),
+        pat(P2, "sec/a", "t-b"),
+        pat(P3, "sec/b", "t-c"),
+      ],
+    });
+    const criticStub = keepAllCritic();
+    await executeEmailBulkSynthesis(makeJob(), {
+      adminClient: client as never,
+      synthesizer: makeSynthesizer({
+        "sec/a": oneUnitResult("sec/a", [P1, P2]),
+        "sec/b": oneUnitResult("sec/b", [P1, P3]),
+      }),
+      critic: criticStub.critic,
+      costStore: makeCostStore(0),
+    });
+    expect(criticStub.calls).toHaveLength(1);
+    // Der eine Call enthaelt die Drafts BEIDER Sections.
+    expect(criticStub.calls[0]).toHaveLength(2);
+  });
+
+  it("(C3 / AC-C-3) critic cost: ledger row role=email_bulk_critic with job_id, synthesis_cost_eur updated", async () => {
+    const { client, state } = threePatternStub();
+    const criticStub = keepAllCritic();
+    await executeEmailBulkSynthesis(makeJob(), {
+      adminClient: client as never,
+      synthesizer: makeSynthesizer(
+        { "sec/a": oneUnitResult("sec/a", [P1, P2, P3]) },
+        0.01,
+      ),
+      critic: criticStub.critic,
+      costStore: makeCostStore(0),
+    });
+
+    const criticLedger = state.inserts.find(
+      (i) =>
+        i.table === "ai_cost_ledger" &&
+        (i.rows as Record<string, unknown>).role === "email_bulk_critic",
+    );
+    expect(criticLedger).toBeDefined();
+    const row = criticLedger!.rows as Record<string, unknown>;
+    expect(row.job_id).toBe(JOB_ID);
+    expect(row.tenant_id).toBe(TENANT_ID);
+    expect(row.usd_cost).toBeGreaterThan(0);
+
+    // synthesis_cost_eur wurde 2x akkumuliert: 1x Synthese-Section + 1x Critic.
+    const costUpdates = state.updates.filter(
+      (u) => u.table === "email_bulk_run" && "synthesis_cost_eur" in u.patch,
+    );
+    expect(costUpdates).toHaveLength(2);
+    const last = costUpdates[costUpdates.length - 1].patch
+      .synthesis_cost_eur as number;
+    const first = costUpdates[0].patch.synthesis_cost_eur as number;
+    expect(last).toBeGreaterThan(first); // Critic-Cost kam oben drauf
+  });
+
+  it("(C4 / AC-C-4, R-C-2) cap-hit after critic, before persist → status=failed, 0 units", async () => {
+    const { client, state } = threePatternStub();
+    const criticStub = keepAllCritic();
+    await executeEmailBulkSynthesis(makeJob(), {
+      adminClient: client as never,
+      synthesizer: makeSynthesizer({ "sec/a": oneUnitResult("sec/a", [P1, P2, P3]) }),
+      critic: criticStub.critic,
+      // 1. Cap-Check (per-Section) unter Cap, 2. Cap-Check (post-Critic) drueber.
+      costStore: makeCostStore([0, 999]),
+      runCapEur: 20,
+    });
+    expect(criticStub.calls).toHaveLength(1);
+    expect(state.updates.find((u) => u.patch.status === "failed")).toBeDefined();
+    expect(state.inserts.filter((i) => i.table === "email_synthesized_unit")).toHaveLength(0);
+    expect(state.rpcs.map((r) => r.name)).toContain("rpc_complete_ai_job");
+  });
+
+  it("(C5 / R-C-2) critic SonnetSchemaError → run failed, no persist of un-critiqued units", async () => {
+    const { client, state } = threePatternStub();
+    const criticStub = makeCritic(new SonnetSchemaError("critic drift", "raw", null));
+    await expect(
+      executeEmailBulkSynthesis(makeJob(), {
+        adminClient: client as never,
+        synthesizer: makeSynthesizer({ "sec/a": oneUnitResult("sec/a", [P1, P2, P3]) }),
+        critic: criticStub.critic,
+        costStore: makeCostStore(0),
+      }),
+    ).rejects.toBeInstanceOf(SonnetSchemaError);
+    expect(state.updates.find((u) => u.patch.status === "failed")).toBeDefined();
+    expect(state.inserts.filter((i) => i.table === "email_synthesized_unit")).toHaveLength(0);
+  });
+
+  it("(C6) zero drafts (all sections schema-drift) → critic NOT called, run synthesized", async () => {
+    const { client, state } = threePatternStub();
+    const criticStub = keepAllCritic();
+    await executeEmailBulkSynthesis(makeJob(), {
+      adminClient: client as never,
+      synthesizer: makeSynthesizer({
+        "sec/a": new SonnetSchemaError("drift", "raw", null),
+      }),
+      critic: criticStub.critic,
+      costStore: makeCostStore(0),
+    });
+    expect(criticStub.calls).toHaveLength(0);
+    expect(state.updates.find((u) => u.patch.status === "synthesized")).toBeDefined();
+    expect(state.inserts.filter((i) => i.table === "email_synthesized_unit")).toHaveLength(0);
+  });
+
+  it("(C7 / AC-C-2 strict) missing verdict for a draft → unit dropped", async () => {
+    const { client, state } = threePatternStub();
+    // 2 Drafts (beide evidence 2+), Critic liefert nur fuer Index 0 ein Verdict.
+    const criticStub = makeCritic([
+      { unit_ref: 0, verdict: "KEEP", reason: "belegt" },
+    ]);
+    await executeEmailBulkSynthesis(makeJob(), {
+      adminClient: client as never,
+      synthesizer: makeSynthesizer({
+        "sec/a": multiUnitResult("sec/a", [
+          [P1, P2],
+          [P2, P3],
+        ]),
+      }),
+      critic: criticStub.critic,
+      costStore: makeCostStore(0),
+    });
+    const unitInserts = state.inserts.filter((i) => i.table === "email_synthesized_unit");
+    expect(unitInserts).toHaveLength(1);
+    expect((unitInserts[0].rows as Record<string, unknown>).title).toBe("Unit 0");
+  });
+
+  it("(C8) out-of-range unit_ref is ignored; valid verdicts still apply", async () => {
+    const { client, state } = threePatternStub();
+    const criticStub = makeCritic([
+      { unit_ref: 0, verdict: "KEEP", reason: "belegt" },
+      { unit_ref: 99, verdict: "REJECT", reason: "halluzinierter Index" },
+    ]);
+    await executeEmailBulkSynthesis(makeJob(), {
+      adminClient: client as never,
+      synthesizer: makeSynthesizer({
+        "sec/a": multiUnitResult("sec/a", [[P1, P2]]),
+      }),
+      critic: criticStub.critic,
+      costStore: makeCostStore(0),
+    });
+    const unitInserts = state.inserts.filter((i) => i.table === "email_synthesized_unit");
+    expect(unitInserts).toHaveLength(1);
+    expect(state.updates.find((u) => u.patch.status === "synthesized")).toBeDefined();
   });
 });
