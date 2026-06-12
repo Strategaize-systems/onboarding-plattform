@@ -25,7 +25,7 @@
       "title": "V9.5 FEAT-082 Bedrock-Modell-Default-Cleanup eu-Sonnet-4 (ISSUE-100)",
       "type": "improvement",
       "priority": "medium",
-      "status": "in_progress",
+      "status": "done",
       "version": "V9.5",
       "description": "V9.5 Ride-along (ISSUE-100): 4 Files von stale Sonnet 3.5 / Haiku 3 auf eu-Sonnet-4-Default umstellen — src/lib/ai/bedrock-sonnet/email-pattern.ts:51, src/lib/ai/bedrock-haiku/index.ts:42, src/lib/llm/v8-1-augmentation/augment.ts:44-46 (latent broken bei ungesetztem BEDROCK_V8_1_MODEL_ID), src/lib/bulk-email/ai-assisted-setup.ts:24. ENV-Override-Mechanik (BEDROCK_V9_SONNET_MODEL_ID etc.) bleibt unangetastet; nur der hardcoded Default wird korrekt. /qa muss bestehende Pattern-Extraktion + V8.1-Augmentation gegen Schema-Vertraege re-verifizieren (R4 Modell-Regression). Vorab als SLC-V9.5-A, damit Deep-Extraction gegen das korrekte Modell designt wird. Spec entsteht in /architecture V9.5 unter features/FEAT-082-*.md.",
       "createdAt": "2026-06-12"

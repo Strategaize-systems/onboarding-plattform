@@ -13,8 +13,8 @@
 //   - Region hardcoded BEDROCK_SONNET_REGION = 'eu-central-1'
 //
 // Erweiterung vs Haiku:
-//   - Pricing Sonnet 3.5: $3 input / $15 output per 1M tokens (Bedrock eu-central-1)
-//   - Modell-ID-Default: anthropic.claude-3-5-sonnet-20241022-v2:0 (ENV BEDROCK_V9_SONNET_MODEL_ID)
+//   - Pricing Sonnet 4 (= Sonnet 3.5 Bedrock-Pricing): $3 input / $15 output per 1M tokens (eu-central-1)
+//   - Modell-ID-Default: eu.anthropic.claude-sonnet-4-20250514-v1:0 (ENV BEDROCK_V9_SONNET_MODEL_ID) — V9.5 SLC-V9.5-A DEC-218
 //   - Spezifische extractPatternFromThread-Funktion mit PatternExtractionResultSchema
 //   - Thread-ID-Override im Output (Caller-vorgegeben — Modell-Drift soll nicht reichen)
 
@@ -39,8 +39,9 @@ import type {
   ThreadMeta,
 } from "./types";
 
-// ─── Pricing (Sonnet 3.5 via Bedrock eu-central-1) ───
-// Stand 2025/2026. Bei Pricing-Aenderungen via Bedrock-Pricing-Page anpassen.
+// ─── Pricing (Sonnet 4 = Sonnet 3.5 Bedrock-Pricing, eu-central-1) ───
+// Stand 2026. Sonnet-4 hat identisches Bedrock-Pricing wie Sonnet-3.5 ($3/$15),
+// daher bleiben die Konstanten beim Modell-Wechsel unveraendert (V9.5 SLC-V9.5-A).
 const COST_PER_INPUT_TOKEN_USD = 3.0 / 1_000_000;
 const COST_PER_OUTPUT_TOKEN_USD = 15.0 / 1_000_000;
 
@@ -48,7 +49,7 @@ const COST_PER_OUTPUT_TOKEN_USD = 15.0 / 1_000_000;
 export const BEDROCK_SONNET_REGION = "eu-central-1" as const;
 
 // ─── Default Model-ID (overridable via ENV) ───
-const DEFAULT_SONNET_MODEL_ID = "anthropic.claude-3-5-sonnet-20241022-v2:0";
+const DEFAULT_SONNET_MODEL_ID = "eu.anthropic.claude-sonnet-4-20250514-v1:0";
 
 function resolveModelId(override?: string): string {
   if (override) return override;

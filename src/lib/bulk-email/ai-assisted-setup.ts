@@ -21,7 +21,8 @@ import { z } from "zod";
 
 // ─── Region-Pflicht eu-central-1 (data-residency.md) ───
 export const BEDROCK_SONNET_REGION = "eu-central-1" as const;
-const DEFAULT_SONNET_MODEL_ID = "anthropic.claude-3-5-sonnet-20241022-v2:0";
+// V9.5 SLC-V9.5-A DEC-218: eu-Sonnet-4 inference-profile (= Sonnet-3.5 Bedrock-Pricing).
+const DEFAULT_SONNET_MODEL_ID = "eu.anthropic.claude-sonnet-4-20250514-v1:0";
 
 function resolveModelId(): string {
   return process.env.BEDROCK_V9_SONNET_MODEL_ID || DEFAULT_SONNET_MODEL_ID;

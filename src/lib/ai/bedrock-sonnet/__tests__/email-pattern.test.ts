@@ -287,10 +287,10 @@ describe("Bedrock-Sonnet Email-Pattern-Adapter", () => {
   });
 
   describe("Modell-ID-Resolution", () => {
-    it("nutzt Default-Modell (Sonnet 3.5) wenn kein Override + keine ENV", async () => {
+    it("nutzt Default-Modell (eu-Sonnet-4) wenn kein Override + keine ENV", async () => {
       __setSonnetCallerForTests(makeMockCaller(JSON.stringify(VALID_PATTERN_PAYLOAD)));
       const result = await extractPatternFromThread(REDACTED_BODY_FIXTURE, DEFAULT_THREAD_META);
-      expect(result.modelId).toBe("anthropic.claude-3-5-sonnet-20241022-v2:0");
+      expect(result.modelId).toBe("eu.anthropic.claude-sonnet-4-20250514-v1:0");
     });
 
     it("respektiert ENV BEDROCK_V9_SONNET_MODEL_ID", async () => {

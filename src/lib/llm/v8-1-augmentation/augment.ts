@@ -36,14 +36,16 @@ import type {
   CacheStructure,
 } from "./types";
 
-// ─── Pricing (Sonnet 3.5: $3/$15 per 1M tokens) ───
+// ─── Pricing (Sonnet 4 = Sonnet 3.5 Bedrock-Pricing: $3/$15 per 1M tokens) ───
 const COST_PER_INPUT_TOKEN = 3.0 / 1_000_000;
 const COST_PER_OUTPUT_TOKEN = 15.0 / 1_000_000;
 
 // ─── Defaults ───
+// V9.5 SLC-V9.5-A DEC-218: latent-broken stale Default (griff bei ungesetztem
+// BEDROCK_V8_1_MODEL_ID) auf eu-Sonnet-4 inference-profile korrigiert. Pricing unveraendert.
 const DEFAULT_MODEL_ID =
   process.env.BEDROCK_V8_1_MODEL_ID ||
-  "anthropic.claude-3-5-sonnet-20241022-v2:0";
+  "eu.anthropic.claude-sonnet-4-20250514-v1:0";
 const DEFAULT_COST_CAP_USD = 0.05;
 const DEFAULT_MAX_TOKENS = 200;
 const DEFAULT_TEMPERATURE = 0.3;
