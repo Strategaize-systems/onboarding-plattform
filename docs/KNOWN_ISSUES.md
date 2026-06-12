@@ -1,5 +1,33 @@
 # Known Issues
 
+### ISSUE-099 — V9 Bedrock-Modell-IDs ohne eu-Inference-Profile-Praefix (invalid model identifier)
+- Status: open
+- Severity: High
+- Area: V9.0/V9.1 Bedrock-LLM (`src/lib/ai/bedrock-sonnet/email-pattern.ts`, `src/lib/ai/bedrock-haiku/index.ts`, `src/lib/bulk-email/ai-assisted-setup.ts`, Coolify-ENV `BEDROCK_V9_SONNET_MODEL_ID`/`BEDROCK_V9_HAIKU_MODEL_ID`)
+- Summary: Live entdeckt 2026-06-12 (V9.1 Setup-Assistent „nicht erreichbar", error_log `setup-ui:forward-setup | The provided model identifier is invalid.`). Die V9-Bedrock-Adapter (Haiku/Sonnet) defaulten auf ROHE Foundation-Model-IDs (`anthropic.claude-3-5-sonnet-20241022-v2:0`, `anthropic.claude-3-haiku-20240307-v1:0`) und die Coolify-ENV `BEDROCK_V9_SONNET_MODEL_ID` ist ebenfalls roh gesetzt. Bedrock eu-central-1 verlangt aber das **Inference-Profile** mit `eu.`-Praefix (vgl. funktionierender Adapter `src/lib/llm.ts`: `eu.anthropic.claude-sonnet-4-20250514-v1:0`). Raw-ID → On-Demand-Invoke abgelehnt.
+- Impact: ALLE V9-Bedrock-Calls scheitern live: V9.1 Setup-Assistent (summarizeSetupIntent) + V9.0/V9.1 Pipeline (Pre-Filter Haiku + Pattern-Extraktion Sonnet). Der reine IMAP-Inbound-Durchstich (Mail ankommen + speichern + zuordnen) ist NICHT betroffen (kein Bedrock); die KI-Verarbeitung danach schon. Latenter Bug seit V9.0 (Live-Bedrock-Smoke war deferred).
+- Workaround: Manuelles Endpoint-Anlegen funktioniert (kein KI-Vorschlag noetig).
+- Next Action: Coolify-ENV setzen `BEDROCK_V9_SONNET_MODEL_ID=eu.anthropic.claude-3-5-sonnet-20241022-v2:0` + `BEDROCK_V9_HAIKU_MODEL_ID=eu.anthropic.claude-3-haiku-20240307-v1:0`, Redeploy, Live-Verify. Optional Code-Defaults auf eu-Profile umstellen.
+
+### ISSUE-098 — V9.1 Forward-Setup-UI zeigt nicht-zustellbare bulk-<slug>@bulk-Adresse im Single-Mailbox-Modus
+- Status: open
+- Severity: Medium
+- Area: V9.1 Setup-UI (`src/app/dashboard/bulk-email-import/forward-setup/`, `MailClientInstructions`, `SetupTokenDisplay`)
+- Summary: Live entdeckt 2026-06-12. Die UI zeigt als Weiterleitungs-Ziel `bulk-<slug>@bulk.strategaizetransition.com` (Catchall-Form, nicht editierbar) und die Mail-Client-Anleitung weist an, dorthin weiterzuleiten. Die Subdomain `bulk.strategaizetransition.com` hat aber KEINEN MX-Record (dig leer) → Mails dorthin bouncen. Im As-built-Single-Mailbox-Modus (DEC-205/206) laeuft alles ueber das eine IONOS-Postfach `bulk@strategaizetransition.com` (MX → IONOS), das der IMAP-Sync abholt; die `bulk-<slug>@…`-Adresse ist die ZUKUENFTIGE Catchall-Form (noch nicht eingerichtet).
+- Impact: User folgt der UI-Anleitung, leitet an eine bouncende Adresse weiter → keine Mail kommt an, Pipeline scheint kaputt. UI-Falle. RUNBOOK dokumentiert die Diskrepanz, die UI selbst nicht.
+- Workaround: Im Single-Mailbox-Modus an `bulk@strategaizetransition.com` weiterleiten (nicht an die UI-Adresse). Sync ordnet alle Mailbox-Mails dem einzigen aktiven Endpoint zu (resolveDefaultEndpoint, kein To-Matching).
+- Next Action: UI im Single-Mailbox-Modus die echte Postfach-Adresse anzeigen (ENV `INBOUND_MAILBOX_ADDRESS` o.ae.), ODER Catchall `bulk.strategaizetransition.com` MX→IONOS einrichten. Entscheidung + Mini-Slice.
+
+### ISSUE-097 — Entitlement-Modell: kein Unterschied Steuerberater-Mandant (Diagnose-Scope) vs. Voll-Kunde (Bulk-Import)
+- Status: open
+- Severity: Medium
+- Area: OP Rollen-/Entitlement-Modell (`profiles.role`, Auth-Gate `src/app/dashboard/bulk-email-import/**/page.tsx`)
+- Summary: Live entdeckt 2026-06-12 (Founder-Frage). Ein per Steuerberater eingeladener Mandant ist `tenant_admin` seines Tenants — dieselbe Rolle wie ein Voll-Kunde/GF. Die Bulk-Email-Import- + Forward-Setup-Seiten gaten ausschliesslich auf `role === 'tenant_admin'`. Damit kann ein reiner Diagnose-Mandant die Voll-Kunden-Funktion (Bulk-Import) per direkter URL erreichen — im Dashboard nur durch fehlenden Menue-Link „versteckt" (security-by-no-nav, kein echtes Entitlement). Es gibt keinen Mechanismus „Mandant → Voll-Kunde heben/erweitern".
+- Impact: Im Internal-Test-Mode (Founder-only) unkritisch. Vor Customer-Live problematisch: kein sauberer Scope-Schnitt zwischen Diagnose-Mandant und zahlendem Voll-Kunden. Persona-/Entitlement-Modellierung fehlt.
+- Workaround: Keiner noetig im Pilot (kein Menue-Link, nur Founder testet).
+- Next Action: DEC treffen — Tenant-Tier/Feature-Entitlement-Flag (gleicher Login, Features erweitert bei Konvertierung) statt reinem Rollen-Gate. Vor Customer-Live (module-lifecycle-discipline). Mit Founder durchgehen.
+
+
 ### ISSUE-096 — V9.1 RLS-Behavioral-Pen-Test fehlt fuer 3 Inbound-Foundation-Tabellen
 - Status: open
 - Severity: Low
