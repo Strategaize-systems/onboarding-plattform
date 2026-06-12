@@ -119,6 +119,61 @@ export const PatternExtractionResultSchema = z.object({
 export type Pattern = z.infer<typeof PatternSchema>;
 export type PatternExtractionResult = z.infer<typeof PatternExtractionResultSchema>;
 
+// ─── Cross-Thread-Synthese Schema (V9.5 SLC-V9.5-B / FEAT-080, DEC-214..217) ──
+//
+// Strict-JSON-Output von Sonnet pro suggested_section-Gruppe. Der Synthese-Call
+// merged mehrere thread-lokale email_pattern-Fragmente desselben Themas zu
+// konsolidierten Handbuch-Bausteinen (Units). Jede Unit aggregiert Evidenz aus
+// n Quell-Patterns + bis zu 5 quellattribuierte Snippets.
+//
+// Privacy (DEC-214 / AC-B-3): description ist thread-agnostisch; thread-lokale
+// Pseudonyme P1/P2 sind ueber Fragmente hinweg NICHT vergleichbar und duerfen
+// nicht im Output landen (im Prompt verboten, in /qa per Pattern-Scan geprueft).
+//
+// evidence_count ist die LLM-gemeldete Anzahl distinkter belegender Patterns.
+// Der Worker (MT-4) rekonziliert sie gegen die tatsaechlich validen
+// source_pattern_ids (Defense gegen Modell-ID-Drift) und nutzt den
+// rekonziliierten Wert fuer den evidence>=2-Persist-Filter + die _source-Rows.
+
+export const SynthesizedEvidenceSnippetSchema = z.object({
+  text: z.string().min(1).max(1000),
+  source_pattern_id: z.string().min(1),
+});
+
+export const SynthesizedUnitSchema = z.object({
+  title: z.string().min(1).max(200),
+  description: z.string().min(1).max(2000),
+  themes: z.array(z.string()).max(20).optional().default([]),
+  suggested_section: z.string().min(1).max(120),
+  source_pattern_ids: z.array(z.string().min(1)).min(1),
+  evidence_count: z.number().int().min(0),
+  evidence_snippets: z.array(SynthesizedEvidenceSnippetSchema).min(1).max(5),
+  aggregated_confidence: z.number().min(0).max(1),
+});
+
+export const SynthesisResultSchema = z.object({
+  units: z.array(SynthesizedUnitSchema).max(50),
+});
+
+export type SynthesizedEvidenceSnippet = z.infer<typeof SynthesizedEvidenceSnippetSchema>;
+export type SynthesizedUnit = z.infer<typeof SynthesizedUnitSchema>;
+export type SynthesisResult = z.infer<typeof SynthesisResultSchema>;
+
+/**
+ * Kompaktes Input-Pattern fuer den Synthese-Call (Teilmenge der email_pattern-
+ * Row). Der Worker projiziert die geladenen Patterns auf diese Form, bevor er
+ * sie pro suggested_section-Gruppe an synthesizeSection() uebergibt.
+ */
+export interface SynthesisInputPattern {
+  id: string;
+  title: string;
+  description: string;
+  evidence_snippets: string[] | null;
+  themes: string[] | null;
+  confidence: number;
+  thread_id: string;
+}
+
 /**
  * Thread-Metadaten als Input fuer extractPatternFromThread.
  * thread_id wird im Output-Schema 1:1 als Identifier verwendet.

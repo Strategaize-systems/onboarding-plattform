@@ -16,15 +16,34 @@ export {
   __resetSonnetCallerForTests,
 } from "./email-pattern";
 
+// V9.5 SLC-V9.5-B MT-2 — Cross-Thread-Synthese (FEAT-080)
+export {
+  synthesizeSection,
+  BEDROCK_SYNTHESIS_REGION,
+  V95_SYNTHESIS_PROMPT_VERSION,
+  V95_SYNTHESIS_SYSTEM_PROMPT,
+  __setSynthesisCallerForTests,
+  __resetSynthesisCallerForTests,
+} from "./email-synthesis";
+
+export { buildSynthesisUserPrompt } from "./email-synthesis-prompt";
+
 export {
   PatternSchema,
   PatternExtractionResultSchema,
+  SynthesizedUnitSchema,
+  SynthesizedEvidenceSnippetSchema,
+  SynthesisResultSchema,
   SonnetSchemaError,
 } from "./types";
 
 export type {
   Pattern,
   PatternExtractionResult,
+  SynthesizedUnit,
+  SynthesizedEvidenceSnippet,
+  SynthesisResult,
+  SynthesisInputPattern,
   SonnetCallAuditEntry,
   SonnetCallResult,
   SonnetInvocationOptions,
