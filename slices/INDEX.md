@@ -930,3 +930,38 @@ V9.1 = 4 Slices SLC-V9.1-A..D (Naming-Konvention version-anchored statt fortlauf
 | Coolify-Scheduled-Task-Eintrag `/api/cron/email-bulk-pipeline-trigger` (stuendlich) | SLC-V9.1-B MT-5 Live-Smoke | Coolify-UI Resource -> Scheduled-Tasks -> `0 * * * *` POST mit CRON_SECRET-Header |
 | Coolify-Scheduled-Task-Eintrag `/api/cron/bulk-email-retention-sweep` (taeglich 02:00 UTC) | SLC-V9.1-C MT-3 Live-Smoke | Coolify-UI Resource -> Scheduled-Tasks -> `0 2 * * *` POST mit CRON_SECRET-Header |
 | Founder-Conversational-First-UX-Wording-Freigabe (Setup-Assistant-Prompt + DSGVO-Disclaimer-Text) | SLC-V9.1-D MT-3 + MT-4 | ~1h: 2 Text-Bausteine final freigeben |
+
+## V9.5 Slices (Bulk-Import Deep-Extraction — Cross-Thread-Synthese + Critic-Gate)
+
+V9.5 = 4 Slices SLC-V9.5-A..D (version-anchored Naming). Additive Synthese-Stage zwischen `email_bulk_run.status` `pattern_extracted` und `curating`: ein neuer bounded Worker `email_bulk_synthesis` verdichtet die n flachen `email_pattern`-Rows pro Run zu konsolidierten `email_synthesized_unit`-Rows (1 Synthese + 1 Critic, kein Konvergenz-Loop, DEC-216). Der flache Per-Thread-Extraktor bleibt im Kern unveraendert (1 Enqueue-Zeile am Success-Tail, OQ-1). Cumulative-Single-Branch-Worktree `v9-5-bulk-deep-extraction`, /qa pro Slice, **EIN** Master-Merge nach Gesamt-/qa (SLC-V9.5-D MT-5). Internal-Test-Mode, kein Customer-Outreach ([[module-lifecycle-discipline]]). Basis: ARCHITECTURE.md §"V9.5 Architecture Addendum" (DEC-214..218, MIG-111), /architecture RPT-454, /slice-planning RPT-455.
+
+| ID | Slice | Feature | Status | Priority | Created |
+|----|-------|---------|--------|----------|---------|
+| SLC-V9.5-A | [Bedrock-Modell-Default-Cleanup (eu-Sonnet-4 / eu-Haiku)](SLC-V9.5-A-bedrock-model-default-cleanup.md) | FEAT-082 / BL-161 | planned | Medium | 2026-06-12 |
+| SLC-V9.5-B | [Synthese-Stage Backend (Cross-Thread-Synthese)](SLC-V9.5-B-synthesis-stage-backend.md) | FEAT-080 / BL-159 | planned | High | 2026-06-12 |
+| SLC-V9.5-C | [Bounded Critic / Quality-Gate](SLC-V9.5-C-bounded-critic-gate.md) | FEAT-081 / BL-160 | planned | High | 2026-06-12 |
+| SLC-V9.5-D | [Curation-Contract-Shift auf email_synthesized_unit](SLC-V9.5-D-curation-contract-shift.md) | FEAT-080 / BL-159 | planned | High | 2026-06-12 |
+
+### V9.5 Execution Order (strikt sequentiell — Cumulative-Single-Branch `v9-5-bulk-deep-extraction`)
+- **SLC-V9.5-A zuerst** (Modell-Cleanup, damit Synthese/Critic gegen das korrekte eu-Sonnet-4 designt werden; enthaelt Worktree-Setup MT-0). Keine Migration.
+- **SLC-V9.5-B nach A** (MIG-111 = `sql/migrations/119_v95_synthesis_stage.sql`: 2 neue Tabellen + Status `synthesizing`/`synthesized` + `synthesis_cost_eur` + `total_cost_eur` GENERATED-Rebuild; Worker-Synthese-Phase + Persist-Filter `evidence_count>=2` + Dispatcher + Enqueue-Tail). KEINE Curation-Aenderung.
+- **SLC-V9.5-C nach B** (Critic-Phase additiv im selben Worker am vorbereiteten Filter-Hook). Keine Migration.
+- **SLC-V9.5-D zuletzt** (Curation-Contract-Shift `email_pattern` → `email_synthesized_unit` + Gesamt-/qa + Pre-Merge-Re-Check + Master-Merge).
+- Hard-Dependency-Kette A → B → C → D. EIN Master-Merge `v9-5-bulk-deep-extraction` → `main` (--no-ff) in SLC-V9.5-D MT-5 nach Gesamt-/qa PASS.
+
+### V9.5 Parallel-Execution-Tabelle
+
+| Slice | Parallel-Group | MIG Reserved | File-Touchpoints (Kern) | Notes |
+|---|---|---|---|---|
+| SLC-V9.5-A | S1 (seq) | keine | bedrock-sonnet/email-pattern.ts, ai-assisted-setup.ts, v8-1-augmentation/augment.ts, bedrock-haiku/index.ts | unabhaengig, zuerst |
+| SLC-V9.5-B | S1 (seq) | **MIG-111 → 119_v95_synthesis_stage.sql** | sql/migrations/119_*, bedrock-sonnet/email-synthesis*.ts, cost-cap.ts, workers/bulk-email/handle-synthesis-job.ts, claim-loop.ts, run.ts, job-types.ts, handle-pattern-extraction-job.ts (Enqueue-Tail) | nach A |
+| SLC-V9.5-C | S1 (seq) | keine | bedrock-sonnet/email-critic*.ts, workers/bulk-email/handle-synthesis-job.ts (Filter-Hook) | nach B; re-touch Worker additiv |
+| SLC-V9.5-D | S1 (seq) | keine | curation/{helpers,actions,CurationClient}.ts(x), curation/components/*, lib/bulk-email/handbook-import.ts | nach C; Master-Merge |
+
+### V9.5 Pre-Slice User-Pflichten
+
+| Pflicht | Blockiert | Aktion |
+|---|---|---|
+| Soft-Pre-Cond: V9.1 /post-launch T+24h STABLE (Koordination, KEIN Code-Block) | — | Reihenfolge-Empfehlung: /post-launch V9.1 zuerst, dann V9.5-Implementation |
+| Exakte eu-Haiku-Modell-ID + Pricing verifizieren | SLC-V9.5-A MT-4 | im /backend gegen `claude-api`-Skill + Bedrock-eu-central-1-Verfuegbarkeit (R-A-1) |
+| Coolify-DB MIG-111-Apply (base64 → psql -U postgres) + LIVE-Schema-Inspect VOR CHECK/GENERATED-Rebuild | SLC-V9.5-B MT-1 | Agent fuehrt aus; R-B-1 BLOCKING (16-Werte-Status-CHECK live) |

@@ -5,7 +5,7 @@
       "title": "V9.5 FEAT-080 Cross-Thread-Synthese-Stage",
       "type": "feature",
       "priority": "high",
-      "status": "open",
+      "status": "in_progress",
       "version": "V9.5",
       "description": "V9.5 Kern-Feature: neue additive Pipeline-Stage zwischen email_bulk_run.status 'pattern_extracted' und 'curating'. Input = alle rohen email_pattern-Rows eines bulk_run_id; Output = konsolidierte Kandidaten-Units (Duplikat-Merge, Cross-Thread-Evidenz-Aggregation, Frequenz-/Belegdichte-Gewichtung, Theme-Clustering). Neuer Worker + neue Status-Werte (synthesizing/synthesized) per Migration + Cost-Cap-Integration + Synthetic-ai_jobs + Curation-UI-Anbindung. Bestehender flacher Per-Thread-Extraktor bleibt unveraendert; laeuft auf kompakten Patterns (nicht Raw-Threads) = guenstig. Repraesentations-Fork (neue Tabelle vs in-place email_pattern-Grouping) = Q-V9.5-A in /architecture. Prinzip-Reuse aus condensation/* (kein Code-1:1). Spec entsteht in /architecture V9.5 unter features/FEAT-080-*.md.",
       "createdAt": "2026-06-12"
@@ -15,7 +15,7 @@
       "title": "V9.5 FEAT-081 Bounded Critic/Quality-Gate",
       "type": "feature",
       "priority": "high",
-      "status": "open",
+      "status": "in_progress",
       "version": "V9.5",
       "description": "V9.5 Feature: Analyst-schlaegt-vor -> Challenger-kritisiert-Prinzip (aus condensation/iteration-loop, NICHT Code-1:1) auf die synthetisierte Ausgabe angewandt. Fixe 1-2 Paesse (harte Obergrenze, kein Konvergenz-Loop) pruefen jede konsolidierte Unit gegen Belegdichte / Trivialitaet / Halluzination und flaggen/verwerfen Low-Quality-Units vor der GF-Curation. Alle Calls Bedrock eu-central-1, ai_cost_ledger (neue role email_bulk_critic) + synthetic ai_jobs, fallen unter den bestehenden Run-Hard-Cost-Cap (checkLiveCapInWorker / V9_BULK_EMAIL_RUN_CAP_EUR). Pass-Zahl + Accept-Kriterium = Q-V9.5-C in /architecture. Pre-Cond: FEAT-080 Synthese-Stage. Spec entsteht in /architecture V9.5 unter features/FEAT-081-*.md.",
       "createdAt": "2026-06-12"
@@ -25,7 +25,7 @@
       "title": "V9.5 FEAT-082 Bedrock-Modell-Default-Cleanup eu-Sonnet-4 (ISSUE-100)",
       "type": "improvement",
       "priority": "medium",
-      "status": "open",
+      "status": "in_progress",
       "version": "V9.5",
       "description": "V9.5 Ride-along (ISSUE-100): 4 Files von stale Sonnet 3.5 / Haiku 3 auf eu-Sonnet-4-Default umstellen — src/lib/ai/bedrock-sonnet/email-pattern.ts:51, src/lib/ai/bedrock-haiku/index.ts:42, src/lib/llm/v8-1-augmentation/augment.ts:44-46 (latent broken bei ungesetztem BEDROCK_V8_1_MODEL_ID), src/lib/bulk-email/ai-assisted-setup.ts:24. ENV-Override-Mechanik (BEDROCK_V9_SONNET_MODEL_ID etc.) bleibt unangetastet; nur der hardcoded Default wird korrekt. /qa muss bestehende Pattern-Extraktion + V8.1-Augmentation gegen Schema-Vertraege re-verifizieren (R4 Modell-Regression). Vorab als SLC-V9.5-A, damit Deep-Extraction gegen das korrekte Modell designt wird. Spec entsteht in /architecture V9.5 unter features/FEAT-082-*.md.",
       "createdAt": "2026-06-12"
