@@ -752,3 +752,13 @@
 - Impact: Capture-Reminder-Mails (SLC-048) wuerden ohne DKIM-Alignment versendet, Spam-Folder-Risiko bei Gmail/Yahoo.
 - Resolution: User-Hinweis auf IONOS-Doku zeigte: IONOS verwendet **provider-spezifische Selektor-Namen** `s1-ionos._domainkey`, `s2-ionos._domainkey`, `s42582890._domainkey` (NICHT die Industry-Standard `s1`/`s2`). Re-Check mit korrekten Selektoren am 2026-05-01 verifizierte: alle 3 IONOS-Selektoren sind als CNAMEs gesetzt + zeigen auf `s1.dkim.ionos.com`/`s2.dkim.ionos.com`/`s42582890.dkim.ionos.com`, Public-Key resolvt sauber als `v=DKIM1; p=MIIBIjAN...`. Domain-Nameserver `ui-dns.*` bestaetigen IONOS-Hosting → DKIM ist per IONOS-Default automatisch publiziert. Reminder-Cron darf direkt aktiviert werden, kein User-Action in IONOS noetig.
 - Followup: SKILL_IMPROVEMENTS — DKIM-Verifikations-Pattern muss provider-spezifisch sein (siehe IMP-XXX neu erfasst).
+
+### ISSUE-101 — `next build` bricht in der Page-Data-Collection fuer /api/public/partner/[slug] ohne Runtime-ENVs ab (pre-existing, Compile PASS)
+- Status: open
+- Severity: Low
+- Area: Build / CI
+- Summary: `npx next build` ohne gesetzte Supabase-Runtime-ENVs schlaegt NACH erfolgreichem Compile in der Page-Data-Collection-Phase fehl (`Failed to collect page data for /api/public/partner/[slug]` — supabase-js `validateSupabaseUrl` via `src/lib/logger.ts` Modul-Init). Per git-stash-Gegenprobe 2026-06-12 auf dem Pre-SLC-V9.5-D-Stand identisch reproduziert — pre-existing, KEIN V9.5-Regress (RPT-462 L-3).
+- Impact: Lokale Full-Build-Verifikation ohne Prod-ENVs ist nicht moeglich; maskiert bei Nicht-Unterscheidung Compile vs Collection echte Build-Regresses. Coolify-Build (mit ENVs) ist nicht betroffen.
+- Workaround: Compile-Phase als Gate nutzen + Fail per git-stash-Gegenprobe gegen Pre-Change-Stand verifizieren (IMP-1242). 
+- Next Action: Route/Logger so haerten, dass Modul-Init ohne ENVs nicht wirft (lazy createClient) ODER Build-Doku mit ENV-Anforderung; spaetestens im /final-check V9.5 als bekannter Umstand fuehren.
+
