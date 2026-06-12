@@ -78,6 +78,7 @@ import {
   notifyFounderApprovalRequired,
   type FounderApprovalRequiredInput,
 } from "../../lib/bulk-email/notify-founder";
+import { JOB_TYPE_EMAIL_BULK_SYNTHESIS } from "./job-types";
 import type { ClaimedJob } from "../condensation/claim-loop";
 
 const UUID_REGEX =
@@ -437,6 +438,26 @@ export async function executeEmailBulkPatternExtract(
     if (finishError) {
       throw new Error(
         `email_bulk_pattern_extract: status='pattern_extracted' UPDATE failed: ${finishError.message}`,
+      );
+    }
+
+    // 7b. V9.5 SLC-V9.5-B MT-5 (OQ-1): Enqueue der Cross-Thread-Synthese-Stage.
+    //     Genau 1 Statement-Block (AC-B-5), NACH dem 'pattern_extracted'-Flip,
+    //     VOR rpc_complete_ai_job. Greift uniform fuer mbox- + Continuous-Runs
+    //     (beide laufen ueber diesen Extraktor zu 'pattern_extracted'). Cap-
+    //     Exceed-Pfad (Z.~426) + Approval-Pause-Pfad enqueuen NICHT (return
+    //     vorher). Enqueue-Fehler → throw: der Extract-Job bleibt offen und wird
+    //     erneut versucht; das ist via Thread-Skip + Synthese-Idempotenz (AC-B-7)
+    //     harmlos.
+    const { error: synthEnqueueError } = await adminClient.from("ai_jobs").insert({
+      tenant_id: run.tenant_id,
+      job_type: JOB_TYPE_EMAIL_BULK_SYNTHESIS,
+      status: "pending",
+      payload: { bulk_run_id: bulkRunId },
+    });
+    if (synthEnqueueError) {
+      throw new Error(
+        `email_bulk_pattern_extract: email_bulk_synthesis enqueue failed: ${synthEnqueueError.message}`,
       );
     }
 

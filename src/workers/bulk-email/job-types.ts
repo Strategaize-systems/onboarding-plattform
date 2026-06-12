@@ -15,9 +15,13 @@ export const JOB_TYPE_EMAIL_BULK_PARSE = "email_bulk_parse" as const;
 export const JOB_TYPE_EMAIL_BULK_PRE_FILTER = "email_bulk_pre_filter" as const;
 export const JOB_TYPE_EMAIL_BULK_THREAD_REDACT = "email_bulk_thread_redact" as const;
 export const JOB_TYPE_EMAIL_BULK_PATTERN_EXTRACT = "email_bulk_pattern_extract" as const;
+// V9.5 SLC-V9.5-B (FEAT-080): Cross-Thread-Synthese-Stage. 3-Stellen-Sync mit
+// claim-loop.ts JOB_TYPES-Array + run.ts-Registrierung (siehe R-B-5).
+export const JOB_TYPE_EMAIL_BULK_SYNTHESIS = "email_bulk_synthesis" as const;
 
 export type BulkEmailJobType =
   | typeof JOB_TYPE_EMAIL_BULK_PARSE
   | typeof JOB_TYPE_EMAIL_BULK_PRE_FILTER
   | typeof JOB_TYPE_EMAIL_BULK_THREAD_REDACT
-  | typeof JOB_TYPE_EMAIL_BULK_PATTERN_EXTRACT;
+  | typeof JOB_TYPE_EMAIL_BULK_PATTERN_EXTRACT
+  | typeof JOB_TYPE_EMAIL_BULK_SYNTHESIS;

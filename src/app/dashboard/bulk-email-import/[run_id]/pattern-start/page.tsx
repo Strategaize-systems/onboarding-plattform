@@ -325,6 +325,9 @@ export default async function PatternStartPage({
           async getRunPatternExtractionCostEur() {
             return 0;
           },
+          async getRunTotalCostEur() {
+            return 0;
+          },
         },
       )
     : null;

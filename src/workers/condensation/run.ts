@@ -23,6 +23,7 @@ import { handleEmailBulkParseJob } from "../bulk-email/handle-parse-job";
 import { handleEmailBulkPreFilterJob } from "../bulk-email/handle-pre-filter-job";
 import { handleEmailBulkThreadRedactJob } from "../bulk-email/handle-thread-redact-job";
 import { handleEmailBulkPatternExtractJob } from "../bulk-email/handle-pattern-extraction-job";
+import { handleEmailBulkSynthesisJob } from "../bulk-email/handle-synthesis-job";
 
 // Validate required environment variables
 const REQUIRED_ENV = [
@@ -109,6 +110,7 @@ async function main(): Promise<void> {
   console.log("[worker] email_bulk_pre_filter handler registered");
   console.log("[worker] email_bulk_thread_redact handler registered");
   console.log("[worker] email_bulk_pattern_extract handler registered");
+  console.log("[worker] email_bulk_synthesis handler registered");
   validateEnv();
   setupShutdown();
 
@@ -132,7 +134,8 @@ async function main(): Promise<void> {
     handleEmailBulkParseJob,
     handleEmailBulkPreFilterJob,
     handleEmailBulkThreadRedactJob,
-    handleEmailBulkPatternExtractJob
+    handleEmailBulkPatternExtractJob,
+    handleEmailBulkSynthesisJob
   );
 }
 
