@@ -398,6 +398,8 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 - **V7_LIVE_SMOKE_PLAN.md**: 13-Schritt-Plan + Migration-Apply Standard-Procedure (6x NOTIFY pgrst) durch.
 
 ## Active Scope
+**V9.x Bulk-Import — Scope-Entscheidung 2026-06-12 (DEC-212):** Der GF-Bulk-Import inkl. Wissensextraktion ins Handbuch ist fuer **Exit-Readiness (Nachfolge)** funktional abgeschlossen — V9.0 (.mbox-Upload, released/stable) + V9.1 (Forward-Bucket, deployed; finaler Live-Beweis via /post-launch). Die volle Pipeline (Upload → Pre-Filter → Curation → PII-Redaction → Pattern-Extraktion → GF-Curation → Knowledge-Units im Handbuch, V9.0 SLC-168) ist gebaut. **V9.2 (Customer-Service-Ticket-Bulk) + V9.3 (Multi-Mitarbeiter-Upload) → `deferred`** (KI-Readiness-/Kundenservice-Themen, fuer Nachfolge verfrueht; zurueck bei Bedarf/Customer-Base). **V9.4 (IS-Knowledge-Push) bleibt `planned`** als naechster Cross-System-Hebel — fuettert NICHT das GF-Handbuch (das macht V9.0), sondern schiebt Patterns cross-repo ins Intelligence Studio; hart-gated auf IS V3.5 SLC-352-API + Anwalts-Sign-off (`KNOWLEDGE_PUSH_ENABLED=false`). Nicht noetig, um den GF-Bulk-Import abzuschliessen.
+
 **V4 — Zwei-Ebenen-Verschmelzung, 6 Features Code-done, 8 Slices Code-done:**
 - FEAT-022 Employee Role + RBAC Extension — SLC-033 + SLC-034 + SLC-037 (done)
 - FEAT-023 Blueprint-to-Employee Bridge Engine — SLC-035 + SLC-036 (deployed)
