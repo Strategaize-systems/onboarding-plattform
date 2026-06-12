@@ -1,29 +1,34 @@
 "use server";
 
 // V9 SLC-167 MT-6 — Curation Server-Actions (FEAT-073)
-//
-// Spec: slices/SLC-167-v9-pattern-curation-cost-cap.md (MT-6 Expected behavior L184-198)
-// DECs: DEC-181 ("Andere..."-Free-Text-Section)
+// V9.5 SLC-V9.5-D MT-1..3 — Curation-Contract-Shift (DEC-214, FEAT-080):
+//   Die Curation operiert ab jetzt auf den konsolidierten
+//   email_synthesized_unit-Rows (MIG-111) statt der flachen email_pattern-
+//   Fragmente. Der thread-lokale Pseudonym-Lookup im Import ENTFAELLT
+//   (Synthese hat P1/P2 entfernt, AC-D-2). Promotion-Target (knowledge_unit-
+//   INSERT + Snapshot-Trigger) bleibt strukturell unveraendert (AC-D-1).
 //
 // Fuenf Aktionen:
-//   - getCurationData(bulkRunId): Page-Load — bulk_run + email_pattern-Liste
-//     sortiert nach confidence DESC + verfuegbare Sections + Progress-Zahlen.
-//   - updatePatternCuration(pattern_id, payload): Pro-Pattern Akzeptieren/
+//   - getCurationData(bulkRunId): Page-Load — bulk_run + Unit-Liste
+//     sortiert nach aggregated_confidence DESC + Sections + Progress-Zahlen.
+//   - updateUnitCuration(unit_id, payload): Pro-Unit Akzeptieren/
 //     Ablehnen/Editieren + Section-Zuordnung.
-//   - bulkAcceptPatterns(bulk_run_id, { confidenceThreshold }): Bulk-Aktion
-//     "alle confidence >= threshold akzeptieren" — UPDATE WHERE pending_curation
-//     AND confidence >= threshold AND suggested_section IS NOT NULL.
-//   - bulkRejectAll(bulk_run_id): UPDATE alle pending_curation → rejected.
+//   - bulkAcceptUnits(bulk_run_id, { confidenceThreshold }): Bulk-Aktion
+//     "alle aggregated_confidence >= threshold akzeptieren" — UPDATE WHERE
+//     pending_curation AND aggregated_confidence >= threshold AND
+//     suggested_section IS NOT NULL.
+//   - bulkRejectAllUnits(bulk_run_id): UPDATE alle pending_curation → rejected.
 //   - finishCurationAndStartHandbookImport(bulk_run_id): GF-Gate-3.
-//     UPDATE email_bulk_run.status='importing' (SLC-167-Scope) + Hinweis dass
-//     SLC-168 Handbook-Import-Worker noch nicht implementiert ist.
+//     Status-Guard akzeptiert 'synthesized' + 'curating' (AC-D-4) →
+//     UPDATE email_bulk_run.status='importing'.
+//   - importToHandbook(bulk_run_id): Units → knowledge_unit + Snapshot.
 //
 // Pattern-Reuse:
 //   - Auth-Gate (tenant_admin): ../pattern-start/actions.ts authorizeActor
 //   - UUID-Validation: ../pattern-start/actions.ts UUID_REGEX
 //   - User-Context-SELECT + admin-Client-Trennung: ../filter-review/actions.ts
 //   - revalidatePath: ../pattern-start/actions.ts
-//   - Section-Lookup: @/lib/bulk-email/sections (MT-6 NEU)
+//   - Section-Lookup: @/lib/bulk-email/sections
 
 import { revalidatePath } from "next/cache";
 
@@ -35,10 +40,10 @@ import {
 } from "@/lib/bulk-email/sections";
 import {
   getOrCreatePseudoBlockCheckpoint,
-  mapPatternToKnowledgeUnit,
+  mapSynthesizedUnitToKnowledgeUnit,
   triggerHandbookSnapshot,
   type BulkRunForImport,
-  type PatternForImport,
+  type SynthesizedUnitForImport,
 } from "@/lib/bulk-email/handbook-import";
 
 import {
@@ -51,11 +56,11 @@ import {
   type BulkAcceptResult,
   type BulkRejectResult,
   type CurationData,
-  type CurationPattern,
+  type CurationUnit,
   type CurationStatus,
   type FinishCurationResult,
   type ImportToHandbookResult,
-  type UpdatePatternCurationResult,
+  type UpdateUnitCurationResult,
 } from "./helpers";
 
 const UUID_REGEX =
@@ -100,10 +105,11 @@ async function authorizeActor(): Promise<
 // ────────────────────────────────────────────────────────────────────────────
 
 /**
- * Lade Bulk-Run-Header + Pattern-Liste + Sections + Progress.
+ * Lade Bulk-Run-Header + Unit-Liste + Sections + Progress.
  *
  * Sicherheit: User-Context-Client. RLS-Policies email_bulk_run_tenant_select
- * + email_pattern_tenant_select filtern automatisch nach Tenant.
+ * + email_synthesized_unit Tenant-Policies (MIG-111) filtern automatisch
+ * nach Tenant.
  *
  * Section-Lookup geht ueber admin-Client (template ist system-weit). Tenant-
  * Filter ist nicht noetig — template-Definitionen sind global.
@@ -142,29 +148,32 @@ export async function getCurationData(
     }
   }
 
-  const { data: patternRows, error: patternError } = await supabase
-    .from("email_pattern")
+  const { data: unitRows, error: unitError } = await supabase
+    .from("email_synthesized_unit")
     .select(
-      "id, thread_id, title, description, evidence_snippets, themes, confidence, suggested_section, curation_status, curated_section, curator_user_id, curated_at",
+      "id, title, description, evidence_snippets, themes, aggregated_confidence, evidence_count, source_pattern_ids, suggested_section, curation_status, curated_section, curator_user_id, curated_at",
     )
     .eq("bulk_run_id", bulkRunId)
-    .order("confidence", { ascending: false });
-  if (patternError) return null;
+    .order("aggregated_confidence", { ascending: false });
+  if (unitError) return null;
 
-  const patterns: CurationPattern[] = (patternRows ?? []).map((p) => ({
-    id: p.id as string,
-    thread_id: p.thread_id as string,
-    title: p.title as string,
-    description: p.description as string,
+  const units: CurationUnit[] = (unitRows ?? []).map((u) => ({
+    id: u.id as string,
+    title: u.title as string,
+    description: u.description as string,
     evidence_snippets:
-      Array.isArray(p.evidence_snippets) ? (p.evidence_snippets as unknown[]) : null,
-    themes: Array.isArray(p.themes) ? (p.themes as string[]) : null,
-    confidence: Number(p.confidence),
-    suggested_section: (p.suggested_section as string | null) ?? null,
-    curation_status: p.curation_status as CurationStatus,
-    curated_section: (p.curated_section as string | null) ?? null,
-    curator_user_id: (p.curator_user_id as string | null) ?? null,
-    curated_at: (p.curated_at as string | null) ?? null,
+      Array.isArray(u.evidence_snippets) ? (u.evidence_snippets as unknown[]) : null,
+    themes: Array.isArray(u.themes) ? (u.themes as string[]) : null,
+    aggregated_confidence: Number(u.aggregated_confidence),
+    evidence_count: Number(u.evidence_count),
+    source_pattern_ids: Array.isArray(u.source_pattern_ids)
+      ? (u.source_pattern_ids as string[])
+      : null,
+    suggested_section: (u.suggested_section as string | null) ?? null,
+    curation_status: u.curation_status as CurationStatus,
+    curated_section: (u.curated_section as string | null) ?? null,
+    curator_user_id: (u.curator_user_id as string | null) ?? null,
+    curated_at: (u.curated_at as string | null) ?? null,
   }));
 
   // Sections via admin-Client (template ist global, kein Tenant-Filter noetig).
@@ -184,17 +193,17 @@ export async function getCurationData(
       capture_session_id: (runRow.capture_session_id as string | null) ?? null,
       template_id: templateId,
     },
-    patterns,
+    units,
     sections,
-    progress: computeProgress(patterns),
+    progress: computeProgress(units),
   };
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// updatePatternCuration — Pro-Pattern UPDATE
+// updateUnitCuration — Pro-Unit UPDATE
 // ────────────────────────────────────────────────────────────────────────────
 
-export interface UpdatePatternCurationPayload {
+export interface UpdateUnitCurationPayload {
   status: CurationStatus;
   /** Pflicht bei status='accepted' oder 'edited'. */
   curated_section?: string | null;
@@ -205,29 +214,29 @@ export interface UpdatePatternCurationPayload {
 }
 
 /**
- * Server-Action: einen einzelnen Pattern-Status setzen (akzeptieren/ablehnen/
+ * Server-Action: einen einzelnen Unit-Status setzen (akzeptieren/ablehnen/
  * editieren) + Section zuordnen.
  *
  * Flow:
  *   1. Auth-Gate (tenant_admin).
  *   2. UUID + Payload-Validation.
- *   3. UPDATE email_pattern SET curation_status, curated_section,
+ *   3. UPDATE email_synthesized_unit SET curation_status, curated_section,
  *      [title, description bei status='edited'], curator_user_id, curated_at.
- *      RLS-Policy email_pattern_tenant_update sichert Tenant-Iso.
+ *      Tenant-RLS (MIG-111) sichert Tenant-Iso.
  *   4. revalidatePath fuer Curation-Page.
  */
-export async function updatePatternCuration(
-  patternId: string,
-  payload: UpdatePatternCurationPayload,
-): Promise<UpdatePatternCurationResult> {
+export async function updateUnitCuration(
+  unitId: string,
+  payload: UpdateUnitCurationPayload,
+): Promise<UpdateUnitCurationResult> {
   const auth = await authorizeActor();
   if ("error" in auth) {
     return { ok: false, error: auth.error };
   }
   const { actor } = auth;
 
-  if (!UUID_REGEX.test(patternId)) {
-    return { ok: false, error: "Ungueltige pattern_id" };
+  if (!UUID_REGEX.test(unitId)) {
+    return { ok: false, error: "Ungueltige unit_id" };
   }
   if (!isCurationStatus(payload.status)) {
     return { ok: false, error: "Ungueltiger curation_status" };
@@ -284,9 +293,9 @@ export async function updatePatternCuration(
   }
 
   const { data: updatedRow, error: updateError } = await supabase
-    .from("email_pattern")
+    .from("email_synthesized_unit")
     .update(updatePayload)
-    .eq("id", patternId)
+    .eq("id", unitId)
     .select("id, bulk_run_id")
     .maybeSingle();
   if (updateError) {
@@ -298,31 +307,32 @@ export async function updatePatternCuration(
   if (!updatedRow) {
     return {
       ok: false,
-      error: "Pattern nicht gefunden oder kein Schreibzugriff (RLS-Block)",
+      error: "Unit nicht gefunden oder kein Schreibzugriff (RLS-Block)",
     };
   }
 
   revalidatePath(
     `/dashboard/bulk-email-import/${updatedRow.bulk_run_id as string}/curation`,
   );
-  return { ok: true, patternId: updatedRow.id as string };
+  return { ok: true, unitId: updatedRow.id as string };
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// bulkAcceptPatterns — Bulk-Aktion "alle confidence >= threshold akzeptieren"
+// bulkAcceptUnits — Bulk-Aktion "alle aggregated_confidence >= threshold"
 // ────────────────────────────────────────────────────────────────────────────
 
 /**
- * Server-Action: alle pending Patterns mit confidence >= threshold akzeptieren.
+ * Server-Action: alle pending Units mit aggregated_confidence >= threshold
+ * akzeptieren.
  *
- * Nur Patterns mit suggested_section IS NOT NULL werden akzeptiert — sonst
+ * Nur Units mit suggested_section IS NOT NULL werden akzeptiert — sonst
  * fehlt die Section-Pflicht und der GF muesste manuell nacheditieren.
  *
  * Spec L189: "Bulk-Aktion 'alle confidence >0.8 akzeptieren'". Wir nutzen >=
  * statt >, weil exakte 0.8 ein realistischer Wert ist und der GF erwartet,
  * dass die Schwelle inklusiv ist.
  */
-export async function bulkAcceptPatterns(
+export async function bulkAcceptUnits(
   bulkRunId: string,
   options: { confidenceThreshold?: number } = {},
 ): Promise<BulkAcceptResult> {
@@ -347,19 +357,19 @@ export async function bulkAcceptPatterns(
 
   const supabase = await createClient();
 
-  // Bulk-UPDATE: WHERE bulk_run_id + pending_curation + confidence >= threshold
-  //              + suggested_section IS NOT NULL.
+  // Bulk-UPDATE: WHERE bulk_run_id + pending_curation +
+  //              aggregated_confidence >= threshold + suggested_section NOT NULL.
   // curated_section = suggested_section (1:1 Uebernahme).
   // Wir muessen die qualifizierten Rows zuerst SELECTen, weil Supabase keine
   // SQL-Expression in UPDATE-Werten erlaubt (curated_section = suggested_section
-  // braucht in zwei Schritten: SELECT, dann Iterate-UPDATE pro Row).
+  // braucht zwei Schritte: SELECT, dann Iterate-UPDATE pro Row).
   const { data: candidateRows, error: selectError } = await supabase
-    .from("email_pattern")
+    .from("email_synthesized_unit")
     .select("id, suggested_section")
     .eq("bulk_run_id", bulkRunId)
     .eq("curation_status", "pending_curation")
     .not("suggested_section", "is", null)
-    .gte("confidence", threshold);
+    .gte("aggregated_confidence", threshold);
   if (selectError) {
     return {
       ok: false,
@@ -378,7 +388,7 @@ export async function bulkAcceptPatterns(
   let acceptedCount = 0;
   for (const c of candidates) {
     const { error: updateError, count } = await supabase
-      .from("email_pattern")
+      .from("email_synthesized_unit")
       .update(
         {
           curation_status: "accepted",
@@ -404,14 +414,14 @@ export async function bulkAcceptPatterns(
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// bulkRejectAll — alle pending → rejected
+// bulkRejectAllUnits — alle pending → rejected
 // ────────────────────────────────────────────────────────────────────────────
 
 /**
- * Server-Action: alle pending_curation-Patterns dieses Runs als rejected
+ * Server-Action: alle pending_curation-Units dieses Runs als rejected
  * markieren. Brauchbar fuer "Run komplett verwerfen ohne Handbuch-Import".
  */
-export async function bulkRejectAll(
+export async function bulkRejectAllUnits(
   bulkRunId: string,
 ): Promise<BulkRejectResult> {
   const auth = await authorizeActor();
@@ -426,7 +436,7 @@ export async function bulkRejectAll(
 
   const supabase = await createClient();
   const { error: updateError, count } = await supabase
-    .from("email_pattern")
+    .from("email_synthesized_unit")
     .update(
       {
         curation_status: "rejected",
@@ -454,25 +464,19 @@ export async function bulkRejectAll(
 
 /**
  * Server-Action: Curation als abgeschlossen markieren und Handbook-Import
- * triggern (SLC-168).
- *
- * SLC-167-Scope (Spec L191): UPDATE email_bulk_run.status='importing' +
- * Hinweis-Text, dass SLC-168-Handbook-Import-Worker noch nicht implementiert
- * ist. Bei kombiniertem Worktree (V9 vollstaendig) wird SLC-168 die
- * tatsaechliche Import-Action triggern und handbookImportStarted=true setzen.
+ * triggern.
  *
  * Flow:
  *   1. Auth-Gate (tenant_admin).
  *   2. UUID-Validation.
- *   3. Status-Pre-Check 'pattern_extracted' oder 'curating' (siehe MIG-051
- *      status-Werte). Wir akzeptieren beide weil V9.0 noch kein expliziter
- *      Status-Sprung von 'pattern_extracted' → 'curating' beim Curation-Start
- *      gemacht hat.
- *   4. Mindestens 1 Pattern mit curation_status IN ('accepted', 'edited').
+ *   3. Status-Pre-Check 'synthesized' oder 'curating' (AC-D-4 — die Synthese-
+ *      Stage SLC-V9.5-B flippt den Run auf 'synthesized'; 'curating' bleibt
+ *      als expliziter Zwischen-Status akzeptiert).
+ *   4. Mindestens 1 Unit mit curation_status IN ('accepted', 'edited').
  *      Sonst macht Import keinen Sinn.
  *   5. UPDATE email_bulk_run.status='importing'.
  *   6. revalidatePath.
- *   7. Return mit Hinweis-Text (SLC-167-Scope).
+ *   7. Return mit Hinweis-Text — CurationClient chained importToHandbook.
  */
 export async function finishCurationAndStartHandbookImport(
   bulkRunId: string,
@@ -504,30 +508,30 @@ export async function finishCurationAndStartHandbookImport(
     return { ok: false, error: "Bulk-Run nicht gefunden" };
   }
   const status = runRow.status as string;
-  if (status !== "pattern_extracted" && status !== "curating") {
+  if (status !== "synthesized" && status !== "curating") {
     return {
       ok: false,
-      error: `Abschluss nicht moeglich — Status ist '${status}', erwartet 'pattern_extracted' oder 'curating'`,
+      error: `Abschluss nicht moeglich — Status ist '${status}', erwartet 'synthesized' oder 'curating'`,
     };
   }
 
-  // Mindestens 1 akzeptiertes/editiertes Pattern
+  // Mindestens 1 akzeptierte/editierte Unit
   const { count: acceptedCount, error: countError } = await supabase
-    .from("email_pattern")
+    .from("email_synthesized_unit")
     .select("id", { count: "exact", head: true })
     .eq("bulk_run_id", bulkRunId)
     .in("curation_status", ["accepted", "edited"]);
   if (countError) {
     return {
       ok: false,
-      error: `Pattern-Count fehlgeschlagen: ${countError.message}`,
+      error: `Unit-Count fehlgeschlagen: ${countError.message}`,
     };
   }
   if (!acceptedCount || acceptedCount === 0) {
     return {
       ok: false,
       error:
-        "Kein akzeptiertes Pattern vorhanden — Curation abschliessen ist erst nach mindestens 1 Akzept moeglich",
+        "Keine akzeptierte Unit vorhanden — Curation abschliessen ist erst nach mindestens 1 Akzept moeglich",
     };
   }
 
@@ -549,10 +553,10 @@ export async function finishCurationAndStartHandbookImport(
   revalidatePath(`/dashboard/bulk-email-import/${bulkRunId}/curation`);
   revalidatePath(`/dashboard/bulk-email-import/${bulkRunId}`);
 
-  // SLC-167-Scope: Status-Flip durch. SLC-168 fuehrt Import in separater
-  // Server-Action (importToHandbook) aus — CurationClient.tsx chained beide
-  // Calls. Diese Funktion bleibt rein Status-Flip + Pre-Conditions-Validation,
-  // damit der bestehende Pre-Check-Contract (Tests + Code) stabil bleibt.
+  // Status-Flip durch. importToHandbook laeuft als separate Server-Action —
+  // CurationClient.tsx chained beide Calls. Diese Funktion bleibt rein
+  // Status-Flip + Pre-Conditions-Validation, damit der bestehende
+  // Pre-Check-Contract (Tests + Code) stabil bleibt.
   return {
     ok: true,
     handbookImportStarted: false,
@@ -562,31 +566,35 @@ export async function finishCurationAndStartHandbookImport(
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// importToHandbook — SLC-168 MT-2 Server-Action (FEAT-074)
+// importToHandbook — Units → knowledge_unit + Snapshot (FEAT-074 / FEAT-080)
 // ────────────────────────────────────────────────────────────────────────────
 
 /**
- * Server-Action: konvertiert akzeptierte/editierte Patterns in knowledge_unit-
+ * Server-Action: konvertiert akzeptierte/editierte Units in knowledge_unit-
  * Rows + triggert handbook_snapshot. Aufgerufen unmittelbar nach
  * finishCurationAndStartHandbookImport (UI-Chain) oder als manueller Re-Try
  * nach Status='failed'.
  *
- * Path-A-Lite (DEC-193):
+ * Path-A-Lite (DEC-193) — Target unveraendert (AC-D-1):
  *   - Pseudo-block_checkpoint pro Bulk-Run (idempotent via content_hash)
  *   - knowledge_unit-INSERT mit Source-Attribution im body als Markdown +
- *     parallel als metadata JSONB (LIVE bestaetigt knowledge_unit.metadata
- *     existiert mit NOT NULL DEFAULT '{}'::jsonb)
- *   - email_pattern.imported_to_handbook_at = now() + imported_knowledge_unit_id
+ *     parallel als metadata JSONB
+ *   - email_synthesized_unit.imported_to_handbook_at = now() +
+ *     imported_knowledge_unit_id
  *   - triggerHandbookSnapshot via RPC rpc_trigger_handbook_snapshot
  *   - Worker handle-snapshot-job.ts pickt asynchron und rendert ZIP
  *
+ * SLC-V9.5-D (AC-D-2): KEIN email_thread/participant_pseudonyms-Lookup mehr —
+ * die Synthese hat P1/P2 bereits entfernt; Attribution via source_pattern_ids
+ * + evidence_count.
+ *
  * Idempotenz:
- *   - imported_to_handbook_at IS NULL filtert bereits importierte Patterns
+ *   - imported_to_handbook_at IS NULL filtert bereits importierte Units
  *   - Pseudo-Checkpoint via content_hash=sha256(bulk_run_id) deduped
  *
  * Failure-Pfad (Snapshot-Trigger oder mid-Loop):
- *   - ROLLBACK: DELETE knowledge_unit-Rows + UPDATE email_pattern.imported_to_*
- *     auf NULL fuer alle insertierten Patterns
+ *   - ROLLBACK: DELETE knowledge_unit-Rows + UPDATE
+ *     email_synthesized_unit.imported_to_* auf NULL fuer alle insertierten Units
  *   - UPDATE bulk_run.status='failed', failure_reason
  *   - Re-Run via dieser Action ist moeglich (status='failed' akzeptiert)
  *
@@ -652,29 +660,30 @@ export async function importToHandbook(
     };
   }
 
-  // 3. Lade pending Patterns (accepted/edited mit Section + nicht-importiert)
-  const { data: patternRows, error: patternError } = await adminClient
-    .from("email_pattern")
+  // 3. Lade pending Units (accepted/edited mit Section + nicht-importiert)
+  const { data: unitRows, error: unitError } = await adminClient
+    .from("email_synthesized_unit")
     .select(
-      "id, thread_id, title, description, evidence_snippets, confidence, curated_section, created_at, curator_user_id",
+      "id, title, description, evidence_snippets, aggregated_confidence, evidence_count, source_pattern_ids, curated_section, created_at, curator_user_id",
     )
     .eq("bulk_run_id", bulkRunId)
     .in("curation_status", ["accepted", "edited"])
     .is("imported_to_handbook_at", null)
     .not("curated_section", "is", null);
-  if (patternError) {
+  if (unitError) {
     return {
       ok: false,
-      error: `Pattern-SELECT fehlgeschlagen: ${patternError.message}`,
+      error: `Unit-SELECT fehlgeschlagen: ${unitError.message}`,
     };
   }
-  const patterns = (patternRows ?? []) as Array<{
+  const units = (unitRows ?? []) as Array<{
     id: string;
-    thread_id: string;
     title: string;
     description: string;
     evidence_snippets: unknown[] | null;
-    confidence: number;
+    aggregated_confidence: number;
+    evidence_count: number;
+    source_pattern_ids: string[] | null;
     curated_section: string;
     created_at: string;
     curator_user_id: string | null;
@@ -687,9 +696,9 @@ export async function importToHandbook(
     source_file_name: runRow.source_file_name as string,
   };
 
-  // 4. Re-Run-Idempotenz: keine pending Patterns → Status auf 'completed' (nur
+  // 4. Re-Run-Idempotenz: keine pending Units → Status auf 'completed' (nur
   //    falls noch nicht), kein 2. Snapshot-Trigger, kein Pseudo-Checkpoint.
-  if (patterns.length === 0) {
+  if (units.length === 0) {
     const { error: completeError } = await adminClient
       .from("email_bulk_run")
       .update({
@@ -708,40 +717,13 @@ export async function importToHandbook(
     revalidatePath(`/dashboard/bulk-email-import/${bulkRunId}`);
     return {
       ok: true,
-      patternsImported: 0,
+      unitsImported: 0,
       knowledgeUnitsCreated: 0,
       handbookSnapshotId: "",
     };
   }
 
-  // 5. Thread-Pseudonym-Lookup (eine Query, JOIN-frei via .in())
-  const threadIds = Array.from(new Set(patterns.map((p) => p.thread_id)));
-  const pseudonymMap = new Map<string, Record<string, string>>();
-  const { data: threadRows, error: threadError } = await adminClient
-    .from("email_thread")
-    .select("id, participant_pseudonyms")
-    .in("id", threadIds);
-  if (threadError) {
-    return {
-      ok: false,
-      error: `Thread-SELECT fehlgeschlagen: ${threadError.message}`,
-    };
-  }
-  for (const thread of threadRows ?? []) {
-    const pseudonyms = thread.participant_pseudonyms;
-    if (
-      pseudonyms &&
-      typeof pseudonyms === "object" &&
-      !Array.isArray(pseudonyms)
-    ) {
-      pseudonymMap.set(
-        thread.id as string,
-        pseudonyms as Record<string, string>,
-      );
-    }
-  }
-
-  // 6. Get-or-create Pseudo-block_checkpoint
+  // 5. Get-or-create Pseudo-block_checkpoint
   const checkpointResult = await getOrCreatePseudoBlockCheckpoint(adminClient, {
     captureSessionId,
     bulkRunId,
@@ -753,9 +735,9 @@ export async function importToHandbook(
   }
   const blockCheckpointId = checkpointResult.blockCheckpointId;
 
-  // 7. Loop: INSERT knowledge_unit + UPDATE email_pattern
+  // 6. Loop: INSERT knowledge_unit + UPDATE email_synthesized_unit
   const insertedKuIds: string[] = [];
-  const insertedPatternIds: string[] = [];
+  const insertedUnitIds: string[] = [];
 
   async function rollbackLoop(failureReason: string): Promise<void> {
     if (insertedKuIds.length > 0) {
@@ -764,14 +746,14 @@ export async function importToHandbook(
         .delete()
         .in("id", insertedKuIds);
     }
-    if (insertedPatternIds.length > 0) {
+    if (insertedUnitIds.length > 0) {
       await adminClient
-        .from("email_pattern")
+        .from("email_synthesized_unit")
         .update({
           imported_to_handbook_at: null,
           imported_knowledge_unit_id: null,
         })
-        .in("id", insertedPatternIds);
+        .in("id", insertedUnitIds);
     }
     await adminClient
       .from("email_bulk_run")
@@ -783,34 +765,34 @@ export async function importToHandbook(
       .eq("id", bulkRunId);
   }
 
-  for (const pattern of patterns) {
-    const patternForImport: PatternForImport = {
-      id: pattern.id,
-      thread_id: pattern.thread_id,
-      title: pattern.title,
-      description: pattern.description,
-      evidence_snippets: pattern.evidence_snippets,
-      confidence: Number(pattern.confidence),
-      curated_section: pattern.curated_section,
+  for (const unit of units) {
+    const unitForImport: SynthesizedUnitForImport = {
+      id: unit.id,
+      title: unit.title,
+      description: unit.description,
+      evidence_snippets: unit.evidence_snippets,
+      aggregated_confidence: Number(unit.aggregated_confidence),
+      evidence_count: Number(unit.evidence_count),
+      source_pattern_ids: unit.source_pattern_ids,
+      curated_section: unit.curated_section,
     };
 
     let insertInput;
     try {
-      insertInput = mapPatternToKnowledgeUnit({
-        pattern: patternForImport,
+      insertInput = mapSynthesizedUnitToKnowledgeUnit({
+        unit: unitForImport,
         bulkRun: bulkRunForImport,
         captureSessionId,
         blockCheckpointId,
-        curatorUserId: pattern.curator_user_id ?? auth.actor.userId,
-        extractedAt: pattern.created_at,
-        participantPseudonyms: pseudonymMap.get(pattern.thread_id),
+        curatorUserId: unit.curator_user_id ?? auth.actor.userId,
+        extractedAt: unit.created_at,
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       await rollbackLoop("handbook_import_mapper_error");
       return {
         ok: false,
-        error: `Mapper-Fehler bei pattern ${pattern.id}: ${msg}`,
+        error: `Mapper-Fehler bei unit ${unit.id}: ${msg}`,
       };
     }
 
@@ -823,29 +805,29 @@ export async function importToHandbook(
       await rollbackLoop("handbook_import_ku_insert_error");
       return {
         ok: false,
-        error: `knowledge_unit INSERT (pattern ${pattern.id}): ${kuInsertError?.message ?? "unknown"}`,
+        error: `knowledge_unit INSERT (unit ${unit.id}): ${kuInsertError?.message ?? "unknown"}`,
       };
     }
     insertedKuIds.push(kuRow.id as string);
 
-    const { error: patternUpdateError } = await adminClient
-      .from("email_pattern")
+    const { error: unitUpdateError } = await adminClient
+      .from("email_synthesized_unit")
       .update({
         imported_to_handbook_at: new Date().toISOString(),
         imported_knowledge_unit_id: kuRow.id,
       })
-      .eq("id", pattern.id);
-    if (patternUpdateError) {
-      await rollbackLoop("handbook_import_pattern_update_error");
+      .eq("id", unit.id);
+    if (unitUpdateError) {
+      await rollbackLoop("handbook_import_unit_update_error");
       return {
         ok: false,
-        error: `email_pattern UPDATE (pattern ${pattern.id}): ${patternUpdateError.message}`,
+        error: `email_synthesized_unit UPDATE (unit ${unit.id}): ${unitUpdateError.message}`,
       };
     }
-    insertedPatternIds.push(pattern.id);
+    insertedUnitIds.push(unit.id);
   }
 
-  // 8. Snapshot-Trigger
+  // 7. Snapshot-Trigger
   const snapshotResult = await triggerHandbookSnapshot(
     adminClient,
     captureSessionId,
@@ -858,20 +840,20 @@ export async function importToHandbook(
     };
   }
 
-  // 9. Final-Status-UPDATE: 'completed' + Stats
+  // 8. Final-Status-UPDATE: 'completed' + Stats
   const { error: finalUpdateError } = await adminClient
     .from("email_bulk_run")
     .update({
       status: "completed",
       completed_at: new Date().toISOString(),
-      patterns_imported: patterns.length,
+      patterns_imported: units.length,
       updated_at: new Date().toISOString(),
     })
     .eq("id", bulkRunId);
   if (finalUpdateError) {
     // Snapshot ist schon getriggert — Rollback waere inkonsistent. Stattdessen
     // status='failed' setzen mit klarer Fehlermeldung; Re-Run wuerde via
-    // imported_to_handbook_at IS NULL-Filter 0 Patterns finden und idempotent
+    // imported_to_handbook_at IS NULL-Filter 0 Units finden und idempotent
     // den Status auf 'completed' setzen.
     return {
       ok: false,
@@ -885,7 +867,7 @@ export async function importToHandbook(
 
   return {
     ok: true,
-    patternsImported: patterns.length,
+    unitsImported: units.length,
     knowledgeUnitsCreated: insertedKuIds.length,
     handbookSnapshotId: snapshotResult.handbookSnapshotId,
   };

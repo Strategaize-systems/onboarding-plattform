@@ -25,7 +25,7 @@ import {
   type HaikuRawCaller,
 } from "..";
 
-const FAKE_MODEL_ID = "anthropic.claude-3-haiku-20240307-v1:0";
+const FAKE_MODEL_ID = "eu.anthropic.claude-haiku-4-5-20251001-v1:0";
 
 function makeMockCaller(text: string, opts?: {
   tokensIn?: number;
@@ -195,7 +195,7 @@ describe("Bedrock-Haiku-Adapter", () => {
   });
 
   describe("Modell-ID Resolution", () => {
-    it("uses Haiku-3 as Default when no options.modelId and no ENV", async () => {
+    it("uses eu-Haiku-4.5 as Default when no options.modelId and no ENV", async () => {
       let usedModel = "";
       __setHaikuCallerForTests(async (args) => {
         usedModel = args.modelId;
@@ -242,8 +242,8 @@ describe("Bedrock-Haiku-Adapter", () => {
     });
   });
 
-  describe("Cost-Computation (Haiku 3 Pricing)", () => {
-    it("computes cost from tokens: $0.25 input / $1.25 output per 1M tokens", async () => {
+  describe("Cost-Computation (Haiku 4.5 Pricing)", () => {
+    it("computes cost from tokens: $1.00 input / $5.00 output per 1M tokens", async () => {
       __setHaikuCallerForTests(
         makeMockCaller("{}", { tokensIn: 1_000_000, tokensOut: 1_000_000 }),
       );
@@ -251,8 +251,8 @@ describe("Bedrock-Haiku-Adapter", () => {
         { system: "S", user: "U" },
         z.object({}),
       );
-      // 1M input * 0.25 + 1M output * 1.25 = 1.50 USD
-      expect(result.costUsd).toBeCloseTo(1.5, 5);
+      // 1M input * 1.00 + 1M output * 5.00 = 6.00 USD (Haiku-4.5-Tier, V9.5 SLC-V9.5-A)
+      expect(result.costUsd).toBeCloseTo(6.0, 5);
     });
 
     it("passes through tokensIn/tokensOut from raw caller", async () => {

@@ -1,4 +1,10 @@
 // V9 SLC-168 MT-1 — Pure-Function-Layer fuer Handbuch-Import (FEAT-074)
+// V9.5 SLC-V9.5-D MT-3 — Curation-Contract-Shift (DEC-214): Import-Source ist
+//   email_synthesized_unit statt email_pattern. Der thread-lokale Pseudonym-
+//   Lookup ENTFAELLT — die Synthese hat P1/P2 bereits entfernt (ARCH §10).
+//   Source-Attribution laeuft via source_pattern_ids + evidence_count statt
+//   Thread-Pseudonyme. Promotion-TARGET (knowledge_unit-INSERT + Snapshot-
+//   Trigger) bleibt strukturell unveraendert (SC-V9.5-5 / AC-D-1).
 //
 // Slice: SLC-168 — V9 Handbuch-Integration + Audit + Source-Attribution-View
 // DECs: DEC-193 (Path-A-Lite — knowledge_unit-INSERT mit Source-Attribution im body-Markdown)
@@ -11,7 +17,7 @@
 //     SECURITY DEFINER + Role-Check intern macht.
 //
 // Path-A-Lite (DEC-193):
-//   - knowledge_unit-INSERT mit body = pattern.description + Source-Attribution-Markdown
+//   - knowledge_unit-INSERT mit body = unit.description + Source-Attribution-Markdown
 //   - Pseudo-block_checkpoint pro Bulk-Run erfuellt NOT NULL FK
 //   - 0 Worker-Aenderung (handle-snapshot-job.ts liest title/body wie ueblich)
 //   - 0 Reader-Aenderung (V4.1 FEAT-028 Reader unangetastet)
@@ -19,7 +25,7 @@
 // Public API (4 exports):
 //   - mapConfidenceToTier(confidence): KnowledgeUnitConfidence
 //   - renderSourceAttributionMarkdown(args): string
-//   - mapPatternToKnowledgeUnit(args): KnowledgeUnitInsertInput  (Pure)
+//   - mapSynthesizedUnitToKnowledgeUnit(args): KnowledgeUnitInsertInput  (Pure)
 //   - getOrCreatePseudoBlockCheckpoint(adminClient, args): Promise<{ok, ...}>
 //   - triggerHandbookSnapshot(client, captureSessionId): Promise<{ok, ...}>
 
@@ -43,31 +49,37 @@ export interface BulkRunForImport {
 }
 
 /**
- * Pattern-Subset fuer Handbook-Import. Subset des `email_pattern`-Schemas
- * (MIG-051/106) — nur was Mapper braucht. Entkoppelt handbook-import vom
- * Curation-UI-Modul (`/dashboard/bulk-email-import/[run_id]/curation/helpers`).
+ * Unit-Subset fuer Handbook-Import. Subset des `email_synthesized_unit`-
+ * Schemas (MIG-111) — nur was der Mapper braucht. Entkoppelt handbook-import
+ * vom Curation-UI-Modul (`/dashboard/bulk-email-import/[run_id]/curation/helpers`).
  */
-export interface PatternForImport {
+export interface SynthesizedUnitForImport {
   id: string;
-  thread_id: string;
   title: string;
   description: string;
+  /** jsonb [{ text, source_pattern_id }] aus der Synthese. */
   evidence_snippets: unknown[] | null;
-  confidence: number;
+  aggregated_confidence: number;
+  evidence_count: number;
+  source_pattern_ids: string[] | null;
   curated_section: string | null;
 }
 
 /**
- * Source-Attribution-Daten pro Pattern. Werden in body als Markdown gerendert
+ * Source-Attribution-Daten pro Unit. Werden in body als Markdown gerendert
  * und (defensiv) zusaetzlich in knowledge_unit.metadata JSONB geschrieben
  * (per DEC-193: try-set Pattern in MT-2-INSERT-Code).
+ *
+ * SLC-V9.5-D (R-D-4): Attribution via source_pattern_ids + evidence_count
+ * statt Thread-Pseudonyme — Units sind cross-thread, thread-lokale P1/P2
+ * existieren auf Unit-Ebene nicht mehr.
  */
 export interface SourceAttribution {
   source_type: "email_bulk";
   bulk_run_id: string;
-  pattern_id: string;
-  thread_id: string;
-  participant_pseudonyms?: Record<string, string>;
+  synthesized_unit_id: string;
+  source_pattern_ids: string[];
+  evidence_count: number;
   confidence_raw: number;
   extracted_at: string; // ISO
 }
@@ -138,7 +150,8 @@ export interface SourceAttributionRenderArgs {
   /** ISO-Date oder Datetime. Es wird nur YYYY-MM-DD verwendet. */
   extractedAt: string;
   confidence: number;
-  participantPseudonyms?: Record<string, string>;
+  /** Anzahl distinkter belegender Quell-Patterns (rekonziliierter Wert). */
+  evidenceCount: number;
 }
 
 /**
@@ -146,13 +159,17 @@ export interface SourceAttributionRenderArgs {
  * bestehende Worker `handle-snapshot-job.ts` liest body und uebergibt es
  * 1:1 an den ZIP-Renderer — Reader sieht das in der gerenderten Section.
  *
- * Output-Form (Beispiel mit Pseudonymen):
+ * Output-Form:
  *
  *     ---
  *     **Quelle**: Aus Email-Bulk-Import vom 2026-06-05 (Datei `mailbox.mbox`).
  *     **Confidence**: high (raw 0.90)
- *     **Pseudonyme**: Klarnamen wurden pseudonymisiert. Beteiligte: P1 | P2.
+ *     **Belege**: 3 Quell-Patterns. Klarnamen wurden bereits in der Synthese entfernt.
  *     **Run-Detail**: [Quelle ansehen](/dashboard/bulk-email-import/<bulk_run_id>)
+ *
+ * SLC-V9.5-D: Pseudonym-Zeile entfaellt (DEC-214) — Units sind cross-thread
+ * und thread-agnostisch formuliert; die Belegdichte ersetzt die Beteiligten-
+ * Liste (R-D-4: Attribution bleibt nicht-leer).
  *
  * Datum-Format: YYYY-MM-DD aus dem ISO-String-Prefix (TZ-agnostisch — der
  * Datums-Anteil ist unabhaengig vom Offset stabil, weil ISO-Strings immer
@@ -163,18 +180,8 @@ export function renderSourceAttributionMarkdown(
 ): string {
   const datePart = args.extractedAt.slice(0, 10);
   const tier = mapConfidenceToTier(args.confidence);
-  const pseudonymsLine = (() => {
-    if (!args.participantPseudonyms) {
-      return "**Pseudonyme**: Klarnamen wurden pseudonymisiert.";
-    }
-    const values = Object.values(args.participantPseudonyms).filter(
-      (v) => typeof v === "string" && v.length > 0,
-    );
-    if (values.length === 0) {
-      return "**Pseudonyme**: Klarnamen wurden pseudonymisiert.";
-    }
-    return `**Pseudonyme**: Klarnamen wurden pseudonymisiert. Beteiligte: ${values.join(" | ")}.`;
-  })();
+  const evidenceLabel =
+    args.evidenceCount === 1 ? "1 Quell-Pattern" : `${args.evidenceCount} Quell-Patterns`;
 
   return [
     "",
@@ -182,52 +189,51 @@ export function renderSourceAttributionMarkdown(
     "",
     `**Quelle**: Aus Email-Bulk-Import vom ${datePart} (Datei \`${args.sourceFileName}\`).`,
     `**Confidence**: ${tier} (raw ${args.confidence.toFixed(2)})`,
-    pseudonymsLine,
+    `**Belege**: ${evidenceLabel}. Klarnamen wurden bereits in der Synthese entfernt.`,
     `**Run-Detail**: [Quelle ansehen](/dashboard/bulk-email-import/${args.bulkRunId})`,
   ].join("\n");
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// 3. Pure-Function: mapPatternToKnowledgeUnit
+// 3. Pure-Function: mapSynthesizedUnitToKnowledgeUnit
 // ────────────────────────────────────────────────────────────────────────────
 
-export interface MapPatternArgs {
-  pattern: PatternForImport;
+export interface MapSynthesizedUnitArgs {
+  unit: SynthesizedUnitForImport;
   bulkRun: BulkRunForImport;
   captureSessionId: string;
   blockCheckpointId: string;
   curatorUserId: string;
-  /** ISO-Datum des Pattern-Extracts (pattern.created_at). */
+  /** ISO-Datum der Unit-Synthese (unit.created_at). */
   extractedAt: string;
-  /** Optional: Pseudonym-Map des Threads (P1 -> "Person A", …). */
-  participantPseudonyms?: Record<string, string>;
 }
 
 /**
- * Pure-Function: bilde Pattern + Run-Context auf einen knowledge_unit-INSERT-
- * Datensatz ab.
+ * Pure-Function: bilde Synthesized-Unit + Run-Context auf einen
+ * knowledge_unit-INSERT-Datensatz ab (SLC-V9.5-D, DEC-214).
  *
  * Regeln:
  *   - curated_section -> block_key (Pflicht; getCurationData + Server-Action
- *     sichern ab dass akzeptierte/editierte Patterns eine Section haben).
- *   - body = pattern.description.trim() + Source-Attribution-Markdown.
- *   - confidence (numerisch 0..1) -> Tier ('low'|'medium'|'high').
- *   - source='email_bulk', unit_type='observation', status='accepted'.
- *   - evidence_refs aus pattern.evidence_snippets falls Array, sonst [].
- *   - metadata wird mitgegeben (Source-Attribution-Audit-Form), MT-2-INSERT
- *     setzt sie defensiv.
+ *     sichern ab dass akzeptierte/editierte Units eine Section haben).
+ *   - body = unit.description.trim() + Source-Attribution-Markdown
+ *     (Belegdichte statt Pseudonym-Liste — KEIN Pseudonym-Lookup, AC-D-2).
+ *   - aggregated_confidence (numerisch 0..1) -> Tier ('low'|'medium'|'high').
+ *   - source='email_bulk', unit_type='observation', status='accepted' —
+ *     Promotion-Target unveraendert (SC-V9.5-5 / AC-D-1).
+ *   - evidence_refs aus unit.evidence_snippets falls Array, sonst [].
+ *   - metadata mit source_pattern_ids + evidence_count (Provenance-Audit).
  *
- * Wirft Error wenn curated_section leer/null ist — Caller (MT-2) muss vorher
+ * Wirft Error wenn curated_section leer/null ist — Caller (MT-3) muss vorher
  * filtern auf curation_status IN ('accepted','edited') AND curated_section
  * IS NOT NULL.
  */
-export function mapPatternToKnowledgeUnit(
-  args: MapPatternArgs,
+export function mapSynthesizedUnitToKnowledgeUnit(
+  args: MapSynthesizedUnitArgs,
 ): KnowledgeUnitInsertInput {
-  const section = args.pattern.curated_section?.trim();
+  const section = args.unit.curated_section?.trim();
   if (!section) {
     throw new Error(
-      `mapPatternToKnowledgeUnit: pattern ${args.pattern.id} hat keine curated_section — kann nicht importiert werden`,
+      `mapSynthesizedUnitToKnowledgeUnit: unit ${args.unit.id} hat keine curated_section — kann nicht importiert werden`,
     );
   }
 
@@ -235,22 +241,22 @@ export function mapPatternToKnowledgeUnit(
     bulkRunId: args.bulkRun.id,
     sourceFileName: args.bulkRun.source_file_name,
     extractedAt: args.extractedAt,
-    confidence: args.pattern.confidence,
-    participantPseudonyms: args.participantPseudonyms,
+    confidence: args.unit.aggregated_confidence,
+    evidenceCount: args.unit.evidence_count,
   });
 
-  const body = `${args.pattern.description.trim()}\n${sourceAttribution}`;
+  const body = `${args.unit.description.trim()}\n${sourceAttribution}`;
 
   const metadata: SourceAttribution = {
     source_type: "email_bulk",
     bulk_run_id: args.bulkRun.id,
-    pattern_id: args.pattern.id,
-    thread_id: args.pattern.thread_id,
-    confidence_raw: args.pattern.confidence,
+    synthesized_unit_id: args.unit.id,
+    source_pattern_ids: Array.isArray(args.unit.source_pattern_ids)
+      ? args.unit.source_pattern_ids
+      : [],
+    evidence_count: args.unit.evidence_count,
+    confidence_raw: args.unit.aggregated_confidence,
     extracted_at: args.extractedAt,
-    ...(args.participantPseudonyms
-      ? { participant_pseudonyms: args.participantPseudonyms }
-      : {}),
   };
 
   return {
@@ -260,13 +266,13 @@ export function mapPatternToKnowledgeUnit(
     block_key: section,
     unit_type: "observation",
     source: "email_bulk",
-    title: args.pattern.title.trim(),
+    title: args.unit.title.trim(),
     body,
-    confidence: mapConfidenceToTier(args.pattern.confidence),
+    confidence: mapConfidenceToTier(args.unit.aggregated_confidence),
     status: "accepted",
     updated_by: args.curatorUserId,
-    evidence_refs: Array.isArray(args.pattern.evidence_snippets)
-      ? args.pattern.evidence_snippets
+    evidence_refs: Array.isArray(args.unit.evidence_snippets)
+      ? args.unit.evidence_snippets
       : [],
     metadata,
   };

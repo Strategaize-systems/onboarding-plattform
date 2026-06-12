@@ -14,9 +14,11 @@
 //   - HaikuSchemaError fuer post-Call-Validation-Drift (Caller faengt + faellt zurueck)
 //   - Region HARDCODED 'eu-central-1' (data-residency.md Pflicht, CI-Test verifiziert)
 //
-// Pricing-Hinweise (anthropic.claude-3-haiku-20240307-v1:0 via Bedrock eu-central-1):
-//   $0.25 per 1M input tokens / $1.25 per 1M output tokens (Stand 2025).
-//   Quelle: docs/ARCHITECTURE.md V9-Section DEC-181 + AWS Bedrock Pricing Page.
+// Pricing-Hinweise (eu.anthropic.claude-haiku-4-5-20251001-v1:0 via Bedrock eu-central-1):
+//   $1.00 per 1M input tokens / $5.00 per 1M output tokens (Haiku-4.5-Tier, Stand 2026).
+//   V9.5 SLC-V9.5-A DEC-218: Tier-Wechsel Haiku-3 -> Haiku-4.5 aendert Pricing (R-A-1).
+//   ID-/Pricing-Quelle: claude-api-Skill (first-party claude-haiku-4-5-20251001, $1/$5).
+//   Live-Verify exakte Bedrock-Inference-Profile-ID + eu-central-1-Verfuegbarkeit im /deploy.
 
 import {
   BedrockRuntimeClient,
@@ -31,15 +33,16 @@ import type {
   HaikuPromptRequest,
 } from "./types";
 
-// ─── Pricing (Haiku 3 via Bedrock eu-central-1) ───
-const COST_PER_INPUT_TOKEN = 0.25 / 1_000_000;
-const COST_PER_OUTPUT_TOKEN = 1.25 / 1_000_000;
+// ─── Pricing (Haiku 4.5 via Bedrock eu-central-1) ───
+// V9.5 SLC-V9.5-A DEC-218 (R-A-1): Haiku-4.5-Tier = $1/$5 (vs Haiku-3 $0.25/$1.25).
+const COST_PER_INPUT_TOKEN = 1.0 / 1_000_000;
+const COST_PER_OUTPUT_TOKEN = 5.0 / 1_000_000;
 
 // ─── Hardcoded Region per data-residency.md (eu-central-1 Frankfurt) ───
 export const BEDROCK_HAIKU_REGION = "eu-central-1" as const;
 
 // ─── Default Model-ID (overridable via ENV) ───
-const DEFAULT_HAIKU_MODEL_ID = "anthropic.claude-3-haiku-20240307-v1:0";
+const DEFAULT_HAIKU_MODEL_ID = "eu.anthropic.claude-haiku-4-5-20251001-v1:0";
 
 function resolveModelId(override?: string): string {
   if (override) return override;
@@ -135,7 +138,7 @@ function extractJsonCandidate(raw: string): string {
  *
  * Vertrag:
  *   - Region IMMER eu-central-1 (BEDROCK_HAIKU_REGION).
- *   - Modell-ID via Options-Override oder ENV BEDROCK_V9_HAIKU_MODEL_ID (Default Haiku 3).
+ *   - Modell-ID via Options-Override oder ENV BEDROCK_V9_HAIKU_MODEL_ID (Default Haiku 4.5).
  *   - System+User-Prompt werden 1:1 an ConverseCommand uebergeben.
  *   - Bei leerem Output: throw Error.
  *   - Bei nicht-JSON-Output: throw HaikuSchemaError (rawText snippet + zod issues).

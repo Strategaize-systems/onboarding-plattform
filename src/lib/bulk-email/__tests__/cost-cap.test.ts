@@ -24,6 +24,7 @@ import {
   DEFAULT_RUN_CAP_EUR,
   DEFAULT_TENANT_MONTH_CAP_EUR,
   checkLiveCapInWorker,
+  checkLiveTotalCapInWorker,
   checkPreApprovalThreshold,
   checkRunCap,
   checkTenantMonthlyCap,
@@ -37,6 +38,7 @@ import {
 interface MockStoreOptions {
   tenantMonthCostEur?: number | ((tenantId: string) => number);
   runPatternCostEur?: number | ((runId: string) => number);
+  runTotalCostEur?: number | ((runId: string) => number);
 }
 
 function makeMockStore(opts: MockStoreOptions = {}): CostCapStore {
@@ -52,6 +54,12 @@ function makeMockStore(opts: MockStoreOptions = {}): CostCapStore {
         return opts.runPatternCostEur(runId);
       }
       return opts.runPatternCostEur ?? 0;
+    },
+    async getRunTotalCostEur(runId) {
+      if (typeof opts.runTotalCostEur === "function") {
+        return opts.runTotalCostEur(runId);
+      }
+      return opts.runTotalCostEur ?? 0;
     },
   };
 }
@@ -185,6 +193,9 @@ describe("checkTenantMonthlyCap", () => {
       async getRunPatternExtractionCostEur() {
         return 0;
       },
+      async getRunTotalCostEur() {
+        return 0;
+      },
     };
     await checkTenantMonthlyCap("tenant-x-uuid", 1, 100, store);
     expect(calledWith).toBe("tenant-x-uuid");
@@ -236,9 +247,66 @@ describe("checkLiveCapInWorker", () => {
         calledWith = runId;
         return 0;
       },
+      async getRunTotalCostEur() {
+        return 0;
+      },
     };
     await checkLiveCapInWorker("run-x-uuid", 20, store);
     expect(calledWith).toBe("run-x-uuid");
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+// V9.5 SLC-V9.5-B MT-3: checkLiveTotalCapInWorker (Synthese-Stage Live-Cap)
+// ────────────────────────────────────────────────────────────────────────────
+
+describe("checkLiveTotalCapInWorker (V9.5 Synthese-Stage)", () => {
+  const RUN_B = "33333333-3333-3333-3333-333333333333";
+
+  it("liest total_cost_eur (nicht pattern_extraction) — 0 EUR → nicht exceeded", async () => {
+    const store = makeMockStore({ runTotalCostEur: 0, runPatternCostEur: 99 });
+    const result = await checkLiveTotalCapInWorker(RUN_B, 20, store);
+    expect(result.exceeded).toBe(false);
+    expect(result.currentEur).toBe(0); // total, nicht pattern (99)
+  });
+
+  it("18 EUR total + 20 EUR cap → nicht exceeded", async () => {
+    const store = makeMockStore({ runTotalCostEur: 18 });
+    const result = await checkLiveTotalCapInWorker(RUN_B, 20, store);
+    expect(result.exceeded).toBe(false);
+    expect(result.currentEur).toBe(18);
+  });
+
+  it("20 EUR genau auf cap → nicht exceeded (inclusive)", async () => {
+    const store = makeMockStore({ runTotalCostEur: 20 });
+    const result = await checkLiveTotalCapInWorker(RUN_B, 20, store);
+    expect(result.exceeded).toBe(false);
+    expect(result.currentEur).toBe(20);
+  });
+
+  it("20.5 EUR total ueber cap → exceeded (Worker bricht Synthese ab)", async () => {
+    const store = makeMockStore({ runTotalCostEur: 20.5 });
+    const result = await checkLiveTotalCapInWorker(RUN_B, 20, store);
+    expect(result.exceeded).toBe(true);
+    expect(result.currentEur).toBe(20.5);
+  });
+
+  it("Run-Isolation: Store filtert per runId", async () => {
+    let calledWith: string | null = null;
+    const store: CostCapStore = {
+      async getTenantMonthCostEur() {
+        return 0;
+      },
+      async getRunPatternExtractionCostEur() {
+        return 0;
+      },
+      async getRunTotalCostEur(runId) {
+        calledWith = runId;
+        return 0;
+      },
+    };
+    await checkLiveTotalCapInWorker("run-total-uuid", 20, store);
+    expect(calledWith).toBe("run-total-uuid");
   });
 });
 

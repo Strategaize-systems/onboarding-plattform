@@ -1,18 +1,22 @@
 // V9 SLC-167 MT-6 — Vitest fuer Curation Server-Actions (FEAT-073)
-//
-// Spec: slices/SLC-167-v9-pattern-curation-cost-cap.md (MT-6 Verification L192-197)
+// V9.5 SLC-V9.5-D MT-1..3 — Curation-Contract-Shift (DEC-214): Actions
+//   operieren auf email_synthesized_unit; finishCuration-Guard akzeptiert
+//   'synthesized'/'curating' (AC-D-4); importToHandbook OHNE Pseudonym-Lookup
+//   (AC-D-2).
 //
 // Coverage:
-//   updatePatternCuration: Auth-Gate, UUID, invalid status, section-Pflicht,
-//                          edited-Title/Description-Validation, success
-//   bulkAcceptPatterns: Auth-Gate, UUID, threshold-Range, 0 candidates, success
-//   bulkRejectAll: Auth-Gate, UUID, success
-//   finishCurationAndStartHandbookImport: Auth-Gate, UUID, status-Pre-Check,
+//   updateUnitCuration: Auth-Gate, UUID, invalid status, section-Pflicht,
+//                       edited-Title/Description-Validation, success
+//   bulkAcceptUnits: Auth-Gate, UUID, threshold-Range, 0 candidates, success
+//   bulkRejectAllUnits: Auth-Gate, UUID, success
+//   finishCurationAndStartHandbookImport: Auth-Gate, UUID, status-Pre-Check
+//                                          (synthesized/curating, AC-D-4),
 //                                          0-accepted-Block, success
+//   importToHandbook: Units -> knowledge_unit ohne email_thread-Lookup
 //
 // Pattern aus ../pattern-start/__tests__/actions.test.ts: vi.mock fuer
-// Supabase-Server + next/cache. Section-Lookup wird in updatePatternCuration
-// + bulkAcceptPatterns nicht aufgerufen — kein Section-Store-Mock noetig.
+// Supabase-Server + next/cache. Section-Lookup wird in updateUnitCuration
+// + bulkAcceptUnits nicht aufgerufen — kein Section-Store-Mock noetig.
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -35,18 +39,18 @@ vi.mock("@/lib/supabase/admin", () => ({
 }));
 
 import {
-  bulkAcceptPatterns,
-  bulkRejectAll,
+  bulkAcceptUnits,
+  bulkRejectAllUnits,
   finishCurationAndStartHandbookImport,
   importToHandbook,
-  updatePatternCuration,
+  updateUnitCuration,
 } from "../actions";
 
 const TENANT = "11111111-1111-1111-1111-111111111111";
 const USER = "22222222-2222-2222-2222-222222222222";
 const RUN_ID = "33333333-3333-3333-3333-333333333333";
-const PATTERN_ID_1 = "44444444-4444-4444-4444-444444444444";
-const PATTERN_ID_2 = "55555555-5555-5555-5555-555555555555";
+const UNIT_ID_1 = "44444444-4444-4444-4444-444444444444";
+const UNIT_ID_2 = "55555555-5555-5555-5555-555555555555";
 
 // ──────────────────────────────────────────────────────────────────────────────
 // User-Client Mock-Builder
@@ -56,21 +60,21 @@ interface UserClientOpts {
   user?: { id: string; email: string } | null;
   profile?: { id: string; tenant_id: string | null; role: string } | null;
   profileError?: { message: string } | null;
-  /** email_pattern UPDATE result */
-  patternUpdate?: {
+  /** email_synthesized_unit UPDATE result */
+  unitUpdate?: {
     data?: { id: string; bulk_run_id: string } | null;
     error?: { message: string } | null;
   };
-  /** email_pattern bulk-SELECT candidates */
+  /** email_synthesized_unit bulk-SELECT candidates */
   bulkCandidates?: Array<{ id: string; suggested_section: string }>;
   bulkCandidatesError?: { message: string } | null;
-  /** email_pattern bulk-UPDATE error */
+  /** email_synthesized_unit bulk-UPDATE error */
   bulkUpdateError?: { message: string } | null;
   bulkUpdateCount?: number;
   /** email_bulk_run SELECT for finish */
   runRow?: { id: string; status: string } | null;
   runError?: { message: string } | null;
-  /** email_pattern accepted-count for finish */
+  /** email_synthesized_unit accepted-count for finish */
   acceptedCount?: number | null;
   countError?: { message: string } | null;
   /** email_bulk_run UPDATE for finish */
@@ -108,9 +112,9 @@ function buildUserClient(opts: UserClientOpts) {
       };
     }
 
-    if (table === "email_pattern") {
+    if (table === "email_synthesized_unit") {
       return {
-        // updatePatternCuration: update(...).eq(id).select(...).maybeSingle()
+        // updateUnitCuration: update(...).eq(id).select(...).maybeSingle()
         update: (patch: Record<string, unknown>, options?: { count?: string }) => {
           opts.updateTracker?.push({ table, patch });
 
@@ -131,25 +135,25 @@ function buildUserClient(opts: UserClientOpts) {
             };
           }
 
-          // updatePatternCuration: update(...).eq(...).select(...).maybeSingle()
-          const defaultData = { id: PATTERN_ID_1, bulk_run_id: RUN_ID };
+          // updateUnitCuration: update(...).eq(...).select(...).maybeSingle()
+          const defaultData = { id: UNIT_ID_1, bulk_run_id: RUN_ID };
           const data =
-            opts.patternUpdate === undefined
+            opts.unitUpdate === undefined
               ? defaultData
-              : opts.patternUpdate.data ?? null;
+              : opts.unitUpdate.data ?? null;
           return {
             eq: () => ({
               select: () => ({
                 maybeSingle: async () => ({
                   data,
-                  error: opts.patternUpdate?.error ?? null,
+                  error: opts.unitUpdate?.error ?? null,
                 }),
               }),
             }),
           };
         },
 
-        // bulkAcceptPatterns SELECT: select(...).eq().eq().not().gte()
+        // bulkAcceptUnits SELECT: select(...).eq().eq().not().gte()
         // finishCurationAndStartHandbookImport COUNT: select(..., {count:'exact', head:true}).eq().in()
         select: (_cols: string, selectOpts?: { count?: string; head?: boolean }) => {
           if (selectOpts?.head === true) {
@@ -163,7 +167,7 @@ function buildUserClient(opts: UserClientOpts) {
               }),
             };
           }
-          // Bulk-Select fuer bulkAcceptPatterns
+          // Bulk-Select fuer bulkAcceptUnits
           return {
             eq: () => ({
               eq: () => ({
@@ -207,7 +211,7 @@ function buildUserClient(opts: UserClientOpts) {
   return Promise.resolve({ auth: { getUser }, from: fromMock });
 }
 
-// Bulk-Reject all-rows-UPDATE uses different chain: update(...).eq(bulk_run_id).eq(curation_status)
+// Bulk-Reject-all-Units-UPDATE uses different chain: update(...).eq(bulk_run_id).eq(curation_status)
 // Already covered via the bulk-UPDATE branch above (count:'exact').
 
 beforeEach(() => {
@@ -218,13 +222,13 @@ beforeEach(() => {
 });
 
 // ──────────────────────────────────────────────────────────────────────────────
-// updatePatternCuration
+// updateUnitCuration
 // ──────────────────────────────────────────────────────────────────────────────
 
-describe("updatePatternCuration — Auth-Gate", () => {
+describe("updateUnitCuration — Auth-Gate", () => {
   it("rejects unauthenticated user", async () => {
     mocks.userClientMock.mockImplementation(() => buildUserClient({ user: null }));
-    const result = await updatePatternCuration(PATTERN_ID_1, {
+    const result = await updateUnitCuration(UNIT_ID_1, {
       status: "accepted",
       curated_section: "prozesse",
     });
@@ -238,7 +242,7 @@ describe("updatePatternCuration — Auth-Gate", () => {
         profile: { id: USER, tenant_id: TENANT, role: "employee" },
       }),
     );
-    const result = await updatePatternCuration(PATTERN_ID_1, {
+    const result = await updateUnitCuration(UNIT_ID_1, {
       status: "accepted",
       curated_section: "prozesse",
     });
@@ -247,22 +251,22 @@ describe("updatePatternCuration — Auth-Gate", () => {
   });
 });
 
-describe("updatePatternCuration — Validation", () => {
+describe("updateUnitCuration — Validation", () => {
   beforeEach(() => {
     mocks.userClientMock.mockImplementation(() => buildUserClient({}));
   });
 
   it("rejects invalid UUID", async () => {
-    const result = await updatePatternCuration("not-uuid", {
+    const result = await updateUnitCuration("not-uuid", {
       status: "accepted",
       curated_section: "prozesse",
     });
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error).toMatch(/pattern_id/);
+    if (!result.ok) expect(result.error).toMatch(/unit_id/);
   });
 
   it("rejects invalid status", async () => {
-    const result = await updatePatternCuration(PATTERN_ID_1, {
+    const result = await updateUnitCuration(UNIT_ID_1, {
       status: "weird" as never,
       curated_section: "prozesse",
     });
@@ -271,7 +275,7 @@ describe("updatePatternCuration — Validation", () => {
   });
 
   it("requires section on status=accepted", async () => {
-    const result = await updatePatternCuration(PATTERN_ID_1, {
+    const result = await updateUnitCuration(UNIT_ID_1, {
       status: "accepted",
     });
     expect(result.ok).toBe(false);
@@ -279,7 +283,7 @@ describe("updatePatternCuration — Validation", () => {
   });
 
   it("rejects sentinel as curated_section", async () => {
-    const result = await updatePatternCuration(PATTERN_ID_1, {
+    const result = await updateUnitCuration(UNIT_ID_1, {
       status: "accepted",
       curated_section: "__other__",
     });
@@ -288,7 +292,7 @@ describe("updatePatternCuration — Validation", () => {
   });
 
   it("rejects empty edited_title on status=edited", async () => {
-    const result = await updatePatternCuration(PATTERN_ID_1, {
+    const result = await updateUnitCuration(UNIT_ID_1, {
       status: "edited",
       curated_section: "prozesse",
       edited_title: "   ",
@@ -298,20 +302,20 @@ describe("updatePatternCuration — Validation", () => {
   });
 });
 
-describe("updatePatternCuration — Success", () => {
+describe("updateUnitCuration — Success", () => {
   it("accepts pattern with section + records curator + timestamp", async () => {
     const tracker: Array<{ table: string; patch: Record<string, unknown> }> = [];
     mocks.userClientMock.mockImplementation(() =>
       buildUserClient({ updateTracker: tracker }),
     );
 
-    const result = await updatePatternCuration(PATTERN_ID_1, {
+    const result = await updateUnitCuration(UNIT_ID_1, {
       status: "accepted",
       curated_section: "prozesse_und_ablaeufe",
     });
 
     expect(result.ok).toBe(true);
-    if (result.ok) expect(result.patternId).toBe(PATTERN_ID_1);
+    if (result.ok) expect(result.unitId).toBe(UNIT_ID_1);
     expect(tracker[0].patch.curation_status).toBe("accepted");
     expect(tracker[0].patch.curated_section).toBe("prozesse_und_ablaeufe");
     expect(tracker[0].patch.curator_user_id).toBe(USER);
@@ -325,7 +329,7 @@ describe("updatePatternCuration — Success", () => {
       buildUserClient({ updateTracker: tracker }),
     );
 
-    const result = await updatePatternCuration(PATTERN_ID_1, {
+    const result = await updateUnitCuration(UNIT_ID_1, {
       status: "edited",
       curated_section: "prozesse",
       edited_title: "Bessere Titel",
@@ -345,7 +349,7 @@ describe("updatePatternCuration — Success", () => {
       buildUserClient({ updateTracker: tracker }),
     );
 
-    const result = await updatePatternCuration(PATTERN_ID_1, {
+    const result = await updateUnitCuration(UNIT_ID_1, {
       status: "rejected",
     });
 
@@ -357,10 +361,10 @@ describe("updatePatternCuration — Success", () => {
 
   it("returns error when RLS blocks UPDATE (no row returned)", async () => {
     mocks.userClientMock.mockImplementation(() =>
-      buildUserClient({ patternUpdate: { data: null } }),
+      buildUserClient({ unitUpdate: { data: null } }),
     );
 
-    const result = await updatePatternCuration(PATTERN_ID_1, {
+    const result = await updateUnitCuration(UNIT_ID_1, {
       status: "accepted",
       curated_section: "prozesse",
     });
@@ -371,22 +375,22 @@ describe("updatePatternCuration — Success", () => {
 });
 
 // ──────────────────────────────────────────────────────────────────────────────
-// bulkAcceptPatterns
+// bulkAcceptUnits
 // ──────────────────────────────────────────────────────────────────────────────
 
-describe("bulkAcceptPatterns", () => {
+describe("bulkAcceptUnits", () => {
   it("rejects invalid UUID", async () => {
     mocks.userClientMock.mockImplementation(() => buildUserClient({}));
-    const result = await bulkAcceptPatterns("not-uuid");
+    const result = await bulkAcceptUnits("not-uuid");
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error).toMatch(/bulk_run_id/);
   });
 
   it("rejects threshold out of range", async () => {
     mocks.userClientMock.mockImplementation(() => buildUserClient({}));
-    const r1 = await bulkAcceptPatterns(RUN_ID, { confidenceThreshold: 1.5 });
+    const r1 = await bulkAcceptUnits(RUN_ID, { confidenceThreshold: 1.5 });
     expect(r1.ok).toBe(false);
-    const r2 = await bulkAcceptPatterns(RUN_ID, { confidenceThreshold: -0.1 });
+    const r2 = await bulkAcceptUnits(RUN_ID, { confidenceThreshold: -0.1 });
     expect(r2.ok).toBe(false);
   });
 
@@ -394,7 +398,7 @@ describe("bulkAcceptPatterns", () => {
     mocks.userClientMock.mockImplementation(() =>
       buildUserClient({ bulkCandidates: [] }),
     );
-    const result = await bulkAcceptPatterns(RUN_ID);
+    const result = await bulkAcceptUnits(RUN_ID);
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.acceptedCount).toBe(0);
   });
@@ -404,15 +408,15 @@ describe("bulkAcceptPatterns", () => {
     mocks.userClientMock.mockImplementation(() =>
       buildUserClient({
         bulkCandidates: [
-          { id: PATTERN_ID_1, suggested_section: "prozesse" },
-          { id: PATTERN_ID_2, suggested_section: "fuehrung" },
+          { id: UNIT_ID_1, suggested_section: "prozesse" },
+          { id: UNIT_ID_2, suggested_section: "fuehrung" },
         ],
         bulkUpdateCount: 1,
         updateTracker: tracker,
       }),
     );
 
-    const result = await bulkAcceptPatterns(RUN_ID, { confidenceThreshold: 0.8 });
+    const result = await bulkAcceptUnits(RUN_ID, { confidenceThreshold: 0.8 });
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.acceptedCount).toBe(2);
 
@@ -426,11 +430,11 @@ describe("bulkAcceptPatterns", () => {
   it("aborts on first UPDATE error and reports partial count", async () => {
     mocks.userClientMock.mockImplementation(() =>
       buildUserClient({
-        bulkCandidates: [{ id: PATTERN_ID_1, suggested_section: "prozesse" }],
+        bulkCandidates: [{ id: UNIT_ID_1, suggested_section: "prozesse" }],
         bulkUpdateError: { message: "permission denied" },
       }),
     );
-    const result = await bulkAcceptPatterns(RUN_ID);
+    const result = await bulkAcceptUnits(RUN_ID);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error).toMatch(/permission denied/);
   });
@@ -440,10 +444,10 @@ describe("bulkAcceptPatterns", () => {
 // bulkRejectAll
 // ──────────────────────────────────────────────────────────────────────────────
 
-describe("bulkRejectAll", () => {
+describe("bulkRejectAllUnits", () => {
   it("rejects invalid UUID", async () => {
     mocks.userClientMock.mockImplementation(() => buildUserClient({}));
-    const result = await bulkRejectAll("not-uuid");
+    const result = await bulkRejectAllUnits("not-uuid");
     expect(result.ok).toBe(false);
   });
 
@@ -452,7 +456,7 @@ describe("bulkRejectAll", () => {
     mocks.userClientMock.mockImplementation(() =>
       buildUserClient({ bulkUpdateCount: 7, updateTracker: tracker }),
     );
-    const result = await bulkRejectAll(RUN_ID);
+    const result = await bulkRejectAllUnits(RUN_ID);
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.rejectedCount).toBe(7);
     expect(tracker[0].patch.curation_status).toBe("rejected");
@@ -489,23 +493,32 @@ describe("finishCurationAndStartHandbookImport", () => {
     if (!result.ok) expect(result.error).toMatch(/Status/);
   });
 
-  it("rejects when no accepted/edited pattern exists", async () => {
+  it("rejects status='pattern_extracted' (Curation erst nach Synthese, AC-D-4)", async () => {
+    mocks.userClientMock.mockImplementation(() =>
+      buildUserClient({ runRow: { id: RUN_ID, status: "pattern_extracted" } }),
+    );
+    const result = await finishCurationAndStartHandbookImport(RUN_ID);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/synthesized/);
+  });
+
+  it("rejects when no accepted/edited unit exists", async () => {
     mocks.userClientMock.mockImplementation(() =>
       buildUserClient({
-        runRow: { id: RUN_ID, status: "pattern_extracted" },
+        runRow: { id: RUN_ID, status: "synthesized" },
         acceptedCount: 0,
       }),
     );
     const result = await finishCurationAndStartHandbookImport(RUN_ID);
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error).toMatch(/Kein akzeptiertes/);
+    if (!result.ok) expect(result.error).toMatch(/Keine akzeptierte/);
   });
 
-  it("flips status to importing and returns SLC-167-scope hint", async () => {
+  it("flips status to importing from 'synthesized' (AC-D-4)", async () => {
     const tracker: Array<{ table: string; patch: Record<string, unknown> }> = [];
     mocks.userClientMock.mockImplementation(() =>
       buildUserClient({
-        runRow: { id: RUN_ID, status: "pattern_extracted" },
+        runRow: { id: RUN_ID, status: "synthesized" },
         acceptedCount: 5,
         updateTracker: tracker,
       }),
@@ -549,24 +562,20 @@ interface AdminMockOpts {
     status: string;
   } | null;
   runError?: { message: string } | null;
-  /** Pattern-Liste fuer email_pattern.select() */
-  patterns?: Array<{
+  /** Unit-Liste fuer email_synthesized_unit.select() */
+  units?: Array<{
     id: string;
-    thread_id: string;
     title: string;
     description: string;
     evidence_snippets: unknown[] | null;
-    confidence: number;
+    aggregated_confidence: number;
+    evidence_count: number;
+    source_pattern_ids: string[] | null;
     curated_section: string;
     created_at: string;
     curator_user_id: string | null;
   }>;
-  patternsError?: { message: string } | null;
-  /** Thread-Pseudonym-Lookup */
-  threads?: Array<{
-    id: string;
-    participant_pseudonyms: Record<string, string> | null;
-  }>;
+  unitsError?: { message: string } | null;
   /** Existierender Pseudo-Checkpoint? */
   existingCheckpointId?: string | null;
   /** Neu erzeugte Checkpoint-ID bei INSERT */
@@ -582,10 +591,10 @@ interface AdminMockOpts {
   rpcError?: { message: string } | null;
   /** Tracker fuer alle bulk_run-UPDATEs */
   bulkRunUpdates?: Array<Record<string, unknown>>;
-  /** Tracker fuer pattern-Updates */
-  patternUpdates?: Array<{ id: string; patch: Record<string, unknown> }>;
-  /** Tracker fuer Bulk-pattern-Updates via .in() */
-  patternBulkUpdates?: Array<{ ids: string[]; patch: Record<string, unknown> }>;
+  /** Tracker fuer unit-Updates */
+  unitUpdates?: Array<{ id: string; patch: Record<string, unknown> }>;
+  /** Tracker fuer Bulk-unit-Updates via .in() (Rollback-Pfad) */
+  unitBulkUpdates?: Array<{ ids: string[]; patch: Record<string, unknown> }>;
   /** Tracker fuer knowledge_unit-INSERTs */
   knowledgeUnitInserts?: Array<Record<string, unknown>>;
   /** Tracker fuer knowledge_unit-DELETEs (Rollback-Pfad) */
@@ -618,15 +627,15 @@ function buildAdminClientForImport(opts: AdminMockOpts) {
         };
       }
 
-      if (table === "email_pattern") {
+      if (table === "email_synthesized_unit") {
         return {
           select: () => ({
             eq: () => ({
               in: () => ({
                 is: () => ({
                   not: async () => ({
-                    data: opts.patterns ?? [],
-                    error: opts.patternsError ?? null,
+                    data: opts.units ?? [],
+                    error: opts.unitsError ?? null,
                   }),
                 }),
               }),
@@ -634,24 +643,13 @@ function buildAdminClientForImport(opts: AdminMockOpts) {
           }),
           update: (patch: Record<string, unknown>) => ({
             eq: async (col: string, val: string) => {
-              opts.patternUpdates?.push({ id: val, patch });
+              opts.unitUpdates?.push({ id: val, patch });
               return { error: null };
             },
             in: async (col: string, ids: string[]) => {
-              opts.patternBulkUpdates?.push({ ids, patch });
+              opts.unitBulkUpdates?.push({ ids, patch });
               return { error: null };
             },
-          }),
-        };
-      }
-
-      if (table === "email_thread") {
-        return {
-          select: () => ({
-            in: async () => ({
-              data: opts.threads ?? [],
-              error: null,
-            }),
           }),
         };
       }
@@ -735,26 +733,31 @@ function buildAdminClientForImport(opts: AdminMockOpts) {
   };
 }
 
-function makePatternRow(
+function makeUnitRow(
   overrides: Partial<{
     id: string;
-    thread_id: string;
     title: string;
     description: string;
     evidence_snippets: unknown[] | null;
-    confidence: number;
+    aggregated_confidence: number;
+    evidence_count: number;
+    source_pattern_ids: string[] | null;
     curated_section: string;
     created_at: string;
     curator_user_id: string | null;
   }> = {},
 ) {
   return {
-    id: PATTERN_ID_1,
-    thread_id: "tttttttt-tttt-tttt-tttt-tttttttttttt",
+    id: UNIT_ID_1,
     title: "Title",
     description: "Description text.",
     evidence_snippets: [],
-    confidence: 0.9,
+    aggregated_confidence: 0.9,
+    evidence_count: 3,
+    source_pattern_ids: [
+      "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+    ],
     curated_section: "vertrieb/einwand-behandlung",
     created_at: "2026-06-05T10:00:00.000Z",
     curator_user_id: USER,
@@ -838,7 +841,7 @@ describe("importToHandbook — Cross-Tenant + Status-Gate", () => {
           source_file_name: "x.mbox",
           status: "failed",
         },
-        patterns: [],
+        units: [],
       }),
     );
     const result = await importToHandbook(RUN_ID);
@@ -868,7 +871,7 @@ describe("importToHandbook — Idempotency + Re-Run", () => {
     mocks.userClientMock.mockImplementation(() => buildUserClient({}));
   });
 
-  it("0 pending patterns → status='completed' + no snapshot trigger + return stats=0", async () => {
+  it("0 pending units → status='completed' + no snapshot trigger + return stats=0", async () => {
     const bulkRunUpdates: Array<Record<string, unknown>> = [];
     const rpcCalls: Array<{ fn: string; params: Record<string, unknown> }> = [];
 
@@ -881,7 +884,7 @@ describe("importToHandbook — Idempotency + Re-Run", () => {
           source_file_name: "x.mbox",
           status: "importing",
         },
-        patterns: [],
+        units: [],
         bulkRunUpdates,
         rpcCalls,
       }),
@@ -890,7 +893,7 @@ describe("importToHandbook — Idempotency + Re-Run", () => {
     const result = await importToHandbook(RUN_ID);
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.patternsImported).toBe(0);
+      expect(result.unitsImported).toBe(0);
       expect(result.knowledgeUnitsCreated).toBe(0);
       expect(result.handbookSnapshotId).toBe("");
     }
@@ -905,16 +908,16 @@ describe("importToHandbook — Happy Path", () => {
     mocks.userClientMock.mockImplementation(() => buildUserClient({}));
   });
 
-  it("3 patterns → 3 knowledge_units + RPC trigger + final-status='completed' + patterns_imported=3", async () => {
+  it("3 units → 3 knowledge_units + RPC trigger + final-status='completed' + patterns_imported=3 (AC-D-1)", async () => {
     const bulkRunUpdates: Array<Record<string, unknown>> = [];
-    const patternUpdates: Array<{ id: string; patch: Record<string, unknown> }> = [];
+    const unitUpdates: Array<{ id: string; patch: Record<string, unknown> }> = [];
     const knowledgeUnitInserts: Array<Record<string, unknown>> = [];
     const rpcCalls: Array<{ fn: string; params: Record<string, unknown> }> = [];
 
-    const patterns = [
-      makePatternRow({ id: PATTERN_ID_1 }),
-      makePatternRow({ id: PATTERN_ID_2, curated_section: "akquise/lead-qualifizierung" }),
-      makePatternRow({
+    const units = [
+      makeUnitRow({ id: UNIT_ID_1 }),
+      makeUnitRow({ id: UNIT_ID_2, curated_section: "akquise/lead-qualifizierung" }),
+      makeUnitRow({
         id: "66666666-6666-6666-6666-666666666666",
         curated_section: "team/onboarding",
       }),
@@ -929,17 +932,11 @@ describe("importToHandbook — Happy Path", () => {
           source_file_name: "x.mbox",
           status: "importing",
         },
-        patterns,
-        threads: [
-          {
-            id: patterns[0]!.thread_id,
-            participant_pseudonyms: { p1: "Person A" },
-          },
-        ],
+        units,
         newCheckpointId: "ck-1",
         knowledgeUnitIds: ["ku-1", "ku-2", "ku-3"],
         bulkRunUpdates,
-        patternUpdates,
+        unitUpdates,
         knowledgeUnitInserts,
         rpcCalls,
       }),
@@ -948,7 +945,7 @@ describe("importToHandbook — Happy Path", () => {
     const result = await importToHandbook(RUN_ID);
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.patternsImported).toBe(3);
+      expect(result.unitsImported).toBe(3);
       expect(result.knowledgeUnitsCreated).toBe(3);
       expect(result.handbookSnapshotId).toBe(SNAPSHOT_ID);
     }
@@ -956,8 +953,16 @@ describe("importToHandbook — Happy Path", () => {
     expect(knowledgeUnitInserts[0]?.source).toBe("email_bulk");
     expect(knowledgeUnitInserts[0]?.unit_type).toBe("observation");
     expect(knowledgeUnitInserts[0]?.status).toBe("accepted");
-    expect(patternUpdates).toHaveLength(3);
-    expect(patternUpdates[0]?.patch.imported_knowledge_unit_id).toBe("ku-1");
+    // AC-D-2: kein Pseudonym-Pfad — body + metadata ohne P1/P2-Referenzen.
+    const body = knowledgeUnitInserts[0]?.body as string;
+    expect(body).toContain("**Belege**:");
+    expect(body).not.toContain("**Pseudonyme**");
+    const metadata = knowledgeUnitInserts[0]?.metadata as Record<string, unknown>;
+    expect(metadata.synthesized_unit_id).toBe(UNIT_ID_1);
+    expect(metadata.evidence_count).toBe(3);
+    expect(metadata.participant_pseudonyms).toBeUndefined();
+    expect(unitUpdates).toHaveLength(3);
+    expect(unitUpdates[0]?.patch.imported_knowledge_unit_id).toBe("ku-1");
     expect(rpcCalls).toHaveLength(1);
     expect(rpcCalls[0]?.fn).toBe("rpc_trigger_handbook_snapshot");
     expect(rpcCalls[0]?.params).toEqual({
@@ -978,11 +983,11 @@ describe("importToHandbook — Failure-Rollback", () => {
     const bulkRunUpdates: Array<Record<string, unknown>> = [];
     const knowledgeUnitInserts: Array<Record<string, unknown>> = [];
     const knowledgeUnitDeletes: Array<string[]> = [];
-    const patternBulkUpdates: Array<{ ids: string[]; patch: Record<string, unknown> }> = [];
+    const unitBulkUpdates: Array<{ ids: string[]; patch: Record<string, unknown> }> = [];
 
-    const patterns = [
-      makePatternRow({ id: PATTERN_ID_1 }),
-      makePatternRow({ id: PATTERN_ID_2 }),
+    const units = [
+      makeUnitRow({ id: UNIT_ID_1 }),
+      makeUnitRow({ id: UNIT_ID_2 }),
     ];
 
     mocks.adminClientMock.mockImplementation(() =>
@@ -994,15 +999,14 @@ describe("importToHandbook — Failure-Rollback", () => {
           source_file_name: "x.mbox",
           status: "importing",
         },
-        patterns,
-        threads: [],
+        units,
         newCheckpointId: "ck-1",
         knowledgeUnitIds: ["ku-1"],
-        knowledgeUnitInsertFailIndex: 1, // 2. pattern fails
+        knowledgeUnitInsertFailIndex: 1, // 2. unit fails
         bulkRunUpdates,
         knowledgeUnitInserts,
         knowledgeUnitDeletes,
-        patternBulkUpdates,
+        unitBulkUpdates,
       }),
     );
 
@@ -1011,11 +1015,11 @@ describe("importToHandbook — Failure-Rollback", () => {
     if (!result.ok) {
       expect(result.error).toMatch(/knowledge_unit INSERT/);
     }
-    // Rollback: 1 KU was inserted (1. pattern), then 2. pattern failed
+    // Rollback: 1 KU was inserted (1. unit), then 2. unit failed
     expect(knowledgeUnitDeletes).toHaveLength(1);
     expect(knowledgeUnitDeletes[0]).toEqual(["ku-1"]);
-    expect(patternBulkUpdates).toHaveLength(1);
-    expect(patternBulkUpdates[0]?.patch.imported_to_handbook_at).toBeNull();
+    expect(unitBulkUpdates).toHaveLength(1);
+    expect(unitBulkUpdates[0]?.patch.imported_to_handbook_at).toBeNull();
     const failedUpdate = bulkRunUpdates[bulkRunUpdates.length - 1];
     expect(failedUpdate?.status).toBe("failed");
     expect(failedUpdate?.failure_reason).toBe("handbook_import_ku_insert_error");
@@ -1025,9 +1029,9 @@ describe("importToHandbook — Failure-Rollback", () => {
     const bulkRunUpdates: Array<Record<string, unknown>> = [];
     const knowledgeUnitInserts: Array<Record<string, unknown>> = [];
     const knowledgeUnitDeletes: Array<string[]> = [];
-    const patternBulkUpdates: Array<{ ids: string[]; patch: Record<string, unknown> }> = [];
+    const unitBulkUpdates: Array<{ ids: string[]; patch: Record<string, unknown> }> = [];
 
-    const patterns = [makePatternRow({ id: PATTERN_ID_1 })];
+    const units = [makeUnitRow({ id: UNIT_ID_1 })];
 
     mocks.adminClientMock.mockImplementation(() =>
       buildAdminClientForImport({
@@ -1038,15 +1042,14 @@ describe("importToHandbook — Failure-Rollback", () => {
           source_file_name: "x.mbox",
           status: "importing",
         },
-        patterns,
-        threads: [],
+        units,
         newCheckpointId: "ck-1",
         knowledgeUnitIds: ["ku-1"],
         rpcError: { message: "rpc failed" },
         bulkRunUpdates,
         knowledgeUnitInserts,
         knowledgeUnitDeletes,
-        patternBulkUpdates,
+        unitBulkUpdates,
       }),
     );
 
@@ -1057,7 +1060,7 @@ describe("importToHandbook — Failure-Rollback", () => {
     }
     expect(knowledgeUnitDeletes).toHaveLength(1);
     expect(knowledgeUnitDeletes[0]).toEqual(["ku-1"]);
-    expect(patternBulkUpdates).toHaveLength(1);
+    expect(unitBulkUpdates).toHaveLength(1);
     const failedUpdate = bulkRunUpdates[bulkRunUpdates.length - 1];
     expect(failedUpdate?.status).toBe("failed");
     expect(failedUpdate?.failure_reason).toBe("handbook_snapshot_trigger_failed");

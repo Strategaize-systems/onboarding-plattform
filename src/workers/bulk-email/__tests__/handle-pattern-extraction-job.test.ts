@@ -296,6 +296,9 @@ function makeCostStore(
       callCount += 1;
       return nextValue !== undefined ? nextValue : initialRunEur;
     },
+    async getRunTotalCostEur() {
+      return 0; // Synthese-Live-Cap nicht im Extraktor-Test
+    },
   };
 }
 
@@ -468,6 +471,14 @@ describe("executeEmailBulkPatternExtract — Happy Path", () => {
     expect(state.rpcs).toEqual([
       { name: "rpc_complete_ai_job", args: { p_job_id: JOB_ID } },
     ]);
+
+    // V9.5 SLC-V9.5-B MT-5: genau 1 Enqueue der Synthese-Stage im Success-Pfad.
+    const synthEnqueues = state.inserts.filter((i) => i.table === "ai_jobs");
+    expect(synthEnqueues).toHaveLength(1);
+    const synthRow = synthEnqueues[0].row as Record<string, unknown>;
+    expect(synthRow.job_type).toBe("email_bulk_synthesis");
+    expect(synthRow.status).toBe("pending");
+    expect((synthRow.payload as { bulk_run_id: string }).bulk_run_id).toBe(BULK_RUN_ID);
   });
 
   it("empty thread list → status='pattern_extracted' + 0 patterns", async () => {
@@ -627,6 +638,10 @@ describe("executeEmailBulkPatternExtract — Live-Cap (AC-167-13)", () => {
     expect(state.rpcs).toEqual([
       { name: "rpc_complete_ai_job", args: { p_job_id: JOB_ID } },
     ]);
+
+    // V9.5 SLC-V9.5-B MT-5 (AC-B-5): Cap-Exceed-Pfad enqueued NICHT (Run nicht
+    // 'pattern_extracted').
+    expect(state.inserts.filter((i) => i.table === "ai_jobs")).toHaveLength(0);
   });
 });
 

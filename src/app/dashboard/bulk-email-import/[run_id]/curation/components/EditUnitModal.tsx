@@ -1,9 +1,11 @@
 "use client";
 
-// V9 SLC-167 MT-6 — Edit-Pattern-Modal (Curation-UI).
+// V9 SLC-167 MT-6 — Edit-Pattern-Modal, V9.5 SLC-V9.5-D MT-4 — Edit-Unit-
+// Modal: editiert konsolidierte email_synthesized_unit-Rows (DEC-214).
 //
 // Spec L188: Titel + Description editierbar, evidence_snippets read-only;
-// Save → UPDATE email_pattern.title + description, curation_status='edited'.
+// Save → UPDATE email_synthesized_unit.title + description,
+// curation_status='edited'.
 //
 // Pattern-Reuse-Anker: ../../filter-review/FilterReviewClient.tsx
 // (AlertDialog-Pattern aus shadcn). Wir nutzen Dialog statt AlertDialog,
@@ -37,38 +39,39 @@ import {
   type SectionOption,
 } from "@/lib/bulk-email/sections";
 import {
+  extractSnippetTexts,
   MAX_EDIT_DESCRIPTION_LENGTH,
   MAX_EDIT_TITLE_LENGTH,
   MAX_FREE_TEXT_SECTION_LENGTH,
-  type CurationPattern,
+  type CurationUnit,
 } from "../helpers";
-import { updatePatternCuration } from "../actions";
+import { updateUnitCuration } from "../actions";
 
-interface EditPatternModalProps {
+interface EditUnitModalProps {
   /**
-   * Pattern, das editiert wird. Niemals null — der Parent rendert das Modal
-   * nur, wenn ein Pattern aktiv ist (key={pattern.id} fuer Reset bei Wechsel).
+   * Unit, die editiert wird. Niemals null — der Parent rendert das Modal
+   * nur, wenn eine Unit aktiv ist (key={unit.id} fuer Reset bei Wechsel).
    */
-  pattern: CurationPattern;
+  unit: CurationUnit;
   sections: SectionOption[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export function EditPatternModal({
-  pattern,
+export function EditUnitModal({
+  unit,
   sections,
   open,
   onOpenChange,
-}: EditPatternModalProps) {
-  // Initialwerte direkt aus pattern — der Parent gibt key={pattern.id} mit,
-  // sodass bei Pattern-Wechsel das Component frisch gemountet wird. Damit
+}: EditUnitModalProps) {
+  // Initialwerte direkt aus unit — der Parent gibt key={unit.id} mit,
+  // sodass bei Unit-Wechsel das Component frisch gemountet wird. Damit
   // brauchen wir keinen useEffect-Reset (verstoesst gegen
   // react-hooks/set-state-in-effect).
-  const [title, setTitle] = useState(pattern.title);
-  const [description, setDescription] = useState(pattern.description);
+  const [title, setTitle] = useState(unit.title);
+  const [description, setDescription] = useState(unit.description);
   const [selectedSection, setSelectedSection] = useState(
-    pattern.curated_section ?? pattern.suggested_section ?? "",
+    unit.curated_section ?? unit.suggested_section ?? "",
   );
   const [freeTextSection, setFreeTextSection] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -78,6 +81,8 @@ export function EditPatternModal({
   const effectiveSection = isOtherSelected
     ? freeTextSection.trim()
     : selectedSection;
+
+  const snippetTexts = extractSnippetTexts(unit.evidence_snippets).slice(0, 3);
 
   function handleSave() {
     setErrorMessage(null);
@@ -109,7 +114,7 @@ export function EditPatternModal({
     }
 
     startTransition(async () => {
-      const result = await updatePatternCuration(pattern.id, {
+      const result = await updateUnitCuration(unit.id, {
         status: "edited",
         curated_section: effectiveSection,
         edited_title: trimmedTitle,
@@ -127,10 +132,10 @@ export function EditPatternModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Pattern editieren</DialogTitle>
+          <DialogTitle>Wissens-Baustein editieren</DialogTitle>
           <DialogDescription>
-            Titel und Beschreibung anpassen. Evidenz-Snippets bleiben unveraendert,
-            weil sie aus dem Quell-Thread stammen.
+            Titel und Beschreibung anpassen. Evidenz-Snippets bleiben
+            unveraendert, weil sie aus den Quell-Patterns stammen.
           </DialogDescription>
         </DialogHeader>
 
@@ -193,28 +198,20 @@ export function EditPatternModal({
             )}
           </div>
 
-          {pattern.evidence_snippets &&
-            Array.isArray(pattern.evidence_snippets) &&
-            pattern.evidence_snippets.length > 0 && (
-              <div className="space-y-2 rounded-md border border-slate-100 bg-slate-50 p-3">
-                <p className="text-xs uppercase tracking-wide text-slate-500">
-                  Evidenz (read-only, pseudonymisiert)
-                </p>
-                <ul className="space-y-1 text-sm text-slate-600">
-                  {(pattern.evidence_snippets as unknown[])
-                    .filter(
-                      (s): s is string =>
-                        typeof s === "string" && s.trim().length > 0,
-                    )
-                    .slice(0, 3)
-                    .map((snippet, idx) => (
-                      <li key={idx} className="italic">
-                        &ldquo;{snippet}&rdquo;
-                      </li>
-                    ))}
-                </ul>
-              </div>
-            )}
+          {snippetTexts.length > 0 && (
+            <div className="space-y-2 rounded-md border border-slate-100 bg-slate-50 p-3">
+              <p className="text-xs uppercase tracking-wide text-slate-500">
+                Evidenz (read-only, Klarnamen bereits entfernt)
+              </p>
+              <ul className="space-y-1 text-sm text-slate-600">
+                {snippetTexts.map((snippet, idx) => (
+                  <li key={idx} className="italic">
+                    &ldquo;{snippet}&rdquo;
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {errorMessage && (
             <div

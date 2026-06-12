@@ -108,6 +108,18 @@ export interface CostCapStore {
    * Used by checkLiveCapInWorker (MT-5).
    */
   getRunPatternExtractionCostEur(runId: string): Promise<number>;
+
+  /**
+   * V9.5 SLC-V9.5-B MT-3 (DEC-217): Liest `email_bulk_run.total_cost_eur` (die
+   * GENERATED-Spalte = pre_filter + pattern_extraction + synthesis). Liefert
+   * `0`, wenn der Run noch nicht existiert.
+   *
+   * Used by checkLiveTotalCapInWorker (Synthese-Stage Live-Cap). Der
+   * Synthese-Worker inkrementiert synthesis_cost_eur; der Live-Cap prueft die
+   * GESAMTkosten gegen den Run-Hard-Cap, damit ein grosser Run den Cap nicht
+   * ueber die Synthese-Phase umgeht (R-B-2, BLOCKING).
+   */
+  getRunTotalCostEur(runId: string): Promise<number>;
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -189,6 +201,27 @@ export async function checkLiveCapInWorker(
   };
 }
 
+/**
+ * V9.5 SLC-V9.5-B MT-3 (DEC-217, R-B-2 BLOCKING): Live-Cap-Check fuer die
+ * Synthese-Stage. Anders als checkLiveCapInWorker (das nur die
+ * pattern_extraction_cost_eur liest) prueft diese Funktion die GESAMTkosten des
+ * Runs (`total_cost_eur` = pre_filter + pattern_extraction + synthesis) gegen
+ * den Run-Hard-Cap. Der Synthese-Worker inkrementiert nach jedem LLM-Call
+ * synthesis_cost_eur (→ total_cost_eur GENERATED) und ruft danach diese Pruefung.
+ * Bei `exceeded` setzt der Worker `status='failed'` + bricht ab.
+ */
+export async function checkLiveTotalCapInWorker(
+  runId: string,
+  capEur: number,
+  store: CostCapStore,
+): Promise<LiveCapResult> {
+  const currentEur = await store.getRunTotalCostEur(runId);
+  return {
+    exceeded: currentEur > capEur,
+    currentEur,
+  };
+}
+
 // ────────────────────────────────────────────────────────────────────────────
 // Supabase-Production-Adapter fuer CostCapStore
 // ────────────────────────────────────────────────────────────────────────────
@@ -244,6 +277,25 @@ export function createCostCapStoreFromSupabase(
       const raw = (
         data as { pattern_extraction_cost_eur: string | number | null }
       ).pattern_extraction_cost_eur;
+      if (raw === null || raw === undefined) return 0;
+      const n = typeof raw === "number" ? raw : Number(raw);
+      return Number.isFinite(n) ? n : 0;
+    },
+
+    async getRunTotalCostEur(runId) {
+      const { data, error } = await adminClient
+        .from("email_bulk_run")
+        .select("total_cost_eur")
+        .eq("id", runId)
+        .maybeSingle();
+      if (error) {
+        throw new Error(
+          `cost-cap: failed to read email_bulk_run.total_cost_eur ${runId}: ${error.message}`,
+        );
+      }
+      if (!data) return 0;
+      const raw = (data as { total_cost_eur: string | number | null })
+        .total_cost_eur;
       if (raw === null || raw === undefined) return 0;
       const n = typeof raw === "number" ? raw : Number(raw);
       return Number.isFinite(n) ? n : 0;
