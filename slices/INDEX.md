@@ -939,7 +939,7 @@ V9.5 = 4 Slices SLC-V9.5-A..D (version-anchored Naming). Additive Synthese-Stage
 |----|-------|---------|--------|----------|---------|
 | SLC-V9.5-A | [Bedrock-Modell-Default-Cleanup (eu-Sonnet-4 / eu-Haiku)](SLC-V9.5-A-bedrock-model-default-cleanup.md) | FEAT-082 / BL-161 | done | Medium | 2026-06-12 |
 | SLC-V9.5-B | [Synthese-Stage Backend (Cross-Thread-Synthese)](SLC-V9.5-B-synthesis-stage-backend.md) | FEAT-080 / BL-159 | done | High | 2026-06-12 |
-| SLC-V9.5-C | [Bounded Critic / Quality-Gate](SLC-V9.5-C-bounded-critic-gate.md) | FEAT-081 / BL-160 | planned | High | 2026-06-12 |
+| SLC-V9.5-C | [Bounded Critic / Quality-Gate](SLC-V9.5-C-bounded-critic-gate.md) | FEAT-081 / BL-160 | done | High | 2026-06-12 |
 | SLC-V9.5-D | [Curation-Contract-Shift auf email_synthesized_unit](SLC-V9.5-D-curation-contract-shift.md) | FEAT-080 / BL-159 | planned | High | 2026-06-12 |
 
 ### V9.5 Execution Order (strikt sequentiell — Cumulative-Single-Branch `v9-5-bulk-deep-extraction`)
