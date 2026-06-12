@@ -3,11 +3,34 @@
 **Version:** V9.1
 **Feature:** FEAT-079 (Admin-Audit Forward-Source-Statistik + Setup-UI mit Conversational-First-Pattern)
 **Backlog:** BL-158
-**Status:** planned
+**Status:** in_progress (Code-Side done /backend RPT-443 + /frontend RPT-444 + /qa RPT-445; offen: Gesamt-V9.1-/qa + Master-Merge)
 **Created:** 2026-06-09
 **Priority:** High
 **Estimate:** ~6-7 MTs, ~4-5 Tage Code-Side + Master-Merge + /post-launch-Prep
 **Worktree Branch:** `v9-1-forward-bucket-email` (Cumulative-Single-Branch, fortgesetzt aus SLC-V9.1-C) -> Master-Merge zu `main` in MT-7
+
+## ⚠️ AS-BUILT RECONCILE (2026-06-11, MT-7 / IMP-1192)
+
+> **Diese Spec-Prosa wurde VOR der Implementierung geschrieben und ist an mehreren Stellen stale.** Die Implementierung folgte den /backend-Drift-Resolution-DECs (DEC-205/206/208/209), nicht dem urspruenglichen Wortlaut unten. **Maßgeblich sind: DECISIONS.md (DEC-205/206/208/209), RPT-443 (/backend), RPT-445 (/qa) und der Code** — nicht die Prosa in "In Scope" / "Micro-Tasks" / "Acceptance Criteria" unterhalb. Die ACs bleiben aus Audit-Gruenden im Original-Wortlaut stehen; die folgende Tabelle ist die verbindliche Uebersetzung in den as-built Stand.
+
+| Thema | Spec-Prosa (stale) | As-Built (verbindlich) | Quelle |
+|---|---|---|---|
+| Inbound-Vendor / Region | AWS SES Inbound Ireland `eu-west-1`, `vendor='ses-ireland'`, Catchall-Routing | **IONOS-IMAP-Pull (Deutschland)**, Single-Mailbox-Modus; kein SES/S3/SNS/Lambda; kein Cross-Region | DEC-205, DEC-196→superseded |
+| Audit-Mechanismus | `audit_log` mit `event_type=...` | **OP hat kein `audit_log`** — durchgaengig `error_log` (`captureInfo`), Validierungs-Rejects in Tabelle `email_validation_reject_log` | DEC-208, DEC-209 |
+| Endpoint-Schema | `vendor`/`local_part`/`domain`-Spalten existieren | as-built: **slug-only** (`email_inbound_endpoint.slug`); Adresse `bulk-<slug>@<domain>` wird im Code gebaut; `vendor` = Konstanten-Label `imap-ionos` | RPT-443, DEC-205 |
+| DSGVO-Consent-Felder + `pending_setup` | als bereits vorhanden angenommen | **additive Migration MIG-063/118** ergaenzt 4 Spalten + `pending_setup`-Status (LIVE) | DEC-209 |
+| Setup-Token-Header | Mandatory `X-Strategaize-Forward-Token`-Pruefung | im **Single-Mailbox-Modus tolerant uebersprungen** (Mail traegt keinen Token-Header); Token nur fuer spaeteren Catchall-Modus relevant; Anleitungen setzen KEINEN Header | DEC-206 |
+| Retention | message-level (`email_message.deleted_at`/`retention_until`) | **run-level** (`email_bulk_run.retention_until`+`soft_delete_at`, `email_message` via FK CASCADE); Idempotency via `knowledge_unit.metadata->>'bulk_run_id'` | DEC-208 |
+| Admin-Cost-Spalte | `vw_bulk_email_cost_monthly.month_start` | Spalte heisst **`month`** (Spec-Annahme war ein Prod-Bug, gefixt in MT-5) | RPT-443, ISSUE-094 |
+| Mail-Client-Anleitungen | 4 Tabs (Gmail/Outlook/Thunderbird/Apple Mail) | **3 Tabs**: Gmail / Outlook (Microsoft 365) / IONOS Webmail | RPT-444 |
+| ConversationalSetupAssistant | "Pattern-Reuse aus IS V4 KI-Filter-Assistant" | OP hat **keinen** KI-Filter-Assistant — **in-repo Voice-Pattern** aus `questionnaire-form.tsx` portiert (`/api/tenant/transcribe`) | RPT-444 |
+| Server-Action-Set | 6 Actions inkl. `aiAssistedSetupSummary` | as-built heisst die KI-Action `suggestSetup` (Wrapper um `summarizeSetupIntent`) | RPT-444, IMP-1196 |
+| Komponenten-Dateipfade | `src/components/bulk-email/*.tsx` | as-built unter `src/app/dashboard/bulk-email-import/forward-setup/*` (kolokiert) | RPT-444 |
+| `email_message.endpoint_id`-Join | message-level Join angenommen | **run-level Join** (`email_message`→`email_bulk_run.endpoint_id`) | RPT-443 |
+
+**MT-7-Status:** COMPLIANCE.md Section 10 + RUNBOOK "V9.1 Setup-UI Founder-Walkthrough" geschrieben (2026-06-11), beide as-built. Master-Merge + Records-Flip auf `done` bleiben **gated hinter Gesamt-V9.1-/qa PASS** (AC-V9.1-D-10/12) — NICHT in diesem Schritt ausgefuehrt.
+
+---
 
 ## Slice Goal
 

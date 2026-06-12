@@ -121,3 +121,144 @@ Neue Seed-User gehoeren:
 - hier ins Runbook
 
 Neue Seed-Tenants gehoeren in eine neue SQL-Migration `02X_seed_<name>_tenant.sql` (analog 027) mit eigener fixer UUID.
+
+## V9.1 Continuous-Cost-Cap + Pipeline-Trigger
+
+Quelle: SLC-V9.1-B (FEAT-077), DEC-197 (Cost-Cap-Modell), DEC-207 (Pipeline-Entry), MIG-062.
+
+Der Continuous-Forward-Bucket-Modus laeuft autonom: der Cron `POST /api/cron/email-bulk-pipeline-trigger` (stuendlich, `x-cron-secret`) walkt jeden `inbound_source='forward_bucket'`-Run cost-cap-gated durch die V9.0-Pipeline. Bei Cap-Hit oder Per-Email-Approval pausiert ein Run und braucht einen manuellen Founder-Eingriff.
+
+### Coolify-Scheduled-Task (einmaliges Setup)
+
+In Coolify unter der `app`-Resource → Scheduled-Tasks:
+
+```
+Schedule: 0 * * * *
+Command/HTTP: POST https://onboarding.strategaizetransition.com/api/cron/email-bulk-pipeline-trigger
+Header: x-cron-secret: $CRON_SECRET
+```
+
+Optionale ENV-Tuning-Variablen (Defaults in Klammern): `V91_BULK_EMAIL_DAILY_CAP_EUR` (5), `V91_BULK_EMAIL_MONTHLY_CAP_EUR` (100), `V91_BULK_EMAIL_TRIGGER_MIN_COUNT` (25), `V91_BULK_EMAIL_PER_EMAIL_APPROVAL_THRESHOLD_EUR` (0.50), `FOUNDER_ALERT_EMAIL` (Fallback `ERROR_ALERT_EMAIL` / `SMTP_USER`).
+
+### Cap-Hit-Reset (Run-Status `paused`)
+
+Bei Daily/Monthly-Cap-Hit setzt der Cron den Run auf `status='paused'` und schickt eine Founder-Email. Nach manueller Kosten-Pruefung im Admin-Audit (`/admin/audit/bulk-email`, gelbes Banner) den Run wieder freigeben:
+
+```bash
+docker exec <supabase-db-container> psql -U postgres -d postgres -c \
+  "UPDATE email_bulk_run SET status='continuous', updated_at=now() WHERE status='paused' AND tenant_id='<TENANT_UUID>';"
+```
+
+Der naechste stuendliche Cron-Tick nimmt den Run wieder auf (sofern der Cap inzwischen unterschritten ist — sonst pausiert er erneut). Cap-Reset effektiv erst nach Tages-/Monatswechsel oder ENV-Cap-Erhoehung.
+
+### Per-Email-Approval-Reset (Run-Status `awaiting_approval`)
+
+Reisst die Per-Email-Schaetzung die Schwelle (Outlier-Run), pausiert der Pattern-Extract-Worker auf `status='awaiting_approval'` (kein Sonnet-Call) und schickt eine Founder-Email. Nach Freigabe den Pattern-Extract-Job mit `approval_token` im Payload neu anstossen:
+
+```bash
+docker exec <supabase-db-container> psql -U postgres -d postgres -c \
+  "UPDATE email_bulk_run SET status='pattern_extracting', updated_at=now() WHERE id='<BULK_RUN_ID>';"
+docker exec <supabase-db-container> psql -U postgres -d postgres -c \
+  "INSERT INTO ai_jobs (tenant_id, job_type, status, payload) VALUES ('<TENANT_UUID>','email_bulk_pattern_extract','pending', '{\"bulk_run_id\":\"<BULK_RUN_ID>\",\"approval_token\":\"founder-approved\"}'::jsonb);"
+```
+
+Der `approval_token` im Payload ueberspringt den Per-Email-Gate, der Worker laeuft mit dem Sonnet-Call durch.
+
+### Manueller Trigger / Smoke-Test
+
+```bash
+curl -X POST https://onboarding.strategaizetransition.com/api/cron/email-bulk-pipeline-trigger \
+  -H "x-cron-secret: <CRON_SECRET>"
+# Antwort: { success, runs_evaluated, runs_triggered, runs_advanced, runs_skipped_cap, runs_skipped_threshold }
+```
+
+## V9.1 Storage-Retention-Cron (DSGVO-Lifecycle, SLC-V9.1-C / DEC-208)
+
+Run-Level-Retention (DEC-208): `email_bulk_run` traegt `retention_until` + `soft_delete_at` (MIG-058). `email_message` haengt per FK `ON DELETE CASCADE` am Run. Default-Policy 60d Soft-Delete + 90d Hard-Delete (ENV `V91_RETENTION_SOFT_DELETE_DAYS` / `V91_RETENTION_HARD_DELETE_DAYS`, gegen `email_bulk_run.created_at`). Runs, deren Pattern ins Handbuch importiert wurde (`knowledge_unit.metadata->>'bulk_run_id'`), bleiben dauerhaft erhalten. Audit je Lauf in `error_log` (`message='email_retention_sweep_run'`).
+
+### Coolify-Scheduled-Task (einmaliges Setup)
+
+Coolify-UI -> Resource -> Scheduled-Tasks -> neuer Task:
+
+```
+Command:   curl -fsS -X POST https://onboarding.strategaizetransition.com/api/cron/bulk-email-retention-sweep -H "x-cron-secret: $CRON_SECRET"
+Frequency: 0 2 * * *      # taeglich 02:00 UTC
+```
+
+### Manueller Trigger / Smoke-Test
+
+```bash
+curl -X POST https://onboarding.strategaizetransition.com/api/cron/bulk-email-retention-sweep \
+  -H "x-cron-secret: <CRON_SECRET>"
+# Antwort: { success, runs_evaluated, soft_deleted_runs, hard_deleted_runs,
+#            skipped_imported, deleted_storage_objects, storage_errors, duration_ms }
+# V9.1-Initial-State (kein Run > 60d): erwartet alle Counts = 0.
+```
+
+### Founder-Override: DSGVO-Loesch-Anspruch sofort (vor Ablauf der Retention)
+
+Loescht einen Run vorzeitig (DSGVO Art. 17). Container-Name per `docker ps --format '{{.Names}}' | grep '^supabase-db'`:
+
+```sql
+-- 1. Run hart loeschen (Cascade entfernt email_message); Storage-Objekte separat
+--    per Bucket-Cleanup, falls noetig.
+DELETE FROM public.email_bulk_run WHERE id = '<bulk_run_id>';
+-- 2. Audit-Eintrag.
+INSERT INTO public.error_log (level, source, message, metadata)
+VALUES ('info', 'manual:retention-override', 'email_retention_manual_override',
+        jsonb_build_object('bulk_run_id', '<bulk_run_id>', 'reason', 'dsgvo_art17'));
+```
+
+### Restore aus Soft-Delete (vor Hard-Delete-Schwelle)
+
+Solange ein Run nur soft-deleted ist (`soft_delete_at` gesetzt, `created_at` noch nicht 90d alt), kann er reaktiviert werden (Auto-Restore-UI ist V9.2+):
+
+```sql
+UPDATE public.email_bulk_run SET soft_delete_at = NULL WHERE id = '<bulk_run_id>';
+```
+
+### Per-Tenant-Retention-Override
+
+Per-Tenant-Override via Tenant-Settings-JSONB ist V9.1.x (out of scope). Founder-Manuell bis dahin: einzelnen Run laenger behalten, indem `created_at` der Sweep-Logik entzogen wird — praktisch via Soft-Delete-Reset oben oder durch frueheres Handbook-Import (importierte Runs werden nie hart-geloescht).
+
+## V9.1 Setup-UI Founder-Walkthrough (SLC-V9.1-D / FEAT-079)
+
+So richtet der GF einen Forward-Bucket-Endpoint ein. **As-built-Stand (DEC-205/DEC-206):** Single-Mailbox-Modus — alle Weiterleitungen landen in **einem** IONOS-Postfach (`bulk@strategaizetransition.com`), das per IMAP-Sync-Cron abgeholt wird. Die UI zeigt eine `bulk-<slug>@…`-Adresse als Weiterleitungsziel; das Routing erfolgt aber ueber das eine Postfach (ENV `INBOUND_DEFAULT_ENDPOINT_SLUG`), nicht ueber echtes Catchall-Slug-Routing.
+
+> **Voraussetzung (OQ-R1-1, Founder-Action, gated):** Bis das IONOS-Postfach + die IMAP-ENVs (`IMAP_HOST/PORT/USER/PASSWORD/INITIAL_SYNC_DAYS`, `INBOUND_DEFAULT_ENDPOINT_SLUG`) + der Coolify-Scheduled-Task `inbound-email-imap-sync` live sind, kommt **keine** weitergeleitete Mail an. Bis dahin meldet der Test-Send-Button immer "nicht empfangen" — das ist erwartet, kein Bug (siehe Schritt 5).
+
+### Schritt 1 — Setup-UI oeffnen
+
+Als `tenant_admin` einloggen und `/dashboard/bulk-email-import/forward-setup` oeffnen. Nicht-`tenant_admin` werden auf `/dashboard` redirected (Auth-Gate in `page.tsx`). Existiert noch kein Endpoint, zeigt der Wizard die **Erstell-Phase** (Assistent + Form); existiert einer, die **Konfigurations-Phase** (Adresse, Anleitung, Allowlist, Test, DSGVO).
+
+### Schritt 2 — Endpoint anlegen (Conversational-First oder Form)
+
+- **Conversational (empfohlen):** Im "Mit KI beschreiben"-Assistenten per **Text oder Sprache** (Mikrofon → `/api/tenant/transcribe`) beschreiben, welche Mails man weiterleiten will. Der Assistent (Bedrock Sonnet, eu-central-1) schlaegt einen Local-Part (`bulk-<slug>`) + optionale Allowlist-Pattern vor. "Uebernehmen" befuellt die Form.
+- **Form-Fallback:** Local-Part direkt eintragen.
+- "Anlegen" ruft `createInboundEndpoint` → Row mit `status='pending_setup'` + frischem 32-byte `setup_token` + `error_log`-Audit (`email_inbound_endpoint_created`).
+
+### Schritt 3 — Weiterleitungs-Adresse (+ Setup-Token) kopieren
+
+Die UI zeigt das Weiterleitungsziel `bulk-<slug>@<INBOUND_CATCHALL_DOMAIN>` und — **einmalig** nach dem Anlegen/Regenerieren — den Setup-Token im Klartext (danach maskiert `…XXXX`). Token verloren → "Regenerieren" (Confirmation-Modal; invalidiert den alten Token sofort, `error_log`-Audit `email_inbound_endpoint_token_regenerated`).
+
+> **Hinweis Single-Mailbox-Modus:** Der Setup-Token wird in diesem Modus **nicht** als Mail-Header geprueft (DEC-206) — die Weiterleitungs-Regeln in Schritt 4 setzen daher nur ein einfaches "Weiterleiten an", **ohne** `X-Strategaize-Forward-Token`-Header. Der Token bleibt fuer den spaeteren Catchall-Modus relevant.
+
+### Schritt 4 — Weiterleitungs-Regel im Mail-Client setzen
+
+Die UI hat drei Tabs (`MailClientInstructions`): **Gmail**, **Outlook / Microsoft 365**, **IONOS Webmail**. Jeweils Schritt-fuer-Schritt: Weiterleitungsadresse = das Ziel aus Schritt 3. Optional gezielt per Filter (z.B. nach Absender) statt Voll-Weiterleitung.
+
+### Schritt 5 — Test-Send + DSGVO-Disclaimer bestaetigen
+
+- **Test-Send:** Button → `sendTestEmail` → Polling (`poll-inbound`, alle 3s, max 60s) auf eine eingegangene Mail. Erfolg → "Test-Mail empfangen". **Solange OQ-R1-1 nicht live ist, ist `received` immer `false`** — Fehler-Feedback erwartet, kein Code-Bug (L-1 in RPT-445).
+- **DSGVO-Disclaimer:** Modal mit Pflicht-Text + Checkbox + "Aktivieren". Bestaetigung → `confirmDsgvoDisclaimer(id, DSGVO_CONSENT_TEXT_VERSION)` → `status='active'` + `dsgvo_consent_*`-Spalten + `error_log`-Audit (`email_inbound_endpoint_dsgvo_consent`). Disclaimer-Wording + Version (`2026-06-11.v1`) in `src/lib/bulk-email/dsgvo-consent.ts`; bei Wording-Aenderung Version hochzaehlen (Audit-Nachvollziehbarkeit). **Die Aktivierung ist bewusst nicht an einen erfolgreichen Test-Send gekoppelt** (sonst waere sie ohne Live-IMAP nie moeglich) — re-evaluieren, sobald IONOS-Sync live ist.
+
+### Verifikation nach Live-Schaltung (OQ-R1-1)
+
+```sql
+-- Endpoint aktiv?
+SELECT slug, status, dsgvo_consent_accepted_at FROM public.email_inbound_endpoint WHERE status='active';
+-- Inbound angekommen? (nach echter Weiterleitung + Cron-Lauf)
+SELECT message FROM public.error_log WHERE message='email_inbound_received' ORDER BY created_at DESC LIMIT 5;
+-- Rejects (Spam/Allowlist) sichtbar?
+SELECT reject_layer, count(*) FROM public.email_validation_reject_log GROUP BY 1;
+```

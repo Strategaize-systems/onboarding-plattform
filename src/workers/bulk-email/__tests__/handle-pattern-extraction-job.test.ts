@@ -66,6 +66,7 @@ interface BulkRunStub {
   id: string;
   tenant_id: string;
   status: string;
+  email_count?: number | null;
   pattern_extraction_cost_eur: number | string | null;
 }
 
@@ -752,5 +753,93 @@ describe("executeEmailBulkPatternExtract — Cost-Accumulation Continuity", () =
     // 5.0 (initial) + 0.92 (new call) = 5.92
     const costValue = costUpdate?.patch.pattern_extraction_cost_eur as number;
     expect(costValue).toBeCloseTo(5.92, 4);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+// V9.1 SLC-V9.1-B MT-3 — Per-Email-Approval-Gate
+// ────────────────────────────────────────────────────────────────────────────
+
+describe("executeEmailBulkPatternExtract — Per-Email-Approval-Gate (MT-3)", () => {
+  it("Outlier (per-email > Schwelle) ohne approval_token -> awaiting_approval + notify + complete, KEIN Sonnet", async () => {
+    const { client, state } = makeAdminStub({
+      bulkRun: {
+        id: BULK_RUN_ID,
+        tenant_id: TENANT_ID,
+        status: "pattern_extracting",
+        email_count: 100,
+        pattern_extraction_cost_eur: 0,
+      },
+      threads: [makeThread("1", THREAD_1)],
+    });
+    const notify = vi.fn().mockResolvedValue(true);
+
+    await executeEmailBulkPatternExtract(makeJob(), {
+      adminClient: client as never,
+      perEmailBaselineEur: 0.6, // erzwingt Outlier (0.6 > 0.5 Schwelle)
+      notifyApprovalRequired: notify,
+    });
+
+    expect(
+      state.updates.some(
+        (u) => u.table === "email_bulk_run" && u.patch.status === "awaiting_approval",
+      ),
+    ).toBe(true);
+    // Worker ist frueh raus: kein pattern_extracted, kein email_pattern INSERT.
+    expect(state.updates.some((u) => u.patch.status === "pattern_extracted")).toBe(false);
+    expect(state.inserts.some((i) => i.table === "email_pattern")).toBe(false);
+    expect(state.rpcs.some((r) => r.name === "rpc_complete_ai_job")).toBe(true);
+    expect(notify).toHaveBeenCalledTimes(1);
+    expect(notify.mock.calls[0][0]).toMatchObject({
+      tenantId: TENANT_ID,
+      bulkRunId: BULK_RUN_ID,
+      thresholdEur: 0.5,
+    });
+  });
+
+  it("Outlier MIT approval_token -> kein Pause, proceedet (leere Threads -> pattern_extracted)", async () => {
+    const { client, state } = makeAdminStub({
+      bulkRun: {
+        id: BULK_RUN_ID,
+        tenant_id: TENANT_ID,
+        status: "pattern_extracting",
+        email_count: 100,
+        pattern_extraction_cost_eur: 0,
+      },
+      threads: [],
+    });
+    const notify = vi.fn();
+
+    await executeEmailBulkPatternExtract(
+      makeJob({ payload: { bulk_run_id: BULK_RUN_ID, approval_token: "approved-by-gf" } }),
+      { adminClient: client as never, perEmailBaselineEur: 0.6, notifyApprovalRequired: notify },
+    );
+
+    expect(state.updates.some((u) => u.patch.status === "awaiting_approval")).toBe(false);
+    expect(notify).not.toHaveBeenCalled();
+    expect(state.updates.some((u) => u.patch.status === "pattern_extracted")).toBe(true);
+  });
+
+  it("Baseline (per-email unter Schwelle) -> kein Pause (Outlier-Guard triggert nicht)", async () => {
+    const { client, state } = makeAdminStub({
+      bulkRun: {
+        id: BULK_RUN_ID,
+        tenant_id: TENANT_ID,
+        status: "pattern_extracting",
+        email_count: 100,
+        pattern_extraction_cost_eur: 0,
+      },
+      threads: [],
+    });
+    const notify = vi.fn();
+
+    await executeEmailBulkPatternExtract(makeJob(), {
+      adminClient: client as never,
+      notifyApprovalRequired: notify, // Default-Baseline 0.006 << 0.5
+    });
+
+    expect(state.updates.some((u) => u.patch.status === "awaiting_approval")).toBe(false);
+    expect(notify).not.toHaveBeenCalled();
+    expect(state.updates.some((u) => u.patch.status === "pattern_extracted")).toBe(true);
   });
 });

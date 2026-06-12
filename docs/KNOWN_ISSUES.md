@@ -1,5 +1,42 @@
 # Known Issues
 
+### ISSUE-096 — V9.1 RLS-Behavioral-Pen-Test fehlt fuer 3 Inbound-Foundation-Tabellen
+- Status: open
+- Severity: Low
+- Area: V9.1 RLS-Test-Matrix (`src/__tests__/rls/`, `src/__tests__/migrations/112-v91-inbound-foundation.test.ts`)
+- Summary: Gesamt-V9.1-/qa (RPT-447) zeigte: ein voller Behavioral-4-Rollen-Pen-Test (withJwtContext SELECT/INSERT/UPDATE/DELETE pro Rolle, SAVEPOINT-Pattern) existiert nur fuer `email_inbound_sync_state` (`v91-inbound.rls.test.ts`, 10 Cases). Die 3 Foundation-Tabellen `email_inbound_endpoint`, `email_forward_allowlist`, `email_validation_reject_log` (MIG-112) haben nur Policy-Existenz- + Schema-Verifikation (Policy-Count + RLS-enabled + CHECK in `112-v91-inbound-foundation.test.ts`), keinen Cross-Tenant-Verhaltens-Test.
+- Impact: Gering im V9.1-Internal-Test-Mode (Founder-only, keine Kundendaten). Die Policies existieren, sind korrekt typisiert (admin_all + tenant-scoped) und folgen dem identischen V9-Standard-Pattern wie das behavioral getestete `email_inbound_sync_state` und `v9-bulk-email`. Risiko steigt erst vor Customer-Live, wenn diese Tabellen reale Kunden-Email-Daten + Sender-Allowlists tragen.
+- Workaround: Keiner noetig im V9.1-Pilot.
+- Next Action: Vor Customer-Live (Modul 1+2+3 komplett, module-lifecycle-discipline) Behavioral-4-Rollen-Matrix fuer die 3 Foundation-Tabellen ergaenzen (Pattern-Reuse aus `v91-inbound.rls.test.ts`). Nicht V9.1-Release-blockierend.
+
+### ISSUE-095 — V9.1 SLC-V9.1-C Retention-Idempotency haengt an knowledge_unit.metadata->>bulk_run_id
+- Status: open
+- Severity: Low
+- Area: V9.1 SLC-V9.1-C Retention-Sweep (`src/lib/bulk-email/retention-idempotency.ts`)
+- Summary: `isRunImportedToHandbook` entscheidet ueber Hard-Delete-Skip allein via `knowledge_unit WHERE source='email_bulk' AND metadata->>'bulk_run_id' = runId`. `handbook-import.ts` dokumentiert (DEC-193), dass `metadata` defensiv optional ist und der INSERT bei fehlender Spalte OHNE metadata retry-t. Faende sich ein importierter Run, dessen knowledge_unit OHNE metadata persistiert wurde, gaebe der Check einen False-Negative → der Run wuerde nach 90d hart-geloescht.
+- Impact: Gering. Die live-DB hat `knowledge_unit.metadata` als V4-Foundation-Pflichtfeld mit `'{}'`-Default (V9.0 SLC-168), d.h. der Defensive-Retry-ohne-metadata-Pfad greift praktisch nicht. Selbst im Worst-Case bleibt die importierte knowledge_unit (das eigentliche Handbuch-Pattern) erhalten — nur die Raw-Source-Emails (email_bulk_run + email_message + Storage) gingen verloren; deren Loeschung ist DSGVO-erwuenscht. Verlust beschraenkt sich auf Source-Traceability eines importierten Runs.
+- Workaround: Keiner noetig im V9.1-Pilot (Founder-only).
+- Next Action: Live-Smoke (AC-9 in /deploy) verifiziert, dass importierte email_bulk-Patterns `metadata.bulk_run_id` gesetzt haben. Optionale Belt-and-Suspenders-Idempotency (zusaetzlicher body-Markdown-Run-Link-Match) als V9.2+.
+
+### ISSUE-094 — V9 SLC-168 Admin-Audit Monats-Cost-Query nutzt nicht-existente Spalte `month_start`
+- Status: resolved
+- Severity: Low
+- Resolution: 2026-06-11 — Fix in SLC-V9.1-D MT-5 /backend (RPT-443): `src/app/admin/audit/bulk-email/page.tsx:179-180` selektiert + filtert jetzt auf `month` statt `month_start`. In SLC-V9.1-D /frontend-QA (RPT-445) code-verifiziert. Live-Smoke-Verifikation (echte Monatskosten sichtbar) bleibt /deploy-gated.
+- Area: V9 SLC-168 Admin-Audit-Page (`src/app/admin/audit/bulk-email/page.tsx:173-174`)
+- Summary: Die Monats-Cost-Aggregat-Query selektiert + filtert auf `month_start` (`.select("tenant_id, month_start, ...").eq("month_start", monthStartIso)`), aber die View `vw_bulk_email_cost_monthly` (MIG-054/109) hat die Spalte `month` (nicht `month_start`). Die Query wirft `column month_start does not exist`, wird vom umgebenden try/catch geschluckt → `costRows` bleibt leer → "Cost-Aggregat aktueller Monat" zeigt 0/leer. Pre-existing aus V9 SLC-168, NICHT aus SLC-V9.1-B. Discovery durch SLC-V9.1-B /qa DB-vs-Code-Paritaets-Check (RPT-440).
+- Impact: Admin-Audit "Cost-Aggregat aktueller Monat"-Tabelle zeigt fuer alle Tenants 0 EUR / 0 Runs, obwohl Monatskosten existieren koennen. Nur Anzeige-Bug (Cross-Tenant-Admin-Sicht), kein Funktions-/Daten-Schaden. Cap-Enforcement (continuous-cost-cap.ts) liest korrekt `month` und ist NICHT betroffen.
+- Workaround: Keiner noetig — rein kosmetisch in der Audit-Anzeige.
+- Next Action: 1-Zeichen-Fix `month_start` → `month` (Select + .eq) in SLC-V9.1-D (beruehrt dieselbe Admin-Audit-Page) oder als Quick-Follow-up. Bewusst nicht in SLC-V9.1-B gefixt (out-of-slice-scope, surgical-changes-Disziplin).
+
+### ISSUE-093 — V9 Bedrock-Haiku-3-Modell Legacy/Deprecation in eu-central-1
+- Status: open
+- Severity: High
+- Area: V9 Pre-Filter-Worker (`src/workers/bulk-email/handle-pre-filter-job.ts`) + Bedrock-Haiku-Adapter (`src/lib/ai/bedrock-haiku/index.ts`)
+- Summary: Production-ENV `BEDROCK_V9_HAIKU_MODEL_ID=eu.anthropic.claude-3-haiku-20240307-v1:0` (Stand 2026-06-09 in Coolify-Container `app-bwkg80w04wgccos48gcws8cs-162742787231`). Bei Versuch eines Bedrock-Calls 2026-06-09 14:17 CEST waehrend V9.1 SLC-V9.1-A MT-1 Skeleton-Validation: `ResourceNotFoundException: Access denied. This Model is marked by provider as Legacy and you have not been actively using the model in the last 30 days. Please upgrade to an active model on Amazon Bedrock`. Haiku 3.5 (`anthropic.claude-3-5-haiku-20241022-v1:0` mit und ohne `eu.` Prefix) liefert `ValidationException: The provided model identifier is invalid` in eu-central-1 — Cross-Region-Inference-Profile fuer Haiku 3.5 nicht in eu-central-1 verfuegbar. V9.1 SLC-V9.1-A MT-1 wurde mit Sonnet-4 Override-Workaround durchgefuehrt (eu.anthropic.claude-sonnet-4-20250514-v1:0, F1=1.000 erreicht, 0.0164 EUR Total).
+- Impact: V9 production Pre-Filter-Worker (`handle-pre-filter-job.ts`) ist beim naechsten realen .mbox-Upload broken — Bedrock-Call wirft ResourceNotFoundException, Worker setzt `email_bulk_run.status='failed'` + `failure_reason='haiku_pre_filter_error: Access denied. This Model is marked by provider as Legacy...'`. Cost-Audit-Trail bleibt funktional (try/catch in cost-ledger-INSERT). User-sichtbar: V9-Pre-Filter-Pipeline ist defacto deaktiviert bis V9-Side-Track-Fix.
+- Workaround: Coolify-ENV `BEDROCK_V9_HAIKU_MODEL_ID` auf production-aktives Modell umstellen: entweder (a) Sonnet 4 als kurzfristiger Workaround (`eu.anthropic.claude-sonnet-4-20250514-v1:0`, ~10x Cost vs Haiku 3 aber hoechste Quality) oder (b) Haiku 3.5 via cross-region-Inference-Profile (us.anthropic.claude-3-5-haiku-20241022-v1:0 — verletzt aber data-residency.md eu-only-Pflicht), oder (c) AWS-Bedrock-Console "Activate Model" auf Haiku 3 erneut anfordern (~24h Approval).
+- Next Action: V9-Side-Track-IMP: (1) AWS-Bedrock-Console pruefen ob Haiku 3 reaktivierbar oder Haiku 3.5 EU-Cross-Region freischaltbar, (2) Coolify-ENV update, (3) V9-DEC fuer Long-Term-Model-Choice (Sonnet-4 vs Haiku 3.5 mit US-Region-Drift-TIA). NICHT V9.1-blocking (V9.1 Skeleton-Validation lief mit Sonnet 4 Override). Diskovery durch V9.1 SLC-V9.1-A MT-1 Live-Run 2026-06-09.
+
 ### ISSUE-092 — V9 SLC-167 Migrations-Luecke: ai_cost_ledger.role + ai_jobs.job_type CHECK fehlen 'email_bulk_pattern_extraction' + 'email_bulk_pattern_extract'
 - Status: resolved (2026-06-05 ~16:55 UTC via Migration 111 / MIG-056 LIVE-applied auf Coolify-Postgres `supabase-db-bwkg80w04wgccos48gcws8cs-162742842423`. ai_cost_ledger_role_check jetzt 19 Werte incl. 'email_bulk_pattern_extraction'. ai_jobs_job_type_check jetzt 19 Werte incl. 'email_bulk_pattern_extract'. RPT-422 /post-launch V9 T+immediate Discovery.)
 - Severity: High
