@@ -2,7 +2,7 @@
 
 - Feature: FEAT-080
 - Version: V9.5
-- Status: planned
+- Status: done
 - Priority: High
 - Backlog: BL-159 (Teil 1/2 — Backend; Curation-Anbindung folgt in SLC-V9.5-D)
 - Parallel-Group: **Sequential-Chain S1** (nach SLC-V9.5-A)

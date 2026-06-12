@@ -227,6 +227,6 @@ V9.5-Scope (Requirements-Baseline 2026-06-12 via RPT-453, basierend auf /discove
 
 | ID | Feature | Status | Spec | Created |
 |----|---------|--------|------|---------|
-| FEAT-080 | Cross-Thread-Synthese-Stage (dedup/merge/frequency-weight email_pattern → konsolidierte Kandidaten-Units) | planned | [Spec](FEAT-080-cross-thread-synthese-stage.md) | 2026-06-12 |
+| FEAT-080 | Cross-Thread-Synthese-Stage (dedup/merge/frequency-weight email_pattern → konsolidierte Kandidaten-Units) | in_progress | [Spec](FEAT-080-cross-thread-synthese-stage.md) | 2026-06-12 |
 | FEAT-081 | Bounded Critic/Quality-Gate (Analyst↔Challenger-Prinzip, 1 Pass, Hard-Cost-Cap erhalten) | planned | [Spec](FEAT-081-bounded-critic-gate.md) | 2026-06-12 |
-| FEAT-082 | Bedrock-Modell-Default-Cleanup eu-Sonnet-4 (ISSUE-100, 4 Files) | planned | [Spec](FEAT-082-bedrock-model-default-cleanup.md) | 2026-06-12 |
+| FEAT-082 | Bedrock-Modell-Default-Cleanup eu-Sonnet-4 (ISSUE-100, 4 Files) | done | [Spec](FEAT-082-bedrock-model-default-cleanup.md) | 2026-06-12 |
