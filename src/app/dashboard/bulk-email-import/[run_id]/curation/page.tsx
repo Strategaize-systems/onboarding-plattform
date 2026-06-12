@@ -1,12 +1,15 @@
-// V9 SLC-167 MT-6 — Curation-Page (GF-Gate-3 Pattern-Curation).
+// V9 SLC-167 MT-6 — Curation-Page (GF-Gate-3).
+// V9.5 SLC-V9.5-D MT-4 — Curation-Contract-Shift (DEC-214, AC-D-4): kuratiert
+//   werden konsolidierte email_synthesized_unit-Rows; editierbar ab Status
+//   'synthesized' (Synthese-Stage SLC-V9.5-B) statt 'pattern_extracted'.
 //
 // Server-Component analog ../page.tsx + ../filter-review/page.tsx.
 // Auth-Gate identisch: tenant_admin only.
 //
 // Lifecycle:
-//   - Status NOT IN ('pattern_extracted', 'curating', 'importing', 'completed', 'failed'):
+//   - Status NOT IN ('synthesized', 'curating', 'importing', 'completed', 'failed'):
 //     Banner "Curation noch nicht verfuegbar"
-//   - Status IN ('pattern_extracted', 'curating'): editierbar.
+//   - Status IN ('synthesized', 'curating'): editierbar.
 //   - Status IN ('importing', 'completed'): read-only.
 //   - Status 'failed': Failure-Banner + Read-Only.
 //
@@ -28,7 +31,7 @@ interface CurationPageProps {
   params: Promise<{ run_id: string }>;
 }
 
-const EDITABLE_STATUSES = new Set(["pattern_extracted", "curating"]);
+const EDITABLE_STATUSES = new Set(["synthesized", "curating"]);
 const PENDING_STATUSES = new Set([
   "uploaded",
   "parsing",
@@ -38,6 +41,10 @@ const PENDING_STATUSES = new Set([
   "thread_redacting",
   "thread_redacted",
   "pattern_extracting",
+  // SLC-V9.5-D: pattern_extracted ist jetzt PENDING — die Synthese-Stage
+  // (SLC-V9.5-B/C) laeuft danach und flippt auf 'synthesized'.
+  "pattern_extracted",
+  "synthesizing",
 ]);
 const FINISHED_STATUSES = new Set(["importing", "completed"]);
 
@@ -59,11 +66,11 @@ function StatusBanner({
         <AlertCircle className="h-5 w-5 flex-shrink-0 text-red-500" />
         <div className="flex-1">
           <p className="text-sm font-semibold text-red-800">
-            Pattern-Extraktion fehlgeschlagen
+            Pipeline fehlgeschlagen
           </p>
           <p className="mt-1 text-sm text-red-700">
-            Dieser Bulk-Run hat die Pattern-Extraktion nicht abgeschlossen.
-            Bereits extrahierte Patterns sind unten read-only sichtbar.
+            Dieser Bulk-Run hat die Pipeline nicht abgeschlossen. Bereits
+            synthetisierte Wissens-Bausteine sind unten read-only sichtbar.
           </p>
           <Link
             href={`/dashboard/bulk-email-import/${runId}`}
@@ -89,8 +96,8 @@ function StatusBanner({
           </p>
           <p className="mt-1 text-sm text-slate-600">
             Die Pipeline laeuft noch (Status: <code>{status}</code>). Sobald die
-            Pattern-Extraktion abgeschlossen ist (<code>pattern_extracted</code>),
-            kannst du die Patterns kuratieren.
+            Cross-Thread-Synthese abgeschlossen ist (<code>synthesized</code>),
+            kannst du die Wissens-Bausteine kuratieren.
           </p>
           <Link
             href={`/dashboard/bulk-email-import/${runId}`}
@@ -115,8 +122,8 @@ function StatusBanner({
             Curation abgeschlossen
           </p>
           <p className="mt-1 text-sm text-green-700">
-            Status: <code>{status}</code>. Patterns sind read-only. Aenderungen
-            sind nach Abschluss nicht mehr moeglich.
+            Status: <code>{status}</code>. Wissens-Bausteine sind read-only.
+            Aenderungen sind nach Abschluss nicht mehr moeglich.
           </p>
         </div>
       </div>
@@ -168,12 +175,12 @@ export default async function CurationPage({ params }: CurationPageProps) {
           Zurueck zur Detail-Ansicht
         </Link>
         <h1 className="text-2xl font-semibold text-slate-900">
-          Pattern-Curation: {data.run.source_file_name}
+          Wissens-Curation: {data.run.source_file_name}
         </h1>
         <p className="text-sm text-slate-500">
-          Pattern-Karten kuratieren — akzeptieren, ablehnen, editieren und
-          Sections zuordnen. Akzeptierte Patterns werden ins Handbuch
-          uebernommen (SLC-168).
+          Konsolidierte Wissens-Bausteine kuratieren — akzeptieren, ablehnen,
+          editieren und Sections zuordnen. Akzeptierte Bausteine werden ins
+          Handbuch uebernommen.
         </p>
       </header>
 
@@ -181,7 +188,7 @@ export default async function CurationPage({ params }: CurationPageProps) {
 
       <CurationClient
         bulkRunId={runId}
-        patterns={data.patterns}
+        units={data.units}
         sections={data.sections}
         progress={data.progress}
         editable={editable}

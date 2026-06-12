@@ -1,6 +1,9 @@
 "use client";
 
 // V9 SLC-167 MT-6 — Curation-UI Client-Komponente.
+// V9.5 SLC-V9.5-D MT-4 — Curation-Contract-Shift (DEC-214): rendert
+//   konsolidierte email_synthesized_unit-Rows (Units) statt email_pattern;
+//   Server-Actions: updateUnitCuration / bulkAcceptUnits / bulkRejectAllUnits.
 //
 // Verantwortung:
 //   - Filter-Tabs nach curation_status (Alle / Pending / Akzeptiert / Editiert /
@@ -10,13 +13,13 @@
 //     Confirmation.
 //   - Finish-Curation-Button → finishCurationAndStartHandbookImport mit
 //     Bestaetigungs-Modal.
-//   - EditPatternModal-Management.
+//   - EditUnitModal-Management.
 //
 // State-Strategie:
 //   - Initial data kommt vom Server (Server-Component-Render).
 //   - Mutations laufen ueber Server-Actions + revalidatePath. Wir reloaden bei
 //     Bulk-Aktionen ueber router.refresh() statt optimistischen State, weil
-//     mehrere Pattern-Cards betroffen sind.
+//     mehrere Unit-Cards betroffen sind.
 //
 // Pattern-Reuse: ../filter-review/FilterReviewClient.tsx (Filter-Tabs, Bulk-
 // AlertDialog, Error-Banner-Pattern).
@@ -54,21 +57,21 @@ import type { SectionOption } from "@/lib/bulk-email/sections";
 import {
   BULK_ACCEPT_DEFAULT_THRESHOLD,
   type CurationData,
-  type CurationPattern,
+  type CurationUnit,
   type CurationStatus,
 } from "./helpers";
 import {
-  bulkAcceptPatterns,
-  bulkRejectAll,
+  bulkAcceptUnits,
+  bulkRejectAllUnits,
   finishCurationAndStartHandbookImport,
   importToHandbook,
 } from "./actions";
-import { PatternCard } from "./components/PatternCard";
-import { EditPatternModal } from "./components/EditPatternModal";
+import { UnitCard } from "./components/UnitCard";
+import { EditUnitModal } from "./components/EditUnitModal";
 
 interface CurationClientProps {
   bulkRunId: string;
-  patterns: CurationPattern[];
+  units: CurationUnit[];
   sections: SectionOption[];
   progress: CurationData["progress"];
   editable: boolean;
@@ -88,7 +91,7 @@ const FILTER_TABS: Array<{ value: FilterValue; label: string }> = [
 
 export function CurationClient({
   bulkRunId,
-  patterns,
+  units,
   sections,
   progress,
   editable,
@@ -101,20 +104,18 @@ export function CurationClient({
   );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [editingPattern, setEditingPattern] = useState<CurationPattern | null>(
-    null,
-  );
+  const [editingUnit, setEditingUnit] = useState<CurationUnit | null>(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  const filteredPatterns = useMemo(() => {
-    if (filter === "all") return patterns;
-    return patterns.filter((p) => p.curation_status === filter);
-  }, [filter, patterns]);
+  const filteredUnits = useMemo(() => {
+    if (filter === "all") return units;
+    return units.filter((u) => u.curation_status === filter);
+  }, [filter, units]);
 
   const groupedByTheme = useMemo(() => {
-    const groups = new Map<string, CurationPattern[]>();
-    for (const p of filteredPatterns) {
+    const groups = new Map<string, CurationUnit[]>();
+    for (const p of filteredUnits) {
       const themes =
         Array.isArray(p.themes) && p.themes.length > 0
           ? p.themes
@@ -127,7 +128,7 @@ export function CurationClient({
     return Array.from(groups.entries()).sort((a, b) =>
       a[0].localeCompare(b[0]),
     );
-  }, [filteredPatterns]);
+  }, [filteredUnits]);
 
   const progressPercent = useMemo(() => {
     if (progress.total === 0) return 0;
@@ -142,13 +143,13 @@ export function CurationClient({
   function handleBulkAccept() {
     clearMessages();
     startTransition(async () => {
-      const result = await bulkAcceptPatterns(bulkRunId, {
+      const result = await bulkAcceptUnits(bulkRunId, {
         confidenceThreshold: bulkThreshold,
       });
       if (!result.ok) {
         setErrorMessage(result.error);
       } else {
-        setSuccessMessage(`${result.acceptedCount} Pattern akzeptiert.`);
+        setSuccessMessage(`${result.acceptedCount} Wissens-Bausteine akzeptiert.`);
         router.refresh();
       }
     });
@@ -157,11 +158,11 @@ export function CurationClient({
   function handleBulkReject() {
     clearMessages();
     startTransition(async () => {
-      const result = await bulkRejectAll(bulkRunId);
+      const result = await bulkRejectAllUnits(bulkRunId);
       if (!result.ok) {
         setErrorMessage(result.error);
       } else {
-        setSuccessMessage(`${result.rejectedCount} Pattern abgelehnt.`);
+        setSuccessMessage(`${result.rejectedCount} Wissens-Bausteine abgelehnt.`);
         router.refresh();
       }
     });
@@ -191,9 +192,9 @@ export function CurationClient({
         return;
       }
 
-      if (importResult.patternsImported === 0) {
+      if (importResult.unitsImported === 0) {
         setSuccessMessage(
-          "Keine neuen Patterns zu importieren — Status auf 'completed' gesetzt.",
+          "Keine neuen Wissens-Bausteine zu importieren — Status auf 'completed' gesetzt.",
         );
       } else {
         setSuccessMessage(
@@ -204,8 +205,8 @@ export function CurationClient({
     });
   }
 
-  function handleEdit(pattern: CurationPattern) {
-    setEditingPattern(pattern);
+  function handleEdit(unit: CurationUnit) {
+    setEditingUnit(unit);
     setEditModalOpen(true);
   }
 
@@ -268,8 +269,8 @@ export function CurationClient({
                 <AlertDialogHeader>
                   <AlertDialogTitle>Bulk-Akzeptanz</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Alle Patterns mit Konfidenz ≥ Schwellenwert und vorhandenem
-                    Section-Vorschlag werden automatisch akzeptiert.
+                    Alle Wissens-Bausteine mit Konfidenz ≥ Schwellenwert und
+                    vorhandenem Section-Vorschlag werden automatisch akzeptiert.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <div className="space-y-2">
@@ -311,7 +312,7 @@ export function CurationClient({
                 <AlertDialogHeader>
                   <AlertDialogTitle>Alle offenen ablehnen?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    {progress.pending} offene Patterns werden als
+                    {progress.pending} offene Wissens-Bausteine werden als
                     &laquo;rejected&raquo; markiert. Das ist nicht rueckgaengig
                     zu machen.
                   </AlertDialogDescription>
@@ -348,11 +349,11 @@ export function CurationClient({
         </div>
       )}
 
-      {/* Pattern-Liste, gruppiert nach Theme */}
-      {filteredPatterns.length === 0 ? (
+      {/* Unit-Liste, gruppiert nach Theme */}
+      {filteredUnits.length === 0 ? (
         <Card>
           <CardContent className="py-8 text-center text-sm text-slate-500">
-            Keine Patterns in dieser Ansicht.
+            Keine Wissens-Bausteine in dieser Ansicht.
           </CardContent>
         </Card>
       ) : (
@@ -366,10 +367,10 @@ export function CurationClient({
                 </span>
               </h2>
               <div className="grid gap-3">
-                {items.map((pattern) => (
-                  <PatternCard
-                    key={pattern.id}
-                    pattern={pattern}
+                {items.map((unit) => (
+                  <UnitCard
+                    key={unit.id}
+                    unit={unit}
                     sections={sections}
                     editable={editable}
                     onEdit={handleEdit}
@@ -390,8 +391,8 @@ export function CurationClient({
                 Curation abschliessen?
               </p>
               <p className="text-xs text-slate-500">
-                {progress.accepted + progress.edited} Patterns werden ins
-                Handbuch uebernommen (SLC-168, noch nicht implementiert).
+                {progress.accepted + progress.edited} Wissens-Bausteine werden
+                ins Handbuch uebernommen.
               </p>
             </div>
             <AlertDialog>
@@ -409,10 +410,9 @@ export function CurationClient({
                 <AlertDialogHeader>
                   <AlertDialogTitle>Curation abschliessen?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Der Bulk-Run wird auf Status &laquo;importing&raquo; gesetzt.
-                    SLC-168 Handbook-Import-Worker uebernimmt die akzeptierten /
-                    editierten Patterns ins Handbuch (Worker ist noch nicht
-                    implementiert — die Daten warten in der DB).
+                    Der Bulk-Run wird auf Status &laquo;importing&raquo; gesetzt
+                    und die akzeptierten / editierten Wissens-Bausteine werden
+                    ins Handbuch uebernommen (knowledge_unit + Snapshot).
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -434,20 +434,20 @@ export function CurationClient({
         >
           <CheckCircle2 className="h-5 w-5 flex-shrink-0 text-slate-500" />
           <p className="flex-1 text-sm text-slate-700">
-            Curation ist abgeschlossen. Patterns sind read-only.
+            Curation ist abgeschlossen. Wissens-Bausteine sind read-only.
           </p>
         </div>
       )}
 
-      {editingPattern && (
-        <EditPatternModal
-          key={editingPattern.id}
-          pattern={editingPattern}
+      {editingUnit && (
+        <EditUnitModal
+          key={editingUnit.id}
+          unit={editingUnit}
           sections={sections}
           open={editModalOpen}
           onOpenChange={(o) => {
             setEditModalOpen(o);
-            if (!o) setEditingPattern(null);
+            if (!o) setEditingUnit(null);
           }}
         />
       )}

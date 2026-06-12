@@ -1,16 +1,20 @@
 "use client";
 
-// V9 SLC-167 MT-6 — Pattern-Card-Component (Curation-UI).
+// V9 SLC-167 MT-6 — Pattern-Card (Curation-UI), V9.5 SLC-V9.5-D MT-4 —
+// Unit-Card: rendert konsolidierte email_synthesized_unit-Rows (DEC-214).
+// Neu: Evidenz-Count-Badge (Belegdichte, AC-D-5) statt Thread-Bezug;
+// Confidence-Pill auf aggregated_confidence; Snippets sind
+// { text, source_pattern_id }-Objekte (extractSnippetTexts).
 //
-// Spec L186: Titel + Description + Evidence-Snippets-Akkordeon (read-only mit
-// Pseudonym-Hint) + Confidence-Pill (gruen/gelb/rot) + Section-Dropdown
-// (Pflicht) + Aktions-Buttons.
+// Spec L186: Titel + Description + Evidence-Snippets-Akkordeon (read-only) +
+// Confidence-Pill (gruen/gelb/rot) + Section-Dropdown (Pflicht) +
+// Aktions-Buttons.
 //
 // Pattern-Reuse-Anker: ../../filter-review/FilterReviewClient.tsx (Card-Layout,
 // Select, Button, useTransition).
 
 import { useMemo, useState, useTransition } from "react";
-import { CheckCircle2, Edit3, XCircle, Sparkles, ChevronRight } from "lucide-react";
+import { CheckCircle2, Edit3, XCircle, Sparkles, ChevronRight, Layers } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -36,19 +40,20 @@ import {
 } from "@/lib/bulk-email/sections";
 import {
   confidenceTier,
+  extractSnippetTexts,
   MAX_FREE_TEXT_SECTION_LENGTH,
   type ConfidenceTier,
-  type CurationPattern,
+  type CurationUnit,
 } from "../helpers";
-import { updatePatternCuration } from "../actions";
+import { updateUnitCuration } from "../actions";
 
-interface PatternCardProps {
-  pattern: CurationPattern;
+interface UnitCardProps {
+  unit: CurationUnit;
   sections: SectionOption[];
-  /** false wenn der Bulk-Run nicht mehr editierbar ist (Status > pattern_extracted). */
+  /** false wenn der Bulk-Run nicht mehr editierbar ist (Status > curating). */
   editable: boolean;
   /** Open-Modal-Callback (Edit). */
-  onEdit: (pattern: CurationPattern) => void;
+  onEdit: (unit: CurationUnit) => void;
 }
 
 const TIER_BADGE_STYLES: Record<ConfidenceTier, string> = {
@@ -57,14 +62,14 @@ const TIER_BADGE_STYLES: Record<ConfidenceTier, string> = {
   red: "bg-red-100 text-red-800 border-red-200",
 };
 
-const STATUS_BADGE_STYLES: Record<CurationPattern["curation_status"], string> = {
+const STATUS_BADGE_STYLES: Record<CurationUnit["curation_status"], string> = {
   pending_curation: "bg-slate-100 text-slate-700 border-slate-200",
   accepted: "bg-green-100 text-green-800 border-green-200",
   rejected: "bg-red-100 text-red-800 border-red-200",
   edited: "bg-blue-100 text-blue-800 border-blue-200",
 };
 
-const STATUS_LABELS: Record<CurationPattern["curation_status"], string> = {
+const STATUS_LABELS: Record<CurationUnit["curation_status"], string> = {
   pending_curation: "Offen",
   accepted: "Akzeptiert",
   rejected: "Abgelehnt",
@@ -81,7 +86,20 @@ function ConfidencePill({ confidence }: { confidence: number }) {
   );
 }
 
-function StatusBadge({ status }: { status: CurationPattern["curation_status"] }) {
+/** Belegdichte-Badge (AC-D-5): Anzahl distinkter belegender Quell-Patterns. */
+function EvidenceCountBadge({ count }: { count: number }) {
+  return (
+    <Badge
+      variant="outline"
+      className="gap-1 border-indigo-200 bg-indigo-50 text-indigo-800"
+    >
+      <Layers className="h-3 w-3" />
+      {count} {count === 1 ? "Beleg" : "Belege"}
+    </Badge>
+  );
+}
+
+function StatusBadge({ status }: { status: CurationUnit["curation_status"] }) {
   return (
     <Badge variant="outline" className={STATUS_BADGE_STYLES[status]}>
       {STATUS_LABELS[status]}
@@ -89,14 +107,14 @@ function StatusBadge({ status }: { status: CurationPattern["curation_status"] })
   );
 }
 
-export function PatternCard({
-  pattern,
+export function UnitCard({
+  unit,
   sections,
   editable,
   onEdit,
-}: PatternCardProps) {
+}: UnitCardProps) {
   const [selectedSection, setSelectedSection] = useState<string>(
-    pattern.curated_section ?? pattern.suggested_section ?? "",
+    unit.curated_section ?? unit.suggested_section ?? "",
   );
   const [freeTextSection, setFreeTextSection] = useState<string>("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -107,12 +125,10 @@ export function PatternCard({
     ? freeTextSection.trim()
     : selectedSection;
 
-  const evidenceSnippets = useMemo(() => {
-    if (!Array.isArray(pattern.evidence_snippets)) return [];
-    return pattern.evidence_snippets
-      .filter((s): s is string => typeof s === "string" && s.trim().length > 0)
-      .slice(0, 5);
-  }, [pattern.evidence_snippets]);
+  const evidenceSnippets = useMemo(
+    () => extractSnippetTexts(unit.evidence_snippets),
+    [unit.evidence_snippets],
+  );
 
   function runAction(action: "accepted" | "rejected") {
     setErrorMessage(null);
@@ -127,7 +143,7 @@ export function PatternCard({
     }
 
     startTransition(async () => {
-      const result = await updatePatternCuration(pattern.id, {
+      const result = await updateUnitCuration(unit.id, {
         status: action,
         curated_section: action === "accepted" ? effectiveSection : undefined,
       });
@@ -138,16 +154,16 @@ export function PatternCard({
   }
 
   return (
-    <Card data-pattern-id={pattern.id}>
+    <Card data-unit-id={unit.id}>
       <CardContent className="space-y-3 pt-5">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
             <h3 className="text-base font-semibold text-slate-900">
-              {pattern.title}
+              {unit.title}
             </h3>
-            {pattern.themes && pattern.themes.length > 0 && (
+            {unit.themes && unit.themes.length > 0 && (
               <div className="mt-1 flex flex-wrap gap-1">
-                {pattern.themes.map((theme) => (
+                {unit.themes.map((theme) => (
                   <Badge
                     key={theme}
                     variant="secondary"
@@ -160,13 +176,14 @@ export function PatternCard({
             )}
           </div>
           <div className="flex flex-col items-end gap-1">
-            <StatusBadge status={pattern.curation_status} />
-            <ConfidencePill confidence={pattern.confidence} />
+            <StatusBadge status={unit.curation_status} />
+            <ConfidencePill confidence={unit.aggregated_confidence} />
+            <EvidenceCountBadge count={unit.evidence_count} />
           </div>
         </div>
 
         <p className="text-sm text-slate-700 whitespace-pre-line">
-          {pattern.description}
+          {unit.description}
         </p>
 
         {evidenceSnippets.length > 0 && (
@@ -177,7 +194,9 @@ export function PatternCard({
               </AccordionTrigger>
               <AccordionContent>
                 <p className="mb-2 text-xs italic text-slate-500">
-                  Pseudonymisiert — P1 / P2 ersetzen reale Personen.
+                  Repraesentative Belege aus {unit.evidence_count}{" "}
+                  {unit.evidence_count === 1 ? "Quell-Pattern" : "Quell-Patterns"} —
+                  Klarnamen wurden bereits in der Synthese entfernt.
                 </p>
                 <ul className="space-y-2">
                   {evidenceSnippets.map((snippet, idx) => (
@@ -200,9 +219,9 @@ export function PatternCard({
             <label className="text-xs uppercase tracking-wide text-slate-500">
               Section
             </label>
-            {pattern.suggested_section && (
+            {unit.suggested_section && (
               <span className="text-xs text-slate-400">
-                Vorschlag: <code>{pattern.suggested_section}</code>
+                Vorschlag: <code>{unit.suggested_section}</code>
                 <ChevronRight className="inline h-3 w-3" />
               </span>
             )}
@@ -267,7 +286,7 @@ export function PatternCard({
             <Button
               size="sm"
               variant="outline"
-              onClick={() => onEdit(pattern)}
+              onClick={() => onEdit(unit)}
               disabled={isPending}
               className="gap-1"
             >
@@ -287,12 +306,12 @@ export function PatternCard({
           </div>
         )}
 
-        {pattern.curated_at && (
+        {unit.curated_at && (
           <p className="text-xs text-slate-400">
-            Kuriert: {new Date(pattern.curated_at).toLocaleString("de-DE")}
-            {pattern.curated_section && (
+            Kuriert: {new Date(unit.curated_at).toLocaleString("de-DE")}
+            {unit.curated_section && (
               <>
-                {" · "}Section: <code>{pattern.curated_section}</code>
+                {" · "}Section: <code>{unit.curated_section}</code>
               </>
             )}
           </p>
