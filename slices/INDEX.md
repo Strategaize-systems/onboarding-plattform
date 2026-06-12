@@ -906,10 +906,10 @@ V9.1 = 4 Slices SLC-V9.1-A..D (Naming-Konvention version-anchored statt fortlauf
 
 | ID | Slice | Feature | Status | Priority | Created |
 |----|-------|---------|--------|----------|---------|
-| SLC-V9.1-A | [Inbound-Foundation + Validation-Layer + IMAP-Sync (R1, DEC-205)](SLC-V9.1-A-inbound-foundation-validation.md) | FEAT-075 + FEAT-076 / BL-154 + BL-155 | in_progress | High | 2026-06-09 |
-| SLC-V9.1-B | [Continuous-Cost-Cap-Service + Pipeline-Trigger-Cron](SLC-V9.1-B-continuous-cost-cap.md) | FEAT-077 / BL-156 | in_progress | High | 2026-06-09 |
-| SLC-V9.1-C | [Storage-Retention-Cron (DSGVO-Lifecycle)](SLC-V9.1-C-storage-retention-cron.md) | FEAT-078 / BL-157 | in_progress | High | 2026-06-09 |
-| SLC-V9.1-D | [Setup-UI Conversational-First + Admin-Audit + Master-Merge](SLC-V9.1-D-setup-ui-admin-audit.md) | FEAT-079 / BL-158 | in_progress | High | 2026-06-09 |
+| SLC-V9.1-A | [Inbound-Foundation + Validation-Layer + IMAP-Sync (R1, DEC-205)](SLC-V9.1-A-inbound-foundation-validation.md) | FEAT-075 + FEAT-076 / BL-154 + BL-155 | deployed | High | 2026-06-09 |
+| SLC-V9.1-B | [Continuous-Cost-Cap-Service + Pipeline-Trigger-Cron](SLC-V9.1-B-continuous-cost-cap.md) | FEAT-077 / BL-156 | deployed | High | 2026-06-09 |
+| SLC-V9.1-C | [Storage-Retention-Cron (DSGVO-Lifecycle)](SLC-V9.1-C-storage-retention-cron.md) | FEAT-078 / BL-157 | deployed | High | 2026-06-09 |
+| SLC-V9.1-D | [Setup-UI Conversational-First + Admin-Audit + Master-Merge](SLC-V9.1-D-setup-ui-admin-audit.md) | FEAT-079 / BL-158 | deployed | High | 2026-06-09 |
 
 ### V9.1 Execution Order (strikt sequentiell)
 - **SLC-V9.1-A zuerst** (Foundation-Layer: 3 neue Tabellen + 2 ALTER + Webhook-Endpoint + Validation-Layer + Synthetic-Corpus-Skeleton-Validation — Pre-Cond fuer alle nachfolgenden)

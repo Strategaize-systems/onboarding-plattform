@@ -5,7 +5,7 @@
       "title": "V9.1 FEAT-079 Admin-Audit Forward-Source-Statistik + Setup-UI (Conversational-First)",
       "type": "feature",
       "priority": "high",
-      "status": "in_progress",
+      "status": "done",
       "version": "V9.1",
       "description": "V9.1 Feature: Erweiterung der V9.0 admin/audit/bulk-email-Page um Forward-Source-Vendor-Statistik (Vendor + Volume + Spam-Reject-Rate + Cost-pro-Tenant). Setup-UI unter /dashboard/bulk-email-import/forward-setup mit Conversational-First-Pattern ('Mit KI beschreiben'-Button per feedback-strategaize-conversational-first-ux) + 4-Schritt-Anleitung pro Mail-Client (Gmail, Outlook, Thunderbird, Apple Mail) + Setup-Token-Display + DSGVO-Pflicht-Disclaimer ('Ich darf diese Emails an Strategaize weiterleiten') + Test-Send-Button (verifiziert Forward-Regel End-to-End). Audit-Log der DSGVO-Zustimmung unloeschbar 7 Jahre. Pre-Cond: GF-Curation-UI-Pattern aus V9.0-Reuse stabil. Pre-Cond fuer Customer-Live: Anwalts-Sign-off (per module-lifecycle-discipline sowieso deferred bis Modul 1+2+3 komplett). Spec entsteht in /architecture V9.1 unter features/FEAT-079-*.md.",
       "createdAt": "2026-06-06"
@@ -15,7 +15,7 @@
       "title": "V9.1 FEAT-078 Storage-Retention-Cron (DSGVO-Lifecycle)",
       "type": "feature",
       "priority": "high",
-      "status": "in_progress",
+      "status": "done",
       "version": "V9.1",
       "description": "V9.1 Feature: Continuous-Inbound-Strom impliziert dauerhaft wachsenden Storage. Daily Coolify-Scheduled-Task loescht Raw-Emails nach konfigurabler Retention-Policy (Q-V9.1-C in /architecture entscheidet — Vorschlag 60 Tage Soft-Delete + 90 Tage Hard-Delete). Bereits in knowledge_unit eingespielte Pattern bleiben unangetastet (idempotent: knowledge_unit referenziert nur pattern_id, nicht raw email_message). DSGVO-Loesch-Anspruch-Compliance. Audit-Log jedes Cron-Run mit Anzahl geloeschter Rows. Reuse: V4.2 capture-reminders-daily Coolify-Scheduled-Task-Pattern + verifyCronSecret-Helper. Spec entsteht in /architecture V9.1.",
       "createdAt": "2026-06-06"
@@ -25,7 +25,7 @@
       "title": "V9.1 FEAT-077 Continuous-Cost-Cap-Service (Daily + Monthly + Per-Email-Approval)",
       "type": "feature",
       "priority": "high",
-      "status": "in_progress",
+      "status": "done",
       "version": "V9.1",
       "description": "V9.1 Feature: V9.0-Cost-Cap-3-Schichten-Defense bleibt, aber neues Continuous-Stream-Modell. Daily-Threshold (Vorschlag 5 EUR/Tag/Tenant) + Monthly-Cap (Reuse V9.0 100 EUR/Tenant/Monat) + Per-Email-Approval-Schwelle (Vorschlag >0.50 EUR/Email → Pre-Approval-Modal beim GF). Bei Threshold-Erreichung: Pipeline pausiert, GF bekommt Notification mit Resume-Button. Reuse: V9.0 FEAT-073 Cost-Cap-Logik + V8.1 FEAT-069 Pre-Approval-Pattern. Audit-Log jeder Cap-Trigger + Pipeline-Pause + GF-Resume-Action. Q-V9.1-B in /architecture finalisiert Schwellen-Werte. Spec entsteht in /architecture V9.1.",
       "createdAt": "2026-06-06"
@@ -35,7 +35,7 @@
       "title": "V9.1 FEAT-076 Forward-Validation-Layer + Spam-Defense",
       "type": "feature",
       "priority": "high",
-      "status": "in_progress",
+      "status": "done",
       "version": "V9.1",
       "description": "V9.1 Feature: Mehrschicht-Validierung damit kein Spam / Unsolicited-PII / Fremd-Sender in den Tenant-Bucket gelangt. Q-V9.1-D + Q-V9.1-H in /architecture entscheiden Mechanik: (a) Header-Token (GF haengt Setup-Token an Forward-Regel), (b) Sender-Allowlist (Tenant pflegt erlaubte Forward-Source-Domains), (c) DKIM-Re-Sign-Verifikation (DKIM-Signatur des Forward-Senders prueft), (d) Kombination. Default-Empfehlung Setup-Token PLUS Sender-Allowlist. Reject-Pfad: Email wird verworfen + audit_log Entry + optional Bounce-Mail (V9.2+) an Sender. Vendor-Built-In-Spam-Filter (Mailgun/SES) als 2. Defense-Schicht. Spec entsteht in /architecture V9.1.",
       "createdAt": "2026-06-06"
@@ -45,7 +45,7 @@
       "title": "V9.1 FEAT-075 AWS SES Inbound Ireland + Catchall-Routing + Tenant-Lookup",
       "type": "feature",
       "priority": "high",
-      "status": "in_progress",
+      "status": "done",
       "version": "V9.1",
       "description": "V9.1 Feature: Inbound-Foundation. **Vendor entschieden DEC-194 2026-06-06: AWS SES Inbound Ireland (eu-west-1)**. Catchall-Subdomain bulk.strategaizetransition.com mit MX-Record auf inbound-smtp.eu-west-1.amazonaws.com. SES Receipt-Rule-Set mit Wildcard bulk.strategaizetransition.com → S3-Bucket bulk-email-inbound (Path-Prefix <tenant-slug>/... fuer RLS-Trennung) + Lambda-Bridge forward-ses-to-op-webhook (transformiert SES-Event → HMAC-signed-POST an OP /api/inbound/email). Tenant-Lookup via Empfaenger-Local-Part (bulk-<tenant-slug>@bulk.strategaizetransition.com → Tenant-ID). Adapter-Pattern (Interface InboundEmailVendor) kapselt SES, damit Plan-B-Wechsel zu Mailgun EU ohne Business-Logic-Refactor moeglich. mailparser-Reuse aus V9.0 src/lib/bulk-email/parser.ts Hard-Reuse-Pflicht. Pflicht: AWS-DPA + EU-Hosting (data-residency.md). Region-Drift Bedrock-Frankfurt-eu-central-1 ↔ SES-Ireland-eu-west-1 als TIA-Punkt in /architecture V9.1 dokumentieren. Spec entsteht in /architecture V9.1.",
       "createdAt": "2026-06-06"
@@ -55,7 +55,7 @@
       "title": "V9.1 Bulk-Import Forward-Bucket-Email (Continuous-Stream-Erweiterung von V9.0)",
       "type": "feature",
       "priority": "high",
-      "status": "in_progress",
+      "status": "done",
       "version": "V9.1",
       "description": "**V9.1 Versions-Anker per RPT-425 /requirements-Skeleton 2026-06-06 + RPT-428 Closure 2026-06-09. Status: READY fuer /architecture V9.1**. Alle 4 BLOCKING-Pre-Conditions + 2 BLOCKING-OQs erledigt. V9.1-Workflow: GF richtet einmalig eine Mail-Forward-Regel im eigenen Mail-Client ein (z.B. alle gesendeten Mails an Kunden weiterleiten nach bulk-<tenant-slug>@bulk.strategaizetransition.com), Plattform empfaengt passive ueber Vendor-Webhook, akkumuliert Forwarded-Emails ueber Tage/Wochen, triggert periodisch (Threshold-erreicht oder Manual-Trigger) die V9.0-Pipeline. Output identisch zu V9.0: kuratierte Pattern als knowledge_unit in V4.1-Handbuch-Snapshot. **5 Features (BL-154..158)**: FEAT-075 Inbound-SMTP-Vendor + Catchall-Routing, FEAT-076 Forward-Validation, FEAT-077 Continuous-Cost-Cap, FEAT-078 Storage-Retention-Cron, FEAT-079 Admin-Audit + Setup-UI (Conversational-First). **Closure-Entscheidungen 2026-06-09**: PC-V9.1-1 erfuellt 2026-06-07 (V9 STABLE RPT-427), PC-V9.1-2 ersetzt durch Synthetic-Corpus mit Ground-Truth-Labels (test-fixtures/v91-mbox-corpus/synthetic.yaml 45 Emails), Q-V9.1-E DECIDED keine harte Schwelle Code-Side / Telemetry-Justierung post-deploy, Q-V9.1-G DECIDED GF-only V9.1. **Foundation-Reuse 80%**: V9.0 Pre-Filter + Threading + PII + Pattern + Curation + Handbuch-Insert + Audit-View 1:1. **20% V9.1-spezifisch**: Inbound-SMTP-Adapter + Catchall-Routing + Continuous-Cost-Cap + Retention-Cron + Forward-Validation + Setup-UI. **Persona V9.1**: GF im eigenen Tenant (NICHT Mitarbeiter/Mandanten/Customer-Service). **Aufwand**: ~2-3 Wochen V9.1 Code-Side + /qa + Release ueber 3-4 Slices SLC-170..173. **Out of Scope V9.1**: Multi-Mitarbeiter (V9.2+), Multi-Vendor/Real-Time-UI (V9.3+), IMAP/PST (V10+), IS-Push/CRM (V11+). **Naechster Schritt**: /architecture V9.1 (~2-3h fresh Session) mit DEC-194 Vendor-Anker + DEC-195 Synthetic-Corpus-Validation-Approach + Q-V9.1-B/C/D/F/H + Region-Drift-TIA-DEC + IAM-Policy-Layout. Per module-lifecycle-discipline + feedback-no-strategaize-live-until-all-systems-ready: KEIN Customer-Live ueber V9.1 vor Modul 1+2+3 vollstaendig.",
       "createdAt": "2026-06-06"

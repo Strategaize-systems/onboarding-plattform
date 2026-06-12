@@ -215,8 +215,8 @@ V9.1-Scope (Requirements-Skeleton angelegt 2026-06-06 via RPT-425, basierend auf
 
 | ID | Feature | Status | Spec | Created |
 |----|---------|--------|------|---------|
-| FEAT-075 | Inbound-SMTP-Vendor + Catchall-Routing + Tenant-Lookup (Bulk-Inbound-Foundation) | in_progress | [SLC-V9.1-A](../slices/SLC-V9.1-A-inbound-foundation-validation.md) | 2026-06-06 |
-| FEAT-076 | Forward-Validation-Layer + Spam-Defense (Setup-Token / Optional Sender-Allowlist / SES Built-In) | in_progress | [SLC-V9.1-A](../slices/SLC-V9.1-A-inbound-foundation-validation.md) | 2026-06-06 |
-| FEAT-077 | Continuous-Cost-Cap-Service (Daily-Threshold + Monthly-Cap + Per-Email-Approval) | in_progress | [SLC-V9.1-B](../slices/SLC-V9.1-B-continuous-cost-cap.md) | 2026-06-06 |
-| FEAT-078 | Storage-Retention-Cron (DSGVO-Lifecycle, 60d Soft-Delete + 90d Hard-Delete) | in_progress | [SLC-V9.1-C](../slices/SLC-V9.1-C-storage-retention-cron.md) | 2026-06-06 |
-| FEAT-079 | Admin-Audit Forward-Source-Statistik + Setup-UI mit Conversational-First-Pattern | in_progress | [SLC-V9.1-D](../slices/SLC-V9.1-D-setup-ui-admin-audit.md) | 2026-06-06 |
+| FEAT-075 | Inbound-SMTP-Vendor + Catchall-Routing + Tenant-Lookup (Bulk-Inbound-Foundation) | deployed | [SLC-V9.1-A](../slices/SLC-V9.1-A-inbound-foundation-validation.md) | 2026-06-06 |
+| FEAT-076 | Forward-Validation-Layer + Spam-Defense (Setup-Token / Optional Sender-Allowlist / SES Built-In) | deployed | [SLC-V9.1-A](../slices/SLC-V9.1-A-inbound-foundation-validation.md) | 2026-06-06 |
+| FEAT-077 | Continuous-Cost-Cap-Service (Daily-Threshold + Monthly-Cap + Per-Email-Approval) | deployed | [SLC-V9.1-B](../slices/SLC-V9.1-B-continuous-cost-cap.md) | 2026-06-06 |
+| FEAT-078 | Storage-Retention-Cron (DSGVO-Lifecycle, 60d Soft-Delete + 90d Hard-Delete) | deployed | [SLC-V9.1-C](../slices/SLC-V9.1-C-storage-retention-cron.md) | 2026-06-06 |
+| FEAT-079 | Admin-Audit Forward-Source-Statistik + Setup-UI mit Conversational-First-Pattern | deployed | [SLC-V9.1-D](../slices/SLC-V9.1-D-setup-ui-admin-audit.md) | 2026-06-06 |
