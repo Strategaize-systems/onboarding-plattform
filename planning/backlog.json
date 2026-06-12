@@ -5,7 +5,7 @@
       "title": "V9.5 FEAT-080 Cross-Thread-Synthese-Stage",
       "type": "feature",
       "priority": "high",
-      "status": "in_progress",
+      "status": "done",
       "version": "V9.5",
       "description": "V9.5 Kern-Feature: neue additive Pipeline-Stage zwischen email_bulk_run.status 'pattern_extracted' und 'curating'. Input = alle rohen email_pattern-Rows eines bulk_run_id; Output = konsolidierte Kandidaten-Units (Duplikat-Merge, Cross-Thread-Evidenz-Aggregation, Frequenz-/Belegdichte-Gewichtung, Theme-Clustering). Neuer Worker + neue Status-Werte (synthesizing/synthesized) per Migration + Cost-Cap-Integration + Synthetic-ai_jobs + Curation-UI-Anbindung. Bestehender flacher Per-Thread-Extraktor bleibt unveraendert; laeuft auf kompakten Patterns (nicht Raw-Threads) = guenstig. Repraesentations-Fork (neue Tabelle vs in-place email_pattern-Grouping) = Q-V9.5-A in /architecture. Prinzip-Reuse aus condensation/* (kein Code-1:1). Spec entsteht in /architecture V9.5 unter features/FEAT-080-*.md.",
       "createdAt": "2026-06-12"
