@@ -220,3 +220,13 @@ V9.1-Scope (Requirements-Skeleton angelegt 2026-06-06 via RPT-425, basierend auf
 | FEAT-077 | Continuous-Cost-Cap-Service (Daily-Threshold + Monthly-Cap + Per-Email-Approval) | deployed | [SLC-V9.1-B](../slices/SLC-V9.1-B-continuous-cost-cap.md) | 2026-06-06 |
 | FEAT-078 | Storage-Retention-Cron (DSGVO-Lifecycle, 60d Soft-Delete + 90d Hard-Delete) | deployed | [SLC-V9.1-C](../slices/SLC-V9.1-C-storage-retention-cron.md) | 2026-06-06 |
 | FEAT-079 | Admin-Audit Forward-Source-Statistik + Setup-UI mit Conversational-First-Pattern | deployed | [SLC-V9.1-D](../slices/SLC-V9.1-D-setup-ui-admin-audit.md) | 2026-06-06 |
+
+## V9.5 Features (Bulk-Import Deep-Extraction — Cross-Thread-Synthese + Critic-Gate)
+
+V9.5-Scope (Requirements-Baseline 2026-06-12 via RPT-453, basierend auf /discovery RPT-452). Status READY fuer /architecture V9.5 — keine BLOCKING-OQs, 1 architektonischer Fork (Q-V9.5-A Repraesentation der konsolidierten Units) ist /architecture-Aufgabe. Hebt die Wissens-Tiefe des Bulk-Pfades: additive Cross-Thread-Synthese-Stage + bounded Critic-Gate zwischen `pattern_extracted` und `curating`; bestehender flacher Per-Thread-Extraktor bleibt unveraendert. Plus eu-Sonnet-4 Modell-Cleanup (ISSUE-100). Prinzip-Reuse aus condensation/* (Analyst↔Challenger), KEIN Code-1:1 (Datenform Email-Fragmente ≠ Fragebogen-Bloecke). Detail-Specs entstehen mit /architecture V9.5 (Skeleton-Status, Files noch nicht angelegt).
+
+| ID | Feature | Status | Spec | Created |
+|----|---------|--------|------|---------|
+| FEAT-080 | Cross-Thread-Synthese-Stage (dedup/merge/frequency-weight email_pattern → konsolidierte Kandidaten-Units) | planned | /architecture V9.5 (Skeleton) | 2026-06-12 |
+| FEAT-081 | Bounded Critic/Quality-Gate (Analyst↔Challenger-Prinzip, 1–2 Paesse, Hard-Cost-Cap erhalten) | planned | /architecture V9.5 (Skeleton) | 2026-06-12 |
+| FEAT-082 | Bedrock-Modell-Default-Cleanup eu-Sonnet-4 (ISSUE-100, 4 Files) | planned | /architecture V9.5 (Skeleton) | 2026-06-12 |

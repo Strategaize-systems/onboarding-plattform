@@ -2497,3 +2497,118 @@ Reihenfolge linear SLC-A → SLC-B → SLC-C → SLC-D. /architecture pruft ob S
 
 ### Detail-Spec
 V9.1-Requirements-Skeleton-Report 2026-06-06 als RPT-425, Closure-Report 2026-06-09 als RPT-428. **Status: READY fuer /architecture V9.1**. Alle 4 BLOCKING-Pre-Conditions + 2 BLOCKING-OQs (Q-V9.1-E + Q-V9.1-G) erledigt. Feature-Skeleton-Specs entstehen mit /architecture V9.1 unter `/features/FEAT-075..079-*.md`. Naechster Schritt: `/architecture V9.1` (~2-3h fresh Session) mit DEC-194 als Vendor-Anker + DEC-195 (Synthetic-Corpus-Validation-Approach) + Q-V9.1-B/C/D/F/H + Region-Drift-TIA-DEC + IAM-Policy-Layout + Pflicht-Founder-Step-Liste (SES-Subdomain-Verify + MX-Record-Eintragung).
+
+## V9.5 — Bulk-Import Deep-Extraction (Cross-Thread-Synthese + Critic-Gate)
+
+Requirements-Baseline angelegt 2026-06-12 via RPT-453, basierend auf /discovery RPT-452 2026-06-12 (Scope-Cut gegen Founder gelockt). **Status: READY fuer /architecture V9.5** (1 architektonischer Fork offen — Repraesentation der konsolidierten Units, /architecture-entscheidbar). V9.5 hebt die **Wissens-Tiefe** des Bulk-Import-Pfades: Heute extrahiert die Pipeline pro Thread genau 1 Sonnet-Pass (flach, isoliert). V9.5 ergaenzt eine **Cross-Thread-Synthese-Stage + bounded Critic-Gate** zwischen `pattern_extracted` und `curating`, damit aus hunderten isolierten Per-Thread-Fragmenten wenige konsolidierte, deduplizierte, evidenz-gewichtete Kandidaten-Units werden.
+
+### Problem Statement
+
+Der Bulk-Importer (`src/workers/bulk-email/handle-pattern-extraction-job.ts`) ruft pro redacted `email_thread` **genau einen** Sonnet-Call (`extractPatternFromThread`) und schreibt 1..5 `email_pattern`-Rows. Es gibt **keine Cross-Thread-Synthese**: 50 Mails ueber denselben wiederkehrenden Einwand erzeugen 50 separate, isolierte Pattern-Cards statt einer gut belegten konsolidierten Aussage. Ergebnis: das Handbuch-Material ist verrauscht, redundant und flach; die manuelle GF-Curation ist das einzige Qualitaets-Gate und muss jede Karte einzeln durchsehen. Das mehrpassige Analyst↔Challenger-Verfahren (`src/workers/condensation/iteration-loop.ts`) hebt heute NUR die Fragebogen-Verdichtung — der Bulk-Pfad profitiert nicht davon. (Befund: Code-Audit 2026-06-12, Memory [[project-op-roadmap-focus-2026-06-12]].)
+
+Zusaetzlich: **ISSUE-100** — der Bulk-Pfad defaultet auf Sonnet 3.5 (stale), waehrend der Kern auf eu-Sonnet-4 laeuft.
+
+### Goal / Intended Outcome
+
+Aus den rohen `email_pattern`-Rows eines Runs entsteht durch eine neue Synthese-Stage ein **kleinerer Satz konsolidierter Kandidaten-Units**: Duplikate gemerged, Evidenz aus mehreren Threads aggregiert, nach Haeufigkeit/Belegdichte gewichtet. Ein **bounded Critic-Pass** (1–2 Durchlaeufe, Analyst-schlaegt-vor → Challenger-kritisiert-Prinzip) validiert die konsolidierte Ausgabe, bevor sie in die GF-Curation-UI geht. Die GF kuratiert dann **wenige, hochwertige** Karten statt vieler flacher Fragmente. Kosten bleiben **bounded/predictable** (fixe Pass-Zahl, Hard-Cost-Cap erhalten). Modell-Default-Drift bereinigt (eu-Sonnet-4).
+
+### Target Users (V9.5)
+
+- **GF im eigenen Tenant (tenant_admin)**: einzige Persona. Profitiert direkt — weniger, bessere Curation-Karten.
+- **strategaize_admin (sekundaer)**: sieht Synthese-Cost + Reduktions-Quote (raw Patterns → konsolidierte Units) im bestehenden admin/audit/bulk-email-View.
+- Keine neue Persona. Internal-Test-Mode (Founder-only) per [[module-lifecycle-discipline]].
+
+### V9.5 In Scope
+
+1. **Cross-Thread-Synthese-Stage (FEAT-080)**: Neue Pipeline-Stage NACH `pattern_extracted`, VOR `curating`. Input = alle rohen `email_pattern`-Rows eines `bulk_run_id`. Output = konsolidierte Kandidaten-Units (Duplikat-Merge, Cross-Thread-Evidenz-Aggregation, Frequenz-/Belegdichte-Gewichtung, Theme-Clustering). Laeuft auf den kompakten extrahierten Patterns (nicht Raw-Threads) = guenstig. Neuer Worker + neue `email_bulk_run.status`-Werte (`synthesizing`/`synthesized`) per Migration. **Bestehender Per-Thread-Extraktor bleibt unveraendert.**
+2. **Bounded Critic/Quality-Gate (FEAT-081)**: Analyst↔Challenger-**Prinzip** (nicht Code) auf die synthetisierte Ausgabe angewandt: fixe 1–2 Paesse, die jede konsolidierte Unit gegen Belegdichte / Trivialitaet / Halluzination pruefen und Low-Quality-Units flaggen/verwerfen, bevor sie die GF erreichen. Harte Pass-Obergrenze (keine Konvergenz-Runaway). Hard-Cost-Cap (`checkLiveCapInWorker` / `V9_BULK_EMAIL_RUN_CAP_EUR`) bleibt aktiv und deckt auch die Synthese-/Critic-Calls.
+3. **Bedrock-Modell-Default-Cleanup (FEAT-082, ISSUE-100)**: 4 Files von stale Sonnet 3.5 / Haiku 3 auf eu-Sonnet-4-Default umstellen: `src/lib/ai/bedrock-sonnet/email-pattern.ts:51`, `src/lib/ai/bedrock-haiku/index.ts:42`, `src/lib/llm/v8-1-augmentation/augment.ts:44-46` (latent broken bei ungesetztem `BEDROCK_V8_1_MODEL_ID`), `src/lib/bulk-email/ai-assisted-setup.ts:24`. ENV-Override-Mechanik bleibt; nur der hardcoded Default wird korrekt.
+
+### V9.5 Out of Scope (parked)
+
+- **Per-Thread-Analyst↔Challenger-Loop**: 2–8 Iterationen pro Thread. Zu teuer (multipliziert Per-Thread-Kosten 2–8×, faellt gegen SLC-167-Cost-Cap), schlechtester Value/Cost. Nur falls nach V9.5 eine reale Qualitaetsluecke auf Per-Thread-Ebene ueberlebt.
+- **Corpus-Gap-/Theme-Completeness-Detection** (Orchestrator-Stil "welche Handbuch-Themen sind unterbelegt"): groesseres strategisches Feature, eigene Discovery.
+- **Auto-Curation / Curation-Burden-Reduktion** (High-Confidence-Auto-Import ohne GF-Review): GF-Curation bleibt Pflicht in V9.5 (analog V9.0/V9.1).
+- **Cross-Source-Synthese** (Bulk-Email-Patterns + Fragebogen-knowledge_unit zusammen): spaeter.
+- **Curation-UI-Redesign** ueber das hinaus, was die Synthese-Stage als konsolidierte Karten einspeist.
+
+### Core Features (V9.5)
+
+| ID | Feature | Zweck |
+|----|---------|-------|
+| FEAT-080 | Cross-Thread-Synthese-Stage | Neue Stage `pattern_extracted`→`synthesized`: dedup/merge/frequency-weight roher email_pattern-Rows zu konsolidierten Kandidaten-Units |
+| FEAT-081 | Bounded Critic/Quality-Gate | Analyst↔Challenger-Prinzip (1–2 Paesse) auf synthetisierte Units; flaggt/verwirft Low-Quality vor GF-Curation; Hard-Cost-Cap erhalten |
+| FEAT-082 | Bedrock-Modell-Default-Cleanup (ISSUE-100) | 4 Files stale Sonnet 3.5 / Haiku 3 → eu-Sonnet-4-Default; ENV-Override bleibt |
+
+Detail-Specs entstehen mit /architecture V9.5 unter `/features/FEAT-080..082-*.md` (Skeleton-Status).
+
+### Constraints
+
+#### Technologie
+- **Pipeline-Reuse-Pflicht**: Per-Thread-Extraktor (FEAT-073), Curation-UI + `importAcceptedPatterns`→`knowledge_unit`-Promotion, Cost-Cap-Service (`src/lib/bulk-email/cost-cap.ts`), Synthetic-ai_jobs-INSERT-Pattern ([[backend]]), Audit via ai_cost_ledger/error_log bleiben strukturell unveraendert. Synthese ist additive Stage, KEIN paralleler Pipeline-Stack.
+- **EU-Data-Residency (data-residency.md)**: alle Synthese-/Critic-LLM-Calls ueber Bedrock eu-central-1 (Frankfurt). Kein Non-EU-Pfad.
+- **Hard-Cost-Cap-Pflicht**: die neuen Synthese-/Critic-Calls MUESSEN unter denselben Run-Cost-Cap (`checkLiveCapInWorker`) fallen wie die Per-Thread-Extraktion. Bounded Pass-Zahl, kein Konvergenz-Loop.
+- **Prinzip-Reuse, nicht Code-Reuse**: Datenform (freie Email-Pattern-Fragmente) ≠ Fragebogen-`BlockDefinition` → das condensation/* Analyst↔Challenger-**Konzept** wird uebernommen, nicht der Code 1:1. /architecture entwirft die Synthese-Prompts frisch.
+- **Modell-Cleanup ENV-Kompatibilitaet**: bestehende ENV-Overrides (`BEDROCK_V9_SONNET_MODEL_ID` etc.) duerfen nicht brechen; nur der hardcoded Default wandert auf eu-Sonnet-4.
+
+#### Organisatorisch
+- **GF-Curation bleibt Pflicht**: kein Auto-Import. Synthese reduziert die Karten-Zahl, ersetzt aber nicht das GF-Review.
+- **Audit-Trail-Pflicht**: jeder Synthese-/Critic-LLM-Call mit Region + Modell-ID + Cost + run-id in ai_cost_ledger (neue role z.B. `email_bulk_synthesis` / `email_bulk_critic`) + synthetic ai_jobs-Row.
+
+### Risks / Assumptions
+
+#### Risiken
+- **R1 — Synthese-Qualitaet UNVALIDATED bis Live-Corpus**: ob Dedup/Merge tatsaechlich besser ist als die flache Ausgabe, zeigt sich erst an realem Founder-Corpus. /qa braucht ein Vorher/Nachher-Vergleichs-Fixture (raw Patterns → konsolidierte Units) mit erwarteter Reduktions-Quote.
+- **R2 — Cost-Cap-Lecks durch neue Stage**: wenn die Synthese-Calls NICHT in den bestehenden Live-Cap einbezogen werden, kann ein grosser Run den Cap umgehen. BLOCKING-Constraint oben.
+- **R3 — Over-Merge / Information-Loss**: zu aggressives Dedup koennte distincte Patterns faelschlich verschmelzen und Nuance verlieren. Critic-Gate + Confidence/Evidence-Schwellen mitigieren; /architecture definiert Merge-Schwelle.
+- **R4 — Modell-Cleanup-Regression**: Umstellung auf eu-Sonnet-4 aendert Output-Form/Token-Kosten der bestehenden Extraktion. /qa muss bestehende Pattern-Extraktion + V8.1-Augmentation gegen die Schema-Vertraege re-verifizieren.
+- **R5 — Repraesentations-Fork beruehrt Curation-Contract**: je nach /architecture-Entscheid (neue Tabelle vs in-place-Grouping auf email_pattern) aendert sich, was die Curation-UI liest und was `importAcceptedPatterns` promotet. Muss ohne Bruch des knowledge_unit-Promotion-Pfads geloest werden.
+
+#### Annahmen
+- V9.1 ist deployed/stable (kein harter Block — V9.5 beruehrt den .mbox+Forward-Pfad gemeinsam ueber `email_pattern`/`email_bulk_run`).
+- Bestehende `email_pattern`-Schema-Felder (title/description/evidence_snippets/themes/confidence/suggested_section) reichen als Synthese-Input; konsolidierte Units brauchen ggf. Aggregat-Felder (source_pattern_ids, evidence_count) — /architecture entscheidet.
+- Curation-UI + knowledge_unit-Promotion bleiben strukturell erhalten; Synthese speist nur hochwertigere Karten ein.
+
+### Success Criteria (V9.5 Gesamt)
+
+- SC-V9.5-1: Nach `pattern_extracted` laeuft eine Synthese-Stage, die die rohen `email_pattern`-Rows eines Runs zu einem kleineren Satz konsolidierter Kandidaten-Units verdichtet (messbare Reduktions-Quote raw→konsolidiert pro Run).
+- SC-V9.5-2: Konsolidierte Units aggregieren Evidenz aus mehreren Threads (mehrfach belegte Aussagen werden als 1 Unit mit n Evidenz-Snippets / source_pattern_ids gefuehrt, nicht n-fach dupliziert).
+- SC-V9.5-3: Ein bounded Critic-Pass (max 1–2 Durchlaeufe) flaggt/verwirft Low-Quality-Units (trivial / unbelegt / halluziniert) vor der GF-Curation; die Pass-Zahl ist hart begrenzt (kein Konvergenz-Loop).
+- SC-V9.5-4: Alle Synthese-/Critic-LLM-Calls laufen ueber Bedrock eu-central-1, werden in ai_cost_ledger (mit Region + Modell-ID + Cost + run-id) geloggt und fallen unter den bestehenden Run-Hard-Cost-Cap; ein Cap-Hit pausiert/failt den Run wie bei der Per-Thread-Extraktion.
+- SC-V9.5-5: Die GF-Curation-UI zeigt die konsolidierten Units; der bestehende `importAcceptedPatterns`→`knowledge_unit`-Promotion-Pfad funktioniert unveraendert (accepted/edited → knowledge_unit mit Source-Attribution).
+- SC-V9.5-6: Die 4 ISSUE-100-Files defaulten auf eu-Sonnet-4; ENV-Overrides funktionieren weiter; bestehende Pattern-Extraktion + V8.1-Augmentation bleiben schema-konform (kein Regression in /qa).
+- SC-V9.5-7: Bestehender Per-Thread-Extraktor + Pre-Filter + Thread-Redact + Cost-Cap-Service strukturell unveraendert (Reuse-Quote verifiziert; V9.5 ist additive Stage).
+- SC-V9.5-8: Tenant-RLS verhindert Cross-Tenant-Read auf alle neuen/erweiterten V9.5-Strukturen (Pen-Test in /qa V9.5).
+
+### Open Questions
+
+#### Fuer /architecture V9.5
+
+- **Q-V9.5-A (architektonischer Fork) — Repraesentation der konsolidierten Units**: (a) NEUE Tabelle (`email_synthesized_unit` o.ae.) — Synthese schreibt konsolidierte Rows, Curation-UI liest von dort, Promotion → knowledge_unit; saubere Trennung, beruehrt Curation-UI + Promotion-Query. ODER (b) IN-PLACE auf `email_pattern` — `synthesis_group_id` + `is_canonical`-Flags; Synthese markiert Duplikate non-canonical/merged + erzeugt/aktualisiert kanonische Rows; Curation-UI filtert auf canonical; reused Curation-UI/Promotion as-is. **Default-Empfehlung: (a)** fuer saubere Audit-/Reduktions-Statistik, falls Curation-UI-Touch vertretbar. /architecture entscheidet + DEC.
+- **Q-V9.5-B — Synthese-Granularitaet**: Synthese pro `suggested_section` / pro Theme-Cluster / global ueber den ganzen Run? Default-Empfehlung: pro Theme-Cluster (balanciert Payload-Groesse vs Cross-Thread-Reichweite).
+- **Q-V9.5-C — Critic-Pass-Zahl + Accept-Kriterium**: fix 1 oder fix 2 Paesse? Accept-Schwelle (Confidence / Evidenz-Count / Challenger-Verdict)? Default-Empfehlung: 1 Synthese-Pass + 1 Critic-Pass, Verwerfen bei Evidenz-Count < 2 ODER Challenger-Verdict `REJECT`.
+- **Q-V9.5-D — Cost-Cap-Anrechnung**: Synthese-/Critic-Cost in `pattern_extraction_cost_eur` mit-akkumulieren oder neue Spalte `synthesis_cost_eur` + `total_cost_eur`-GENERATED erweitern? Default-Empfehlung: neue Spalte fuer saubere Kosten-Attribution, in den Live-Cap einbezogen.
+- **Q-V9.5-E — Modell-Cleanup-Scope**: alle 4 Files in V9.5 ODER nur die bulk-relevanten (email-pattern + haiku + ai-assisted-setup) und v8-1-augmentation separat? Default-Empfehlung: alle 4 (Hygiene-Bundle, klein), v8-1-augmentation wegen latent-broken-Risiko prioritaer.
+
+### Delivery Mode
+
+**SaaS Product** — unveraendert. Strengste TDD-Disziplin (Synthese-Merge-Logik + Critic-Verdict + Cost-Cap-Integration + Tenant-RLS). Mandatory atomic commits pro Micro-Task ([[git-release]]). Eigener Worktree (SaaS-Mode-Pflicht). Internal-Test-Mode — kein Customer-Live ueber V9.5 vor Modul-Vollstaendigkeit ([[module-lifecycle-discipline]]).
+
+### Slice-Sketch (vorlaeufig, /architecture + /slice-planning entscheiden)
+
+Geschaetzt **2–3 Slices**. Cumulative-Single-Branch-Worktree analog V9.0/V9.1 (`v9-5-bulk-deep-extraction`).
+
+- **SLC-V9.5-A (geplant) — FEAT-082 Modell-Cleanup**: 4-File-Default-Umstellung eu-Sonnet-4 + Regression-/qa der bestehenden Extraktion/Augmentation. Klein, vorab (designt Deep-Extraction gegen das korrekte Modell). Pre-Cond: keine.
+- **SLC-V9.5-B (geplant) — FEAT-080 Synthese-Stage**: Migration (neue Status-Werte + Repraesentation per Q-V9.5-A) + neuer Synthese-Worker + Dispatcher-Wiring + Cost-Cap-Integration + Synthetic-ai_jobs + Curation-UI-Anbindung. Pre-Cond: Q-V9.5-A/B/D entschieden.
+- **SLC-V9.5-C (geplant) — FEAT-081 Critic-Gate**: bounded Critic-Pass auf synthetisierte Units + Verdict-/Reject-Logik + Cost-Cap + /qa-Vorher/Nachher-Fixture. Pre-Cond: Q-V9.5-C entschieden, SLC-V9.5-B done.
+
+Reihenfolge linear SLC-A → SLC-B → SLC-C. /architecture prueft ob B+C als 1 Slice zusammenlegbar.
+
+### Pre-Conditions
+
+- Keine BLOCKING-Pre-Conditions. V9.1-Deploy/Stable nicht hart erforderlich (V9.5 beruehrt den gemeinsamen `email_pattern`/`email_bulk_run`-Layer).
+- Empfehlung: V9.1 `/post-launch` T+24h STABLE-Bestaetigung abwarten, bevor V9.5-Implementation den gemeinsamen Bulk-Layer beruehrt (Koordinations-, kein Code-Block).
+
+### Detail-Spec
+
+V9.5-Requirements-Baseline-Report 2026-06-12 als RPT-453, basierend auf /discovery RPT-452. **Status: READY fuer /architecture V9.5**. Keine BLOCKING-OQs; 1 architektonischer Fork (Q-V9.5-A Repraesentation) ist /architecture-Aufgabe, kein Founder-Block. Feature-Skeleton-Specs entstehen mit /architecture unter `/features/FEAT-080..082-*.md`. Naechster Schritt: `/architecture V9.5` (~2h fresh Session) mit Q-V9.5-A..E + Synthese-Prompt-Entwurf (frisch, kein condensation-Code-Reuse) + Migration-Skizze (Status-Werte + Repraesentation + Cost-Spalte) + ai_cost_ledger-role-Erweiterung.
