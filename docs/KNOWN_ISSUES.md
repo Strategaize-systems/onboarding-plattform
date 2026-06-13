@@ -1,5 +1,14 @@
 # Known Issues
 
+### ISSUE-102 — V9.1 Coolify Scheduled-Tasks scheitern mit `curl: not found` (3 Forward-Bucket-Crons ~21h dormant)
+- Status: resolved
+- Severity: High
+- Area: Coolify Scheduled-Tasks (inbound-email-imap-sync / email-bulk-pipeline-trigger / bulk-email-retention-sweep) / Next.js-standalone-Alpine-App-Container
+- Summary: Live entdeckt im /post-launch V9.1 T+21h (2026-06-13, RPT-466). Die 3 V9.1-Coolify-Scheduled-Tasks feuern korrekt auf Cadence (imap-sync `*/5`), scheiterten aber bei JEDER Ausfuehrung mit `Job permanently failed after 1 attempts: sh: curl: not found`. Das Task-Command nutzte `curl -fsS -X POST <url> -H "x-cron-secret: $CRON_SECRET"`; der Alpine-App-Container hat aber nur `wget` (kein curl). Die Endpoints selbst funktionieren (manueller `docker exec wget` → `{success:true}`). Effekt: V9.1-Kern-Feature (continuous Forward-Bucket-Inbound-Sync) war seit dem ~08:18-Redeploy (2026-06-12) ~21h dormant — kein Auto-Pull aus IONOS. KEIN Datenverlust (IONOS haelt Mail; `last_uid=1` resumed beim naechsten erfolgreichen Sync). Aeltere April/Mai-Tasks (pending-signup-cleanup, capture-reminders) waren nicht betroffen (andere Command-Form).
+- Impact: Continuous-Inbound-Sync + Pipeline-Trigger + Retention-Sweep liefen nicht automatisch. Im Internal-Test-Mode (Founder-only) ohne Datenverlust, aber das V9.1-Kern-Versprechen (always-on Inbound) war nicht operativ.
+- Resolution: 2026-06-13 im /post-launch. Alle 3 Task-Commands in `coolify-db scheduled_tasks.command` von `curl -fsS -X POST <url> -H "..."` auf `wget -qO- --post-data='' --header="..." <url>` umgestellt (Fix vorab im Container validiert: wget-over-HTTPS → `{success:true}`). Verifikation: naechster `*/5`-Tick 06:10:02 UTC = **success** `{"success":true,...,"lastUid":1}` (vorher 06:05/06:00 = failed `curl: not found`); app `error_log` bestaetigt `cron:inbound-email-imap-sync run` um 06:10:04 (Endpoint vom Scheduler erreicht). pipeline-trigger (hourly) + retention-sweep (daily) tragen den identischen validierten Fix, bestaetigen auf ihrem naechsten Tick.
+- Next Action: Cross-Repo-Pflicht — alle Coolify-Scheduled-Task-Commands gegen Alpine-App-Container muessen `wget` statt `curl` nutzen; /deploy muss „Scheduled-Task EXECUTES successfully" verifizieren (nicht nur „registered"). Dev-System-IMP angelegt.
+
 ### ISSUE-100 — Stale Code-Default Bedrock-Modell-IDs in 4 Adaptern (V8.1-Augmentation potenziell latent broken)
 - Status: open
 - Severity: Medium
