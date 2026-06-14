@@ -365,9 +365,14 @@ Vereinte Plattform fuer strukturierte Wissenserhebung und KI-gestuetzte Verdicht
 
 (V9.5 — aktueller Resume-Punkt nach /deploy V9.5 DONE 2026-06-14 (REL-032, Live-Smoke RPT-467). V9.1 /post-launch STABLE 2026-06-13 (RPT-466), Last-Stable=V9.1.)
 1. **`/post-launch V9.5` T+24h** (~2026-06-15) — passiver Burn-In: Container-Health (App+Worker+DB) + error_log-Scan ueber das Fenster + Worker-Claim-Loop/Synthese-Stage-Sanity → bei PASS V9.5 STABLE + Last-Stable=V9.5. NICHT vorher fahren (Fenster offen ab Redeploy-Boot 2026-06-14 ~09:21 UTC).
-2. **BL-505 (High) — Tag/Theme-Export in knowledge_unit + Controlled-Tag-Vokabular fuers Bulk-Import-LLM** (Founder-Anforderung 2026-06-14, im V9.5-/deploy-Smoke entdeckt). Eigene Slice-Planung; Loesungs-Kandidaten: Vokabular-Injektion bestehender Tenant-Tags in Extraktions-+Synthese-Prompt + Embedding-Normalisierung (Titan/pgvector). Kein Deploy-Blocker.
-3. **ISSUE-100 (Medium, deferred)** — eu-Haiku-4.5 aktivieren nur wenn Founder Kostenoptimierung will (Override aktuell `BEDROCK_V9_HAIKU_MODEL_ID`=eu-Sonnet-4, bewiesen lauffaehig); Aktivierung erfordert `aws bedrock list-inference-profiles --region eu-central-1`-Verify. ISSUE-097 Entitlement-DEC (Founder-Gespraech, vor Customer-Live).
-4. **Danach V9.6 OP Security-Hardening** (BS-V8.12/V8.14-Pattern-Reuse, vor Customer-Live).
+2. **Cockpit-Roadmap aufgeraeumt 2026-06-14 (Founder):** Aktive To-do-Linie steht jetzt klar untereinander — **V9.6 → V9.7 → V9.8 → V9.9 → V9.10**. Zurueckgestellt + aus der V9-Linie genommen: **V9.2→V15, V9.3→V16** (deferred, kein Build-Druck). **V9.1 = 100%** (BL-504/ISSUE-098 als unversioniertes Cleanup ausgelagert; ENV `INBOUND_MAILBOX_ADDRESS=bulk@strategaizetransition.com` beim naechsten Redeploy setzen → dann ISSUE-098 resolved).
+3. **Bau-Reihenfolge nach /post-launch V9.5:**
+   - **V9.6** OP Security-Hardening (BS-V8.12/V8.14-Pattern-Reuse, vor Customer-Live) — naechster Build.
+   - **V9.7** OKF Handbuch-Export (duenner Emitter knowledge_unit→OKF-Bundle, /discovery-ready, Founder-gated; Proposal im Dev-System).
+   - **V9.8** Tag-Vokabular + Tag-Export (= BL-505, Founder-Anforderung 2026-06-14).
+   - **V9.9** IS-Knowledge-Push (ex-V9.4, aktiv behalten).
+   - **V9.10** Knowledge Foundation OP: KI-Workspace + OP→IS Verdichtungs-Cron mit Consent/PII (ex-V7.6, BL-123/124).
+4. **ISSUE-100 (Medium, deferred)** — eu-Haiku-4.5 nur bei Founder-Kostenoptimierung (Override `BEDROCK_V9_HAIKU_MODEL_ID`=eu-Sonnet-4, bewiesen lauffaehig; Aktivierung erfordert `aws bedrock list-inference-profiles --region eu-central-1`-Verify). ISSUE-097 Entitlement-DEC (vor Customer-Live).
 4. **Forbidden Shortcuts BLOCKING** per [[module-lifecycle-discipline]] + [[feedback-no-strategaize-live-until-all-systems-ready]] + IMP-950: kein released-Upgrade ohne /post-launch, kein Customer-Outreach / kein Pilot. Internal-Test-Mode (Founder-only) bleibt.
 
 (Historisch — V8.1 Lead-Conversion-Backlog, jetzt erledigt durch V8.1 STABLE und V9 STABLE — bleibt zur Audit-Spur:)

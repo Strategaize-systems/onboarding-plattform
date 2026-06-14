@@ -218,25 +218,25 @@
       "order": 19.1
     },
     {
-      "id": "v9-2",
-      "name": "V9.2",
+      "id": "v15",
+      "name": "V15",
       "status": "deferred",
-      "summary": "**V9.2 Bulk-Import Customer-Service-Ticket-Bulk** (geparkt aus RPT-373 V9-Discovery 2026-06-01). Zweite Daten-Quelle nach Email: Helpdesk-Ticket-Export (CSV / JSON) aus gaengigen Helpdesk-Tools (Zendesk, Freshdesk, HubSpot Service Hub). Parsing-Adapter fuer 3-5 Standard-Helpdesk-Export-Formate. Konsum-Pfad gleicher wie V9.0: PII-Redaction → Pattern-Extraktion → GF-Curation → Handbuch-Snapshot ODER (V10-abhaengig) Customer-Service-Auto-Response-Bibliothek. Founder-Pull (2026-06-01): 'Kundenservicethemen mal durchschauen — wo stecken noch irgendwelche Themen drin, die wir noch nicht gesehen haben'. **Tech-Aufwand**: ~1-2 Wochen Code-Side (Parser pro Helpdesk-Format + Pattern-Extraktion-Prompt-Anpassung fuer Ticket-Struktur statt Email-Thread). **Pre-Conditions**: V9.0 RELEASED. **Out of Scope V9.2**: Live-Helpdesk-API-Sync (V11+). [DEFERRED 2026-06-12, DEC-212: Exit-Readiness/Nachfolge braucht nur den GF-Bulk-Import (V9.0+V9.1). Zurueckgestellt bis KI-Readiness-Bedarf bzw. eine Customer-Base das rechtfertigt.]",
-      "order": 19.2
+      "summary": "**V15 (zurueckgestellt, ex-V9.2) — Customer-Service-Ticket-Bulk.** Aus der aktiven V9-Linie genommen (Founder 2026-06-14, kein Build-Druck). **V9.2 Bulk-Import Customer-Service-Ticket-Bulk** (geparkt aus RPT-373 V9-Discovery 2026-06-01). Zweite Daten-Quelle nach Email: Helpdesk-Ticket-Export (CSV / JSON) aus gaengigen Helpdesk-Tools (Zendesk, Freshdesk, HubSpot Service Hub). Parsing-Adapter fuer 3-5 Standard-Helpdesk-Export-Formate. Konsum-Pfad gleicher wie V9.0: PII-Redaction → Pattern-Extraktion → GF-Curation → Handbuch-Snapshot ODER (V10-abhaengig) Customer-Service-Auto-Response-Bibliothek. Founder-Pull (2026-06-01): 'Kundenservicethemen mal durchschauen — wo stecken noch irgendwelche Themen drin, die wir noch nicht gesehen haben'. **Tech-Aufwand**: ~1-2 Wochen Code-Side (Parser pro Helpdesk-Format + Pattern-Extraktion-Prompt-Anpassung fuer Ticket-Struktur statt Email-Thread). **Pre-Conditions**: V9.0 RELEASED. **Out of Scope V9.2**: Live-Helpdesk-API-Sync (V11+). [DEFERRED 2026-06-12, DEC-212: Exit-Readiness/Nachfolge braucht nur den GF-Bulk-Import (V9.0+V9.1). Zurueckgestellt bis KI-Readiness-Bedarf bzw. eine Customer-Base das rechtfertigt.]",
+      "order": 25
     },
     {
-      "id": "v9-3",
-      "name": "V9.3",
+      "id": "v16",
+      "name": "V16",
       "status": "deferred",
-      "summary": "**V9.3 Bulk-Import Multi-Mitarbeiter-Upload** (geparkt aus RPT-373 V9-Discovery 2026-06-01). Erweitert V9.0 GF-only-Persona um Mitarbeiter-Uploads. Jeder Mitarbeiter (Rolle `employee` aus FEAT-022 V4) laedt seine eigenen Emails / Tickets hoch, tenant_admin sieht aggregierte Pattern-Liste mit Mitarbeiter-Quellen-Provenance. Per-User-Bucket-Subpfad im bestehenden tenant-isolierten Storage, RLS-Erweiterung (Mitarbeiter sieht nur eigene Uploads, GF sieht alle Mitarbeiter-Uploads des Tenants). **Tech-Aufwand**: ~1-2 Wochen Code-Side (RLS-Erweiterung + UI-Sektion 'Meine Bulk-Imports' im Mitarbeiter-Dashboard + Aggregations-View im GF-Dashboard). **Pre-Conditions**: V9.0 RELEASED + FEAT-022 Mitarbeiter-Capture-Workflow live (V4, deployed). **Out of Scope V9.3**: Live-Synchronisation Mitarbeiter-Inbox (V11+), Mitarbeiter-Curation-Rechte (V9.4+). [DEFERRED 2026-06-12, DEC-212: Exit-Readiness/Nachfolge braucht nur den GF-Bulk-Import (V9.0+V9.1). Zurueckgestellt bis KI-Readiness-Bedarf bzw. eine Customer-Base das rechtfertigt.]",
-      "order": 19.3
+      "summary": "**V16 (zurueckgestellt, ex-V9.3) — Multi-Mitarbeiter-Upload.** Aus der aktiven V9-Linie genommen (Founder 2026-06-14, kein Build-Druck). **V9.3 Bulk-Import Multi-Mitarbeiter-Upload** (geparkt aus RPT-373 V9-Discovery 2026-06-01). Erweitert V9.0 GF-only-Persona um Mitarbeiter-Uploads. Jeder Mitarbeiter (Rolle `employee` aus FEAT-022 V4) laedt seine eigenen Emails / Tickets hoch, tenant_admin sieht aggregierte Pattern-Liste mit Mitarbeiter-Quellen-Provenance. Per-User-Bucket-Subpfad im bestehenden tenant-isolierten Storage, RLS-Erweiterung (Mitarbeiter sieht nur eigene Uploads, GF sieht alle Mitarbeiter-Uploads des Tenants). **Tech-Aufwand**: ~1-2 Wochen Code-Side (RLS-Erweiterung + UI-Sektion 'Meine Bulk-Imports' im Mitarbeiter-Dashboard + Aggregations-View im GF-Dashboard). **Pre-Conditions**: V9.0 RELEASED + FEAT-022 Mitarbeiter-Capture-Workflow live (V4, deployed). **Out of Scope V9.3**: Live-Synchronisation Mitarbeiter-Inbox (V11+), Mitarbeiter-Curation-Rechte (V9.4+). [DEFERRED 2026-06-12, DEC-212: Exit-Readiness/Nachfolge braucht nur den GF-Bulk-Import (V9.0+V9.1). Zurueckgestellt bis KI-Readiness-Bedarf bzw. eine Customer-Base das rechtfertigt.]",
+      "order": 26
     },
     {
-      "id": "v9-4",
-      "name": "V9.4",
+      "id": "v9-9",
+      "name": "V9.9",
       "status": "planned",
-      "summary": "**V9.4 Bulk-Import IS-Knowledge-Push** (geparkt aus RPT-373 V9-Discovery 2026-06-01). Cross-Repo-Hebel: akzeptierte Patterns aus V9.0/V9.1/V9.2/V9.3 fliessen zusaetzlich zum OP-internen Handbuch-Konsum in die IS V3.5 `knowledge_item`-Master-Schicht (mit `source_system='onboarding_plattform'`, `aggregation_level='pseudonymized'`, `pii_redacted=true`). Konsumenten in BS + IS (RAG-Workspace) koennen GF-Pattern-Wissen ueber Tenants hinweg konsumieren (mit DSGVO-konformer Pseudonymisierung). Reuse-Pattern: V7.6 SLC-354 OP→IS Verdichtungs-Cron-Architektur. **Tech-Aufwand**: ~1 Woche Code-Side (Push-Endpoint + Service-Key-Auth + Idempotenz-Hash). **Pre-Conditions** (Hart-Block): IS V3.5 SLC-352 Knowledge-API LIVE + Anwalts-Sign-off PII-Redaction (BL-104 extern). Solange Pre-Cond nicht durch: V9.4 nicht startbar. **KNOWLEDGE_PUSH_ENABLED=false** als Master-Switch bis Anwalt-OK. **Out of Scope V9.4**: Cross-Tenant-Pattern-Diff (V14+), Knowledge-API-Bidirectional-Sync (V12+).",
-      "order": 19.4
+      "summary": "**V9.9 (ex-V9.4) — IS-Knowledge-Push. AKTIV behalten (Founder 2026-06-14), eingeplant nach V9.6/9.7/9.8.** **V9.4 Bulk-Import IS-Knowledge-Push** (geparkt aus RPT-373 V9-Discovery 2026-06-01). Cross-Repo-Hebel: akzeptierte Patterns aus V9.0/V9.1/V9.2/V9.3 fliessen zusaetzlich zum OP-internen Handbuch-Konsum in die IS V3.5 `knowledge_item`-Master-Schicht (mit `source_system='onboarding_plattform'`, `aggregation_level='pseudonymized'`, `pii_redacted=true`). Konsumenten in BS + IS (RAG-Workspace) koennen GF-Pattern-Wissen ueber Tenants hinweg konsumieren (mit DSGVO-konformer Pseudonymisierung). Reuse-Pattern: V7.6 SLC-354 OP→IS Verdichtungs-Cron-Architektur. **Tech-Aufwand**: ~1 Woche Code-Side (Push-Endpoint + Service-Key-Auth + Idempotenz-Hash). **Pre-Conditions** (Hart-Block): IS V3.5 SLC-352 Knowledge-API LIVE + Anwalts-Sign-off PII-Redaction (BL-104 extern). Solange Pre-Cond nicht durch: V9.4 nicht startbar. **KNOWLEDGE_PUSH_ENABLED=false** als Master-Switch bis Anwalt-OK. **Out of Scope V9.4**: Cross-Tenant-Pattern-Diff (V14+), Knowledge-API-Bidirectional-Sync (V12+).",
+      "order": 19.9
     },
     {
       "id": "v10",
@@ -295,11 +295,11 @@
       "order": 17.97
     },
     {
-      "id": "v7-6",
-      "name": "V7.6",
+      "id": "v9-10",
+      "name": "V9.10",
       "status": "planned",
-      "summary": "**Knowledge Foundation OP — geplant 2026-05-27, noch nicht gestartet.** Erste Konsumenten-Integration in die Wissens-Architektur aus 2026-05-27 (Memory `project_knowledge_architecture_2026_05_27.md` im Dev-System). 2 Slices: **SLC-353** KI-Workspace im OP — Pattern P-010 (KI-Workspace-Hybrid) aus Business System portieren. 5 Berichts-Buttons (Mandanten-spezifisch: 'Welche SOPs habe ich schon?', 'Was fehlt mir fuer Exit-Reife?'). Freie Frage-Box mit Whisper-Voice-Input. Streaming-Antwort aus Bedrock. RAG-Quelle: OP-eigene Mandanten-Daten + IS-Knowledge-API (ueber STRATEGAIZE_KNOWLEDGE_SERVICE_KEY). Cost-Tracking pro Anfrage. Aufwand 2-3 Tage. **SLC-354** OP->IS Verdichtungs-Cron — daily 03:00. Nur Mandanten mit aktivem consent_type='knowledge_aggregation' (Erweiterung der bestehenden lead_push_consent-Tabelle aus V6 SLC-106). Nur Knowledge-Units mit Berater-Review-Freigabe (neuer Flag released_for_knowledge_aggregation). PII-Redaction-Pass (wiederverwendet aus V5 SLC-076..078) laeuft vor Uebermittlung als zweiter Pass. HTTP-POST zu IS mit Service-Key. aggregation_level='pseudonymized', pii_redacted=true. Idempotenz-Hash. KNOWLEDGE_PUSH_ENABLED=false als Master-Switch bis Anwalts-Sign-off. Aufwand 1-2 Tage. **Cross-Repo-Koordination:** Cross-Repo-Plan in `c:/strategaize/strategaize-dev-system/docs/PATTERN_LIBRARY/CROSS_REPO_IMPLEMENTATION_PLAN.md`. Gleichzeitige Backlog-Items in IS (V3.5, BL-119..121) und BS (V8.7). **Pre-Conditions:** IS V3.5 fertig (mind. SLC-352 Knowledge-API live), OP V7.5 abgeschlossen. **Anwalt-Gate:** SLC-353 ohne Anwalt live schaltbar (kein PII raus). SLC-354 braucht Anwalts-Sign-off vor Live-Schaltung (Mandanten-Daten verlassen Mandanten-Scope). Workflow: bauen + Test-Modus, dann Anwalt, dann Live.",
-      "order": 17.95
+      "summary": "**V9.10 (ex-V7.6) — Knowledge Foundation OP: KI-Workspace (BL-123) + OP->IS Verdichtungs-Cron mit Consent/PII (BL-124). AKTIV behalten (Founder 2026-06-14).** **Knowledge Foundation OP — geplant 2026-05-27, noch nicht gestartet.** Erste Konsumenten-Integration in die Wissens-Architektur aus 2026-05-27 (Memory `project_knowledge_architecture_2026_05_27.md` im Dev-System). 2 Slices: **SLC-353** KI-Workspace im OP — Pattern P-010 (KI-Workspace-Hybrid) aus Business System portieren. 5 Berichts-Buttons (Mandanten-spezifisch: 'Welche SOPs habe ich schon?', 'Was fehlt mir fuer Exit-Reife?'). Freie Frage-Box mit Whisper-Voice-Input. Streaming-Antwort aus Bedrock. RAG-Quelle: OP-eigene Mandanten-Daten + IS-Knowledge-API (ueber STRATEGAIZE_KNOWLEDGE_SERVICE_KEY). Cost-Tracking pro Anfrage. Aufwand 2-3 Tage. **SLC-354** OP->IS Verdichtungs-Cron — daily 03:00. Nur Mandanten mit aktivem consent_type='knowledge_aggregation' (Erweiterung der bestehenden lead_push_consent-Tabelle aus V6 SLC-106). Nur Knowledge-Units mit Berater-Review-Freigabe (neuer Flag released_for_knowledge_aggregation). PII-Redaction-Pass (wiederverwendet aus V5 SLC-076..078) laeuft vor Uebermittlung als zweiter Pass. HTTP-POST zu IS mit Service-Key. aggregation_level='pseudonymized', pii_redacted=true. Idempotenz-Hash. KNOWLEDGE_PUSH_ENABLED=false als Master-Switch bis Anwalts-Sign-off. Aufwand 1-2 Tage. **Cross-Repo-Koordination:** Cross-Repo-Plan in `c:/strategaize/strategaize-dev-system/docs/PATTERN_LIBRARY/CROSS_REPO_IMPLEMENTATION_PLAN.md`. Gleichzeitige Backlog-Items in IS (V3.5, BL-119..121) und BS (V8.7). **Pre-Conditions:** IS V3.5 fertig (mind. SLC-352 Knowledge-API live), OP V7.5 abgeschlossen. **Anwalt-Gate:** SLC-353 ohne Anwalt live schaltbar (kein PII raus). SLC-354 braucht Anwalts-Sign-off vor Live-Schaltung (Mandanten-Daten verlassen Mandanten-Scope). Workflow: bauen + Test-Modus, dann Anwalt, dann Live.",
+      "order": 19.95
     },
     {
       "id": "v9-5",
@@ -313,7 +313,21 @@
       "name": "V9.6",
       "status": "planned",
       "order": 19.6,
-      "summary": "**V9.6 OP Security-Hardening — PRIORITAET 2 (nach V9.5, vor Customer-Live).** Spiegelt die Security-Patches/Hardening aus dem Business-System (BS V8.12/V8.14) gezielt auf die Onboarding-Plattform, damit OP wirklich live-ready ist. Cross-Repo-Pattern-Reuse per strategaize-pattern-reuse.md: Logger-Redaction/logSafe (Secret/PII-Masking in Logs), Passwort-Policy (12+ Hard-Floor + zxcvbn), profiles.role Column-Protection (Privilege-Escalation-Block via BEFORE-UPDATE-Trigger service_role-aware), Login-Rate-Limit/Lockout (Brute-Force), Public-Markdown/Legal XSS-Sanitize (rehype-sanitize), Branding-Logo-Upload Role-Check + SVG-MIME-Block, Auth-Role-Helper fail-closed. Pre-Cond: V9.5 erledigt (Founder-Direktive). Empfohlener Start: Security-Audit (Subagenten-Lenses analog BS) -> /requirements V9.6. Naechster Schritt: /discovery oder /onboard-Security-Audit."
+      "summary": "**NAECHSTER SCHRITT nach V9.5 DEPLOYED (Founder 2026-06-14).** **V9.6 OP Security-Hardening — PRIORITAET 2 (nach V9.5, vor Customer-Live).** Spiegelt die Security-Patches/Hardening aus dem Business-System (BS V8.12/V8.14) gezielt auf die Onboarding-Plattform, damit OP wirklich live-ready ist. Cross-Repo-Pattern-Reuse per strategaize-pattern-reuse.md: Logger-Redaction/logSafe (Secret/PII-Masking in Logs), Passwort-Policy (12+ Hard-Floor + zxcvbn), profiles.role Column-Protection (Privilege-Escalation-Block via BEFORE-UPDATE-Trigger service_role-aware), Login-Rate-Limit/Lockout (Brute-Force), Public-Markdown/Legal XSS-Sanitize (rehype-sanitize), Branding-Logo-Upload Role-Check + SVG-MIME-Block, Auth-Role-Helper fail-closed. Pre-Cond: V9.5 erledigt (Founder-Direktive). Empfohlener Start: Security-Audit (Subagenten-Lenses analog BS) -> /requirements V9.6. Naechster Schritt: /discovery oder /onboard-Security-Audit."
+    },
+    {
+      "id": "v9-7",
+      "name": "V9.7",
+      "status": "planned",
+      "order": 19.7,
+      "summary": "**V9.7 OKF Handbuch-Export — OP Unternehmenshandbuch-Generator OKF-konform machen (Google Open Knowledge Format v0.1).** Duenner isolierter Emitter (knowledge_unit -> OKF-Bundle: Markdown+YAML-Frontmatter je Concept, index.md/log.md, Bundle-relative Cross-Links), KEIN DB-Umbau (OKF = Export-/Austausch-Schicht, Postgres bleibt System-of-Record, pgvector Retrieval-Index). Hoechster Interop-Hebel. Proposal /discovery-ready: Dev-System docs/OKF_OP_HANDBOOK_EXPORT_SLICE.md + Profil-Rule strategaize-okf-profile.md. Founder-gated (module-lifecycle-discipline). Naechster Schritt: /discovery OP mit dem Proposal als Input."
+    },
+    {
+      "id": "v9-8",
+      "name": "V9.8",
+      "status": "planned",
+      "order": 19.8,
+      "summary": "**V9.8 Tag-Vokabular + Tag-Export (= BL-505).** Zwei verbundene Luecken aus dem V9.5-/deploy-Smoke (Founder 2026-06-14): (1) email_synthesized_unit.themes propagieren NICHT in knowledge_unit (Export-Gap) -> Tags muessen mit-exportiert werden; (2) kein Controlled-Tag-Vokabular -> LLM generiert Themes/suggested_section frei pro Lauf, Synonym-Wildwuchs. Ziel: pro-Tenant wachsendes Tag-Vokabular (LLM prueft erst bestehende Liste, nur bei echt Neuem neues Tag; Hauptkategorien=Sections, Tags variieren leicht nicht stark) fuer Findbarkeit im Handbuch. Loesungs-Kandidaten: Vokabular-Injektion in Extraktions-+Synthese-Prompt + Embedding-Normalisierung (Titan/pgvector). Eigene Slice-Planung."
     }
   ]
 }
