@@ -1589,6 +1589,16 @@
       "version": "V9.1",
       "description": "Setup-UI baute das Weiterleitungs-Ziel hart als bulk-<slug>@bulk.strategaizetransition.com (Catchall ohne MX -> bounct). Fix via ENV-Modus-Schalter INBOUND_MAILBOX_ADDRESS (DEC-211) + zentralem resolveForwardAddress; im Single-Mailbox-Modus zeigt/testet die UI das reale IONOS-Postfach. Code + /qa Code-Side PASS (RPT-451); Deploy + Live-Verify Founder-gated (ENV setzen + Redeploy, gebuendelt mit /post-launch V9.1).",
       "createdAt": "2026-06-12"
+    },
+    {
+      "id": "BL-505",
+      "title": "Controlled Tag-/Theme-Vokabular fuer Bulk-Import-Wissensbausteine + Tag-Propagation in den Export",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": null,
+      "description": "Zwei verbundene Luecken im V9.x Bulk-Import-Wissenssystem, entdeckt im V9.5 /deploy-Smoke 2026-06-14. (1) Export-Gap: email_synthesized_unit.themes werden beim Handbook-Import NICHT in knowledge_unit uebernommen (handbook-import.ts mappt nur title+description+source-attribution+curated_section). Tags muessen mit-exportiert werden, sonst sind sie fuer spaetere Suche/Downstream-Wissenssysteme wertlos. (2) LLM-Wildwuchs: Themes (und der LLM-suggested_section) werden pro Lauf FREI generiert; das LLM sieht KEINE Liste bereits vergebener Tags -> Synonym-Varianten (antwortzeit vs reaktionszeit vs antwort-geschwindigkeit) fragmentieren das Wissen ungebremst. Anforderung (Founder 2026-06-14): kontrolliertes, pro-Tenant wachsendes Tag-Vokabular. Beim Neuvergeben prueft das LLM zuerst die bestehende Liste auf einen passenden Tag und haengt daran an; nur wenn nichts passt, wird ein neues Tag entschieden. Hauptkategorien = Sections (bereits ueber template.handbook_schema kontrolliert, beim manuellen Kuratieren gesnappt); darunter haengende Tags duerfen leicht variieren, aber nicht stark. Ziel: Findbarkeit im Handbuch — Mitarbeiter/neuer Chef muessen Wissen ueber Suche finden, nicht verfehlen weil ein Tag nicht exakt passt (Kern des Produktnutzens). Nicht ueberdesignen, aber das LLM aktiv kontrollieren. Loesungs-Kandidaten: (a) Vokabular-Injektion bestehender Tenant-Tags/Sections in Extraktions- + Synthese-Prompt (use-existing-where-fits, only-add-if-novel); (b) Embedding-Normalisierung synonymer Themes via Titan/pgvector (Stack vorhanden). Betroffen: email-pattern-prompt.ts, email-synthesis-prompt.ts, handbook-import.ts (themes->knowledge_unit), evtl. neue tenant_tag-Vokabular-Tabelle. Kein V9.5-Deploy-Blocker.",
+      "createdAt": "2026-06-14"
     }
   ]
 }
