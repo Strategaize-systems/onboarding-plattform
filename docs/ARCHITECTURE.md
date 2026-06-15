@@ -9289,3 +9289,101 @@ Pricing-Hinweis: Sonnet-4 = Sonnet-3.5 Bedrock-Pricing ($3/$15) → die `COST_PE
 ### 12. Empfohlener naechster Schritt
 
 `/slice-planning V9.5` — SLC-V9.5-A/B/C mit Micro-Task-Decomposition, AC-Matrizen, Cumulative-Single-Branch-Worktree `v9-5-bulk-deep-extraction`. Pre-Cond (Koordination, kein Code-Block): V9.1 `/post-launch` T+24h STABLE.
+
+## V9.7 Architecture Addendum — OKF Handbuch-Export (Concept-Emitter + Bundle-Assembly, RPT-471, 2026-06-15)
+
+### 1. Architektur-Zusammenfassung
+
+V9.7 macht den OP-Unternehmerhandbuch-Snapshot zusaetzlich als **OKF-v0.1-Bundle** (Google Open Knowledge Format) nach **Strategaize-OKF-Profil 1.0** verfuegbar. Der bestehende narrative Handbuch-Renderer (`renderHandbook` → `handbuch/`-Ordner) bleibt **byte-fuer-byte unveraendert** (alongside, SC-V9.7-10). Ein neuer **isolierter Emitter** (`src/lib/handbook/okf/*`) serialisiert jede kuratierte Wissens-Row (`knowledge_unit`, `block_diagnosis`, `sop`) in **eine** OKF-Concept-`.md` (fein-granular), assembliert sie zu einem Bundle (root `index.md` + `log.md` + Section-Ordner) und validiert das Ergebnis programmatisch. Beide Ordner (`handbuch/` + `okf/`) liegen im **selben Download-ZIP**.
+
+**Grundsatz (BLOCKING, aus `strategaize-okf-profile.md`):** OKF ist Export-/Serialisierungs-Schicht, KEIN Storage. Postgres bleibt System-of-Record. **0 DB-Migrationen, 0 neue Tabellen, 0 neue Dependencies, 0 neue ENVs, 0 neue Cron-Jobs.** Alle OKF-Felddetails leben ausschliesslich im `okf/`-Modul (Isolation, SC-V9.7-7).
+
+### 2. Hauptkomponenten + Verantwortlichkeiten
+
+| Komponente | Pfad (Vorschlag /slice-planning) | Art | Verantwortung |
+|---|---|---|---|
+| OKF-Concept-Emitter (FEAT-083) | `src/lib/handbook/okf/emit.ts` | NEU | Pure Functions `emitKnowledgeUnitConcept` / `emitDiagnosisConcept` / `emitSopConcept` (Row → `{path, content}`); Frontmatter-Serializer (nutzt `yaml`); `type`-Mapper; `confidence`-Mapper; Body-Render; Cross-Link-Aufloesung |
+| OKF-Concept-Typen | `src/lib/handbook/okf/types.ts` | NEU | `OkfConcept`, Frontmatter-Shape — gekapselt im Modul (Isolation) |
+| Bundle-Assembly (FEAT-084) | `src/lib/handbook/okf/bundle.ts` | NEU | `assembleOkfBundle(concepts, ctx)` → `Record<path,content>` inkl. root `index.md` (mit `okf_version`/`strategaize_okf_profile`, Section-gruppierte Bullet-Form) + `log.md` (Creation-Eintrag) |
+| Konformitaets-Check (FEAT-084) | `src/lib/handbook/okf/conformance.ts` (+ Test) | NEU | `checkOkfConformance(files)` → `{ok, violations[]}`; parst Frontmatter via `yaml`; prueft SC-V9.7-1..5 programmatisch; **TDD-RED zuerst** |
+| Worker-Integration | `src/workers/handbook/handle-snapshot-job.ts` | GEAENDERT | Loader-SELECTs erweitern (generische Felder); nach `renderHandbook` additiv `emit`+`assemble`+`conformance`; OKF-Files an ZIP-Builder uebergeben. Worker-Kern bleibt OKF-agnostisch (ruft nur das isolierte Modul) |
+| Shared-Types | `src/workers/handbook/types.ts` | GEAENDERT | `KnowledgeUnitRow`/`DiagnosisRow`/`SopRow` um `evidence_refs` + `updated_at` (+ KU `created_at`) erweitern — generische Row-Felder, KEINE OKF-Details |
+| ZIP-Builder | `src/workers/handbook/zip-builder.ts` | GEAENDERT | Mehrere benannte Folder-Sets in EIN ZIP (`handbuch/` + `okf/`); rueckwaerts-kompatible Signatur (`files`+`rootFolder` bleibt) |
+
+### 3. Daten-/Storage-Richtung
+
+**Keine Schema-Aenderung.** Quellen sind die bereits vom Snapshot-Worker geladenen Tabellen. Live-Schema-Grounding (2026-06-15, Coolify-DB):
+
+| Tabelle | OKF-`type` | Identitaet (`strategaize_id`) | `timestamp` | `confidence` | `curation_status` | Citations-Quelle |
+|---|---|---|---|---|---|---|
+| `knowledge_unit` | `unit_type` → finding/risk/action/observation (`ai_draft`→observation, DEC-224) | `id` | `updated_at` | `confidence` text-enum low/medium/high **1:1** (DEC-224) | `status` proposed/accepted/edited **1:1** | `evidence_refs` jsonb — **PII, NICHT als Citations** (DEC-223) |
+| `block_diagnosis` | `diagnosis` (1 Concept/Row, DEC-222) | `id` | `updated_at` | — (Spalte fehlt) | confirmed→accepted (nur confirmed emittiert) | — |
+| `sop` | `sop` | `id` | `updated_at` | — | — (kein status) | — |
+
+`strategaize_source: op` (fix), `strategaize_tenant: <snapshot.tenant_id>` je Concept. `tags` in V9.7 **weggelassen** (es gibt keine `themes`-Spalte; kontrolliertes Tag-Vokabular kommt V9.8/BL-505, DEC-224).
+
+**Bundle-Layout im ZIP (DEC-220/221/222):**
+```
+<snapshot>.zip
+├── handbuch/            ← UNVERAENDERT (narrativer Renderer)
+│   ├── INDEX.md
+│   └── NN_section.md
+└── okf/                 ← NEU (OKF-Bundle, self-contained = Bundle-Root)
+    ├── index.md         (frontmatter: okf_version "0.1" + strategaize_okf_profile "1.0"; Bullet-Form gruppiert nach Section)
+    ├── log.md           (1 Creation-Eintrag fuer diesen Snapshot)
+    └── <section-key>/
+        ├── finding-<slug>-<id8>.md
+        ├── diagnosis-<id8>.md
+        └── sop-<slug>-<id8>.md
+```
+Cross-Links sind bundle-root-absolut relativ zum `okf/`-Root (z.B. `/A/diagnosis-1a2b3c4d.md`) → stabil bei Verschieben. Kein per-Section Container-File in V9.7 (`handbook-section`-Type bleibt registriert-aber-ungenutzt, DEC-221).
+
+### 4. Request-/Daten-Flow
+
+```
+handbook_snapshot_generation Job (bestehender Worker-Claim-Loop)
+  → load (erweiterte SELECTs: + evidence_refs, + updated_at)
+  → renderHandbook(...)              → files["handbuch/*"]      (UNVERAENDERT)
+  → [NEU] emit pro Row              → OkfConcept[]              (post-Filter: KU=block-review-gefiltert, diagnosis=confirmed, sop=alle)
+  → [NEU] assembleOkfBundle(...)    → files["okf/*"]
+  → [NEU] checkOkfConformance(okf)  → ok|violations (Verhalten bei Verstoss = OQ §9.1)
+  → buildHandbookZip({handbuch, okf}) → 1 ZIP
+  → Storage-Upload (bestehend) + UPDATE handbook_snapshot
+Download: GET /api/handbook/[snapshotId]/download  (UNVERAENDERT — selber Endpoint, ZIP-Inhalt erweitert)
+```
+
+### 5. Externe Abhaengigkeiten / Integrationen
+
+Keine neuen. `yaml@^2.9.0` (bereits Dependency) fuer Frontmatter-Serialize/Parse; `archiver@^7.0.1` (bereits) fuer ZIP. Kein Bedrock-Call (Emitter ist deterministisch, $0 — konsistent mit DEC-038). Spec-Drift-Absicherung via bestehendem Cron `okf-spec-watch` (monatlich, Dev-System) + Rule `okf-spec-monitoring.md`.
+
+### 6. Security / Privacy
+
+- **DSGVO (SC-V9.7-9) — kritischer Grounding-Befund:** OP-`evidence_refs` sind Walkthrough-Provenance-Objekte `{recorded_by_user_id, walkthrough_session_id}` — reine UUIDs, **`recorded_by_user_id` ist Personenbezug**, kein menschenlesbarer Citation-Text. Sie werden NICHT in `# Citations` gerendert (kein PII-Leak, kein Nutzwert). Nur `evidence_count` (Zahl) landet im Frontmatter. (DEC-223)
+- Bundle ist tenant-scoped (`strategaize_tenant`); Download laeuft ueber den bestehenden RLS-gegateten `rpc_get_handbook_snapshot_path` + Next.js-Proxy (unveraendert). `strategaize_tenant` = Tenant-UUID (Metadaten, kein Personenbezug).
+- Emitter laeuft service-role im Worker (wie der bestehende Renderer) — keine neue Exposure.
+
+### 7. Constraints & Tradeoffs
+
+- **Content-Paritaet (Tradeoff):** OKF-Bundle und narratives Handbuch werden aus DERSELBEN kuratierten Session gezogen, aber das OKF-Selektionskriterium ist explizit (KU post-block-review-filter; diagnosis `status='confirmed'`; sop alle) und repliziert NICHT die per-Section `min_status`-Logik des narrativen Renderers. Exakte 1:1-Mengengleichheit ist ein dokumentiertes Nicht-Ziel von V9.7 (DEC-225). Risiko gering (beide aus curated data); falls spaeter exakte Paritaet gefordert: shared Selector.
+- **log.md single-entry:** Snapshots sind immutable Point-in-Time-Exporte ohne kumulierte Historie → `log.md` enthaelt einen Creation-Eintrag pro Generierung. Cross-Snapshot-History waere Persistenz (out of scope).
+- **Fail-Verhalten:** Empfehlung **weiche Degradation** — der OKF-Emitter laeuft additiv NACH erfolgreichem narrativen Render; ein OKF-Fehler/Konformitaets-Verstoss → `error_log` + ZIP ohne `okf/`-Ordner (narratives Handbuch = Kern-Deliverable bricht NIE). Alternative (harter Job-Fail) waere strenger, riskiert aber den Handbuch-Download wegen eines Export-Wrapper-Bugs. Endgueltig in /slice-planning (§9.1).
+
+### 8. Aufgeloeste Open Questions (Q-V9.7-A..E)
+
+- **Q-A (Packaging):** selber Download-ZIP, zweiter Ordner `okf/`, kein neuer Endpoint → **DEC-220**.
+- **Q-B (Container-Files):** keine `handbook-section`-Container; root `index.md` gruppiert nach Section → **DEC-221**.
+- **Q-C (Naming/Ordner):** Section-Ordner + deterministische Filenames `<type>-<slug>-<id8>.md`; bundle-root-absolute Cross-Links → **DEC-221**.
+- **Q-D (block_diagnosis):** 1 Concept pro Row (subtopics als Body-Subsections), NICHT pro Subtopic (Subtopics haben keine eigene UUID-Identitaet fuer `strategaize_id`) → **DEC-222**.
+- **Q-E (evidence_refs → Citations):** OP-evidence_refs sind PII-UUIDs ohne Citation-Text → `# Citations` in V9.7 weggelassen, nur `evidence_count` → **DEC-223**.
+- **Grounding-Korrekturen am Proposal/Profil:** confidence text-enum 1:1 (kein numeric-threshold-Mapping fuer OP-KU); `ai_draft`→observation; `tags`/`themes` → V9.8/BL-505 (keine `themes`-Spalte); curation_status←status 1:1; timestamp←updated_at → **DEC-224**. Emitter-Isolation + Input-Contract + Content-Selection + weiche-Degradation + `yaml`-Reuse + Conformance-TDD → **DEC-225**.
+
+### 9. Offene technische Punkte fuer /slice-planning V9.7
+
+1. **OKF-Fehler-Degradation final fixieren:** weich (Empfehlung, §7) vs. hart.
+2. **Slice-Schnitt:** FEAT-083 (Emitter, TDD) und FEAT-084 (Bundle+Conformance+Worker-Wiring+ZIP) — 2 Slices, sequenziell (Emitter zuerst, Bundle baut darauf). Cumulative-Single-Branch + EIN Master-Merge.
+3. **Cross-Link-Regel:** KU↔diagnosis ueber gemeinsamen `block_key` (kein expliziter FK). Welche Links genau (KU→diagnosis des Blocks? bidirektional?) → /slice-planning fixiert.
+4. **Test-Layout** (colocated vs `__tests__/`, IMP-1262): reale OP-Konvention vor Test-Pfad-Auflistung pruefen.
+
+### 10. Empfohlener naechster Schritt
+
+`/slice-planning V9.7` — SLC-Schnitt fuer FEAT-083 (Concept-Emitter, TDD-RED Conformance zuerst) → FEAT-084 (Bundle-Assembly + Worker-Wiring + ZIP-Multi-Folder), Cumulative-Single-Branch-Worktree, AC-Matrizen gegen SC-V9.7-1..10. 0 Migrationen, 0 neue Deps.
