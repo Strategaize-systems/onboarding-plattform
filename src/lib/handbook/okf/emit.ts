@@ -13,9 +13,11 @@
 import { stringify as stringifyYaml } from "yaml";
 import { slugifyHeading } from "../slugify";
 import type {
+  KnowledgeUnitInput,
   OkfConcept,
   OkfConfidence,
   OkfCurationStatus,
+  OkfEmitContext,
   OkfFrontmatter,
   OkfType,
   SerializedConcept,
@@ -124,5 +126,44 @@ export function serializeConcept(concept: OkfConcept): SerializedConcept {
   return {
     path: concept.path,
     content: `---\n${frontmatter}---\n\n${body}\n`,
+  };
+}
+
+// --- MT-2: emitKnowledgeUnitConcept ---
+
+/**
+ * `knowledge_unit`-Row -> OkfConcept. `evidence_refs` werden NUR gezaehlt — ihr
+ * PII-Inhalt landet NIE im Output (DEC-223, DSGVO). KEIN `tags` (DEC-224).
+ */
+export function emitKnowledgeUnitConcept(
+  row: KnowledgeUnitInput,
+  ctx: OkfEmitContext,
+): OkfConcept {
+  const type = mapUnitTypeToOkf(row.unit_type);
+  const evidenceCount = Array.isArray(row.evidence_refs)
+    ? row.evidence_refs.length
+    : 0;
+
+  const frontmatter: OkfFrontmatter = {
+    type,
+    title: row.title,
+    description: firstSentence(row.body, row.title),
+    timestamp: row.updated_at,
+    strategaize_source: "op",
+    strategaize_tenant: ctx.tenantId,
+    confidence: mapConfidence(row.confidence),
+    curation_status: mapCurationStatus(row.status),
+    evidence_count: evidenceCount,
+    strategaize_id: row.id,
+  };
+
+  return {
+    type,
+    frontmatter,
+    body: row.body,
+    blockKey: row.block_key,
+    sourceTable: "knowledge_unit",
+    sectionKey: row.block_key,
+    path: `${row.block_key}/${conceptFilename(type, row.title, row.id)}`,
   };
 }

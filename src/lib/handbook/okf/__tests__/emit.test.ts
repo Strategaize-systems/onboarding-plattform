@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
 import {
   conceptFilename,
+  emitKnowledgeUnitConcept,
   firstSentence,
   mapConfidence,
   mapCurationStatus,
@@ -14,7 +15,34 @@ import {
   serializeConcept,
   serializeFrontmatter,
 } from "../emit";
-import type { OkfConcept, OkfFrontmatter } from "../types";
+import type {
+  KnowledgeUnitInput,
+  OkfConcept,
+  OkfEmitContext,
+  OkfFrontmatter,
+} from "../types";
+
+const CTX: OkfEmitContext = { tenantId: "tenant-abc" };
+
+function makeKnowledgeUnit(
+  overrides: Partial<KnowledgeUnitInput> = {},
+): KnowledgeUnitInput {
+  return {
+    id: "11112222-3333-4444-5555-666677778888",
+    block_key: "a_zielgruppe",
+    unit_type: "finding",
+    title: "Zielgruppe ist B2B",
+    body: "Der Kunde fokussiert auf B2B. Das ergibt sich aus dem Gespraech.",
+    confidence: "high",
+    status: "accepted",
+    evidence_refs: [
+      { recorded_by_user_id: "user-secret-1", walkthrough_session_id: "wt-1" },
+      { recorded_by_user_id: "user-secret-2", walkthrough_session_id: "wt-2" },
+    ],
+    updated_at: "2026-06-15T14:25:00Z",
+    ...overrides,
+  };
+}
 
 describe("mapUnitTypeToOkf", () => {
   it("passes through finding/risk/action/observation 1:1", () => {
@@ -173,5 +201,78 @@ describe("serializeConcept", () => {
     const { content } = serializeConcept(concept);
     const fmBlock = content.split("---\n")[1];
     expect(parseYaml(fmBlock)).toEqual(concept.frontmatter);
+  });
+});
+
+describe("emitKnowledgeUnitConcept", () => {
+  it("produces full profile frontmatter from a finding row", () => {
+    const concept = emitKnowledgeUnitConcept(makeKnowledgeUnit(), CTX);
+    expect(concept.type).toBe("finding");
+    expect(concept.sourceTable).toBe("knowledge_unit");
+    expect(concept.blockKey).toBe("a_zielgruppe");
+    expect(concept.sectionKey).toBe("a_zielgruppe");
+    expect(concept.frontmatter).toEqual({
+      type: "finding",
+      title: "Zielgruppe ist B2B",
+      description: "Der Kunde fokussiert auf B2B.",
+      timestamp: "2026-06-15T14:25:00Z",
+      strategaize_source: "op",
+      strategaize_tenant: "tenant-abc",
+      confidence: "high",
+      curation_status: "accepted",
+      evidence_count: 2,
+      strategaize_id: "11112222-3333-4444-5555-666677778888",
+    });
+  });
+
+  it("maps an ai_draft row to type observation", () => {
+    const concept = emitKnowledgeUnitConcept(
+      makeKnowledgeUnit({ unit_type: "ai_draft" }),
+      CTX,
+    );
+    expect(concept.type).toBe("observation");
+    expect(concept.frontmatter.type).toBe("observation");
+  });
+
+  it("builds a deterministic section-scoped path", () => {
+    const concept = emitKnowledgeUnitConcept(makeKnowledgeUnit(), CTX);
+    expect(concept.path).toBe(
+      "a_zielgruppe/finding-zielgruppe-ist-b2b-11112222.md",
+    );
+  });
+
+  it("DSGVO: evidence_refs raw values never appear in output, only the count (DEC-223)", () => {
+    const concept = emitKnowledgeUnitConcept(makeKnowledgeUnit(), CTX);
+    const { content } = serializeConcept(concept);
+    expect(content).not.toMatch(/user-secret-1/);
+    expect(content).not.toMatch(/walkthrough_session_id/);
+    expect(content).not.toMatch(/recorded_by_user_id/);
+    expect(content).not.toMatch(/evidence_refs/);
+    expect(concept.frontmatter.evidence_count).toBe(2);
+  });
+
+  it("treats null evidence_refs as evidence_count 0", () => {
+    const concept = emitKnowledgeUnitConcept(
+      makeKnowledgeUnit({ evidence_refs: null }),
+      CTX,
+    );
+    expect(concept.frontmatter.evidence_count).toBe(0);
+  });
+
+  it("emits no tags key (DEC-224) and a parseable, non-empty type (SC-V9.7-1)", () => {
+    const concept = emitKnowledgeUnitConcept(makeKnowledgeUnit(), CTX);
+    const { content } = serializeConcept(concept);
+    const fm = parseYaml(content.split("---\n")[1]);
+    expect(content).not.toMatch(/^tags:/m);
+    expect(fm.type).toBe("finding");
+    expect(String(fm.type).length).toBeGreaterThan(0);
+  });
+
+  it("falls back to the title for description when body is empty (R-A-1)", () => {
+    const concept = emitKnowledgeUnitConcept(
+      makeKnowledgeUnit({ body: "" }),
+      CTX,
+    );
+    expect(concept.frontmatter.description).toBe("Zielgruppe ist B2B");
   });
 });
