@@ -80,7 +80,9 @@ export function firstSentence(body: string, fallback: string): string {
   if (!trimmed) {
     return fallback;
   }
-  const match = trimmed.match(/^.*?[.!?](?=\s|$)/s);
+  // No dotAll flag (tsconfig target < es2018): `.` stops at newlines, so a body
+  // without a terminator on its first line falls back to that first line.
+  const match = trimmed.match(/^.*?[.!?](?=\s|$)/);
   const candidate = match ? match[0] : trimmed.split("\n")[0];
   return candidate.trim() || fallback;
 }
