@@ -23,6 +23,8 @@ import type {
   OkfFrontmatter,
   OkfType,
   SerializedConcept,
+  SopInput,
+  SopStepInput,
 } from "./types";
 
 // --- MT-1: Mapper + Serializer + Pfad-Helper ---
@@ -223,5 +225,75 @@ export function emitDiagnosisConcept(
     sourceTable: "block_diagnosis",
     sectionKey: row.block_key,
     path: `${row.block_key}/${conceptFilename("diagnosis", title, row.id)}`,
+  };
+}
+
+// --- MT-4: emitSopConcept ---
+
+// Renderer bevorzugt das Generator-Feld `action` vor dem Legacy-Feld `title`.
+function renderSopStep(step: SopStepInput, index: number): string {
+  const headline = step.action ?? step.title ?? "";
+  const lines = [`${index + 1}. ${headline}`.trimEnd()];
+  if (step.responsible) {
+    lines.push(`   - Verantwortlich: ${step.responsible}`);
+  }
+  if (step.timeframe) {
+    lines.push(`   - Zeitrahmen: ${step.timeframe}`);
+  }
+  if (step.success_criterion) {
+    lines.push(`   - Erfolgskriterium: ${step.success_criterion}`);
+  }
+  if (step.detail) {
+    lines.push(`   - ${step.detail}`);
+  }
+  return lines.join("\n");
+}
+
+function renderSopBody(
+  objective: string | undefined,
+  steps: SopStepInput[],
+): string {
+  const parts: string[] = [];
+  if (objective && objective.trim()) {
+    parts.push(objective.trim());
+  }
+  if (steps.length > 0) {
+    parts.push(
+      ["## Schritte", "", ...steps.map((step, i) => renderSopStep(step, i))].join(
+        "\n",
+      ),
+    );
+  }
+  return parts.join("\n\n");
+}
+
+/**
+ * `sop`-Row -> OkfConcept. Body = Objective + nummerierte Schritte (beide
+ * Step-Formate, siehe `workers/handbook/types.ts`). Kein confidence/
+ * curation_status (SOP hat keinen Status).
+ */
+export function emitSopConcept(row: SopInput, ctx: OkfEmitContext): OkfConcept {
+  const title = row.content.title ?? `SOP: ${row.block_key}`;
+  const objective = row.content.objective;
+  const steps = row.content.steps ?? [];
+
+  const frontmatter: OkfFrontmatter = {
+    type: "sop",
+    title,
+    ...(objective ? { description: objective } : {}),
+    timestamp: row.updated_at,
+    strategaize_source: "op",
+    strategaize_tenant: ctx.tenantId,
+    strategaize_id: row.id,
+  };
+
+  return {
+    type: "sop",
+    frontmatter,
+    body: renderSopBody(objective, steps),
+    blockKey: row.block_key,
+    sourceTable: "sop",
+    sectionKey: row.block_key,
+    path: `${row.block_key}/${conceptFilename("sop", title, row.id)}`,
   };
 }

@@ -9,6 +9,7 @@ import {
   conceptFilename,
   emitDiagnosisConcept,
   emitKnowledgeUnitConcept,
+  emitSopConcept,
   firstSentence,
   mapConfidence,
   mapCurationStatus,
@@ -22,6 +23,7 @@ import type {
   OkfConcept,
   OkfEmitContext,
   OkfFrontmatter,
+  SopInput,
 } from "../types";
 
 const CTX: OkfEmitContext = { tenantId: "tenant-abc" };
@@ -352,5 +354,95 @@ describe("emitDiagnosisConcept", () => {
     );
     expect(concept.frontmatter.title).toBe("Diagnose: a_zielgruppe");
     expect(() => serializeConcept(concept)).not.toThrow();
+  });
+});
+
+function makeSop(overrides: Partial<SopInput> = {}): SopInput {
+  return {
+    id: "99998888-7777-6666-5555-444433332222",
+    block_key: "f_prozesse",
+    updated_at: "2026-06-15T09:30:00Z",
+    content: {
+      title: "Onboarding-Prozess",
+      objective: "Neue Mitarbeiter strukturiert einarbeiten.",
+      steps: [
+        {
+          number: 1,
+          action: "Arbeitsplatz vorbereiten",
+          responsible: "IT",
+          timeframe: "Tag 1",
+          success_criterion: "Laptop einsatzbereit",
+        },
+        {
+          number: 2,
+          action: "Einfuehrungsgespraech",
+          responsible: "Teamlead",
+        },
+      ],
+    },
+    ...overrides,
+  };
+}
+
+describe("emitSopConcept", () => {
+  it("produces sop frontmatter without confidence/curation_status", () => {
+    const concept = emitSopConcept(makeSop(), CTX);
+    expect(concept.type).toBe("sop");
+    expect(concept.sourceTable).toBe("sop");
+    expect(concept.frontmatter).toEqual({
+      type: "sop",
+      title: "Onboarding-Prozess",
+      description: "Neue Mitarbeiter strukturiert einarbeiten.",
+      timestamp: "2026-06-15T09:30:00Z",
+      strategaize_source: "op",
+      strategaize_tenant: "tenant-abc",
+      strategaize_id: "99998888-7777-6666-5555-444433332222",
+    });
+  });
+
+  it("renders generator-format steps in order, action before title", () => {
+    const concept = emitSopConcept(makeSop(), CTX);
+    const idxFirst = concept.body.indexOf("Arbeitsplatz vorbereiten");
+    const idxSecond = concept.body.indexOf("Einfuehrungsgespraech");
+    expect(idxFirst).toBeGreaterThan(-1);
+    expect(idxSecond).toBeGreaterThan(idxFirst);
+    expect(concept.body).toContain("1. Arbeitsplatz vorbereiten");
+    expect(concept.body).toContain("Verantwortlich: IT");
+    expect(concept.body).toContain("Erfolgskriterium: Laptop einsatzbereit");
+  });
+
+  it("renders legacy-format steps (title + detail)", () => {
+    const concept = emitSopConcept(
+      makeSop({
+        content: {
+          title: "Legacy SOP",
+          objective: "Ziel.",
+          steps: [
+            { title: "Schritt A", detail: "Mach A zuerst." },
+            { title: "Schritt B" },
+          ],
+        },
+      }),
+      CTX,
+    );
+    expect(concept.body).toContain("1. Schritt A");
+    expect(concept.body).toContain("Mach A zuerst.");
+    expect(concept.body).toContain("2. Schritt B");
+  });
+
+  it("falls back to SOP: <block_key> when content.title missing", () => {
+    const concept = emitSopConcept(
+      makeSop({ content: { objective: "Ziel.", steps: [] } }),
+      CTX,
+    );
+    expect(concept.frontmatter.title).toBe("SOP: f_prozesse");
+    expect(concept.frontmatter.description).toBe("Ziel.");
+  });
+
+  it("produces a deterministic path and parseable frontmatter", () => {
+    const concept = emitSopConcept(makeSop(), CTX);
+    expect(concept.path).toBe("f_prozesse/sop-onboarding-prozess-99998888.md");
+    const { content } = serializeConcept(concept);
+    expect(parseYaml(content.split("---\n")[1]).type).toBe("sop");
   });
 });
