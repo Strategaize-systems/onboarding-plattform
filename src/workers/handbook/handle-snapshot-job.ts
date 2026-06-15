@@ -18,6 +18,15 @@ import {
   loadBlockReviewState,
 } from "./block-review-filter";
 import { loadApprovedWalkthroughs } from "./load-walkthroughs";
+import {
+  buildOkfBundleOrNull,
+  isConfirmedDiagnosis,
+} from "../../lib/handbook/okf/build-bundle";
+import type {
+  DiagnosisInput,
+  KnowledgeUnitInput,
+  SopInput,
+} from "../../lib/handbook/okf/types";
 import type {
   DiagnosisRow,
   KnowledgeUnitRow,
@@ -94,7 +103,9 @@ export async function handleHandbookSnapshotJob(job: ClaimedJob): Promise<void> 
     // 5. Lade KUs (proposed/accepted/edited) der Quell-Session
     const { data: kuRows, error: kuErr } = await adminClient
       .from("knowledge_unit")
-      .select("id, block_key, source, unit_type, title, body, confidence, status")
+      .select(
+        "id, block_key, source, unit_type, title, body, confidence, status, evidence_refs, created_at, updated_at",
+      )
       .eq("capture_session_id", snapshot.capture_session_id)
       .in("status", ["proposed", "accepted", "edited"])
       .order("block_key");
@@ -112,6 +123,9 @@ export async function handleHandbookSnapshotJob(job: ClaimedJob): Promise<void> 
       body: r.body as string,
       confidence: r.confidence as string,
       status: r.status as string,
+      evidence_refs: (r.evidence_refs ?? null) as unknown[] | null,
+      created_at: (r.created_at ?? undefined) as string | undefined,
+      updated_at: (r.updated_at ?? undefined) as string | undefined,
     }));
 
     // 5b. SLC-041 V4.1 Pre-Filter — block_review-Status fuer Mitarbeiter-KUs anwenden.
@@ -133,7 +147,7 @@ export async function handleHandbookSnapshotJob(job: ClaimedJob): Promise<void> 
     // 6. Lade Diagnosen (alle Status — Filter passiert im Renderer per min_status)
     const { data: diagRows, error: diagErr } = await adminClient
       .from("block_diagnosis")
-      .select("id, block_key, content, status")
+      .select("id, block_key, content, status, updated_at")
       .eq("capture_session_id", snapshot.capture_session_id);
 
     if (diagErr) {
@@ -145,12 +159,13 @@ export async function handleHandbookSnapshotJob(job: ClaimedJob): Promise<void> 
       block_key: r.block_key as string,
       status: r.status as string,
       content: (r.content ?? {}) as DiagnosisRow["content"],
+      updated_at: (r.updated_at ?? undefined) as string | undefined,
     }));
 
     // 7. Lade SOPs
     const { data: sopRows, error: sopErr } = await adminClient
       .from("sop")
-      .select("id, block_key, content")
+      .select("id, block_key, content, updated_at")
       .eq("capture_session_id", snapshot.capture_session_id);
 
     if (sopErr) {
@@ -161,6 +176,7 @@ export async function handleHandbookSnapshotJob(job: ClaimedJob): Promise<void> 
       id: r.id as string,
       block_key: r.block_key as string,
       content: (r.content ?? {}) as SopRow["content"],
+      updated_at: (r.updated_at ?? undefined) as string | undefined,
     }));
 
     // 7b. SLC-091 V5.1 — Lade approved Walkthroughs (FEAT-038)
@@ -174,6 +190,7 @@ export async function handleHandbookSnapshotJob(job: ClaimedJob): Promise<void> 
     );
 
     // 8. Render
+    const generatedAt = new Date();
     const renderStart = Date.now();
     const rendered = renderHandbook({
       schema,
@@ -182,15 +199,70 @@ export async function handleHandbookSnapshotJob(job: ClaimedJob): Promise<void> 
       diagnoses,
       sops,
       walkthroughs,
-      generatedAt: new Date(),
+      generatedAt,
     });
     const renderMs = Date.now() - renderStart;
     console.log(
       `[handbook-job] Rendered ${rendered.counts.section_count} sections (kus=${rendered.counts.knowledge_unit_count}, diag=${rendered.counts.diagnosis_count}, sops=${rendered.counts.sop_count}, walkthroughs=${rendered.counts.walkthrough_count}) in ${renderMs}ms`,
     );
 
-    // 9. ZIP bauen
-    const zipResult = await buildHandbookZip({ files: rendered.files });
+    // 8b. V9.7 SLC-V9.7-B — OKF-Bundle (additiv, WEICHE Degradation, DEC-225).
+    // Quelle = DIESELBEN gefilterten Arrays wie der narrative Renderer:
+    // KU=block-review-gefiltert, Diagnosen=nur confirmed, SOPs=alle. Ein OKF-
+    // Fehler/Konformitaets-Verstoss laesst nur das okf/ weg — der Handbuch-
+    // Download bricht NIE. Worker-Kern bleibt OKF-agnostisch (ruft nur den
+    // isolierten Helper, AC-B-6).
+    const tenantId = snapshot.tenant_id as string;
+    const okfKnowledgeUnits: KnowledgeUnitInput[] = knowledgeUnits.map((r) => ({
+      id: r.id,
+      block_key: r.block_key,
+      unit_type: r.unit_type,
+      title: r.title,
+      body: r.body,
+      confidence: r.confidence,
+      status: r.status,
+      evidence_refs: r.evidence_refs ?? null,
+      updated_at: r.updated_at ?? "",
+    }));
+    const okfDiagnoses: DiagnosisInput[] = diagnoses
+      .filter(isConfirmedDiagnosis)
+      .map((r) => ({
+        id: r.id,
+        block_key: r.block_key,
+        status: r.status,
+        content: r.content,
+        updated_at: r.updated_at ?? "",
+      }));
+    const okfSops: SopInput[] = sops.map((r) => ({
+      id: r.id,
+      block_key: r.block_key,
+      content: r.content,
+      updated_at: r.updated_at ?? "",
+    }));
+
+    const okfBundle = buildOkfBundleOrNull(
+      { knowledgeUnits: okfKnowledgeUnits, diagnoses: okfDiagnoses, sops: okfSops },
+      {
+        tenantId,
+        tenantName: (tenantRow.name as string) ?? "",
+        generatedAt,
+        snapshotId: snapshot.id as string,
+      },
+      (okfErr) =>
+        captureException(okfErr, {
+          source: "handbook-job",
+          metadata: { snapshotId, action: "okf-emit" },
+        }),
+    );
+    console.log(
+      `[handbook-job] OKF bundle: ${okfBundle ? `${Object.keys(okfBundle).length} files` : "skipped (soft-degraded)"}`,
+    );
+
+    // 9. ZIP bauen (handbuch/ immer; okf/ nur wenn konform erzeugt)
+    const zipResult = await buildHandbookZip({
+      files: rendered.files,
+      ...(okfBundle ? { extraFolders: [{ root: "okf", files: okfBundle }] } : {}),
+    });
     const storagePath = `${snapshot.tenant_id}/${snapshot.id}.zip`;
     console.log(
       `[handbook-job] ZIP ready: ${zipResult.size} bytes, path=${storagePath}`,

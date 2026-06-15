@@ -48,6 +48,9 @@ export interface HandbookSchema {
 }
 
 // Lade-Datentypen fuer den Renderer-Eingang.
+// V9.7 SLC-V9.7-B: + evidence_refs / created_at / updated_at — generische
+// Row-Felder fuer den OKF-Emitter (KEINE OKF-Details hier). Optional, damit
+// bestehende Renderer-Konstruktoren/Fixtures unveraendert bleiben.
 export interface KnowledgeUnitRow {
   id: string;
   block_key: string;
@@ -57,6 +60,9 @@ export interface KnowledgeUnitRow {
   body: string;
   confidence: string;
   status: string;
+  evidence_refs?: unknown[] | null;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface DiagnosisSubtopic {
@@ -74,6 +80,8 @@ export interface DiagnosisRow {
     subtopics?: DiagnosisSubtopic[];
     [k: string]: unknown;
   };
+  // V9.7 SLC-V9.7-B: OKF timestamp (optional, generisch).
+  updated_at?: string;
 }
 
 // SOP-Step kann zwei Form-Varianten haben:
@@ -104,6 +112,8 @@ export interface SopRow {
     steps?: SopStep[];
     [k: string]: unknown;
   };
+  // V9.7 SLC-V9.7-B: OKF timestamp (optional, generisch).
+  updated_at?: string;
 }
 
 // V5.1 SLC-091 — Walkthrough-Source-Type fuer Handbuch-Snapshot-Renderer.
