@@ -13,6 +13,8 @@
 import { stringify as stringifyYaml } from "yaml";
 import { slugifyHeading } from "../slugify";
 import type {
+  DiagnosisInput,
+  DiagnosisSubtopicInput,
   KnowledgeUnitInput,
   OkfConcept,
   OkfConfidence,
@@ -165,5 +167,61 @@ export function emitKnowledgeUnitConcept(
     sourceTable: "knowledge_unit",
     sectionKey: row.block_key,
     path: `${row.block_key}/${conceptFilename(type, row.title, row.id)}`,
+  };
+}
+
+// --- MT-3: emitDiagnosisConcept ---
+
+function renderFieldValue(value: unknown): string {
+  if (value === null || value === undefined) {
+    return "";
+  }
+  return typeof value === "object" ? JSON.stringify(value) : String(value);
+}
+
+function renderDiagnosisBody(subtopics: DiagnosisSubtopicInput[]): string {
+  return subtopics
+    .map((subtopic) => {
+      const fields = subtopic.fields ?? {};
+      const lines = Object.entries(fields).map(
+        ([key, value]) => `- **${key}:** ${renderFieldValue(value)}`,
+      );
+      return [`## ${subtopic.name}`, "", ...lines].join("\n").trimEnd();
+    })
+    .join("\n\n");
+}
+
+/**
+ * `block_diagnosis`-Row -> EIN OkfConcept (DEC-222). Subtopics werden als
+ * `## <name>`-Subsections mit Feld-Bullet-Listen in den Body gerendert. Kein
+ * `confidence` (Spalte fehlt); `curation_status: accepted` (nur `confirmed`-
+ * Diagnosen werden vom Worker uebergeben, SLC-V9.7-B).
+ */
+export function emitDiagnosisConcept(
+  row: DiagnosisInput,
+  ctx: OkfEmitContext,
+): OkfConcept {
+  const blockKey = row.content.block_key ?? row.block_key;
+  const title = `Diagnose: ${blockKey}`;
+  const subtopics = row.content.subtopics ?? [];
+
+  const frontmatter: OkfFrontmatter = {
+    type: "diagnosis",
+    title,
+    timestamp: row.updated_at,
+    strategaize_source: "op",
+    strategaize_tenant: ctx.tenantId,
+    curation_status: "accepted",
+    strategaize_id: row.id,
+  };
+
+  return {
+    type: "diagnosis",
+    frontmatter,
+    body: renderDiagnosisBody(subtopics),
+    blockKey: row.block_key,
+    sourceTable: "block_diagnosis",
+    sectionKey: row.block_key,
+    path: `${row.block_key}/${conceptFilename("diagnosis", title, row.id)}`,
   };
 }

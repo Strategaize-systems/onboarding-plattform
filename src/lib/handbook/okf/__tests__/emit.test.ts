@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
 import {
   conceptFilename,
+  emitDiagnosisConcept,
   emitKnowledgeUnitConcept,
   firstSentence,
   mapConfidence,
@@ -16,6 +17,7 @@ import {
   serializeFrontmatter,
 } from "../emit";
 import type {
+  DiagnosisInput,
   KnowledgeUnitInput,
   OkfConcept,
   OkfEmitContext,
@@ -274,5 +276,81 @@ describe("emitKnowledgeUnitConcept", () => {
       CTX,
     );
     expect(concept.frontmatter.description).toBe("Zielgruppe ist B2B");
+  });
+});
+
+function makeDiagnosis(overrides: Partial<DiagnosisInput> = {}): DiagnosisInput {
+  return {
+    id: "aaaabbbb-cccc-dddd-eeee-ffff00001111",
+    block_key: "a_zielgruppe",
+    status: "confirmed",
+    updated_at: "2026-06-15T10:00:00Z",
+    content: {
+      block_key: "a_zielgruppe",
+      subtopics: [
+        {
+          key: "a1_zielgruppe",
+          name: "Zielgruppe",
+          fields: { segment: "B2B", region: "DACH" },
+        },
+        {
+          key: "a2_value_proposition",
+          name: "Value Proposition",
+          fields: { kern: "Zeitersparnis" },
+        },
+        { key: "a3_pricing", name: "Pricing", fields: {} },
+      ],
+    },
+    ...overrides,
+  };
+}
+
+describe("emitDiagnosisConcept", () => {
+  it("produces exactly one diagnosis concept per row (DEC-222)", () => {
+    const concept = emitDiagnosisConcept(makeDiagnosis(), CTX);
+    expect(concept.type).toBe("diagnosis");
+    expect(concept.sourceTable).toBe("block_diagnosis");
+    expect(concept.frontmatter).toEqual({
+      type: "diagnosis",
+      title: "Diagnose: a_zielgruppe",
+      timestamp: "2026-06-15T10:00:00Z",
+      strategaize_source: "op",
+      strategaize_tenant: "tenant-abc",
+      curation_status: "accepted",
+      strategaize_id: "aaaabbbb-cccc-dddd-eeee-ffff00001111",
+    });
+  });
+
+  it("has no confidence (column absent)", () => {
+    const concept = emitDiagnosisConcept(makeDiagnosis(), CTX);
+    expect(concept.frontmatter.confidence).toBeUndefined();
+  });
+
+  it("renders subtopics as ## subsections with field bullet lists", () => {
+    const concept = emitDiagnosisConcept(makeDiagnosis(), CTX);
+    expect(concept.body).toContain("## Zielgruppe");
+    expect(concept.body).toContain("- **segment:** B2B");
+    expect(concept.body).toContain("- **region:** DACH");
+    expect(concept.body).toContain("## Value Proposition");
+    expect(concept.body).toContain("- **kern:** Zeitersparnis");
+    expect(concept.body).toContain("## Pricing");
+  });
+
+  it("produces a parseable, deterministic path and frontmatter", () => {
+    const concept = emitDiagnosisConcept(makeDiagnosis(), CTX);
+    expect(concept.path).toBe(
+      "a_zielgruppe/diagnosis-diagnose-a_zielgruppe-aaaabbbb.md",
+    );
+    const { content } = serializeConcept(concept);
+    expect(parseYaml(content.split("---\n")[1]).type).toBe("diagnosis");
+  });
+
+  it("falls back to row.block_key when content.block_key missing and tolerates no subtopics", () => {
+    const concept = emitDiagnosisConcept(
+      makeDiagnosis({ content: {} }),
+      CTX,
+    );
+    expect(concept.frontmatter.title).toBe("Diagnose: a_zielgruppe");
+    expect(() => serializeConcept(concept)).not.toThrow();
   });
 });
