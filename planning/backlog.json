@@ -1619,6 +1619,16 @@
       "version": "V9.7",
       "description": "Setzt die FEAT-083-Concept-Dateien zu einem OKF-v0.1-konformen Bundle zusammen: Root-index.md (Frontmatter okf_version 0.1 + strategaize_okf_profile 1.0, OKF-Bullet-Form) + log.md (ein Eintrag pro Snapshot-Generierung) + Verzeichnisstruktur. Packaging ALONGSIDE: OKF-Ordner zusaetzlich zum bestehenden handbuch/-Ordner im selben Download-ZIP (das narrative Handbuch bleibt byte-unveraendert; selber-ZIP-vs-separater-Endpoint = Q-V9.7-A). Worker-Wiring additiv in handle-snapshot-job (Kern bleibt OKF-agnostisch). Konformitaets-Check (conformance.ts, TDD-RED zuerst) parst das erzeugte Bundle und prueft SC-V9.7-1..5 programmatisch; optionale Gegenprobe mit Googles okf/viz.html. Ist-Code: src/workers/handbook/{handle-snapshot-job,renderer,zip-builder,index-builder}.ts + src/app/api/handbook/[snapshotId]/download/route.ts. Drift-Absicherung via okf-spec-monitoring.md (Cron okf-spec-watch monatlich).",
       "createdAt": "2026-06-14"
+    },
+    {
+      "id": "BL-164",
+      "title": "SOP -> Agent-Skills-Export (SKILL.md-Bundle) — Prozedur-Standard (Anthropic), komplementaer zu OKF",
+      "type": "later",
+      "priority": "medium",
+      "status": "open",
+      "version": null,
+      "description": "Zweiter Output-Emitter analog zum OKF-Emitter (BL-162/163), aber fuer den Prozedur-/Know-how-Teil: serialisiert kuratierte SOPs (sop-Tabelle, steps action/responsible/timeframe) in Anthropic Agent-Skills-Bundles (SKILL.md + ggf. Ressourcen) nach Strategaize-Agent-Skills-Profil (Dev-System Rule strategaize-agent-skills-profile.md). Komplementaer: OKF = Wissen/Fakten (knowledge_unit/diagnosis), Agent Skills = Prozeduren/SOPs. Damit gibt OP Firmen-Wissen in Googles Format UND Firmen-Prozeduren in Anthropics Format aus (Capture-Frontend fuer beide offenen B2B-Standards). SCHRITT 0 (BLOCKING, Founder 2026-06-15): bestehende SOP-Generierungs-Vorgabe src/workers/sop/sop-prompt.ts ist ~4-5 Monate alt und MUSS zuerst auf Aktualitaet geprueft/aktualisiert werden (alle seither dazugekommenen Erkenntnisse; ggf. Skill-shaped verfeinert: Trigger/Pre-Checks/Inputs/Outputs/Done). Vorgabe getauscht -> SOP-Output aendert sich -> dann erst Emitter. Reine Serialisierung, KEIN DB-Umbau (sop-Tabelle vorhanden), Emitter isoliert (kein Skills-Detail in Business-Logik). Auslieferung: Agent-Skills-Ordner neben dem OKF-Wissens-Ordner im Handbuch-ZIP. Spaeter auch fuer Intelligence Studio relevant (knowledge_item + eigene Prozeduren, gleicher Profil-Standard, Port per Pattern-Reuse). Sequenzierung: NACH V9.7 OKF, Versionsnummer offen. Detail-Proposal: dev-system docs/AGENT_SKILLS_OP_SOP_EXPORT_BACKLOG.md.",
+      "createdAt": "2026-06-15"
     }
   ]
 }
