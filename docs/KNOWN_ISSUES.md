@@ -1,5 +1,14 @@
 # Known Issues
 
+### ISSUE-103 — V9.7 Worker-Crash-Loop nach Redeploy: `ERR_MODULE_NOT_FOUND 'yaml'` (yaml war devDependency)
+- Status: resolved
+- Severity: High
+- Area: Worker-Build/Runtime (scripts/build-worker.mjs esbuild `packages:external`) / package.json dependency-Klassifikation
+- Summary: Live entdeckt im /deploy V9.7 (2026-06-15). Nach dem ersten Coolify-Redeploy ging der `worker`-Container in eine Crash-Loop (`Restarting (1)`) mit `Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'yaml' imported from /app/worker.js`. Ursache: der V9.7-OKF-Code (`src/lib/handbook/okf/{emit,bundle,conformance}.ts`) importiert `yaml`, das aber in `devDependencies` stand. Der Worker-Build laesst npm-Pakete extern (`packages:"external"`), die Production-Worker-Runtime (`--omit=dev`) hatte `yaml` daher nicht. App + DB liefen sauber (Next.js bundelt yaml app-seitig). Die /architecture-Notiz „yaml bereits Dependency" war ungenau — es war dev-only.
+- Impact: Snapshot-Worker komplett down bis zum Fix (kein Job-Processing). Im Internal-Test-Mode ohne Customer-Impact; das narrative Handbuch waere bei laufendem alten Worker weiter erstellt worden, aber der neue Worker startete gar nicht.
+- Resolution: 2026-06-15. `yaml@^2.9.0` von `devDependencies` → `dependencies` verschoben (neben `archiver`, dem anderen externalisierten Worker-Dep), `npm install` (Lockfile: yaml jetzt prod), Commit `a8846ff`, Push, zweiter Redeploy. Verifikation: Worker `(healthy)`, RestartCount=0, registriert `handbook_snapshot_generation`; Live-Smoke-Snapshot `07bb9461` sauber verarbeitet (`OKF bundle: 38 files`).
+- Next Action: Cross-Repo-Pflicht — jedes npm-Paket, das von Worker-Code importiert wird, MUSS in `dependencies` (nicht devDependencies) stehen, weil der Worker-Build externalisiert. /architecture + /final-check muessen „dependency vs devDependency" fuer Worker-Imports verifizieren statt „ist im package.json" zu behaupten. Dev-System-IMP angelegt.
+
 ### ISSUE-102 — V9.1 Coolify Scheduled-Tasks scheitern mit `curl: not found` (3 Forward-Bucket-Crons ~21h dormant)
 - Status: resolved
 - Severity: High
