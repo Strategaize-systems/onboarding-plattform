@@ -66,6 +66,46 @@ describe("buildHandbookZip", () => {
     expect(result.buffer.length).toBeGreaterThan(0);
   });
 
+  it("packt extraFolders (okf/) zusaetzlich zu handbuch/ in EIN Archiv", async () => {
+    const result = await buildHandbookZip({
+      files: { "INDEX.md": "# Index", "01_section.md": "# Section" },
+      extraFolders: [
+        {
+          root: "okf",
+          files: {
+            "index.md": "# OKF",
+            "log.md": "# Log",
+            "a/finding-x-11112222.md": "---\ntype: finding\n---\n",
+          },
+        },
+      ],
+    });
+    const names = listZipFilenames(result.buffer);
+    // bestehende handbuch/-Pfade unveraendert vorhanden
+    expect(names).toContain("handbuch/INDEX.md");
+    expect(names).toContain("handbuch/01_section.md");
+    // okf/-Pfade zusaetzlich vorhanden
+    expect(names).toContain("okf/index.md");
+    expect(names).toContain("okf/log.md");
+    expect(names).toContain("okf/a/finding-x-11112222.md");
+    // fileCount = Summe ueber alle Folder-Sets
+    expect(result.fileCount).toBe(5);
+  });
+
+  it("ohne extraFolders byte-identisch zum reinen handbuch/-Aufruf", async () => {
+    const withoutExtra = await buildHandbookZip({
+      files: { "INDEX.md": "# Index" },
+    });
+    const withEmptyExtra = await buildHandbookZip({
+      files: { "INDEX.md": "# Index" },
+      extraFolders: [],
+    });
+    expect(listZipFilenames(withEmptyExtra.buffer)).toEqual(
+      listZipFilenames(withoutExtra.buffer),
+    );
+    expect(withEmptyExtra.fileCount).toBe(1);
+  });
+
   it("ist deterministisch fuer gleiche Eingabe (Filenames gleich)", async () => {
     const a = await buildHandbookZip({
       files: { "INDEX.md": "x", "01_a.md": "y" },
