@@ -237,5 +237,5 @@ V9.7-Scope (Requirements 2026-06-14 via RPT-469, basierend auf /discovery RPT-46
 
 | ID | Feature | Status | Spec | Created |
 |----|---------|--------|------|---------|
-| FEAT-083 | OKF Concept-Emitter (DB-Row → OKF-Concept-.md, type-Mapping + Frontmatter + Citations) | planned | [Spec](FEAT-083-okf-concept-emitter.md) | 2026-06-14 |
+| FEAT-083 | OKF Concept-Emitter (DB-Row → OKF-Concept-.md, type-Mapping + Frontmatter + Citations) | done | [Spec](FEAT-083-okf-concept-emitter.md) | 2026-06-14 |
 | FEAT-084 | OKF Bundle-Assembly + Konformitäts-Check (index.md/log.md, alongside Handbuch-ZIP) | planned | [Spec](FEAT-084-okf-bundle-assembly-conformance.md) | 2026-06-14 |

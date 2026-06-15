@@ -1605,7 +1605,7 @@
       "title": "V9.7 OKF Concept-Emitter — DB-Row -> OKF-Concept-.md (FEAT-083)",
       "type": "feature",
       "priority": "medium",
-      "status": "open",
+      "status": "done",
       "version": "V9.7",
       "description": "Isoliertes Emitter-Modul, das jede kuratierte Wissens-Row eines Handbuch-Snapshots fein-granular in EINE OKF-Concept-Datei (Markdown + YAML-Frontmatter) nach Strategaize-OKF-Profil 1.0 serialisiert. Type-Mapping: knowledge_unit.unit_type -> finding/risk/action/observation; sop -> sop; block_diagnosis -> diagnosis. Frontmatter Pflicht `type` + OKF-empfohlen (title/description/tags/timestamp) + Strategaize-Extension (strategaize_source=op/strategaize_tenant/confidence/curation_status/evidence_count/strategaize_id). confidence numerisch->enum nach Profil-Schwellen (<0.5 low/<0.8 medium/sonst high). `# Citations` aus evidence_refs. Cross-Links bundle-relativ-absolut. BLOCKING: keine OKF-Felddetails in Worker-Kern/Business-Logik (Profil-AC-7). Reine Serialisierung, KEIN DB-Umbau. Quellen = heute vom Snapshot-Worker geladen: knowledge_unit, block_diagnosis, sop (NICHT email_synthesized_unit). TDD: Unit-Tests je Concept-Typ RED zuerst. /architecture V9.7 entscheidet Q-V9.7-C (Naming/Ordner) + Q-V9.7-D (diagnosis pro Row vs Subtopic) + Q-V9.7-E (evidence_refs-Mapping).",
       "createdAt": "2026-06-14"

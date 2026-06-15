@@ -972,7 +972,7 @@ V9.7 = 2 Slices SLC-V9.7-A/B (version-anchored Naming). Isolierter OKF-Emitter (
 
 | ID | Slice | Feature | Status | Priority | Created |
 |----|-------|---------|--------|----------|---------|
-| SLC-V9.7-A | [OKF Concept-Emitter](SLC-V9.7-A-okf-concept-emitter.md) | FEAT-083 / BL-162 | planned | Medium | 2026-06-15 |
+| SLC-V9.7-A | [OKF Concept-Emitter](SLC-V9.7-A-okf-concept-emitter.md) | FEAT-083 / BL-162 | done | Medium | 2026-06-15 |
 | SLC-V9.7-B | [OKF Bundle-Assembly + Konformitaets-Check + Worker-Wiring](SLC-V9.7-B-okf-bundle-assembly.md) | FEAT-084 / BL-163 | planned | Medium | 2026-06-15 |
 
 ### V9.7 Execution Order (strikt sequentiell — Cumulative-Single-Branch `v9-7-okf-export`)
