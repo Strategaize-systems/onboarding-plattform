@@ -965,3 +965,30 @@ V9.5 = 4 Slices SLC-V9.5-A..D (version-anchored Naming). Additive Synthese-Stage
 | Soft-Pre-Cond: V9.1 /post-launch T+24h STABLE (Koordination, KEIN Code-Block) | — | Reihenfolge-Empfehlung: /post-launch V9.1 zuerst, dann V9.5-Implementation |
 | Exakte eu-Haiku-Modell-ID + Pricing verifizieren | SLC-V9.5-A MT-4 | im /backend gegen `claude-api`-Skill + Bedrock-eu-central-1-Verfuegbarkeit (R-A-1) |
 | Coolify-DB MIG-111-Apply (base64 → psql -U postgres) + LIVE-Schema-Inspect VOR CHECK/GENERATED-Rebuild | SLC-V9.5-B MT-1 | Agent fuehrt aus; R-B-1 BLOCKING (16-Werte-Status-CHECK live) |
+
+## V9.7 Slices (OKF Handbuch-Export — Concept-Emitter + Bundle-Assembly)
+
+V9.7 = 2 Slices SLC-V9.7-A/B (version-anchored Naming). Isolierter OKF-Emitter (`src/lib/handbook/okf/*`) serialisiert jede kuratierte Wissens-Row (`knowledge_unit`/`block_diagnosis`/`sop`) fein-granular in eine OKF-Concept-`.md` (Strategaize-OKF-Profil 1.0), assembliert sie zu einem OKF-v0.1-Bundle (`index.md` + `log.md` + Section-Ordner) und packt es **alongside** das unveraenderte narrative `handbuch/`-ZIP in EIN Download-ZIP. **0 DB-Migrationen, 0 neue Deps (yaml@^2.9.0 + archiver bereits da), 0 neue ENVs/Cron, 0 neue Tabellen.** Cumulative-Single-Branch-Worktree `v9-7-okf-export`, /qa pro Slice, **EIN** Master-Merge nach Gesamt-/qa (SLC-V9.7-B). Internal-Test-Mode, kein Customer-Outreach ([[module-lifecycle-discipline]]). Basis: ARCHITECTURE.md §"V9.7 Architecture Addendum" (DEC-220..225), /architecture RPT-471.
+
+| ID | Slice | Feature | Status | Priority | Created |
+|----|-------|---------|--------|----------|---------|
+| SLC-V9.7-A | [OKF Concept-Emitter](SLC-V9.7-A-okf-concept-emitter.md) | FEAT-083 / BL-162 | planned | Medium | 2026-06-15 |
+| SLC-V9.7-B | [OKF Bundle-Assembly + Konformitaets-Check + Worker-Wiring](SLC-V9.7-B-okf-bundle-assembly.md) | FEAT-084 / BL-163 | planned | Medium | 2026-06-15 |
+
+### V9.7 Execution Order (strikt sequentiell — Cumulative-Single-Branch `v9-7-okf-export`)
+- **SLC-V9.7-A zuerst** (Concept-Emitter: pure Functions je Concept-Typ, TDD-RED je Typ; enthaelt Worktree-Setup MT-0). Keine Migration, kein Worker-Touch.
+- **SLC-V9.7-B nach A** (Bundle-Assembly + Konformitaets-Check [TDD-RED zuerst] + Worker-Wiring + zip-builder Multi-Folder + Gesamt-/qa + Pre-Merge-Re-Check + Master-Merge).
+- Hard-Dependency A → B (B importiert A's `emit`). EIN Master-Merge `v9-7-okf-export` → `main` (--no-ff) in SLC-V9.7-B nach Gesamt-/qa PASS.
+
+### V9.7 Parallel-Execution-Tabelle
+
+| Slice | Parallel-Group | MIG Reserved | File-Touchpoints (Kern) | Notes |
+|---|---|---|---|---|
+| SLC-V9.7-A | S1 (seq) | keine | src/lib/handbook/okf/{types,emit}.ts + Tests | unabhaengig, zuerst; KEIN Worker-Touch |
+| SLC-V9.7-B | S1 (seq) | keine | src/lib/handbook/okf/{bundle,conformance}.ts + Tests, src/workers/handbook/{handle-snapshot-job,types,zip-builder}.ts | nach A; Master-Merge |
+
+### V9.7 Pre-Slice User-Pflichten
+
+| Pflicht | Blockiert | Aktion |
+|---|---|---|
+| Keine. 0 Migrationen, 0 neue Deps, 0 ENV/Cron — rein Code-Side + Worktree | — | /backend SLC-V9.7-A direkt startbar (Worktree-Setup = MT-0) |
