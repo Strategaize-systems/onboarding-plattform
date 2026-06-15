@@ -230,3 +230,12 @@ V9.5-Scope (Requirements-Baseline 2026-06-12 via RPT-453, basierend auf /discove
 | FEAT-080 | Cross-Thread-Synthese-Stage (dedup/merge/frequency-weight email_pattern → konsolidierte Kandidaten-Units) | deployed | [Spec](FEAT-080-cross-thread-synthese-stage.md) | 2026-06-12 |
 | FEAT-081 | Bounded Critic/Quality-Gate (Analyst↔Challenger-Prinzip, 1 Pass, Hard-Cost-Cap erhalten) | deployed | [Spec](FEAT-081-bounded-critic-gate.md) | 2026-06-12 |
 | FEAT-082 | Bedrock-Modell-Default-Cleanup eu-Sonnet-4 (ISSUE-100, 4 Files) | deployed | [Spec](FEAT-082-bedrock-model-default-cleanup.md) | 2026-06-12 |
+
+## V9.7 Features (OKF Handbuch-Export — Google Open Knowledge Format v0.1)
+
+V9.7-Scope (Requirements 2026-06-14 via RPT-469, basierend auf /discovery RPT-468). Status READY fuer /architecture V9.7. OP Unternehmenshandbuch-Generator OKF-konform machen nach Strategaize-OKF-Profil 1.0. Konvergierter Scope (3 Founder-Entscheidungen): fein-granular (1 OKF-.md pro Concept), ALONGSIDE dem bestehenden narrativen Handbuch-ZIP (nicht ersetzen), OHNE email_synthesized_unit (geparkt, V9.8=Tag-Vokabular). Isolierter Emitter, KEIN DB-Umbau (OKF = Export-Schicht, Postgres bleibt System-of-Record). Quellen: knowledge_unit/block_diagnosis/sop (heute vom Snapshot-Worker geladen). Grounding-Befund: Proposal-`handbook.json` existiert nicht; heutiges Bundle = 1 .md/Sektion -> fein-granular ist Restrukturierung (~2 Slices). Detail-/Schnittentscheidungen (Q-V9.7-A..E) in /architecture V9.7.
+
+| ID | Feature | Status | Spec | Created |
+|----|---------|--------|------|---------|
+| FEAT-083 | OKF Concept-Emitter (DB-Row → OKF-Concept-.md, type-Mapping + Frontmatter + Citations) | planned | [Spec](FEAT-083-okf-concept-emitter.md) | 2026-06-14 |
+| FEAT-084 | OKF Bundle-Assembly + Konformitäts-Check (index.md/log.md, alongside Handbuch-ZIP) | planned | [Spec](FEAT-084-okf-bundle-assembly-conformance.md) | 2026-06-14 |

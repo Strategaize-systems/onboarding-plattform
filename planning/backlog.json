@@ -1599,6 +1599,26 @@
       "version": "V9.8",
       "description": "Zwei verbundene Luecken im V9.x Bulk-Import-Wissenssystem, entdeckt im V9.5 /deploy-Smoke 2026-06-14. (1) Export-Gap: email_synthesized_unit.themes werden beim Handbook-Import NICHT in knowledge_unit uebernommen (handbook-import.ts mappt nur title+description+source-attribution+curated_section). Tags muessen mit-exportiert werden, sonst sind sie fuer spaetere Suche/Downstream-Wissenssysteme wertlos. (2) LLM-Wildwuchs: Themes (und der LLM-suggested_section) werden pro Lauf FREI generiert; das LLM sieht KEINE Liste bereits vergebener Tags -> Synonym-Varianten (antwortzeit vs reaktionszeit vs antwort-geschwindigkeit) fragmentieren das Wissen ungebremst. Anforderung (Founder 2026-06-14): kontrolliertes, pro-Tenant wachsendes Tag-Vokabular. Beim Neuvergeben prueft das LLM zuerst die bestehende Liste auf einen passenden Tag und haengt daran an; nur wenn nichts passt, wird ein neues Tag entschieden. Hauptkategorien = Sections (bereits ueber template.handbook_schema kontrolliert, beim manuellen Kuratieren gesnappt); darunter haengende Tags duerfen leicht variieren, aber nicht stark. Ziel: Findbarkeit im Handbuch — Mitarbeiter/neuer Chef muessen Wissen ueber Suche finden, nicht verfehlen weil ein Tag nicht exakt passt (Kern des Produktnutzens). Nicht ueberdesignen, aber das LLM aktiv kontrollieren. Loesungs-Kandidaten: (a) Vokabular-Injektion bestehender Tenant-Tags/Sections in Extraktions- + Synthese-Prompt (use-existing-where-fits, only-add-if-novel); (b) Embedding-Normalisierung synonymer Themes via Titan/pgvector (Stack vorhanden). Betroffen: email-pattern-prompt.ts, email-synthesis-prompt.ts, handbook-import.ts (themes->knowledge_unit), evtl. neue tenant_tag-Vokabular-Tabelle. Kein V9.5-Deploy-Blocker.",
       "createdAt": "2026-06-14"
+    },
+    {
+      "id": "BL-162",
+      "title": "V9.7 OKF Concept-Emitter — DB-Row -> OKF-Concept-.md (FEAT-083)",
+      "type": "feature",
+      "priority": "medium",
+      "status": "open",
+      "version": "V9.7",
+      "description": "Isoliertes Emitter-Modul, das jede kuratierte Wissens-Row eines Handbuch-Snapshots fein-granular in EINE OKF-Concept-Datei (Markdown + YAML-Frontmatter) nach Strategaize-OKF-Profil 1.0 serialisiert. Type-Mapping: knowledge_unit.unit_type -> finding/risk/action/observation; sop -> sop; block_diagnosis -> diagnosis. Frontmatter Pflicht `type` + OKF-empfohlen (title/description/tags/timestamp) + Strategaize-Extension (strategaize_source=op/strategaize_tenant/confidence/curation_status/evidence_count/strategaize_id). confidence numerisch->enum nach Profil-Schwellen (<0.5 low/<0.8 medium/sonst high). `# Citations` aus evidence_refs. Cross-Links bundle-relativ-absolut. BLOCKING: keine OKF-Felddetails in Worker-Kern/Business-Logik (Profil-AC-7). Reine Serialisierung, KEIN DB-Umbau. Quellen = heute vom Snapshot-Worker geladen: knowledge_unit, block_diagnosis, sop (NICHT email_synthesized_unit). TDD: Unit-Tests je Concept-Typ RED zuerst. /architecture V9.7 entscheidet Q-V9.7-C (Naming/Ordner) + Q-V9.7-D (diagnosis pro Row vs Subtopic) + Q-V9.7-E (evidence_refs-Mapping).",
+      "createdAt": "2026-06-14"
+    },
+    {
+      "id": "BL-163",
+      "title": "V9.7 OKF Bundle-Assembly + Konformitaets-Check (alongside Handbuch-ZIP) (FEAT-084)",
+      "type": "feature",
+      "priority": "medium",
+      "status": "open",
+      "version": "V9.7",
+      "description": "Setzt die FEAT-083-Concept-Dateien zu einem OKF-v0.1-konformen Bundle zusammen: Root-index.md (Frontmatter okf_version 0.1 + strategaize_okf_profile 1.0, OKF-Bullet-Form) + log.md (ein Eintrag pro Snapshot-Generierung) + Verzeichnisstruktur. Packaging ALONGSIDE: OKF-Ordner zusaetzlich zum bestehenden handbuch/-Ordner im selben Download-ZIP (das narrative Handbuch bleibt byte-unveraendert; selber-ZIP-vs-separater-Endpoint = Q-V9.7-A). Worker-Wiring additiv in handle-snapshot-job (Kern bleibt OKF-agnostisch). Konformitaets-Check (conformance.ts, TDD-RED zuerst) parst das erzeugte Bundle und prueft SC-V9.7-1..5 programmatisch; optionale Gegenprobe mit Googles okf/viz.html. Ist-Code: src/workers/handbook/{handle-snapshot-job,renderer,zip-builder,index-builder}.ts + src/app/api/handbook/[snapshotId]/download/route.ts. Drift-Absicherung via okf-spec-monitoring.md (Cron okf-spec-watch monatlich).",
+      "createdAt": "2026-06-14"
     }
   ]
 }
