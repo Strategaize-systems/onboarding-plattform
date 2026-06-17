@@ -30,6 +30,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { assertSessionTierAllows } from "@/lib/auth/assert-session-tier";
 import { captureInfo, captureWarning } from "@/lib/logger";
 
 import {
@@ -90,6 +91,7 @@ interface BulkRunRow {
   status: string;
   email_count: number | null;
   created_at: string;
+  capture_session_id: string | null;
 }
 
 export interface PipelineTriggerDeps {
@@ -141,7 +143,7 @@ export async function runPipelineTrigger(
 
   const { data, error } = await adminClient
     .from("email_bulk_run")
-    .select("id, tenant_id, status, email_count, created_at")
+    .select("id, tenant_id, status, email_count, created_at, capture_session_id")
     .eq("inbound_source", "forward_bucket")
     .in("status", PIPELINE_ACTIVE_STATUSES as unknown as string[]);
   if (error) {
@@ -183,7 +185,7 @@ export async function runPipelineTrigger(
         continue;
       }
       await updateStatus(adminClient, run.id, "parsed", now);
-      await enqueue(adminClient, run.tenant_id, JOB_PRE_FILTER, run.id);
+      await enqueue(adminClient, run.tenant_id, JOB_PRE_FILTER, run.id, run.capture_session_id);
       summary.runs_triggered += 1;
       continue;
     }
@@ -191,7 +193,7 @@ export async function runPipelineTrigger(
     if (run.status === "pre_filtered") {
       // Naechste Stage: Thread-Redact (Worker erwartet 'pre_filtered',
       // flippt selbst auf thread_redacting). Kein Status-Set noetig.
-      await enqueue(adminClient, run.tenant_id, JOB_THREAD_REDACT, run.id);
+      await enqueue(adminClient, run.tenant_id, JOB_THREAD_REDACT, run.id, run.capture_session_id);
       summary.runs_advanced += 1;
       continue;
     }
@@ -213,7 +215,7 @@ export async function runPipelineTrigger(
       // Pattern-Extract-Worker erwartet 'pattern_extracting' (Caller-gesetzt).
       // Die Per-Email-Approval-Schicht (MT-3) sitzt im Worker vor dem Sonnet-Call.
       await updateStatus(adminClient, run.id, "pattern_extracting", now);
-      await enqueue(adminClient, run.tenant_id, JOB_PATTERN_EXTRACT, run.id);
+      await enqueue(adminClient, run.tenant_id, JOB_PATTERN_EXTRACT, run.id, run.capture_session_id);
       summary.runs_advanced += 1;
       continue;
     }
@@ -257,12 +259,29 @@ async function enqueue(
   tenantId: string,
   jobType: string,
   bulkRunId: string,
+  captureSessionId: string | null,
 ): Promise<void> {
+  // V9.75 Tier-Gate (Schicht 1) + session_tier-Stempel. Forward-Bucket-Runs sind
+  // ueblicherweise session-los (capture_session_id NULL) -> per-Session-Gate nicht
+  // anwendbar (autonome V9.1-Continuous-Pipeline), session_tier bleibt NULL. Ist
+  // der Run an eine Session gebunden, greift das handbook-Gate (ARCHITECTURE §4).
+  let sessionTier: string | null = null;
+  if (captureSessionId) {
+    const gate = await assertSessionTierAllows(admin, captureSessionId, jobType);
+    if (!gate.allowed) {
+      throw new Error(
+        `pipeline-trigger: tier_gate_denied (${jobType}) for bulk_run ${bulkRunId} (session ${captureSessionId})`,
+      );
+    }
+    sessionTier = gate.tier;
+  }
+
   const { error } = await admin.from("ai_jobs").insert({
     tenant_id: tenantId,
     job_type: jobType,
     status: "pending",
     payload: { bulk_run_id: bulkRunId },
+    session_tier: sessionTier,
   });
   if (error) {
     throw new Error(

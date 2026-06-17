@@ -30,6 +30,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { assertSessionTierAllows } from "@/lib/auth/assert-session-tier";
 import { computeFileHash } from "@/lib/bulk-email/file-hash";
 import {
   STORAGE_BUCKET,
@@ -258,11 +259,36 @@ export async function uploadBulkEmailRun(
 
   const bulkRunId = bulkRun.id as string;
 
+  // V9.75 Tier-Gate (Schicht 1) — email_bulk_* verlangt >= handbook. Nur wenn der
+  // Run an eine capture_session gebunden ist (session-loser Forward-Bucket-Pfad
+  // ist nicht per-Session-gegated, DEC: ARCHITECTURE §4 + MT-3). Bei Verstoss:
+  // Rollback analog zum Job-Enqueue-Fehlerpfad (Run + Storage + Session loeschen).
+  let sessionTier: string | null = null;
+  if (captureSessionId) {
+    const gate = await assertSessionTierAllows(
+      admin,
+      captureSessionId,
+      JOB_TYPE_EMAIL_BULK_PARSE
+    );
+    if (!gate.allowed) {
+      await admin.from("email_bulk_run").delete().eq("id", bulkRunId);
+      await admin.storage.from(STORAGE_BUCKET).remove([storagePath]);
+      await admin.from("capture_session").delete().eq("id", captureSessionId);
+      return {
+        ok: false,
+        error:
+          "Bulk-E-Mail-Import ist fuer die aktuelle Stufe nicht freigeschaltet (tier_gate_denied)",
+      };
+    }
+    sessionTier = gate.tier;
+  }
+
   const { error: jobError } = await admin.from("ai_jobs").insert({
     tenant_id: uploader.tenantId,
     job_type: JOB_TYPE_EMAIL_BULK_PARSE,
     status: "pending",
     payload: { bulk_run_id: bulkRunId },
+    session_tier: sessionTier,
   });
   if (jobError) {
     await admin.from("email_bulk_run").delete().eq("id", bulkRunId);
