@@ -31,6 +31,8 @@
 --   --   \i sql/migrations/047_rpc_orchestrator_and_gaps.sql
 --   --   \i sql/migrations/074_rpc_handbook.sql
 --   --   \i sql/migrations/035_ai_queue_rpcs_and_logging.sql  -- (claim-RPC ohne session_tier)
+--   DROP TRIGGER IF EXISTS ai_jobs_session_tier_insert_guard ON ai_jobs;
+--   DROP FUNCTION IF EXISTS ai_jobs_session_tier_insert_guard();
 --   DROP TRIGGER IF EXISTS capture_session_tier_change_guard ON capture_session;
 --   DROP FUNCTION IF EXISTS capture_session_tier_change_guard();
 --   DROP FUNCTION IF EXISTS fn_session_tier_allows(uuid, text);
@@ -187,6 +189,46 @@ CREATE TRIGGER capture_session_tier_change_guard
   BEFORE UPDATE ON public.capture_session
   FOR EACH ROW
   EXECUTE FUNCTION public.capture_session_tier_change_guard();
+
+-- ============================================================
+-- 3b. Anti-Forge-Schutz auf ai_jobs.session_tier (Worker-Defense-Integritaet)
+-- ============================================================
+-- session_tier ist ein VERTRAUENS-Stempel, auf den die Worker-Defense (Schicht 2,
+-- §5 + claim-loop.ts) bei NICHT-NULL-Wert vertraut. Die defense-in-depth-Policy
+-- `ai_jobs_tenant_admin_insert` (031) erlaubt einem tenant_admin aber einen
+-- direkten PostgREST-INSERT in ai_jobs — und die Policy-WITH-CHECK beschraenkt nur
+-- role+tenant_id, NICHT session_tier. Ohne diesen Guard koennte ein blueprint/free-
+-- Mandant per direktem INSERT einen gated Job mit GEFORGTEM session_tier='handbook'
+-- anlegen und damit die Worker-Defense aushebeln (ISSUE-097-Restloch).
+--
+-- Fix: jeder INSERT durch einen anderen Schreiber als service_role/postgres bekommt
+-- session_tier ZWANGS-genullt. Damit landet ein direkter INSERT IMMER mit NULL-
+-- Stempel -> der Worker loest die echte Session aus dem Payload auf und faellt
+-- fail-closed (AC-A-3). Legitime Stempel bleiben unangetastet:
+--   - Dispatch-RPCs (032/047/074) laufen SECURITY DEFINER als Owner -> current_user='postgres' -> ALLOW
+--   - Worker + TS-Dispatch nutzen createAdminClient (service_role)    -> current_user='service_role' -> ALLOW
+--   - direkter tenant_admin-INSERT (PostgREST)                        -> current_user='authenticated' -> session_tier := NULL
+-- Reuse current_user-Guard-Pattern (BS V8.14 profiles.role, strategaize-pattern-reuse.md).
+
+CREATE OR REPLACE FUNCTION public.ai_jobs_session_tier_insert_guard()
+  RETURNS TRIGGER
+  LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF NEW.session_tier IS NOT NULL
+     AND current_user NOT IN ('service_role', 'postgres') THEN
+    NEW.session_tier := NULL;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS ai_jobs_session_tier_insert_guard ON public.ai_jobs;
+
+CREATE TRIGGER ai_jobs_session_tier_insert_guard
+  BEFORE INSERT ON public.ai_jobs
+  FOR EACH ROW
+  EXECUTE FUNCTION public.ai_jobs_session_tier_insert_guard();
 
 -- ============================================================
 -- 4. Dispatch-RPC-Guards (MT-2): Tier-Gate + session_tier-Stempel
