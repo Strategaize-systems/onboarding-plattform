@@ -156,6 +156,45 @@ describe("evaluateWorkerTierGate (V9.75 Worker-Defense)", () => {
     expect(from).toHaveBeenCalledWith("block_checkpoint");
   });
 
+  // ── ISSUE-105-Regression: bridge_run_id / dialogue_session_id Backstop-Resolve ──
+  it("NULL-Stempel, bridge_run_id im Payload -> Session via bridge_run aufgeloest + geprueft", async () => {
+    const { client, from } = makeClient({
+      rpc: {
+        fn_tier_allows: { data: false, error: null }, // NULL-Stempel faellt durch
+        fn_session_tier_allows: { data: true, error: null },
+      },
+      tables: {
+        bridge_run: { data: { capture_session_id: "sess-br" }, error: null },
+      },
+    });
+    const ok = await evaluateWorkerTierGate(client, {
+      job_type: "bridge_generation",
+      session_tier: null,
+      payload: { bridge_run_id: "br-1" },
+    });
+    expect(ok).toBe(true);
+    expect(from).toHaveBeenCalledWith("bridge_run");
+  });
+
+  it("NULL-Stempel, dialogue_session_id im Payload, Session unter Stufe -> denied", async () => {
+    const { client, from } = makeClient({
+      rpc: {
+        fn_tier_allows: { data: false, error: null },
+        fn_session_tier_allows: { data: false, error: null },
+      },
+      tables: {
+        dialogue_session: { data: { capture_session_id: "sess-ds" }, error: null },
+      },
+    });
+    const ok = await evaluateWorkerTierGate(client, {
+      job_type: "dialogue_extraction",
+      session_tier: null,
+      payload: { dialogue_session_id: "ds-1" },
+    });
+    expect(ok).toBe(false);
+    expect(from).toHaveBeenCalledWith("dialogue_session");
+  });
+
   it("NULL-Stempel, gated non-bulk Job ohne aufloesbaren Payload -> fail-closed", async () => {
     const { client } = makeClient({
       rpc: { fn_tier_allows: { data: false, error: null } },

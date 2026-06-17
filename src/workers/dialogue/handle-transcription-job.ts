@@ -128,6 +128,11 @@ export async function handleTranscriptionJob(job: ClaimedJob): Promise<void> {
   console.log(`[dialogue-transcription] Status → processing`);
 
   // 7. Enqueue dialogue_extraction job (SLC-031)
+  // V9.75 (Fix ISSUE-105): Folge-Pipeline-Job erbt den session_tier-Stempel des
+  // Eltern-Jobs (dialogue_transcription wurde am Dispatch in recording-ready/route
+  // gegated + gestempelt). Ohne Vererbung haette der Worker den dialogue_extraction-
+  // Job fail-closed getoetet (NULL-Stempel + Payload {dialogue_session_id} nicht
+  // aufloesbar). Die Worker-Defense re-prueft den geerbten Stempel.
   const { error: enqueueError } = await adminClient.from("ai_jobs").insert({
     tenant_id: job.tenant_id,
     job_type: "dialogue_extraction",
@@ -135,6 +140,7 @@ export async function handleTranscriptionJob(job: ClaimedJob): Promise<void> {
       dialogue_session_id,
     },
     status: "pending",
+    session_tier: job.session_tier ?? null,
   });
 
   if (enqueueError) {

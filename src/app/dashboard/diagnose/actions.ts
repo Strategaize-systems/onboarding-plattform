@@ -24,6 +24,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { assertSessionTierAllows } from "@/lib/auth/assert-session-tier";
 import {
   runV8MandantenReportPipeline,
   type V8PipelineResult,
@@ -291,6 +292,23 @@ export async function submitDiagnoseRun(
     return { error: "Keine Antworten erfasst" };
   }
 
+  // V9.75 Tier-Gate (Schicht 1) — knowledge_unit_condensation verlangt >= blueprint.
+  // VOR dem Status-Submit pruefen, damit bei Ablehnung kein Halb-Zustand
+  // (status='submitted' ohne Job) entsteht. Fix ISSUE-105: dieser Dispatch-Pfad
+  // (neben rpc_create_block_checkpoint) war ungated; der Worker re-gatet zwar via
+  // payload.capture_session_id, aber der Dispatch-Gate fehlte (AC-A-2).
+  const gate = await assertSessionTierAllows(
+    admin,
+    sessionId,
+    "knowledge_unit_condensation"
+  );
+  if (!gate.allowed) {
+    return {
+      error:
+        "Diagnose-Verdichtung ist fuer die aktuelle Stufe nicht freigeschaltet (tier_gate_denied)",
+    };
+  }
+
   const { error: updateError } = await admin
     .from("capture_session")
     .update({ status: "submitted", updated_at: new Date().toISOString() })
@@ -309,6 +327,7 @@ export async function submitDiagnoseRun(
         capture_session_id: sessionId,
         source_kind: "diagnose",
       },
+      session_tier: gate.tier,
     })
     .select("id")
     .single();

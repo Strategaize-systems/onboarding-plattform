@@ -519,6 +519,56 @@ describe("Migration 121 — rpc_trigger_handbook_snapshot Tier-Gate (handbook_sn
   });
 });
 
+describe("Migration 121 — rpc_trigger_bridge_run Tier-Gate (bridge_generation) [Fix ISSUE-105]", () => {
+  it("free-Session wird mit tier_gate_denied abgelehnt; kein bridge_run/Job", async () => {
+    await withTestDb(async (client) => {
+      await applyMigration121(client);
+      const { userId, sessionId, tenantId } = await seedSession(client, "free");
+
+      let errMessage: string | null = null;
+      await withJwtContext(client, userId, async () => {
+        await client.query("SAVEPOINT try_br");
+        try {
+          await client.query(`SELECT rpc_trigger_bridge_run($1)`, [sessionId]);
+        } catch (e) {
+          errMessage = (e as Error).message;
+        }
+        await client.query("ROLLBACK TO SAVEPOINT try_br");
+      });
+      expect(errMessage).toMatch(/tier_gate_denied/);
+
+      const run = await client.query(
+        `SELECT 1 FROM bridge_run WHERE capture_session_id=$1`, [sessionId]);
+      expect(run.rowCount).toBe(0);
+      const job = await client.query(
+        `SELECT 1 FROM ai_jobs WHERE tenant_id=$1 AND job_type='bridge_generation'`,
+        [tenantId]);
+      expect(job.rowCount).toBe(0);
+    });
+  });
+
+  it("blueprint-Session erlaubt; ai_job traegt session_tier='blueprint'", async () => {
+    await withTestDb(async (client) => {
+      await applyMigration121(client);
+      const { userId, sessionId, tenantId } = await seedSession(client, "blueprint");
+
+      let bridgeRunId: string | null = null;
+      await withJwtContext(client, userId, async () => {
+        const r = await client.query<{ result: { bridge_run_id: string | null; error?: string } }>(
+          `SELECT rpc_trigger_bridge_run($1) AS result`, [sessionId]);
+        bridgeRunId = r.rows[0]!.result.bridge_run_id;
+      });
+      expect(bridgeRunId).not.toBeNull();
+
+      const job = await client.query<{ session_tier: string }>(
+        `SELECT session_tier FROM ai_jobs
+          WHERE tenant_id=$1 AND job_type='bridge_generation'`, [tenantId]);
+      expect(job.rowCount).toBe(1);
+      expect(job.rows[0]!.session_tier).toBe("blueprint");
+    });
+  });
+});
+
 // ============================================================================
 // AC-A-4 — Claim-RPC liefert session_tier-Stempel (Worker-Defense, MT-4)
 //   rpc_claim_next_ai_job_for_type gibt den denormalisierten Stempel zurueck,

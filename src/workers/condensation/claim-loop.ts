@@ -43,6 +43,13 @@ type GateResolution =
  *                   (NULL = session-loser Forward-Bucket-Run -> "session-less")
  *  - payload.capture_session_id (direkt)
  *  - payload.block_checkpoint_id -> block_checkpoint.capture_session_id
+ *  - payload.bridge_run_id       -> bridge_run.capture_session_id
+ *  - payload.dialogue_session_id -> dialogue_session.capture_session_id
+ *
+ * Die bridge_run_id-/dialogue_session_id-Pfade haerten die Schicht-2-Defense gegen
+ * einen ungestempelten Dispatch (ISSUE-105, RPT-484): die Dispatch-Sites stempeln
+ * den Tier jetzt zwar selbst (Schicht 1), aber der Backstop loest die echte Session
+ * auch ohne Stempel auf, statt blind fail-closed zu toeten.
  */
 async function resolveSessionForGate(
   client: SupabaseClient,
@@ -76,6 +83,28 @@ async function resolveSessionForGate(
       .from("block_checkpoint")
       .select("capture_session_id")
       .eq("id", payload.block_checkpoint_id)
+      .maybeSingle();
+    if (error || !data || !data.capture_session_id) return { kind: "unresolved" };
+    return { kind: "session", sessionId: data.capture_session_id as string };
+  }
+
+  // bridge_run_id -> capture_session_id (bridge_generation).
+  if (typeof payload.bridge_run_id === "string") {
+    const { data, error } = await client
+      .from("bridge_run")
+      .select("capture_session_id")
+      .eq("id", payload.bridge_run_id)
+      .maybeSingle();
+    if (error || !data || !data.capture_session_id) return { kind: "unresolved" };
+    return { kind: "session", sessionId: data.capture_session_id as string };
+  }
+
+  // dialogue_session_id -> capture_session_id (dialogue_extraction).
+  if (typeof payload.dialogue_session_id === "string") {
+    const { data, error } = await client
+      .from("dialogue_session")
+      .select("capture_session_id")
+      .eq("id", payload.dialogue_session_id)
       .maybeSingle();
     if (error || !data || !data.capture_session_id) return { kind: "unresolved" };
     return { kind: "session", sessionId: data.capture_session_id as string };

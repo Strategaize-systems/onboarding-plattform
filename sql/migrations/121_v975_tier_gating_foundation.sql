@@ -30,6 +30,7 @@
 --   --   \i sql/migrations/032_rpc_create_block_checkpoint.sql
 --   --   \i sql/migrations/047_rpc_orchestrator_and_gaps.sql
 --   --   \i sql/migrations/074_rpc_handbook.sql
+--   --   \i sql/migrations/073_rpc_bridge.sql                  -- (rpc_trigger_bridge_run ohne Gate/Stempel)
 --   --   \i sql/migrations/035_ai_queue_rpcs_and_logging.sql  -- (claim-RPC ohne session_tier)
 --   DROP TRIGGER IF EXISTS ai_jobs_session_tier_insert_guard ON ai_jobs;
 --   DROP FUNCTION IF EXISTS ai_jobs_session_tier_insert_guard();
@@ -247,6 +248,7 @@ CREATE TRIGGER ai_jobs_session_tier_insert_guard
 --   rpc_create_block_checkpoint   (032) -> knowledge_unit_condensation  [blueprint]
 --   rpc_enqueue_recondense_job    (047) -> recondense_with_gaps         [blueprint]
 --   rpc_trigger_handbook_snapshot (074) -> handbook_snapshot_generation [handbook]
+--   rpc_trigger_bridge_run        (073) -> bridge_generation            [blueprint]  (Fix ISSUE-105)
 --
 -- Die Claim-RPC-Erweiterung (035, session_tier im Return) folgt in MT-4.
 
@@ -507,6 +509,115 @@ $$;
 
 GRANT EXECUTE ON FUNCTION public.rpc_trigger_handbook_snapshot(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.rpc_trigger_handbook_snapshot(uuid) TO service_role;
+
+-- ---- (073) rpc_trigger_bridge_run -------------------------------------------
+-- Quelle: sql/migrations/073_rpc_bridge.sql (nur diese RPC).
+-- Fix ISSUE-105 (RPT-484): bridge_generation [blueprint] wurde am Dispatch weder
+-- gegated noch gestempelt -> die Worker-Defense (§5) toetete jeden bridge-Job
+-- fail-closed (NULL-Stempel + Payload {bridge_run_id} ist nicht aufloesbar).
+-- Hier: Tier-Gate vor jeder Mutation (atomarer Rollback bei Verstoss) +
+-- session_tier-Stempel auf den ai_job (analog 032/047/074).
+CREATE OR REPLACE FUNCTION public.rpc_trigger_bridge_run(
+  p_capture_session_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, auth
+AS $$
+DECLARE
+  v_caller_role    text;
+  v_caller_tenant  uuid;
+  v_caller_id      uuid;
+  v_session        public.capture_session%ROWTYPE;
+  v_bridge_run_id  uuid;
+  v_checkpoints    uuid[];
+BEGIN
+  v_caller_id     := auth.uid();
+  v_caller_role   := auth.user_role();
+  v_caller_tenant := auth.user_tenant_id();
+
+  IF v_caller_id IS NULL THEN
+    RETURN jsonb_build_object('error', 'unauthenticated');
+  END IF;
+
+  IF v_caller_role NOT IN ('tenant_admin', 'strategaize_admin') THEN
+    RETURN jsonb_build_object('error', 'forbidden');
+  END IF;
+
+  IF p_capture_session_id IS NULL THEN
+    RETURN jsonb_build_object('error', 'capture_session_id_required');
+  END IF;
+
+  SELECT * INTO v_session
+    FROM public.capture_session
+   WHERE id = p_capture_session_id;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('error', 'capture_session_not_found');
+  END IF;
+
+  -- Cross-Tenant-Schutz fuer tenant_admin
+  IF v_caller_role = 'tenant_admin' AND v_session.tenant_id <> v_caller_tenant THEN
+    RETURN jsonb_build_object('error', 'forbidden');
+  END IF;
+
+  -- V9.75 Tier-Gate (Stufe blueprint). Verstoss = harter Fehler -> atomarer
+  -- Rollback, weder bridge_run- noch ai_jobs-Row bleibt liegen.
+  IF NOT public.fn_tier_allows(v_session.tier, 'bridge_generation') THEN
+    RAISE EXCEPTION 'tier_gate_denied: bridge_generation requires min tier %, session tier is %',
+      public.fn_min_tier_for_job('bridge_generation'), v_session.tier
+      USING ERRCODE = 'insufficient_privilege';
+  END IF;
+
+  -- Sammle aktuelle submitted/finalized Checkpoints (questionnaire_submit oder meeting_final)
+  SELECT COALESCE(array_agg(bc.id ORDER BY bc.created_at), '{}'::uuid[])
+    INTO v_checkpoints
+    FROM public.block_checkpoint bc
+   WHERE bc.capture_session_id = p_capture_session_id
+     AND bc.checkpoint_type IN ('questionnaire_submit', 'meeting_final');
+
+  -- INSERT bridge_run
+  INSERT INTO public.bridge_run (
+    tenant_id,
+    capture_session_id,
+    template_id,
+    template_version,
+    status,
+    triggered_by_user_id,
+    source_checkpoint_ids
+  ) VALUES (
+    v_session.tenant_id,
+    p_capture_session_id,
+    v_session.template_id,
+    v_session.template_version,
+    'running',
+    v_caller_id,
+    v_checkpoints
+  )
+  RETURNING id INTO v_bridge_run_id;
+
+  -- INSERT ai_jobs (Worker pickt via claim-loop) mit session_tier-Stempel
+  INSERT INTO public.ai_jobs (
+    tenant_id,
+    job_type,
+    payload,
+    status,
+    session_tier
+  ) VALUES (
+    v_session.tenant_id,
+    'bridge_generation',
+    jsonb_build_object('bridge_run_id', v_bridge_run_id),
+    'pending',
+    v_session.tier
+  );
+
+  RETURN jsonb_build_object('bridge_run_id', v_bridge_run_id);
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.rpc_trigger_bridge_run(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.rpc_trigger_bridge_run(uuid) TO service_role;
 
 -- ============================================================
 -- 5. Worker-Defense-Stempel im Claim-Return (MT-4, DEC-221)
