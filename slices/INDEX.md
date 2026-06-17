@@ -999,7 +999,7 @@ V9.75 = 3 Slices SLC-V9.75-A/B/C (version-anchored Naming). Reine Verpackung des
 
 | ID | Slice | Feature | Status | Priority | Created |
 |----|-------|---------|--------|----------|---------|
-| SLC-V9.75-A | [Tier-Gating Foundation](SLC-V9.75-A-tier-gating-foundation.md) | FEAT-085 / BL-506 | planned | Blocker | 2026-06-17 |
+| SLC-V9.75-A | [Tier-Gating Foundation](SLC-V9.75-A-tier-gating-foundation.md) | FEAT-085 / BL-506 | in_progress | Blocker | 2026-06-17 |
 | SLC-V9.75-B | [Stufe-1-Fahrplan-Report-Renderer](SLC-V9.75-B-fahrplan-report-renderer.md) | FEAT-086 / BL-507 | planned | High | 2026-06-17 |
 | SLC-V9.75-C | [Stufe-1-Mitarbeiter-Register + Bruecke](SLC-V9.75-C-mitarbeiter-register.md) | FEAT-087 / BL-508 | planned | Medium | 2026-06-17 |
 
