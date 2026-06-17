@@ -237,5 +237,15 @@ V9.7-Scope (Requirements 2026-06-14 via RPT-469, basierend auf /discovery RPT-46
 
 | ID | Feature | Status | Spec | Created |
 |----|---------|--------|------|---------|
-| FEAT-083 | OKF Concept-Emitter (DB-Row → OKF-Concept-.md, type-Mapping + Frontmatter + Citations) | done | [Spec](FEAT-083-okf-concept-emitter.md) | 2026-06-14 |
-| FEAT-084 | OKF Bundle-Assembly + Konformitäts-Check (index.md/log.md, alongside Handbuch-ZIP) | done | [Spec](FEAT-084-okf-bundle-assembly-conformance.md) | 2026-06-14 |
+| FEAT-083 | OKF Concept-Emitter (DB-Row → OKF-Concept-.md, type-Mapping + Frontmatter + Citations) | deployed | [Spec](FEAT-083-okf-concept-emitter.md) | 2026-06-14 |
+| FEAT-084 | OKF Bundle-Assembly + Konformitäts-Check (index.md/log.md, alongside Handbuch-ZIP) | deployed | [Spec](FEAT-084-okf-bundle-assembly-conformance.md) | 2026-06-14 |
+
+## V9.75 Features (Exit-Readiness-Produktisierung — 3-Stufen-Leiter-Packaging)
+
+V9.75-Scope (Requirements 2026-06-17 via RPT-480, basierend auf /discovery RPT-479). Status READY fuer /architecture V9.75. Reine **Verpackung** des gebauten Engine-Stacks in die 3-Stufen-Leiter (Free/Blueprint 1.5-3.5k Chef-allein/SOP-Handbuch 20-45k). 3 Features sequenziert. Founder-Forks gelockt: alle 3 in V9.75 · Tier-Flag pro capture_session · Renderer voll inkl. Verkaufs-Framing. Server-side-Gating BLOCKING, loest ISSUE-097. Out: Billing/Anrechnung, Enablement-Material. Grounding: Dev-System docs/PRODUKT_PRICING_STRATEGIE_2026-06-15.md + OPERATIVES_STUFEN_MAPPING_2026-06-15.md (§3 Gating-Matrix) + Schema-Explore RPT-480. Detail-/Schnittentscheidungen (Q-V9.75-A..F) in /architecture V9.75.
+
+| ID | Feature | Status | Spec | Created |
+|----|---------|--------|------|---------|
+| FEAT-085 | Tier-Gating (capture_session.tier free/blueprint/handbook + server-side Capture/Job/Render-Gate + Worker-Defense; loest ISSUE-097) | planned | [Spec](FEAT-085-tier-gating.md) | 2026-06-17 |
+| FEAT-086 | Stufe-1-Fahrplan-Report-Renderer (block_diagnosis + quality_report → kundenseitiger To-Do-Report, voll inkl. Verkaufs-Framing, React-PDF-Reuse) | planned | [Spec](FEAT-086-stufe1-fahrplan-report.md) | 2026-06-17 |
+| FEAT-087 | Stufe-1-Mitarbeiter-Register (Name+Funktion ohne E-Mail + Meeting-UI + Bruecke zu rpc_create_employee_invitation) | planned | [Spec](FEAT-087-mitarbeiter-register.md) | 2026-06-17 |

@@ -2612,3 +2612,121 @@ Reihenfolge linear SLC-A → SLC-B → SLC-C. /architecture prueft ob B+C als 1 
 ### Detail-Spec
 
 V9.5-Requirements-Baseline-Report 2026-06-12 als RPT-453, basierend auf /discovery RPT-452. **Status: READY fuer /architecture V9.5**. Keine BLOCKING-OQs; 1 architektonischer Fork (Q-V9.5-A Repraesentation) ist /architecture-Aufgabe, kein Founder-Block. Feature-Skeleton-Specs entstehen mit /architecture unter `/features/FEAT-080..082-*.md`. Naechster Schritt: `/architecture V9.5` (~2h fresh Session) mit Q-V9.5-A..E + Synthese-Prompt-Entwurf (frisch, kein condensation-Code-Reuse) + Migration-Skizze (Status-Werte + Repraesentation + Cost-Spalte) + ai_cost_ledger-role-Erweiterung.
+
+## V9.75 — Exit-Readiness-Produktisierung (Tier-Gating + Stufe-1-Fahrplan-Report + Mitarbeiter-Register)
+
+Requirements-Baseline angelegt 2026-06-17 via RPT-480, basierend auf /discovery RPT-479 (Founder-Forks gelockt). **Status: READY fuer /architecture V9.75.** V9.75 ist eine **Verpackungs-Version, kein Capability-Build**: der gesamte Engine-Stack (alle Capture-Modi, 3-Agenten-Verdichtung, `block_diagnosis`, Orchestrator-`quality_report`/`gap_questions`, `sop_generation`, `handbook_snapshot_generation`/OKF, `employee_invitation`) ist gebaut. V9.75 schnuert ihn in die kommerzielle 3-Stufen-Leiter: **Stufe 0 Free** (Schnell-Check, existiert als V8-Teaser) → **Stufe 1 Blueprint/Standortbestimmung** (1.5–3.5k, Chef allein, Diagnose+Fahrplan) → **Stufe 2 SOP-Handbuch** (20–45k, Organisation+Lueckenschluss). Grounding: Dev-System `docs/PRODUKT_PRICING_STRATEGIE_2026-06-15.md` + `OPERATIVES_STUFEN_MAPPING_2026-06-15.md` (§3 = Capture-Modus→Stufen-Gating-Enumeration, gegen reale OP verifiziert).
+
+### Problem Statement
+
+Heute ist in der OP **alles immer an**: jeder `tenant_admin` kann jeden Capture-Modus und jeden Worker-Job ausloesen, es gibt **kein Tier-/Stufen-Konzept** (`capture_session` hat keine tier-Spalte). Damit (a) laesst sich die 3-Stufen-Leiter nicht verkaufen — es gibt keine Grenze zwischen kostenloser Diagnose und bezahltem Voll-Engagement — und (b) besteht das offene **ISSUE-097**: ein per Steuerberater eingeladener Diagnose-Mandant ist dieselbe Rolle (`tenant_admin`) wie ein Voll-Kunde und kann Voll-Kunden-Funktionen (Bulk-Import) per direkter URL erreichen; das Dashboard versteckt sie nur per fehlendem Menue-Link (security-by-no-nav, kein echtes Entitlement). Zusaetzlich fehlt der **eine kundenseitige Renderer**, der die Stufe-1-Diagnose als priorisierten To-Do-/Standortbestimmungs-Report ausgibt: `block_diagnosis` fliesst heute nur ins Handbuch, `gap_questions` liegen nur in der DB (treiben interne Re-Verdichtung). Und das leichte **Mitarbeiter-Register** (Name+Funktion ohne E-Mail), das der Chef im Stufe-1-Meeting fuehrt, existiert nicht — Mitarbeiter entstehen heute nur ueber die volle `employee_invitation` (E-Mail Pflicht).
+
+### Goal / Intended Outcome
+
+Die OP wird **produkt-strukturiert verkaufbar** (intern demonstrierbar, ohne Billing): (1) ein **server-side erzwungenes** Stufen-Flag pro Session steuert, welche Capture-Modi, Worker-Jobs und Render-Outputs freigeschaltet sind — und schliesst ISSUE-097 als Nebenergebnis; (2) ein neuer **Stufe-1-Fahrplan-Report** macht aus `block_diagnosis` + Orchestrator-`coverage`/`gap_questions` ein kundenseitiges, verkaufs-gerahmtes Deliverable (Reifegrad-Profil + priorisierte Luecken-/To-Do-Liste + Scope-Satz + pro Luecke die Exit-Wert/Risiko-Kopplung + 1 Muster-Sektion + Scope-Schaetzung); (3) ein **leichtes Mitarbeiter-Register** (Name+Funktion) im Meeting + Bruecke zur bestehenden `rpc_create_employee_invitation`.
+
+### Target Users (V9.75)
+
+- **GF/Chef im eigenen Tenant (`tenant_admin`)**: primaere Persona. Macht Stufe 1 allein (Management-Perspektive), liest den Fahrplan-Report, fuehrt das Register.
+- **strategaize_admin / Berater (sekundaer)**: setzt/hebt die Stufe pro Session (Tier-Verwaltung), nutzt im oberen Preisband das Auswertungsgespraech (= Verkaufsgespraech).
+- Keine neue Auth-Rolle. Internal-Test-Mode (Founder-only) per [[module-lifecycle-discipline]] — **kein Customer-Outreach, kein Billing** in V9.75.
+
+### V9.75 In Scope
+
+1. **Tier-Gating (FEAT-085 / BL-506)**: Neue Stufen-Spalte auf `capture_session` (Werte `free`/`blueprint`/`handbook`) + **server-side erzwungenes** Gate an allen Dispatch-Eintrittspunkten (`rpc_create_block_checkpoint`, `rpc_enqueue_recondense_job`, `sop-actions.ts`, Dialogue-/Walkthrough-/Bulk-/Handbook-Trigger) + Defense-in-Depth im Worker (verweigert gated `job_type` bei zu niedriger Session-Stufe). Gating-Matrix nach Operativem Mapping §3. Loest **ISSUE-097**.
+2. **Stufe-1-Fahrplan-Report-Renderer (FEAT-086 / BL-507)**: Neuer kundenseitiger Report aus `block_diagnosis.content` (ampel/reifegrad/risiko/hebel/relevanz_90d, status `confirmed`) + `block_checkpoint.quality_report` (coverage/gap_questions/evidence_quality/recommendation). Output **voll inkl. Verkaufs-Framing**: Reifegrad-Profil + priorisierte Luecken-/To-Do-Liste (Aufwand S/M/L, Owner, naechster Schritt) + gedruckter Scope-Satz („Landkarte, nicht Handbuch") + pro Luecke die Exit-Wert/Risiko-Kopplung + 1 Muster-Handbuch-Sektion + Scope-Schaetzung. Reuse des React-PDF-Renderer-Patterns (`src/lib/pdf/mandanten-report-v2/`).
+3. **Stufe-1-Mitarbeiter-Register (FEAT-087 / BL-508)**: Neue leichte Tabelle (Name + Funktion, **ohne E-Mail**, optional Block-/Bereichs-Tag, session-/tenant-scoped) + Erfassungs-UI im Meeting/Debrief-View + Bruecke: Register-Eintrag → Chef ergaenzt E-Mail → bestehendes `rpc_create_employee_invitation(p_email, p_display_name=Name, p_role_hint=Funktion)`. Downstream (Einladung/Onboarding/Capture/Bridge) = reuse.
+
+### V9.75 Out of Scope (parked)
+
+- **Billing / Anrechnungs-Logik / Zahlungs-Flow** — explizit spaeter (Founder). V9.75 liefert die Produkt-Struktur, nicht die Bezahlung.
+- **Mitarbeiter-Enablement-Material** (Videos/Unterlagen) — Founder-„spaeter".
+- **Erloes-Nebenlinien** (M&A-Origination, Operational-DD, Berater-Lizenz, Continuous-Learning) — opportunistisch, kein Build.
+- **KI-Readiness als 2. Produktreihe** — geparkte Folge-Aufgabe, erst wenn Exit-Readiness-Linie steht.
+- **Tier-Namen-Marketing-Finalisierung** — intern reicht `free`/`blueprint`/`handbook`; Kundennamen sind Marketing-Entscheidung, kein Build-Input.
+- **Stufe-2-Upsell-Brücke-Vorbefuellung** (gap_questions → Stufe-2-Scope automatisch) — wuenschenswert, aber eigenes Folge-Feature; V9.75 stellt nur Gating + Report + Register.
+- **Self-Serve-Tier-Upgrade durch den Kunden** — die Stufen-Aenderung macht Berater/Admin, nicht der Kunde (kein Billing).
+
+### Core Features (V9.75)
+
+| ID | Feature | Zweck |
+|----|---------|-------|
+| FEAT-085 | Tier-Gating (Stufen-Flag + server-side Capture/Job/Render-Gate) | `capture_session.tier` (free/blueprint/handbook) + server-side Gate an allen Dispatch-Punkten + Worker-Defense; loest ISSUE-097 |
+| FEAT-086 | Stufe-1-Fahrplan-Report-Renderer | block_diagnosis + quality_report → kundenseitiger priorisierter To-Do-/Standortbestimmungs-Report, voll inkl. Verkaufs-Framing (React-PDF-Reuse) |
+| FEAT-087 | Stufe-1-Mitarbeiter-Register + Bruecke | Leichte Name+Funktion-Tabelle (ohne E-Mail) + Meeting-UI + Bruecke zu rpc_create_employee_invitation |
+
+Detail-Specs entstehen mit /architecture V9.75 unter `/features/FEAT-085..087-*.md` (Skeleton-Status).
+
+### Constraints
+
+#### Technologie
+- **Reine Verpackung — keine neue Fähigkeit**: V9.75 baut KEINE neue Pipeline, KEINEN neuen Capture-Modus, KEINE neue LLM-Stage. Es ergaenzt 1 Spalte + Gates, 1 Renderer (auf vorhandenen Daten), 1 leichte Tabelle + Bruecke (auf vorhandener RPC).
+- **Server-side Gating-Pflicht (BLOCKING)**: das Tier-Gate MUSS an den Dispatch-Eintrittspunkten (Server-Actions / RPCs) UND als Defense-in-Depth im Worker erzwungen werden — **kein reines UI-/Nav-Hiding** (sonst Wiederholung des ISSUE-097-Musters; vgl. BS V8.14 / [[security-audit-fable5-standard]]). Pattern-Reuse: `assertRole`-Stil-Guard + Worker-Pre-Check analog Synthetic-ai_jobs ([[backend]]).
+- **Backward-Compatibility**: bestehende interne Sessions duerfen nicht brechen. Default-Tier-Wert fuer Bestands-Sessions = `handbook` (voller Zugriff, /architecture-Entscheid Q-A) — Internal-Test-Mode bleibt voll funktional.
+- **Renderer-Daten-Reuse-Pflicht**: der Fahrplan-Report liest ausschliesslich bestehende `block_diagnosis.content`- + `block_checkpoint.quality_report`-Felder; keine neue Diagnose-/Orchestrator-Logik. Render-Stack = React-PDF (`mandanten-report-v2`-Pattern), kein neuer PDF-Stack.
+- **Register-RPC-Reuse-Pflicht**: die Bruecke ruft die bestehende `rpc_create_employee_invitation(p_email, p_display_name, p_role_hint)` unveraendert; das Register fuegt nur eine vorgelagerte leichte Erfassung ohne E-Mail hinzu.
+- **EU-Data-Residency**: falls der Fahrplan-Renderer LLM-Augmentation fuer Aufwand/Owner/Exit-Kopplung nutzt (Q-D), laeuft sie ueber Bedrock eu-central-1 ([[data-residency]]).
+
+#### Organisatorisch
+- **Kein Billing, kein Customer-Outreach** in V9.75 ([[module-lifecycle-discipline]]). Tier-Wechsel = Berater/Admin-Aktion, nicht Self-Serve-Kauf.
+- **Tenant-RLS-Pflicht**: neue Register-Tabelle + tier-Spalte tenant-scoped; Pen-Test in /qa.
+
+### Risks / Assumptions
+
+#### Risiken
+- **R1 — Gating-Oberflaeche breit, leicht unvollstaendig**: das Gate muss an JEDEM Dispatch-Punkt sitzen (Block-Submit-RPC, SOP, Recondense-RPC, Dialogue-/Walkthrough-Trigger, Bulk-Trigger, Handbook-Snapshot-Trigger). Ein vergessener Pfad = Bypass = ISSUE-097 bleibt offen. Mitigation: vollstaendige Dispatch-Enumeration (Explore RPT-480 hat die Eintrittspunkte gelistet) + Worker-Defense-in-Depth als Backstop + /qa-Bypass-Test pro gated Pfad.
+- **R2 — Fahrplan-Report braucht Felder, die heute nicht in den Daten stehen**: `gap_questions` tragen Prioritaet, aber NICHT „Aufwand S/M/L", „Owner", „naechster Schritt" und auch nicht die „Exit-Wert/Risiko-Kopplung pro Luecke". Diese muessen abgeleitet (LLM-Augmentation), getemplatet (heuristisch pro Block) oder vereinfacht werden — Q-D, /architecture-Fork.
+- **R3 — Free-Stufe vs V8-Teaser-Doppelung**: Stufe 0 existiert bereits als eigenstaendiger V8-Teaser-Report (separates Template, statisches Scoring). Ob `free` ein `capture_session.tier`-Wert wird oder der Teaser ein getrennter Flow bleibt, ist zu klaeren (Q-B) — sonst zwei „Free"-Konzepte.
+- **R4 — Default-Tier-Migration**: ein falscher Default fuer Bestands-Sessions koennte interne Test-Sessions versehentlich gaten (Funktion „verschwindet"). Mitigation: Default `handbook` + explizite Migration.
+- **R5 — Register↔Invitation-Idempotenz**: ein Register-Eintrag, der spaeter zur Einladung wird, darf bei E-Mail-Nachtrag keine Duplikate erzeugen (employee_invitation hat UNIQUE pending-email). Bruecke muss den bestehenden Idempotenz-Constraint respektieren.
+
+#### Annahmen
+- `block_diagnosis.content` (ampel/reifegrad/risiko/hebel/relevanz_90d) + `block_checkpoint.quality_report` (coverage/gap_questions/evidence_quality/recommendation) reichen als Renderer-Quelle (Explore RPT-480 bestaetigt Schema). Nur die Verkaufs-Framing-Felder (R2) sind ggf. abzuleiten.
+- `rpc_create_employee_invitation` + employee_invitation + bridge_proposal bleiben strukturell unveraendert (reuse).
+- V9.7 ist STABLE (RPT-478); V9.75 beruehrt den OKF-/Handbuch-Pfad nicht (nur Gating davor).
+
+### Success Criteria (V9.75 Gesamt)
+
+- SC-V9.75-1: `capture_session` traegt eine Stufen-Spalte (`free`/`blueprint`/`handbook`); Bestands-Sessions defaulten ohne Funktionsverlust (Internal-Test-Mode bleibt voll).
+- SC-V9.75-2: Ein gated `job_type`/Capture-Modus, der die Stufe der Session uebersteigt, wird **server-side abgelehnt** (am Dispatch-Punkt UND im Worker als Defense-in-Depth) — nachgewiesen per /qa-Bypass-Test pro Pfad (direkter RPC-/Action-Aufruf, nicht nur fehlendes Menue).
+- SC-V9.75-3: **ISSUE-097 geschlossen** — ein Blueprint-/Free-Mandant kann die Voll-Kunden-Jobs (Bulk-Import, SOP, Handbook-Snapshot) nicht mehr per direkter URL/Action ausloesen.
+- SC-V9.75-4: Der Stufe-1-Fahrplan-Report rendert aus `block_diagnosis` + `quality_report` ein kundenseitiges Deliverable mit Reifegrad-Profil + priorisierter Luecken-/To-Do-Liste + Scope-Satz + Exit-Wert/Risiko-Kopplung pro Luecke + 1 Muster-Sektion + Scope-Schaetzung.
+- SC-V9.75-5: Der Report ist auf Stufe `blueprint` (und hoeher) verfuegbar, auf `free` nicht (Gating-konsistent).
+- SC-V9.75-6: Das Mitarbeiter-Register erfasst Name+Funktion (ohne E-Mail) session-/tenant-scoped; ein Eintrag + nachgetragene E-Mail erzeugt via `rpc_create_employee_invitation` genau eine Einladung (Idempotenz respektiert).
+- SC-V9.75-7: Bestehende Engine-Pfade (Verdichtung, Diagnose, SOP, Handbuch/OKF, employee_invitation, bridge) strukturell unveraendert (reine Verpackung; Reuse-Quote verifiziert).
+- SC-V9.75-8: Tenant-RLS verhindert Cross-Tenant-Read/Write auf tier-Spalte + Register-Tabelle (Pen-Test /qa).
+
+### Open Questions
+
+#### Fuer /architecture V9.75
+- **Q-V9.75-A — tier-Spalte: Platzierung, Werte, Default**: `capture_session.tier text CHECK IN ('free','blueprint','handbook')` bestaetigt (pro Session, Founder-Discovery). Default fuer Bestands-Sessions? **Empfehlung: `handbook`** (Backward-Compat, Internal-Test-Mode voll). Wer darf setzen/heben (strategaize_admin? tenant_admin?)? **Empfehlung: strategaize_admin/Berater** (kein Self-Serve, kein Billing).
+- **Q-V9.75-B — Gating-Matrix + Free-Stufe**: exakte `job_type`/Capture-Modus→Stufe-Zuordnung nach Operativem Mapping §3 finalisieren. Insb.: ist `free` ein `capture_session.tier`-Wert (mit `questionnaire`+statisches Scoring) ODER bleibt der V8-Teaser ein getrennter Flow und `tier` kennt nur `blueprint`/`handbook`? **Empfehlung: tier kennt free/blueprint/handbook; free = nur `questionnaire` ohne LLM-Jobs.** Zuordnung `recondense_with_gaps` (Chef-Self-Backspelling Stufe 1 vs Multi-Source Stufe 2) klaeren.
+- **Q-V9.75-C — Gating-Enforcement-Layer**: Gate in den Dispatch-RPCs (`rpc_create_block_checkpoint`, `rpc_enqueue_recondense_job`) vs in den Server-Actions vs ein gemeinsamer Guard-Helper. **Empfehlung: gemeinsamer server-side Guard-Helper an jedem Dispatch-Eintritt + Worker-Pre-Check (Defense-in-Depth).** Server-side ist BLOCKING.
+- **Q-V9.75-D — Fahrplan-Report Verkaufs-Framing-Felder (R2)**: Aufwand S/M/L + Owner + naechster Schritt + Exit-Wert/Risiko-Kopplung — LLM-augmentiert (neuer kleiner Job, Bedrock eu-central-1) vs heuristisch/getemplatet pro Block vs vereinfacht? **Empfehlung: leichte LLM-Augmentation fuer Aufwand/Owner/naechster-Schritt + getemplatete Exit-Kopplung pro Block** — /architecture entscheidet + Cost-Erwaegung.
+- **Q-V9.75-E — Report-Ausgabeformat**: PDF (React-PDF, `mandanten-report-v2`-Reuse) vs Web-View vs beides? **Empfehlung: PDF (konsistent mit Mandanten-Report) + optionale Web-Ansicht.**
+- **Q-V9.75-F — Register-Tabellen-Form**: Spalten (name, function/role_hint, optional block_key-Tag), session- vs tenant-scoped, Dedup-Regel; UI-Einbettung (Debrief-View vs Meeting-View vs Diagnose-Dashboard). **Empfehlung: session-scoped mit optionalem Block-Tag, Erfassung im Debrief-/Meeting-View.**
+
+**Keine BLOCKING-Founder-OQs offen** — alle 6 sind /architecture-Aufgaben mit Default-Empfehlung. Die 3 Produkt-Forks (Scope/Gating-Ebene/Renderer-Tiefe) sind in /discovery gelockt.
+
+### Delivery Mode
+
+**SaaS Product** — unveraendert. Strengste TDD-Disziplin fuer das Gating (Bypass-Tests pro Pfad + Worker-Defense + Tenant-RLS) und die Register-Bruecke (Idempotenz). Mandatory atomic commits pro Micro-Task ([[git-release]]). Eigener Worktree (SaaS-Mode-Pflicht). Internal-Test-Mode — kein Customer-Live/Billing ueber V9.75 vor Modul-Vollstaendigkeit ([[module-lifecycle-discipline]]).
+
+### Slice-Sketch (vorlaeufig, /architecture + /slice-planning entscheiden)
+
+Geschaetzt **3 Slices**, sequenziert, Cumulative-Single-Branch-Worktree analog V9.x (`v9-75-exit-readiness`).
+
+- **SLC-V9.75-A (geplant) — FEAT-085 Tier-Gating (Foundation)**: Migration (tier-Spalte + Default-Backfill) + gemeinsamer server-side Guard-Helper + Wiring an alle Dispatch-Eintrittspunkte + Worker-Defense + /qa-Bypass-Test-Matrix + ISSUE-097-Resolution. Zuerst — alles haengt am Flag. Pre-Cond: Q-A/B/C entschieden.
+- **SLC-V9.75-B (geplant) — FEAT-086 Fahrplan-Report-Renderer**: React-PDF-Renderer auf block_diagnosis + quality_report + Verkaufs-Framing (+ ggf. Augmentation-Job per Q-D) + Tier-Gate (nur blueprint+). Pre-Cond: Q-D/E entschieden, SLC-A done (Gate vorhanden).
+- **SLC-V9.75-C (geplant) — FEAT-087 Mitarbeiter-Register + Bruecke**: leichte Tabelle + Erfassungs-UI + Bruecke zu rpc_create_employee_invitation + RLS + Idempotenz. Am unabhaengigsten, zuletzt/parallel. Pre-Cond: Q-F entschieden.
+
+Reihenfolge A → B → C; /architecture prueft Parallelisierbarkeit von C.
+
+### Pre-Conditions
+
+- Keine BLOCKING-Pre-Conditions. V9.7 STABLE (RPT-478) erfuellt; V9.75 beruehrt den OKF-/Handbuch-Pfad nicht.
+- Engine-Substanz (Capture/Verdichtung/Diagnose/Orchestrator/SOP/Handbuch/employee_invitation) ist gebaut + verifiziert (Explore RPT-480).
+
+### Detail-Spec
+
+V9.75-Requirements-Baseline-Report 2026-06-17 als RPT-480, basierend auf /discovery RPT-479 (3 Founder-Forks gelockt) + Schema-Grounding (Explore). **Status: READY fuer /architecture V9.75.** Keine BLOCKING-OQs; 6 architektonische Forks (Q-V9.75-A..F) mit Default-Empfehlung sind /architecture-Aufgabe. Feature-Skeleton-Specs unter `/features/FEAT-085..087-*.md`. Naechster Schritt: `/architecture V9.75` mit Q-A..F + Gating-Matrix (Operatives Mapping §3) + Migration-Skizze (tier-Spalte + Register-Tabelle) + Guard-Helper-Entwurf (server-side, Dispatch + Worker-Defense) + Renderer-Daten-Mapping (block_diagnosis/quality_report → Report-Felder).
