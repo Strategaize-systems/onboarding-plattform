@@ -5,7 +5,7 @@
       "title": "V9.75 Tier-Gating (Stufen-Flag + Capture/Job/Render-Gating)",
       "type": "feature",
       "priority": "high",
-      "status": "open",
+      "status": "done",
       "version": "V9.75",
       "description": "Stufen-Flag (Free/Blueprint/Handbuch) an capture_session (oder tenant) -> steuert (a) freie Capture-Modi, (b) erlaubte Worker-Jobs (Stufe 1: condensation+diagnosis+report; Stufe 2: +sop_generation+handbook_snapshot+Multi-Source-Capture), (c) Render-Output je Stufe. Heute: kein Tier-Konzept, alle Modi+Jobs immer verfuegbar (Explore-verifiziert 2026-06-15). Kleiner Bau (Feld + Gates/RLS-/App-Guards), keine neue Faehigkeit. Spec: Dev-System docs/OPERATIVES_STUFEN_MAPPING_2026-06-15.md Section 8 + finaler Build-Scope.",
       "createdAt": "2026-06-15"

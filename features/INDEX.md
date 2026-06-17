@@ -246,6 +246,6 @@ V9.75-Scope (Requirements 2026-06-17 via RPT-480, basierend auf /discovery RPT-4
 
 | ID | Feature | Status | Spec | Created |
 |----|---------|--------|------|---------|
-| FEAT-085 | Tier-Gating (capture_session.tier free/blueprint/handbook + server-side Capture/Job/Render-Gate + Worker-Defense; loest ISSUE-097) | planned | [Spec](FEAT-085-tier-gating.md) | 2026-06-17 |
+| FEAT-085 | Tier-Gating (capture_session.tier free/blueprint/handbook + server-side Capture/Job/Render-Gate + Worker-Defense; loest ISSUE-097) | done | [Spec](FEAT-085-tier-gating.md) | 2026-06-17 |
 | FEAT-086 | Stufe-1-Fahrplan-Report-Renderer (block_diagnosis + quality_report → kundenseitiger To-Do-Report, voll inkl. Verkaufs-Framing, React-PDF-Reuse) | planned | [Spec](FEAT-086-stufe1-fahrplan-report.md) | 2026-06-17 |
 | FEAT-087 | Stufe-1-Mitarbeiter-Register (Name+Funktion ohne E-Mail + Meeting-UI + Bruecke zu rpc_create_employee_invitation) | planned | [Spec](FEAT-087-mitarbeiter-register.md) | 2026-06-17 |
