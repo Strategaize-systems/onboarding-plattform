@@ -992,3 +992,35 @@ V9.7 = 2 Slices SLC-V9.7-A/B (version-anchored Naming). Isolierter OKF-Emitter (
 | Pflicht | Blockiert | Aktion |
 |---|---|---|
 | Keine. 0 Migrationen, 0 neue Deps, 0 ENV/Cron — rein Code-Side + Worktree | — | /backend SLC-V9.7-A direkt startbar (Worktree-Setup = MT-0) |
+
+## V9.75 Slices — Exit-Readiness-Produktisierung (Tier-Gating + Fahrplan-Report + Register)
+
+V9.75 = 3 Slices SLC-V9.75-A/B/C (version-anchored Naming). Reine Verpackung des gebauten Engine-Stacks in die 3-Stufen-Leiter. **Cumulative-Single-Branch-Worktree `v9-75-exit-readiness`, /qa pro Slice, EIN Master-Merge nach Gesamt-/qa.** 2 Migrationen (121 Gating + 122 Register), **0 neue LLM-Jobs, 0 neue Deps** (`@react-pdf/renderer` vorhanden). Internal-Test-Mode, kein Customer-Outreach ([[module-lifecycle-discipline]]). Basis: ARCHITECTURE.md „## V9.75 Architecture Addendum" (DEC-219..224), /architecture RPT-481, /slice-planning RPT-482.
+
+| ID | Slice | Feature | Status | Priority | Created |
+|----|-------|---------|--------|----------|---------|
+| SLC-V9.75-A | [Tier-Gating Foundation](SLC-V9.75-A-tier-gating-foundation.md) | FEAT-085 / BL-506 | planned | Blocker | 2026-06-17 |
+| SLC-V9.75-B | [Stufe-1-Fahrplan-Report-Renderer](SLC-V9.75-B-fahrplan-report-renderer.md) | FEAT-086 / BL-507 | planned | High | 2026-06-17 |
+| SLC-V9.75-C | [Stufe-1-Mitarbeiter-Register + Bruecke](SLC-V9.75-C-mitarbeiter-register.md) | FEAT-087 / BL-508 | planned | Medium | 2026-06-17 |
+
+### V9.75 Execution Order (Cumulative-Single-Branch `v9-75-exit-readiness`)
+- **SLC-V9.75-A zuerst** (Tier-Gating-Foundation, security-kritisch, TDD-RED; enthaelt Worktree-Setup MT-0 + Migration 121). Hard-Dependency: B und C brauchen die tier-Spalte + Gate-Logik.
+- **SLC-V9.75-B nach A** (Fahrplan-PDF-Renderer; 0 Migration; liest bestehende Daten).
+- **SLC-V9.75-C nach A** (Register + Bruecke; Migration 122). **Logisch unabhaengig von B** (disjunkte Files) → kann nach A vor/neben B laufen.
+- **EIN Master-Merge** `v9-75-exit-readiness` → `main` (--no-ff) nach Gesamt-/qa + Pre-Merge-Re-Check.
+
+### V9.75 Parallel-Execution-Tabelle
+
+| Slice | Parallel-Group | MIG Reserved | File-Touchpoints (Kern) | Notes |
+|---|---|---|---|---|
+| SLC-V9.75-A | S1 (seq, zuerst) | **121** (+122 falls Split) | sql/migrations/121_*.sql, src/lib/auth/assert-session-tier.ts, src/workers/condensation/claim-loop.ts, diagnosis-/sop-actions.ts, walkthrough-/bulk-email/pipeline-trigger.ts, api/dialogue/recording-ready/route.ts | Foundation; blockt B+C |
+| SLC-V9.75-B | S2 (nach A) | keine | src/lib/pdf/fahrplan-report/*, app/admin/.../fahrplan-report route | liest Daten; disjunkt von C |
+| SLC-V9.75-C | S2 (nach A) | **122** (→123 falls A splittet auf 121+122) | sql/migrations/122_*.sql, app/admin/.../roster-actions.ts, debrief/.../RosterPanel.tsx | disjunkt von B; logisch parallel |
+
+**Empfehlung (Single-Founder, Cognitive-Load):** sequentiell A → B → C auf EINEM Branch (matcht OP V9.5/V9.7-Konvention). B‖C-Parallelisierung ist verfuegbar (disjunkte Files), aber fuer einen Founder selten lohnend. **MIG-Reservierung beachten:** falls SLC-A die Gating-Migration auf 121+122 splittet, verschiebt SLC-C auf 123 (Renumber am Merge, Pre-Merge-Re-Check Schritt 3).
+
+### V9.75 Pre-Slice User-Pflichten
+
+| Pflicht | Blockiert | Aktion |
+|---|---|---|
+| Keine Code-Side-Pflicht. Live-Apply Migration 121+122 + Coolify-Redeploy erfolgt im /deploy (Founder-gated) | Live-Smoke (nicht Code-Side) | /backend SLC-V9.75-A direkt startbar (Worktree-Setup = MT-0) |
