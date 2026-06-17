@@ -24,11 +24,13 @@
 --   Owner (postgres) laeuft und der service_role-aware Trigger postgres BLOCKT.
 --
 -- Rollback:
---   -- Dispatch-RPC-Guards (MT-2): die un-gated Bodies durch Re-Apply der Quell-
---   -- Migrationen wiederherstellen (CREATE OR REPLACE hat kein Auto-Drop):
+--   -- Dispatch-RPC-Guards (MT-2) + Claim-RPC-Erweiterung (MT-4): die Original-
+--   -- Bodies durch Re-Apply der Quell-Migrationen wiederherstellen (CREATE OR
+--   -- REPLACE hat kein Auto-Drop):
 --   --   \i sql/migrations/032_rpc_create_block_checkpoint.sql
 --   --   \i sql/migrations/047_rpc_orchestrator_and_gaps.sql
 --   --   \i sql/migrations/074_rpc_handbook.sql
+--   --   \i sql/migrations/035_ai_queue_rpcs_and_logging.sql  -- (claim-RPC ohne session_tier)
 --   DROP TRIGGER IF EXISTS capture_session_tier_change_guard ON capture_session;
 --   DROP FUNCTION IF EXISTS capture_session_tier_change_guard();
 --   DROP FUNCTION IF EXISTS fn_session_tier_allows(uuid, text);
@@ -465,9 +467,61 @@ GRANT EXECUTE ON FUNCTION public.rpc_trigger_handbook_snapshot(uuid) TO authenti
 GRANT EXECUTE ON FUNCTION public.rpc_trigger_handbook_snapshot(uuid) TO service_role;
 
 -- ============================================================
--- 5. MT-4 (Folge-Micro-Task, in dieser Datei ergaenzt):
---    - CREATE OR REPLACE rpc_claim_next_ai_job_for_type (+ session_tier im Return)
+-- 5. Worker-Defense-Stempel im Claim-Return (MT-4, DEC-221)
 -- ============================================================
+-- Schicht 2 (ARCHITECTURE §4): der Claim-RPC liefert zusaetzlich den
+-- denormalisierten session_tier-Stempel, damit claim-loop.ts unmittelbar nach
+-- dem Claim fn_tier_allows(session_tier, job_type) pruefen kann — OHNE
+-- capture_session-Join (genau wozu der Stempel da ist, §9). Reine Erweiterung:
+-- SELECT + jsonb_build_object um session_tier ergaenzt; die Claim-Semantik
+-- (aeltester pending Job, SKIP LOCKED, status -> claimed + claimed_at) bleibt
+-- byte-fuer-byte identisch zur Quelle.
+--
+-- Quelle: sql/migrations/035_ai_queue_rpcs_and_logging.sql
+CREATE OR REPLACE FUNCTION rpc_claim_next_ai_job_for_type(p_job_type text)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_job record;
+BEGIN
+  -- Claim aeltesten pending Job mit SKIP LOCKED (concurrency-safe)
+  SELECT id, tenant_id, job_type, payload, status, created_at, session_tier
+  INTO v_job
+  FROM ai_jobs
+  WHERE status = 'pending'
+    AND job_type = p_job_type
+  ORDER BY created_at ASC
+  LIMIT 1
+  FOR UPDATE SKIP LOCKED;
+
+  -- Kein Job gefunden
+  IF v_job IS NULL THEN
+    RETURN NULL;
+  END IF;
+
+  -- Status auf claimed setzen
+  UPDATE ai_jobs
+  SET status = 'claimed',
+      claimed_at = now()
+  WHERE id = v_job.id;
+
+  -- Job-Daten zurueckgeben (inkl. session_tier-Stempel fuer Worker-Defense)
+  RETURN jsonb_build_object(
+    'id', v_job.id,
+    'tenant_id', v_job.tenant_id,
+    'job_type', v_job.job_type,
+    'payload', v_job.payload,
+    'created_at', v_job.created_at,
+    'session_tier', v_job.session_tier
+  );
+END;
+$$;
+
+-- Nur service_role darf claimen (Worker laeuft mit service_role)
+GRANT EXECUTE ON FUNCTION rpc_claim_next_ai_job_for_type(text) TO service_role;
 
 -- Schema-Cache-Reload (neue Spalten/Funktionen fuer PostgREST sichtbar machen).
 NOTIFY pgrst, 'reload schema';

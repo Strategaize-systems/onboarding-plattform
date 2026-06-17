@@ -518,3 +518,52 @@ describe("Migration 121 — rpc_trigger_handbook_snapshot Tier-Gate (handbook_sn
     });
   });
 });
+
+// ============================================================================
+// AC-A-4 — Claim-RPC liefert session_tier-Stempel (Worker-Defense, MT-4)
+//   rpc_claim_next_ai_job_for_type gibt den denormalisierten Stempel zurueck,
+//   damit claim-loop.ts ohne capture_session-Join pruefen kann. Claim-Semantik
+//   (SKIP LOCKED, status -> claimed) bleibt unveraendert.
+// ============================================================================
+
+describe("Migration 121 — rpc_claim_next_ai_job_for_type (session_tier im Return)", () => {
+  it("liefert den session_tier-Stempel im Claim-Return + setzt status='claimed'", async () => {
+    await withTestDb(async (client) => {
+      await applyMigration121(client);
+      const t = await client.query<{ id: string }>(
+        `INSERT INTO public.tenants (name) VALUES ('v975-claim-stamp') RETURNING id`);
+      const tenantId = t.rows[0]!.id;
+      const ins = await client.query<{ id: string }>(
+        `INSERT INTO ai_jobs (tenant_id, job_type, payload, status, session_tier)
+         VALUES ($1, 'sop_generation', '{}'::jsonb, 'pending', 'handbook') RETURNING id`,
+        [tenantId]);
+      const jobId = ins.rows[0]!.id;
+
+      const r = await client.query<{ result: { id: string; session_tier: string | null } }>(
+        `SELECT rpc_claim_next_ai_job_for_type('sop_generation') AS result`);
+      expect(r.rows[0]!.result.id).toBe(jobId);
+      expect(r.rows[0]!.result.session_tier).toBe("handbook");
+
+      const st = await client.query<{ status: string }>(
+        `SELECT status FROM ai_jobs WHERE id=$1`, [jobId]);
+      expect(st.rows[0]!.status).toBe("claimed");
+    });
+  });
+
+  it("session_tier ist null im Return wenn der Stempel NULL ist (legacy/session-los)", async () => {
+    await withTestDb(async (client) => {
+      await applyMigration121(client);
+      const t = await client.query<{ id: string }>(
+        `INSERT INTO public.tenants (name) VALUES ('v975-claim-null') RETURNING id`);
+      const tenantId = t.rows[0]!.id;
+      await client.query(
+        `INSERT INTO ai_jobs (tenant_id, job_type, payload, status, session_tier)
+         VALUES ($1, 'lead_push_retry', '{}'::jsonb, 'pending', NULL)`,
+        [tenantId]);
+
+      const r = await client.query<{ result: { session_tier: string | null } }>(
+        `SELECT rpc_claim_next_ai_job_for_type('lead_push_retry') AS result`);
+      expect(r.rows[0]!.result.session_tier).toBeNull();
+    });
+  });
+});
