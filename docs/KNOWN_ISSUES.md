@@ -1,5 +1,14 @@
 # Known Issues
 
+### ISSUE-105 — V9.75 SLC-V9.75-A Worker-Defense killt 3 ungestempelte gated Dispatch-Pfade fail-closed (Funktions-Regression)
+- Status: open
+- Severity: Blocker
+- Area: V9.75 Tier-Gating Worker-Defense (`src/workers/condensation/claim-loop.ts` `evaluateWorkerTierGate`/`resolveSessionForGate`) + ungestempelte Dispatch-Sites (Migration 073 `rpc_bridge`, `src/app/api/capture/[sessionId]/evidence/upload/route.ts`, `src/workers/dialogue/handle-transcription-job.ts`)
+- Summary: /qa SLC-V9.75-A entdeckt 2026-06-17 (RPT-484, Worktree `v9-75-exit-readiness` `c7fad17`). Drei gated job_types werden von Dispatch-Sites enqueued, die V9.75 NICHT angefasst hat → `ai_jobs.session_tier = NULL`. Die Worker-Defense faellt fuer NULL-Stempel auf `resolveSessionForGate(payload)` zurueck, kann aber keinen der drei Payloads aufloesen (kennt nur `email_bulk_*`/`bulk_run_id`, `payload.capture_session_id`, `payload.block_checkpoint_id`): `bridge_generation` (Payload `{bridge_run_id}`, via `rpc_bridge` 073), `evidence_extraction` (Payload `{evidence_file_id, session_id}` — Key `session_id` ≠ `capture_session_id`, via evidence-upload-route), `dialogue_extraction` (Payload `{dialogue_session_id}`, via `handle-transcription-job` Chain). Alle drei → `tier_gate_denied_worker`. Empirisch reproduziert (Probe `evaluateWorkerTierGate` → alle 3 false) + live bestaetigt (`fn_tier_allows(NULL, <job>) = false`).
+- Impact: Nach Deploy schlagen Bruecke-, Chef-Evidence- und Dialog-Extraktion fuer JEDE Session — auch korrekt entitelte `handbook`-Sessions — im Worker fehl. Drei bestehende, live deployte Pipelines kaputt → AC-A-8 „0 Regression" verletzt. Im Internal-Test-Mode (Founder-only) ohne Kunden-Impact, aber blockiert Merge/Deploy von V9.75.
+- Workaround: Keiner — Slice darf nicht gemergt/deployed werden, bis gefixt.
+- Next Action: /backend Fix-Iteration (Option A bevorzugt): `session_tier` an den 3 Sites stempeln + dort gaten (`rpc_bridge` CREATE-OR-REPLACE in Mig 121 §4; `evidence/upload/route.ts` `assertSessionTierAllows`+Stempel; `handle-transcription-job.ts` Eltern-`job.session_tier` an `dialogue_extraction`-Insert vererben). Zusatz Medium: Schicht-1-Gate bei `diagnose/actions.ts:306` (`knowledge_unit_condensation` — funktional OK weil Worker via `capture_session_id` re-gatet, aber Dispatch-Gate fehlt). Payload-Regressionstests fuer die 3 Faelle + `next build`. Danach Re-/qa.
+
 ### ISSUE-103 — V9.7 Worker-Crash-Loop nach Redeploy: `ERR_MODULE_NOT_FOUND 'yaml'` (yaml war devDependency)
 - Status: resolved
 - Severity: High
