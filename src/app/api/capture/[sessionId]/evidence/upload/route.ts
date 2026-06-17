@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { assertSessionTierAllows } from "@/lib/auth/assert-session-tier";
 import { extractText } from "@/lib/document-parser";
 import {
   MAX_FILE_SIZE,
@@ -176,19 +177,37 @@ export async function POST(
     );
   }
 
-  // Enqueue evidence_extraction job for async processing (chunking + mapping)
-  try {
-    await adminClient.from("ai_jobs").insert({
-      tenant_id: session.tenant_id,
-      job_type: "evidence_extraction",
-      payload: {
-        evidence_file_id: evidenceFile.id,
-        session_id: sessionId,
-      },
-      status: "pending",
-    });
-  } catch (enqueueErr) {
-    console.error("[evidence-upload] Failed to enqueue extraction job:", enqueueErr);
+  // V9.75 Tier-Gate (Schicht 1) — evidence_extraction verlangt >= blueprint.
+  // Der Datei-Upload selbst ist kein gated job_type; nur die AI-Extraktion. Bei
+  // zu niedriger Stufe wird der Extraktions-Job NICHT enqueued (kein 403 — die
+  // Datei ist gespeichert). Bei ausreichender Stufe wird session_tier gestempelt.
+  // Fix ISSUE-105: ohne Stempel + nicht-aufloesbarem Payload {evidence_file_id,
+  // session_id} haette der Worker jeden evidence_extraction-Job fail-closed getoetet.
+  const gate = await assertSessionTierAllows(
+    adminClient,
+    sessionId,
+    "evidence_extraction"
+  );
+  if (gate.allowed) {
+    // Enqueue evidence_extraction job for async processing (chunking + mapping)
+    try {
+      await adminClient.from("ai_jobs").insert({
+        tenant_id: session.tenant_id,
+        job_type: "evidence_extraction",
+        payload: {
+          evidence_file_id: evidenceFile.id,
+          session_id: sessionId,
+        },
+        status: "pending",
+        session_tier: gate.tier,
+      });
+    } catch (enqueueErr) {
+      console.error("[evidence-upload] Failed to enqueue extraction job:", enqueueErr);
+    }
+  } else {
+    console.log(
+      `[evidence-upload] evidence_extraction skipped (tier_gate_denied) for session ${sessionId}`
+    );
   }
 
   // --- Async KI Document Analysis (ported from Blueprint) ---

@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { assertSessionTierAllows } from "@/lib/auth/assert-session-tier";
 import type { DiagnosisContent } from "@/workers/diagnosis/types";
 
 interface TriggerDiagnosisResult {
@@ -66,7 +67,21 @@ export async function triggerDiagnosisGeneration(
     return { success: false, error: "Checkpoint gehoert nicht zur Session" };
   }
 
-  // 3. Enqueue ai_job
+  // 2b. V9.75 Tier-Gate (Schicht 1) — diagnosis_generation verlangt >= blueprint.
+  const gate = await assertSessionTierAllows(
+    supabase,
+    sessionId,
+    "diagnosis_generation"
+  );
+  if (!gate.allowed) {
+    return {
+      success: false,
+      error:
+        "Diagnose ist fuer die aktuelle Stufe nicht freigeschaltet (tier_gate_denied)",
+    };
+  }
+
+  // 3. Enqueue ai_job (mit session_tier-Stempel fuer die Worker-Defense)
   const { data: jobData, error: jobError } = await supabase
     .from("ai_jobs")
     .insert({
@@ -78,6 +93,7 @@ export async function triggerDiagnosisGeneration(
         session_id: sessionId,
       },
       status: "pending",
+      session_tier: gate.tier,
     })
     .select("id")
     .single();

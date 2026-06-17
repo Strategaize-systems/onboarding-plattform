@@ -17,6 +17,8 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { assertSessionTierAllows } from "@/lib/auth/assert-session-tier";
+
 type AdminClient = SupabaseClient;
 
 const PIPELINE_TRANSITIONS: Record<
@@ -54,7 +56,7 @@ export async function advanceWalkthroughPipeline(
 ): Promise<AdvanceResult> {
   const { data: session, error: loadError } = await adminClient
     .from("walkthrough_session")
-    .select("id, tenant_id, status")
+    .select("id, tenant_id, status, capture_session_id")
     .eq("id", walkthroughSessionId)
     .single();
 
@@ -90,6 +92,20 @@ export async function advanceWalkthroughPipeline(
   // 2. Naechsten ai_job einfaedeln (sofern Stufe einen Folge-Job hat)
   let enqueuedJobId: string | null = null;
   if (transition.nextJobType) {
+    // V9.75 Worker-Defense-Vererbung (ARCHITECTURE §4): Folge-Stage-Jobs erben
+    // session_tier. Re-Gate (defense-in-depth) + Stempel ueber die capture_session.
+    // walkthrough_session.capture_session_id ist NOT NULL (Migration 083).
+    const gate = await assertSessionTierAllows(
+      adminClient,
+      session.capture_session_id as string,
+      transition.nextJobType,
+    );
+    if (!gate.allowed) {
+      throw new Error(
+        `advanceWalkthroughPipeline: tier_gate_denied for '${transition.nextJobType}' (session ${walkthroughSessionId})`,
+      );
+    }
+
     const { data: jobRow, error: enqueueError } = await adminClient
       .from("ai_jobs")
       .insert({
@@ -97,6 +113,7 @@ export async function advanceWalkthroughPipeline(
         job_type: transition.nextJobType,
         payload: { walkthroughSessionId },
         status: "pending",
+        session_tier: gate.tier,
       })
       .select("id")
       .single();

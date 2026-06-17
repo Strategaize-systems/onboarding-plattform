@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { assertSessionTierAllows } from "@/lib/auth/assert-session-tier";
 import type { SopContent } from "@/workers/sop/types";
 
 interface TriggerSopResult {
@@ -62,7 +63,21 @@ export async function triggerSopGeneration(
     return { success: false, error: "Checkpoint gehoert nicht zur Session" };
   }
 
-  // 3. Enqueue ai_job
+  // 2b. V9.75 Tier-Gate (Schicht 1) — sop_generation verlangt >= handbook.
+  const gate = await assertSessionTierAllows(
+    supabase,
+    sessionId,
+    "sop_generation"
+  );
+  if (!gate.allowed) {
+    return {
+      success: false,
+      error:
+        "SOP-Generierung ist fuer die aktuelle Stufe nicht freigeschaltet (tier_gate_denied)",
+    };
+  }
+
+  // 3. Enqueue ai_job (mit session_tier-Stempel fuer die Worker-Defense)
   const { data: jobData, error: jobError } = await supabase
     .from("ai_jobs")
     .insert({
@@ -74,6 +89,7 @@ export async function triggerSopGeneration(
         session_id: sessionId,
       },
       status: "pending",
+      session_tier: gate.tier,
     })
     .select("id")
     .single();

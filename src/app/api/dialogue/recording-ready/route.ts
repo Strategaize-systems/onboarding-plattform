@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { assertSessionTierAllows } from "@/lib/auth/assert-session-tier";
 import { readFile } from "node:fs/promises";
 
 /**
@@ -52,7 +53,7 @@ export async function POST(request: Request) {
   // 1. Find dialogue session by room name
   const { data: session, error: sessionError } = await admin
     .from("dialogue_session")
-    .select("id, tenant_id, status")
+    .select("id, tenant_id, status, capture_session_id")
     .eq("jitsi_room_name", body.room_name)
     .single();
 
@@ -118,7 +119,21 @@ export async function POST(request: Request) {
     );
   }
 
-  // 5. Enqueue dialogue_transcription job
+  // 5. V9.75 Tier-Gate (Schicht 1) — dialogue_transcription verlangt >= handbook.
+  // dialogue_session.capture_session_id ist NOT NULL (Migration 059).
+  const gate = await assertSessionTierAllows(
+    admin,
+    session.capture_session_id,
+    "dialogue_transcription"
+  );
+  if (!gate.allowed) {
+    console.error(
+      `[recording-ready] tier_gate_denied: dialogue_transcription for session ${session.id}`
+    );
+    return NextResponse.json({ error: "tier_gate_denied" }, { status: 403 });
+  }
+
+  // 6. Enqueue dialogue_transcription job (mit session_tier-Stempel)
   const { error: jobError } = await admin.from("ai_jobs").insert({
     tenant_id: session.tenant_id,
     job_type: "dialogue_transcription",
@@ -127,6 +142,7 @@ export async function POST(request: Request) {
       recording_storage_path: storagePath,
     },
     status: "pending",
+    session_tier: gate.tier,
   });
 
   if (jobError) {

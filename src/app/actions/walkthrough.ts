@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { assertSessionTierAllows } from "@/lib/auth/assert-session-tier";
 
 // V5 Walkthrough-Mode — Capture-Foundation Server Actions.
 // SLC-071 MT-4 + MT-5 (initial). SLC-075 MT-1 (Self-Spawn-Refactor).
@@ -293,7 +294,7 @@ export async function confirmWalkthroughUploaded(
   // Zeile mit dem User-Client; RLS zeigt sie nur, wenn er sie sehen darf.
   const { data: session, error: loadError } = await supabase
     .from("walkthrough_session")
-    .select("id, tenant_id, recorded_by_user_id, status")
+    .select("id, tenant_id, recorded_by_user_id, status, capture_session_id")
     .eq("id", input.walkthroughSessionId)
     .single();
   if (loadError || !session) {
@@ -330,12 +331,29 @@ export async function confirmWalkthroughUploaded(
     );
   }
 
-  // ai_jobs INSERT — Worker-Pickup laeuft in SLC-072.
+  // V9.75 Tier-Gate (Schicht 1) — walkthrough_* verlangt >= handbook. Dies ist
+  // der initiale Walkthrough-Trigger; Folge-Stage-Jobs erben session_tier ueber
+  // den Pipeline-Trigger (ARCHITECTURE §4). walkthrough_session.capture_session_id
+  // ist NOT NULL (Migration 083).
+  const gate = await assertSessionTierAllows(
+    admin,
+    session.capture_session_id,
+    "walkthrough_transcribe"
+  );
+  if (!gate.allowed) {
+    throw new Error(
+      "Walkthrough ist fuer die aktuelle Stufe nicht freigeschaltet (tier_gate_denied)"
+    );
+  }
+
+  // ai_jobs INSERT — Worker-Pickup laeuft in SLC-072. session_tier-Stempel
+  // fuer die Worker-Defense (MT-4) + Vererbung an Folge-Stages.
   const { error: jobError } = await admin.from("ai_jobs").insert({
     tenant_id: session.tenant_id,
     job_type: "walkthrough_transcribe",
     status: "pending",
     payload: { walkthroughSessionId: session.id },
+    session_tier: gate.tier,
   });
   if (jobError) {
     throw new Error(`ai_jobs INSERT fehlgeschlagen: ${jobError.message}`);
