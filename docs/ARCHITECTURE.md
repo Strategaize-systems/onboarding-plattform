@@ -9387,3 +9387,178 @@ Keine neuen. `yaml@^2.9.0` (bereits Dependency) fuer Frontmatter-Serialize/Parse
 ### 10. Empfohlener naechster Schritt
 
 `/slice-planning V9.7` — SLC-Schnitt fuer FEAT-083 (Concept-Emitter, TDD-RED Conformance zuerst) → FEAT-084 (Bundle-Assembly + Worker-Wiring + ZIP-Multi-Folder), Cumulative-Single-Branch-Worktree, AC-Matrizen gegen SC-V9.7-1..10. 0 Migrationen, 0 neue Deps.
+
+## V9.75 Architecture Addendum — Exit-Readiness-Produktisierung (Tier-Gating + Stufe-1-Fahrplan-Report + Mitarbeiter-Register) (RPT-481, 2026-06-17)
+
+> Grundlage: PRD-Section „## V9.75 — Exit-Readiness-Produktisierung" + RPT-480 (/requirements) + Operatives Stufen-Mapping §3 (Dev-System). V9.75 ist **Verpackung, kein Capability-Build**: 1 Spalte + Gates, 1 Renderer auf vorhandenen Daten, 1 leichte Tabelle + Bruecke auf vorhandener RPC. Code-Grounding via Explore (Dispatch-Punkte, Worker-Claim, Schemas, React-PDF-Pattern, Invitation-RPC) + Direkt-Verifikation der zwei lasttragenden Schema-Fakten (siehe §0).
+
+### 0. Schema-Grounding-Korrekturen (gegen reale OP verifiziert 2026-06-17)
+
+Zwei Annahmen aus RPT-480 wurden direkt am Code geprueft — beide aufgeloest, eine mit erheblicher Scope-Erleichterung:
+
+1. **`block_checkpoint.quality_report` EXISTIERT** als reale jsonb-Spalte (Migration `040_orchestrator_extensions.sql:19-20`, `ADD COLUMN quality_report jsonb`). Sie traegt den `OrchestratorOutput` (`coverage` {covered_subtopics, missing_subtopics, coverage_ratio}, `evidence_quality`, `gap_questions[]` {question_text, context, subtopic, priority: required|nice_to_have}, `recommendation`: sufficient|needs_backspelling|critical_gaps). TS-Typ: `src/workers/condensation/types.ts:144-165`. → RPT-480 war korrekt; eine fruehe Explore-Vermutung („quality_report nicht vorhanden, in block_diagnosis gefaltet") war falsch und ist verworfen.
+2. **Verkaufs-Framing-Felder sind BEREITS in den Daten** (loest R2 / Q-D-Sorge). Das Diagnose-Prompt-Schema (`051_template_diagnosis_fields.sql:121`, `diagnosis_prompt.output_instructions`) instruiert das LLM, pro Subtopic u.a. `aufwand` (S|M|L), `owner`, `naechster_schritt`, `empfehlung`, `belege`, `abhaengigkeiten`, `zielbild` **zusaetzlich zu** ampel/reifegrad/risiko/hebel/relevanz_90d zu erzeugen. Diese landen in `block_diagnosis.content.subtopics[].fields` (`Record<string, string|number|null>`, Typ `DiagnosisContent`/`DiagnosisSubtopic` in `src/workers/diagnosis/types.ts:38-50`). Lese-Praezedenz existiert: `src/app/dashboard/diagnose/[capture_session_id]/lead-push-actions.ts:382-408` liest `content.subtopics[*].fields.reifegrad`. **Konsequenz: FEAT-086 braucht KEINEN neuen LLM-Job** — siehe §6 / DEC-222.
+
+### 1. Architektur-Summary
+
+V9.75 fuegt der OP einen **server-side erzwungenen Entitlement-Layer** (Stufen-Flag pro `capture_session`) hinzu, der steuert, welche Worker-Jobs (= Capture-Verarbeitung + Outputs) eine Session ausloesen darf, plus zwei reine **Verpackungs-Artefakte**: einen PDF-Fahrplan-Report auf bereits erzeugten Diagnose-/Orchestrator-Daten und ein leichtes Mitarbeiter-Register mit Bruecke zur bestehenden Einladungs-RPC. **Keine** neue Pipeline, kein neuer Capture-Modus, keine neue LLM-Stage. Drei strukturelle Bausteine, ein gemeinsames Gating-Source-of-Truth (SQL-Funktion).
+
+### 2. Hauptkomponenten + Verantwortlichkeiten
+
+| Komponente | Typ | Verantwortung |
+|---|---|---|
+| `capture_session.tier` | DB-Spalte (neu) | Entitlement-Flag pro Session (`free`/`blueprint`/`handbook`) |
+| `fn_tier_rank(text)` / `fn_min_tier_for_job(text)` / `fn_session_tier_allows(uuid, text)` | SQL-Helfer (neu) | **Single Source of Truth** der Gating-Matrix (Job→Min-Tier, Tier-Ordnung, Session-Erlaubnis) |
+| `set_capture_session_tier(session_id, tier)` | RPC (neu, SECURITY DEFINER) | Einziger legitimer Schreibpfad auf `tier` (strategaize_admin-only) |
+| `capture_session_tier_change_guard` | BEFORE-UPDATE-Trigger (neu) | Column-Level-Schutz: `tier`-Aenderung nur via service_role (= set-tier-RPC) — Reuse BS-`profiles.role`-Pattern |
+| `assertSessionTierAllows(client, sessionId, jobType)` | TS-Guard (neu) | Dispatch-Gate an den TS-Eintrittspunkten |
+| `ai_jobs.session_tier` | DB-Spalte (neu) | Denormalisierter Session-Tier-Stempel pro Job → Worker-Defense ohne Join |
+| Fahrplan-Report-Renderer | `src/lib/pdf/fahrplan-report/` (neu) | React-PDF-Deliverable aus `block_diagnosis` + `quality_report` (Reuse `mandanten-report-v2`-Fonts/Theme) |
+| `employee_roster_draft` | DB-Tabelle (neu) | Leichtes Name+Funktion-Register (ohne E-Mail), session-scoped |
+| `promoteRosterEntryToInvitation` | Server-Action (neu) | Bruecke Register-Eintrag → bestehende `rpc_create_employee_invitation` |
+
+**Strukturell unveraendert (Reuse, SC-V9.75-7):** alle Capture-Modi, 3-Agenten-Verdichtung, `block_diagnosis`-/Orchestrator-Erzeugung, `sop_generation`, `handbook_snapshot_generation`/OKF, `employee_invitation`/`bridge_proposal`, Worker-Handler-Logik. V9.75 legt nur ein Schloss davor und einen Renderer/Bruecke daneben.
+
+### 3. Gating-Matrix (Q-V9.75-B → DEC-220) — finalisiert nach Operativem Mapping §3
+
+Quelle der Wahrheit ist die SQL-Funktion `fn_min_tier_for_job(job_type)`. **Tier-Ordnung:** `free`=0 < `blueprint`=1 < `handbook`=2. Erlaubt, wenn `fn_tier_rank(session.tier) >= fn_tier_rank(fn_min_tier_for_job(job_type))`.
+
+| job_type | Min-Tier | Begruendung (§3) |
+|---|---|---|
+| `knowledge_unit_condensation` | **blueprint** | Verdichtung Einzelperspektive (Stufe 1) |
+| `diagnosis_generation` | **blueprint** | Reifegrad-Diagnose je Subtopic (Stufe 1) |
+| `recondense_with_gaps` | **blueprint** | Chef-Self-Backspelling (Stufe 1, Einzelperspektive). Job-Mechanik ist modus-agnostisch; was Stufe 2 ausmacht, sind die zusaetzlich freigeschalteten Capture-Modi (Mirror/Dialog/Walkthrough/Bulk), die separat gegated sind. Gating bei `handbook` wuerde Stufe-1-Backspelling faelschlich blocken. |
+| `evidence_extraction` | **blueprint** | Eigene Chef-Dokumente, begrenzt (Stufe 1) |
+| `bridge_generation` | **blueprint** | Stufe1→2-Bruecken-Vorschlag (aus Stufe-1-Diagnose). /backend bestaetigt finale Zuordnung an der realen Handler-Semantik. |
+| `dialogue_transcription` / `dialogue_extraction` | **handbook** | Berater-Interviews (Stufe 2) |
+| `walkthrough_stub_processing` / `_transcribe` / `_redact_pii` / `_extract_steps` / `_map_subtopics` | **handbook** | Walkthroughs (Stufe 2) |
+| `email_bulk_parse` / `_pre_filter` / `_thread_redact` / `_pattern_extract` / `_synthesis` | **handbook** | Bulk-Import-Lueckenschluss (Stufe 2) |
+| `sop_generation` | **handbook** | SOP-Generierung (Stufe 2) |
+| `handbook_snapshot_generation` | **handbook** | Unternehmens-/SOP-Handbuch (Stufe 2) |
+| `lead_push_retry` | **ungated** (immer erlaubt) | Lead-Delivery-Infra, kein Capture-/Output-Entitlement |
+
+**`free`-Konsequenz:** Da jeder gated Job ≥`blueprint` verlangt, kann eine `free`-Session **keinen** LLM-Job ausloesen — nur der statische Fragebogen + V8-Teaser-Scoring (kein ai_job) laeuft. Das deckt §4 (Stufe 0 = statisches Scoring, keine LLM-Verdichtung) ohne Sonderfall ab.
+
+**R3-Aufloesung (free vs V8-Teaser, Q-B):** Der V8-Teaser bleibt ein **getrennter Funnel-Flow** (eigenes Template, statisches Scoring, eigener Renderer). `tier='free'` ist kein zweites „Free-Produkt", sondern die **Entitlement-Untergrenze** einer reale `capture_session` (blockt alle gated Jobs). Keine Verschmelzung — zwei verschiedene Konzepte (Marketing-Funnel-Einstieg vs. Session-Entitlement).
+
+### 4. Enforcement-Architektur (Q-V9.75-C → DEC-221) — server-side, zwei Schichten
+
+**Alle gated Dispatches sind session-scoped** (verifiziert: auch `rpc_trigger_handbook_snapshot(p_capture_session_id)` nimmt eine Session-ID, `074_rpc_handbook.sql:32` — die in RPT-480 befuerchtete Tenant-vs-Session-Spannung existiert nicht). Damit ist die Gate-Signatur **uniform**: `fn_session_tier_allows(capture_session_id, job_type)`.
+
+**Schicht 1 — Dispatch-Gate (primaeres Entitlement, BLOCKING):** an JEDEM der enumerierten Eintrittspunkte VOR dem `ai_jobs`-INSERT:
+
+| Eintrittspunkt | Datei | Gate-Form |
+|---|---|---|
+| `rpc_create_block_checkpoint` → condensation | `032_*.sql` | Inline-PL/pgSQL-Guard `IF NOT fn_session_tier_allows(...) THEN RAISE EXCEPTION 'tier_gate_denied'` vor INSERT |
+| `rpc_enqueue_recondense_job` → recondense | `047_*.sql` | dito (inline) |
+| `rpc_trigger_handbook_snapshot` → handbook | `074_*.sql` | dito (inline) |
+| `triggerDiagnosisGeneration` → diagnosis | `…/[blockKey]/diagnosis-actions.ts` | TS-Guard `assertSessionTierAllows()` vor `.insert()` |
+| `triggerSopGeneration` → sop | `…/[blockKey]/sop-actions.ts` | TS-Guard |
+| Walkthrough-Pipeline | `src/lib/walkthrough/pipeline-trigger.ts` | TS-Guard am initialen Trigger; Folge-Jobs erben (siehe Schicht 2) |
+| Bulk-Email-Pipeline | `src/lib/bulk-email/pipeline-trigger.ts` (`enqueue()` Helper) | TS-Guard im `enqueue()`-Helper (zentraler Pipeline-Funnel) |
+| Dialogue Recording-Ready | `src/app/api/dialogue/recording-ready/route.ts` | TS-Guard vor `admin.from('ai_jobs').insert()` |
+
+Da `032`/`047`/`074` PL/pgSQL-RPCs sind und die TS-Dispatches direkt `.insert()`en, gibt es **keinen** einzelnen zentralen Enqueue-Punkt — das Gate muss an beiden Welten sitzen. Der TS-Guard `src/lib/auth/assert-session-tier.ts` liest `capture_session.tier` + ruft die SQL-Erlaubnislogik (oder spiegelt die Matrix als TS-Konstante mit Test-Paritaet gegen die SQL-Funktion).
+
+**Schicht 2 — Worker-Defense-in-Depth (Backstop gegen vergessene/direkte Pfade):**
+- **Stempel:** jeder Dispatch schreibt `ai_jobs.session_tier` = aktueller Session-Tier. Folge-Pipeline-Jobs (Walkthrough/Bulk) erben den `session_tier` des Eltern-Jobs.
+- **Claim-RPC erweitern:** `rpc_claim_next_ai_job_for_type` (`035_*.sql`) gibt zusaetzlich `session_tier` zurueck.
+- **Worker-Check:** in `src/workers/condensation/claim-loop.ts` unmittelbar nach Claim → `fn_tier_allows(session_tier, job_type)`. Bei Verstoss: Job `status='failed'`, `error='tier_gate_denied_worker'`, kein Handler-Aufruf.
+- **Fail-closed bei NULL:** ist `session_tier` fuer einen **gated** job_type NULL (vergessener Pfad), versucht der Worker eine billige Aufloesung aus dem Payload (`capture_session_id`/`block_checkpoint_id`); gelingt das nicht → **Job faellt fehl** (fail-closed, macht den Bug sichtbar; vgl. `security-audit-fable5-standard`). **Ungated** job_types (`lead_push_retry`) sind von der Pruefung ausgenommen (immer erlaubt).
+
+Reuse: `assertRole`-Stil-Guard (kein zentraler Helper in OP vorhanden → neu, schlank) + Synthetic-ai_jobs-Worker-Pre-Check-Disziplin ([[backend]]). **Kein Nav-Hiding als Gate** — UI darf Buttons ausblenden (UX), aber die Durchsetzung ist immer server-side.
+
+### 5. Datenmodell-Aenderungen (Migration-Skizze)
+
+**Migration(en) 121+ (SLC-V9.75-A, Gating-Foundation):**
+```
+ALTER TABLE capture_session
+  ADD COLUMN tier text NOT NULL DEFAULT 'handbook'
+  CHECK (tier IN ('free','blueprint','handbook'));        -- NOT NULL DEFAULT backfillt Bestand = 'handbook' (Q-A / DEC-219)
+
+ALTER TABLE ai_jobs ADD COLUMN session_tier text NULL;     -- Worker-Defense-Stempel
+
+CREATE FUNCTION fn_tier_rank(text) RETURNS int IMMUTABLE;          -- free=0/blueprint=1/handbook=2
+CREATE FUNCTION fn_min_tier_for_job(text) RETURNS text IMMUTABLE;  -- die Matrix aus §3 (CASE)
+CREATE FUNCTION fn_session_tier_allows(uuid, text) RETURNS boolean; -- liest capture_session.tier + Rank-Vergleich
+CREATE FUNCTION set_capture_session_tier(uuid, text) ... SECURITY DEFINER; -- strategaize_admin-only Schreibpfad
+CREATE TRIGGER capture_session_tier_change_guard BEFORE UPDATE ...; -- tier-Change nur via service_role (Reuse profiles.role-Pattern)
+-- CREATE OR REPLACE: rpc_create_block_checkpoint / rpc_enqueue_recondense_job / rpc_trigger_handbook_snapshot (+ inline Gate)
+-- CREATE OR REPLACE: rpc_claim_next_ai_job_for_type (+ RETURN session_tier)
+-- RLS: capture_session SELECT erlaubt tenant das Lesen von tier; UPDATE auf tier nur service_role (Trigger erzwingt)
+```
+
+**Migration 122 (SLC-V9.75-C, Register):**
+```
+CREATE TABLE employee_roster_draft (
+  id uuid PK, tenant_id uuid NOT NULL, capture_session_id uuid NOT NULL,
+  name text NOT NULL, role_hint text NULL, block_key text NULL,   -- KEINE E-Mail
+  promoted_invitation_id uuid NULL,                                -- Bruecken-Linkage (Re-Promote-Schutz)
+  created_by uuid, created_at timestamptz, updated_at timestamptz
+);
+CREATE UNIQUE INDEX ... ON employee_roster_draft (capture_session_id, lower(name), lower(coalesce(role_hint,'')));  -- weiche Dedup
+-- RLS: tenant_id = auth.user_tenant_id() (read/write within tenant); strategaize_admin full
+```
+
+**SLC-V9.75-B (Renderer):** **0 Migrationen** — liest ausschliesslich bestehende `block_diagnosis.content` + `block_checkpoint.quality_report`.
+
+MIG-Nummern (121/122) sind **Skizze** — finale Nummer + File-Split entscheidet /backend (next freie Migration = 121, hoechste real = `120_v95_critic_role.sql`). Formale MIGRATIONS.md-Eintraege entstehen bei Apply (mit Datum) im /backend bzw. /deploy.
+
+### 6. Fahrplan-Report-Datenfluss (FEAT-086, Q-V9.75-D/E → DEC-222/223)
+
+**Quelle (rein lesend, kein neuer Job):** pro Session ueber den Join `capture_session → block_checkpoint (quality_report) + block_diagnosis (content)`:
+- `block_diagnosis.content.subtopics[].fields`: `ampel`, `reifegrad`, `risiko`, `hebel`, `relevanz_90d`, `empfehlung`, `aufwand` (S/M/L), `owner`, `naechster_schritt`.
+- `block_checkpoint.quality_report`: `coverage.missing_subtopics`, `gap_questions[]` (`priority`), `recommendation`.
+
+**Report-Feld → Quelle-Mapping:**
+
+| Report-Sektion | Quelle (DERIVED, kein LLM) |
+|---|---|
+| Reifegrad-Profil je Block/Subtopic | `fields.{ampel,reifegrad,risiko,hebel,relevanz_90d}` |
+| Aufwand S/M/L, naechster Schritt | `fields.aufwand`, `fields.naechster_schritt` (bereits LLM-erzeugt, mig 051) |
+| Owner | `fields.owner` falls befuellt, sonst Template-Fallback „Geschaeftsfuehrung / noch zu benennen" (Owner ist im Prompt bewusst leer = Chef benennt) |
+| Priorisierte Luecken-/To-Do-Liste | `quality_report.gap_questions` (required vor nice_to_have) + `coverage.missing_subtopics`; Sortierung `(priority, risiko*hebel desc, relevanz_90d)` |
+| Exit-Wert/Risiko-Kopplung pro Luecke | **Getemplatete** Narrative aus `risiko`+`hebel`+`relevanz_90d`+`empfehlung` (das Diagnose-Prompt rahmt `risiko` bereits als „Was passiert bei Due Diligence" und `hebel` als „Wirkung auf Exit-Readiness" — deterministisches Template pro (ampel, risiko-Band, hebel-Band) ist ehrlich + gegroundet) |
+| Scope-Satz („Landkarte, nicht Handbuch") | statische Copy |
+| 1 Muster-Handbuch-Sektion | Reuse `src/lib/handbook/okf/emit.ts` (`renderDiagnosisBody`) fuer 1 reifen Block als Substanz-Beweis |
+| Scope-Schaetzung | Heuristik aus #rot/#gelb-Bloecke + #missing_subtopics → Spannen-Range (kein LLM) |
+
+**Ausgabe (Q-E / DEC-223):** **PDF** via React-PDF, neues Modul `src/lib/pdf/fahrplan-report/` (Geschwister zu `mandanten-report-v2`, Reuse `fonts.ts`/`theme.ts`/Wheel-Komponenten). Bereitstellung via Server-Action/Route analog bestehendem Mandanten-Report-Pfad, **Tier-Gate: nur `blueprint`+** (SC-V9.75-5). Optionale Web-Ansicht: deferred (PDF ist das Deliverable; thin Web-Preview ist Folge-Polish, kein V9.75-Blocker).
+
+**Q-D-Refinement (gegen PRD-Default):** Die PRD empfahl tentativ „leichte LLM-Augmentation fuer Aufwand/Owner/naechster-Schritt". §0.2 zeigt: diese Felder sind **bereits in `block_diagnosis.content`**. → **Kein neuer LLM-Job, keine Bedrock-Kosten, keine Latenz** — guenstiger, schneller und staerker „reine Verpackung". `data-residency`-LLM-Pfad entfaellt fuer V9.75 damit ganz.
+
+### 7. Mitarbeiter-Register + Bruecke (FEAT-087, Q-V9.75-F → DEC-224)
+
+- **Tabelle** `employee_roster_draft` (§5): session-scoped, Name+role_hint, optional `block_key`-Tag, **ohne E-Mail**. Weiche Dedup via Unique-Index (`ON CONFLICT DO NOTHING` im Insert) — Register-Dedup ist Warn-Level (PRD R5); die harte Idempotenz sitzt auf der Invitation-Seite.
+- **UI:** Roster-Panel im Debrief-/Meeting-View (`src/app/admin/debrief/[sessionId]/[blockKey]/`); `block_key` aus dem aktuellen Block vor-getaggt. Add/Edit/Delete.
+- **Bruecke** `promoteRosterEntryToInvitation(rosterId, email)`: liest Eintrag → ruft **unveraendert** `rpc_create_employee_invitation(p_email=email, p_display_name=name, p_role_hint=role_hint)` (`072_*.sql`, RETURNS jsonb, 14d-Token, tenant_admin/strategaize_admin-validiert). Respektiert die bestehende `idx_employee_invitation_pending_email`-UNIQUE (tenant_id, lower(email)) WHERE status='pending' → bei Duplikat liefert die RPC `{error:'duplicate_pending_invitation'}`, UI surft als „bereits eingeladen". Erfolg → `employee_roster_draft.promoted_invitation_id` gesetzt (Re-Promote-Schutz). **Keine** Aenderung an `employee_invitation`/`bridge_proposal`/Onboarding (Reuse, SC-V9.75-7).
+- **Register-Tier-Sichtbarkeit:** Register ist Stufe-1-Aktivitaet → verfuegbar ab `blueprint`+ (leichtes UI-/Action-Gate; nicht security-kritisch, da keine teure Ressource — leichtere Pruefung als das Job-Gating).
+
+### 8. Security / Privacy
+
+- **Tier-Spalte Column-Level-Schutz:** `tier` darf NUR via `set_capture_session_tier`-RPC (SECURITY DEFINER, strategaize_admin) geaendert werden; der `capture_session_tier_change_guard`-Trigger (service_role-aware, Reuse BS-`profiles.role`-Pattern [[strategaize-pattern-reuse]]) blockt direkte `PATCH /rest/v1/capture_session {tier:'handbook'}`-Self-Promotion durch tenant_admin. **Bypass-Test Pflicht in /qa** (direkter PostgREST-PATCH).
+- **ISSUE-097-Closure (SC-V9.75-3):** ein `blueprint`/`free`-Mandant kann Voll-Kunden-Jobs (Bulk, SOP, Handbook-Snapshot) weder per Menue noch per **direktem RPC-/Action-Aufruf** ausloesen — durchgesetzt Schicht 1 (Dispatch) + Schicht 2 (Worker). /qa-Bypass-Test pro gated Pfad (direkter Call, nicht nur fehlender Nav-Link).
+- **Tenant-RLS:** `employee_roster_draft` + `capture_session.tier` tenant-scoped (`auth.user_tenant_id()`); Cross-Tenant-Read/Write Pen-Test (SC-V9.75-8) in /qa via node:20-Sidecar-SAVEPOINT-Pattern ([[coolify-test-setup]]).
+- **Kein PII-Zuwachs:** Register haelt nur Name+Funktion (Datensparsamkeit); Fahrplan-Report enthaelt keine Roh-Evidenz ueber das diagnostisch Noetige hinaus.
+- **EU-Data-Residency:** entfaellt fuer V9.75 (kein neuer LLM-Call, DEC-222).
+
+### 9. Constraints / Tradeoffs
+
+- **Breite Gating-Oberflaeche (R1):** 8 Dispatch-Eintrittspunkte ueber PL/pgSQL + TS. Tradeoff akzeptiert mit zwei Gegenmitteln: zentrale Matrix-Funktion (eine Wahrheitsquelle) + Worker-Defense-in-Depth (fail-closed) als Backstop gegen einen vergessenen Pfad. /qa enumeriert pro gated Pfad.
+- **Matrix in SQL + TS gespiegelt:** der TS-Guard braucht die Matrix zur Dispatch-Zeit; SQL-Funktion ist die Wahrheit. Tradeoff: ein Test erzwingt Paritaet (TS-Konstante == `fn_min_tier_for_job`-Output fuer alle 20 job_types).
+- **session_tier-Denormalisierung:** ein Stempel pro Job statt Laufzeit-Join — bewusst, damit der Worker ohne capture_session-Join pruefen kann (Claim-RPC gibt heute keinen Session-Kontext).
+- **Per-Session-Tier (nicht per-Tenant):** Founder-Lock (Q-A). Akzeptiert; da alle gated Dispatches session-scoped sind, entsteht keine Tenant-Rollup-Komplexitaet (handbook-Trigger ist ebenfalls session-scoped).
+- **Reine Verpackung:** keine bestehende Engine-Logik wird angefasst; Reuse-Quote in /qa verifiziert (SC-V9.75-7).
+
+### 10. Offene technische Punkte fuer /slice-planning V9.75
+
+1. **`bridge_generation`-Min-Tier final bestaetigen** an der realen Handler-Semantik (blueprint vs handbook) — Matrix-Funktion macht das zur 1-Zeilen-Aenderung.
+2. **File-Split der Gating-Migration** (eine Migration 121 vs. mehrere: Schema / Helfer-Funktionen / RPC-Replaces) — /backend entscheidet; atomic-commit-Disziplin pro Micro-Task.
+3. **TS-Guard-Quelle der Matrix:** TS-Konstante mit Paritaets-Test vs. Roundtrip-RPC-Call (`fn_session_tier_allows`) je Dispatch — Tradeoff Latenz vs. Single-Source. Empfehlung: RPC-Call in den TS-Guards (eine Wahrheit), TS-Konstante nur falls Latenz auffaellt.
+4. **Muster-Handbuch-Sektion im Report:** welcher Block (hoechster reifegrad? erster confirmed?) als Substanz-Beweis — /slice-planning fixiert die Auswahlregel.
+5. **Test-Layout** (colocated vs `src/__tests__/`, IMP-1262) vor Test-Pfad-Auflistung an realer OP-Konvention pruefen.
+6. **Parallelisierbarkeit:** SLC-C (Register) haengt nur an SLC-A (tier-Spalte fuer RLS-Kontext), nicht an SLC-B → nach A parallel zu B moeglich.
+
+### 11. Empfohlener naechster Schritt
+
+`/slice-planning V9.75` — SLC-Schnitt A (Tier-Gating-Foundation: Migration + Matrix-Funktionen + Dispatch-Guards + Worker-Defense + Bypass-Test-Matrix + ISSUE-097-Closure, TDD-RED zuerst) → B (Fahrplan-PDF-Renderer, 0 Migrationen, Reuse mandanten-report-v2) → C (Register + Bruecke, parallel zu B nach A). Cumulative-Single-Branch-Worktree `v9-75-exit-readiness`, EIN Master-Merge, AC-Matrizen gegen SC-V9.75-1..8. Geschaetzt 3 Slices, 2 Migrationen, **0 neue LLM-Jobs, 0 neue Deps** (React-PDF bereits vorhanden).

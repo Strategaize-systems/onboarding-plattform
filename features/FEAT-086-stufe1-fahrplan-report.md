@@ -30,4 +30,7 @@ Der **einzige echt fehlende Renderer**: macht aus der bereits erzeugten Stufe-1-
 Q-V9.75-D (Verkaufs-Framing-Felder Aufwand/Owner/naechster-Schritt + Exit-Kopplung: LLM-augmentiert vs getemplatet vs vereinfacht — R2, da nicht in den Daten), Q-V9.75-E (Ausgabeformat PDF vs Web vs beides).
 
 ## Reuse / Constraints
-React-PDF (`mandanten-report-v2`), keine neue Diagnose-Logik. Falls LLM-Augmentation: Bedrock eu-central-1 ([[data-residency]]). SaaS-Mode.
+React-PDF (`mandanten-report-v2`), keine neue Diagnose-Logik. SaaS-Mode.
+
+## /architecture-Aufloesung (RPT-481, 2026-06-17)
+**Q-D→DEC-222: KEIN neuer LLM-Job.** Direkt-Verifikation (mig 051 `diagnosis_prompt.output_instructions`): `aufwand` (S/M/L), `owner`, `naechster_schritt`, `empfehlung` werden bereits pro Subtopic in `block_diagnosis.content.subtopics[].fields` erzeugt (Typ `DiagnosisContent`, `src/workers/diagnosis/types.ts`). Renderer liest sie direkt (owner-Fallback „GF/noch zu benennen"); Exit-Wert/Risiko-Kopplung deterministisch getemplatet aus risiko/hebel/relevanz_90d/empfehlung → R2 aufgeloest, `data-residency`-LLM-Pfad entfaellt. `block_checkpoint.quality_report` (coverage/gap_questions/recommendation) existiert real (mig 040) → priorisierte Luecken-Liste. Q-E→DEC-223: PDF via React-PDF, neues Modul `src/lib/pdf/fahrplan-report/` (Reuse fonts/theme/wheel), Tier-Gate blueprint+, Web-View deferred. **0 Migrationen** (SLC-B). Detail: ARCHITECTURE.md §0/§6.

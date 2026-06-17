@@ -24,3 +24,6 @@ Q-V9.75-F (Tabellen-Form: Spalten, session- vs tenant-scoped, Dedup-Regel, UI-Ei
 
 ## Reuse / Constraints
 `rpc_create_employee_invitation` + `employee_invitation` + `bridge_proposal` (`proposed_employee_user_id`/`proposed_employee_role_hint`) unveraendert. SaaS-Mode TDD (Idempotenz + RLS).
+
+## /architecture-Aufloesung (RPT-481, 2026-06-17)
+Q-F→DEC-224: `employee_roster_draft (id, tenant_id, capture_session_id, name, role_hint, block_key NULL, promoted_invitation_id NULL, created_by, created_at, updated_at)` — **session-scoped, ohne E-Mail**, weiche Dedup via UNIQUE(capture_session_id, lower(name), lower(coalesce(role_hint,''))) ON CONFLICT DO NOTHING + Tenant-RLS. UI im Debrief-/Meeting-View, `block_key` aus aktuellem Block vor-getaggt. Bruecke `promoteRosterEntryToInvitation(rosterId, email)` → unveraenderte `rpc_create_employee_invitation`; pending-email-UNIQUE (`idx_employee_invitation_pending_email`, mig 066) liefert bei Duplikat `duplicate_pending_invitation` → „bereits eingeladen", Erfolg setzt `promoted_invitation_id` (Re-Promote-Schutz). Register-UI ab blueprint+. Migration 122 (Skizze), parallel zu SLC-B nach SLC-A. Detail: ARCHITECTURE.md §5/§7.

@@ -29,3 +29,6 @@ Q-V9.75-A (Spalte/Werte/Default/wer-setzt), Q-V9.75-B (Gating-Matrix + Free-vs-V
 
 ## Reuse / Constraints
 `assertRole`-Stil-Guard, Synthetic-ai_jobs-Worker-Pre-Check-Pattern ([[backend]]). Server-side BLOCKING (kein Nav-Hiding, vgl. BS V8.14 / security-audit-fable5-standard). SaaS-Mode TDD.
+
+## /architecture-Aufloesung (RPT-481, 2026-06-17)
+Q-A→DEC-219 (`capture_session.tier` free/blueprint/handbook, Default handbook, Schreibpfad nur strategaize_admin via `set_capture_session_tier`-RPC + service_role-aware `capture_session_tier_change_guard`-Trigger, Reuse BS-`profiles.role`-Pattern). Q-B→DEC-220 (Gating-Matrix als SQL-Single-Source `fn_min_tier_for_job`; `recondense_with_gaps`=blueprint; `free` getrennt vom V8-Teaser). Q-C→DEC-221 (2 Schichten: Inline-Guard in rpc_create_block_checkpoint/rpc_enqueue_recondense_job/rpc_trigger_handbook_snapshot + TS-`assertSessionTierAllows` an 5 TS-Dispatches + Worker-Defense via `ai_jobs.session_tier`-Stempel, fail-closed). **Alle gated Dispatches session-scoped** (handbook-Trigger nimmt p_capture_session_id → uniformes Gate). Migration 121 (Skizze). Detail: ARCHITECTURE.md „## V9.75 Architecture Addendum" §3/§4/§5/§8.
