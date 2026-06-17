@@ -341,3 +341,180 @@ describe("Migration 121 — capture_session_tier_change_guard", () => {
     });
   });
 });
+
+// ============================================================================
+// AC-A-2/AC-A-3 — Dispatch-RPC Tier-Gates (MT-2)
+//   Jede gated Dispatch-RPC lehnt eine Session unter der Mindest-Stufe mit
+//   'tier_gate_denied' ab (kein Checkpoint/Snapshot/Job bleibt liegen) und
+//   stempelt bei Erfolg den session_tier auf den erzeugten ai_job.
+//   Die voll-adversariale Bypass-Suite (PostgREST-Patch, direkter Job-INSERT,
+//   Worker-Defense) folgt in MT-5.
+// ============================================================================
+
+/** Seedet einen block_checkpoint fuer eine Session (als postgres/Superuser). */
+async function seedCheckpoint(
+  client: Client,
+  tenantId: string,
+  sessionId: string,
+  userId: string,
+): Promise<string> {
+  const r = await client.query<{ id: string }>(
+    `INSERT INTO public.block_checkpoint (
+       tenant_id, capture_session_id, block_key,
+       checkpoint_type, content, content_hash, created_by
+     )
+     VALUES ($1::uuid, $2::uuid, 'block_1', 'questionnaire_submit',
+             '{}'::jsonb, encode(sha256('seed'::bytea), 'hex'), $3::uuid)
+     RETURNING id`,
+    [tenantId, sessionId, userId],
+  );
+  return r.rows[0]!.id;
+}
+
+describe("Migration 121 — rpc_create_block_checkpoint Tier-Gate (knowledge_unit_condensation)", () => {
+  it("free-tier Session wird mit tier_gate_denied abgelehnt; kein Checkpoint/Job", async () => {
+    await withTestDb(async (client) => {
+      await applyMigration121(client);
+      const { userId, sessionId, tenantId } = await seedSession(client, "free");
+
+      let errMessage: string | null = null;
+      await withJwtContext(client, userId, async () => {
+        await client.query("SAVEPOINT try_cp");
+        try {
+          await client.query(
+            `SELECT rpc_create_block_checkpoint($1, 'block_1', 'questionnaire_submit', '{"a":1}'::jsonb)`,
+            [sessionId],
+          );
+        } catch (e) {
+          errMessage = (e as Error).message;
+        }
+        await client.query("ROLLBACK TO SAVEPOINT try_cp");
+      });
+      expect(errMessage).toMatch(/tier_gate_denied/);
+
+      const cp = await client.query(
+        `SELECT 1 FROM block_checkpoint WHERE capture_session_id=$1`, [sessionId]);
+      expect(cp.rowCount).toBe(0);
+      const job = await client.query(
+        `SELECT 1 FROM ai_jobs WHERE tenant_id=$1 AND job_type='knowledge_unit_condensation'`,
+        [tenantId]);
+      expect(job.rowCount).toBe(0);
+    });
+  });
+
+  it("blueprint-Session erlaubt; ai_job traegt session_tier='blueprint'", async () => {
+    await withTestDb(async (client) => {
+      await applyMigration121(client);
+      const { userId, sessionId } = await seedSession(client, "blueprint");
+
+      let jobId: string | null = null;
+      await withJwtContext(client, userId, async () => {
+        const r = await client.query<{ result: { job_id: string | null } }>(
+          `SELECT rpc_create_block_checkpoint($1, 'block_1', 'questionnaire_submit', '{"a":1}'::jsonb) AS result`,
+          [sessionId],
+        );
+        jobId = r.rows[0]!.result.job_id;
+      });
+      expect(jobId).not.toBeNull();
+
+      const job = await client.query<{ session_tier: string }>(
+        `SELECT session_tier FROM ai_jobs WHERE id=$1`, [jobId]);
+      expect(job.rows[0]!.session_tier).toBe("blueprint");
+    });
+  });
+});
+
+describe("Migration 121 — rpc_enqueue_recondense_job Tier-Gate (recondense_with_gaps)", () => {
+  it("free-tier Checkpoint wird mit tier_gate_denied abgelehnt", async () => {
+    await withTestDb(async (client) => {
+      await applyMigration121(client);
+      const { userId, sessionId, tenantId } = await seedSession(client, "free");
+      const checkpointId = await seedCheckpoint(client, tenantId, sessionId, userId);
+
+      let errMessage: string | null = null;
+      await client.query("SAVEPOINT try_rc");
+      try {
+        await client.query(
+          `SELECT rpc_enqueue_recondense_job($1, '{}'::uuid[])`, [checkpointId]);
+      } catch (e) {
+        errMessage = (e as Error).message;
+      }
+      await client.query("ROLLBACK TO SAVEPOINT try_rc");
+      expect(errMessage).toMatch(/tier_gate_denied/);
+
+      const job = await client.query(
+        `SELECT 1 FROM ai_jobs WHERE tenant_id=$1 AND job_type='recondense_with_gaps'`,
+        [tenantId]);
+      expect(job.rowCount).toBe(0);
+    });
+  });
+
+  it("blueprint-Checkpoint erlaubt; ai_job traegt session_tier='blueprint'", async () => {
+    await withTestDb(async (client) => {
+      await applyMigration121(client);
+      const { userId, sessionId, tenantId } = await seedSession(client, "blueprint");
+      const checkpointId = await seedCheckpoint(client, tenantId, sessionId, userId);
+
+      const r = await client.query<{ result: { job_id: string } }>(
+        `SELECT rpc_enqueue_recondense_job($1, '{}'::uuid[]) AS result`, [checkpointId]);
+      const jobId = r.rows[0]!.result.job_id;
+      expect(jobId).toBeTruthy();
+
+      const job = await client.query<{ session_tier: string }>(
+        `SELECT session_tier FROM ai_jobs WHERE id=$1`, [jobId]);
+      expect(job.rows[0]!.session_tier).toBe("blueprint");
+    });
+  });
+});
+
+describe("Migration 121 — rpc_trigger_handbook_snapshot Tier-Gate (handbook_snapshot_generation)", () => {
+  it("blueprint-Session wird mit tier_gate_denied abgelehnt; kein Snapshot/Job", async () => {
+    await withTestDb(async (client) => {
+      await applyMigration121(client);
+      const { userId, sessionId, tenantId } = await seedSession(client, "blueprint");
+
+      let errMessage: string | null = null;
+      await withJwtContext(client, userId, async () => {
+        await client.query("SAVEPOINT try_hb");
+        try {
+          await client.query(
+            `SELECT rpc_trigger_handbook_snapshot($1)`, [sessionId]);
+        } catch (e) {
+          errMessage = (e as Error).message;
+        }
+        await client.query("ROLLBACK TO SAVEPOINT try_hb");
+      });
+      expect(errMessage).toMatch(/tier_gate_denied/);
+
+      const snap = await client.query(
+        `SELECT 1 FROM handbook_snapshot WHERE capture_session_id=$1`, [sessionId]);
+      expect(snap.rowCount).toBe(0);
+      const job = await client.query(
+        `SELECT 1 FROM ai_jobs WHERE tenant_id=$1 AND job_type='handbook_snapshot_generation'`,
+        [tenantId]);
+      expect(job.rowCount).toBe(0);
+    });
+  });
+
+  it("handbook-Session erlaubt; ai_job traegt session_tier='handbook'", async () => {
+    await withTestDb(async (client) => {
+      await applyMigration121(client);
+      const { userId, sessionId, tenantId } = await seedSession(client, "handbook");
+
+      let snapshotId: string | null = null;
+      await withJwtContext(client, userId, async () => {
+        const r = await client.query<{ result: { handbook_snapshot_id: string | null; error?: string } }>(
+          `SELECT rpc_trigger_handbook_snapshot($1) AS result`, [sessionId]);
+        snapshotId = r.rows[0]!.result.handbook_snapshot_id;
+      });
+      expect(snapshotId).not.toBeNull();
+
+      const job = await client.query<{ session_tier: string }>(
+        `SELECT session_tier FROM ai_jobs
+          WHERE tenant_id=$1 AND job_type='handbook_snapshot_generation'`,
+        [tenantId]);
+      expect(job.rowCount).toBe(1);
+      expect(job.rows[0]!.session_tier).toBe("handbook");
+    });
+  });
+});
