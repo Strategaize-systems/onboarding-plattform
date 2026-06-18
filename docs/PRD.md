@@ -2730,3 +2730,65 @@ Reihenfolge A → B → C; /architecture prueft Parallelisierbarkeit von C.
 ### Detail-Spec
 
 V9.75-Requirements-Baseline-Report 2026-06-17 als RPT-480, basierend auf /discovery RPT-479 (3 Founder-Forks gelockt) + Schema-Grounding (Explore). **Status: READY fuer /architecture V9.75.** Keine BLOCKING-OQs; 6 architektonische Forks (Q-V9.75-A..F) mit Default-Empfehlung sind /architecture-Aufgabe. Feature-Skeleton-Specs unter `/features/FEAT-085..087-*.md`. Naechster Schritt: `/architecture V9.75` mit Q-A..F + Gating-Matrix (Operatives Mapping §3) + Migration-Skizze (tier-Spalte + Register-Tabelle) + Guard-Helper-Entwurf (server-side, Dispatch + Worker-Defense) + Renderer-Daten-Mapping (block_diagnosis/quality_report → Report-Felder).
+
+## V9.8 — Controlled Tag-Vokabular + Tag-Export-Propagation (BL-505)
+
+### Problem statement
+Zwei verbundene Luecken im V9.x Bulk-Import-Wissenssystem (Founder, entdeckt im V9.5-/deploy-Smoke 2026-06-14), code-verifiziert in dieser Requirements-Session:
+1. **Export-Gap.** `email_synthesized_unit.themes` (`text[]`, Mig 119) wird beim Handbook-Import NICHT in `knowledge_unit` uebernommen — `handbook-import.ts::mapSynthesizedUnitToKnowledgeUnit` mappt nur `title`, `body` (= description + Source-Attribution), `curated_section`→`block_key`, `confidence`. `knowledge_unit` hat heute keine `themes`/`tags`-Spalte (nur `metadata` JSONB, Mig 093). Die im Bulk-Lauf erarbeiteten Tags gehen damit verloren und stehen der spaeteren Handbuch-Suche / Downstream-Wissenssystemen nicht zur Verfuegung.
+2. **LLM-Tag-Wildwuchs.** `email-pattern-prompt.ts` (Extraktion) + `email-synthesis-prompt.ts` (Synthese) generieren `themes` pro Lauf FREI (max 20, mit Beispielen), OHNE Injektion bereits vergebener Tenant-Tags. Synonym-Varianten (antwortzeit vs. reaktionszeit vs. antwort-geschwindigkeit) fragmentieren das Wissen ungebremst.
+
+### Goal / intended outcome
+Findbarkeit im Handbuch: Mitarbeiter / neuer Chef finden Wissen ueber Suche, statt es zu verfehlen, weil ein Tag nicht exakt passt (Kern des Produktnutzens). Erreicht durch (a) ein pro-Tenant wachsendes, kontrolliertes Tag-Vokabular, das das LLM beim Neuvergeben aktiv steuert (use-existing-where-fits, only-add-if-novel), und (b) verlustfreie Propagation der Tags bis in `knowledge_unit`.
+
+### Primary user(s)
+- **Indirekt/Endnutzen:** Mitarbeiter + neuer Geschaeftsfuehrer, die das Unternehmerhandbuch durchsuchen.
+- **Operativ:** Kurator/Founder, der Bulk-Import-Wissensbausteine ins Handbuch promotet; das Tenant-Vokabular waechst implizit mit (kein manuelles Tag-Management als V1-Ziel).
+
+### V1 scope
+- **Theme-Export-Propagation:** `themes` aus `email_synthesized_unit` beim Promote in `knowledge_unit` mit-uebernehmen (Ziel-Spalte = /architecture-Fork: dedizierte `themes text[]` vs. `metadata` JSONB). Forward-only.
+- **Controlled-Vokabular per Prompt-Injektion:** bestehende Tenant-Tags (+ kontrollierte Sections) werden in den Extraktions- UND Synthese-Prompt injiziert mit Regel „nutze einen passenden bestehenden Tag; entscheide nur ein neues Tag, wenn nichts passt".
+- **Vokabular-Quelle:** pro Tenant aggregierte, bereits vergebene Tags (Architektur entscheidet: abgeleitet aus bestehenden `themes`-Spalten vs. neue schlanke `tenant_tag`-Vokabular-Tabelle).
+- **Hauptkategorien bleiben Sections** (`template.handbook_schema`, beim Kuratieren gesnappt); darunter haengende Tags duerfen leicht variieren, aber nicht stark.
+
+### Out of scope (V1)
+- **Embedding-Normalisierung synonymer Themes** (Titan/pgvector) — Loesungs-Kandidat, aber heavier; deferred (Founder: „nicht ueberdesignen"). Als V9.8+-Kandidat dokumentiert.
+- **Retroaktives Re-Tagging** bereits importierter `knowledge_unit`-Rows — V1 ist forward-only; Backfill separat falls noetig.
+- **Manuelle Tag-Verwaltungs-UI** (Tags umbenennen/mergen/loeschen durch den Kurator) — spaeter, falls Bedarf.
+- **Tag-Facetten-Suche-UI** im Handbuch — V9.8 stellt die Tag-Daten bereit; die Such-/Filter-UI ist eigener Scope.
+
+### Core features
+- **FEAT-088 — Controlled Tenant-Tag-Vokabular (Prompt-gesteuert):** Vokabular-Quelle (pro Tenant) + Injektion in `email-pattern-prompt.ts` + `email-synthesis-prompt.ts` mit use-existing-where-fits/only-add-if-novel-Regel.
+- **FEAT-089 — Tag-Export-Propagation:** `themes` → `knowledge_unit` in `handbook-import.ts` (verlustfrei, queryable), inkl. Ziel-Spalten-Entscheidung + ggf. Migration.
+
+### Constraints
+- Data-Residency: jede LLM-/Embedding-Nutzung bleibt EU (Bedrock eu-central-1) — gilt auch falls Embedding-Normalisierung spaeter dazukommt.
+- Tenant-Isolation: Vokabular ist strikt pro Tenant (RLS), kein Cross-Tenant-Tag-Leak.
+- Minimaler Churn: bestehende Bulk-Pipeline + Worker + Synthese-Schemata moeglichst additiv erweitern, keine Umstrukturierung.
+- V9.8 ist der Findbarkeits-/Tagging-Abschluss von Modul 1 — Produkt-Strukturen, die spaeter kaemen, muessten hier mit-getaggt werden (Founder-Begruendung fuer Reihenfolge V9.75 → V9.8).
+
+### Risks / assumptions
+- **R1:** Prompt-Vokabular-Injektion bei grossem Tenant-Tag-Bestand kann das Token-Budget / die Strict-JSON-Stabilitaet belasten — Architektur muss eine Obergrenze / Relevanz-Vorauswahl der injizierten Tags vorsehen.
+- **R2:** „leicht variieren, aber nicht stark" ist unscharf — ohne Embedding-Normalisierung haengt die Konsolidierung allein an der Prompt-Disziplin; Akzeptanz ist „deutlich weniger Synonym-Wildwuchs", nicht „null".
+- **R3:** Ziel-Spalte fuer Themes (`themes text[]` vs `metadata` JSONB) beeinflusst spaetere Suchbarkeit/Indexierung — Architektur-Entscheidung mit Downstream-Wirkung.
+- **Annahme:** Tags werden weiterhin primaer LLM-erzeugt + kuratoriell gesnappt; kein manuelles Tag-Authoring als Pflicht-Eingang in V1.
+
+### Success criteria
+- SC-1: Beim Promote eines `email_synthesized_unit` landen dessen `themes` verlustfrei + queryable in der zugehoerigen `knowledge_unit` (Export-Gap geschlossen, code- + DB-verifiziert).
+- SC-2: Extraktions- + Synthese-Prompt injizieren das bestehende Tenant-Tag-Vokabular; bei passenden Bestands-Tags wird angehaengt statt neu erfunden (testbar: Lauf gegen Tenant mit Vokabular reproduziert bestehende Tags statt Synonyme).
+- SC-3: Neue Tags entstehen nur, wenn kein passender Bestands-Tag existiert (kontrolliertes Wachstum, nicht eingefroren).
+- SC-4: Tenant-Isolation des Vokabulars (kein Cross-Tenant-Tag in Prompt/Speicher); RLS verifiziert.
+- SC-5: tsc0/eslint0, Tests GREEN (hermetisch + DB-Sidecar wo Schema/RLS betroffen), `next build` PASS, 0 Regression der bestehenden Bulk-Pipeline.
+
+### Open questions (→ /architecture-Forks)
+- Q-V9.8-A: Theme-Export-Ziel — dedizierte `knowledge_unit.themes text[]`-Spalte (Mig, queryable/indexierbar) vs. `metadata` JSONB (kein Schema-Change). Empfehlung: dedizierte Spalte (Findbarkeit ist Produktkern).
+- Q-V9.8-B: Vokabular-Quelle — on-the-fly aggregiert aus bestehenden `themes`-Spalten (kein neues Schema) vs. neue `tenant_tag`-Vokabular-Tabelle (sauberes Wachstum, Counts, kuratierbar). Empfehlung: schlanke `tenant_tag`-Tabelle, falls on-the-fly-Aggregation zu teuer/unscharf.
+- Q-V9.8-C: Injektions-Obergrenze + Auswahlstrategie der Tags in den Prompt (alle vs. Top-N nach Haeufigkeit vs. section-gefiltert) — gegen R1 (Token-Budget).
+- Q-V9.8-D: Wird das Vokabular bei Extraktion, Synthese oder beiden injiziert (beide haben `themes`)? Default: beide, mit derselben Regel.
+- Q-V9.8-E: Embedding-Normalisierung endgueltig deferred (Empfehlung) oder schon als Minimal-Variante in V9.8? Founder-Steer „nicht ueberdesignen" → deferred.
+
+### Delivery mode
+SaaS Product (Internal-Test-Mode, kein Customer-Outreach — module-lifecycle-discipline). V9.8 = Modul-1-Findbarkeits-Abschluss.
+
+### Detail-Spec
+V9.8-Requirements-Baseline 2026-06-18 als RPT-492. Code-gegroundet (handbook-import.ts Export-Gap + beide Prompt-Files Free-Theme-Generierung + knowledge_unit/synthesized-Schema). **Status: READY fuer /architecture V9.8.** Keine BLOCKING-OQs; 5 Forks Q-V9.8-A..E mit Default-Empfehlung sind /architecture-Aufgabe. Feature-Skeleton-Specs `/features/FEAT-088..089-*.md`. Naechster Schritt: `/architecture V9.8` (Vokabular-Quelle + Injektions-Strategie + Theme-Export-Ziel + Migration-Skizze).

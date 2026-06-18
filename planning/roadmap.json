@@ -332,9 +332,9 @@
     {
       "id": "v9-8",
       "name": "V9.8",
-      "status": "planned",
+      "status": "active",
       "order": 19.8,
-      "summary": "**V9.8 Tag-Vokabular + Tag-Export (= BL-505).** Zwei verbundene Luecken aus dem V9.5-/deploy-Smoke (Founder 2026-06-14): (1) email_synthesized_unit.themes propagieren NICHT in knowledge_unit (Export-Gap) -> Tags muessen mit-exportiert werden; (2) kein Controlled-Tag-Vokabular -> LLM generiert Themes/suggested_section frei pro Lauf, Synonym-Wildwuchs. Ziel: pro-Tenant wachsendes Tag-Vokabular (LLM prueft erst bestehende Liste, nur bei echt Neuem neues Tag; Hauptkategorien=Sections, Tags variieren leicht nicht stark) fuer Findbarkeit im Handbuch. Loesungs-Kandidaten: Vokabular-Injektion in Extraktions-+Synthese-Prompt + Embedding-Normalisierung (Titan/pgvector). Eigene Slice-Planung."
+      "summary": "**V9.8 Tag-Vokabular + Tag-Export (= BL-505). /requirements DONE 2026-06-18 (RPT-492) — active.** Zwei verbundene Luecken aus dem V9.5-/deploy-Smoke (Founder 2026-06-14), code-gegroundet: (1) Export-Gap — email_synthesized_unit.themes propagieren NICHT in knowledge_unit (handbook-import.ts droppt themes; knowledge_unit hat keine themes-Spalte, nur metadata JSONB Mig 093); (2) Tag-Wildwuchs — email-pattern-/email-synthesis-prompt.ts generieren themes frei pro Lauf ohne Vokabular-Injektion, Synonym-Fragmentierung. Ziel: pro-Tenant wachsendes Tag-Vokabular (LLM use-existing-where-fits/only-add-if-novel; Hauptkategorien=Sections, Tags variieren leicht nicht stark) fuer Findbarkeit im Handbuch. 2 Features: FEAT-088 Controlled-Vokabular (Prompt-Injektion) + FEAT-089 Tag-Export-Propagation. Lean (Prompt-Injektion); Embedding-Normalisierung (Titan/pgvector) deferred (Founder-Steer: nicht ueberdesignen). 5 Forks Q-V9.8-A..E. Naechster Schritt: /architecture V9.8."
     }
   ]
 }

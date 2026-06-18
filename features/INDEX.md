@@ -249,3 +249,12 @@ V9.75-Scope (Requirements 2026-06-17 via RPT-480, basierend auf /discovery RPT-4
 | FEAT-085 | Tier-Gating (capture_session.tier free/blueprint/handbook + server-side Capture/Job/Render-Gate + Worker-Defense; loest ISSUE-097) | deployed | [Spec](FEAT-085-tier-gating.md) | 2026-06-17 |
 | FEAT-086 | Stufe-1-Fahrplan-Report-Renderer (block_diagnosis + quality_report → kundenseitiger To-Do-Report, voll inkl. Verkaufs-Framing, React-PDF-Reuse) | deployed | [Spec](FEAT-086-stufe1-fahrplan-report.md) | 2026-06-17 |
 | FEAT-087 | Stufe-1-Mitarbeiter-Register (Name+Funktion ohne E-Mail + Meeting-UI + Bruecke zu rpc_create_employee_invitation) | deployed | [Spec](FEAT-087-mitarbeiter-register.md) | 2026-06-17 |
+
+## V9.8 — Controlled Tag-Vokabular + Tag-Export-Propagation Features
+
+V9.8-Scope (Requirements 2026-06-18 via RPT-492, BL-505). Status READY fuer /architecture V9.8. Schliesst die 2 Findbarkeits-Luecken aus dem V9.5-/deploy-Smoke: kontrolliertes pro-Tenant-Tag-Vokabular (LLM use-existing-where-fits) + verlustfreie Theme-Propagation in knowledge_unit. Lean (Prompt-Injektion), Embedding-Normalisierung deferred (Founder „nicht ueberdesignen"). Forks Q-V9.8-A..E in /architecture V9.8.
+
+| ID | Feature | Status | Spec | Created |
+|----|---------|--------|------|---------|
+| FEAT-088 | Controlled Tenant-Tag-Vokabular (pro-Tenant wachsend + Injektion in Extraktions-/Synthese-Prompt, use-existing-where-fits/only-add-if-novel) | planned | [Spec](FEAT-088-controlled-tag-vokabular.md) | 2026-06-18 |
+| FEAT-089 | Tag-Export-Propagation (email_synthesized_unit.themes → knowledge_unit beim Handbook-Import, queryable) | planned | [Spec](FEAT-089-tag-export-propagation.md) | 2026-06-18 |
