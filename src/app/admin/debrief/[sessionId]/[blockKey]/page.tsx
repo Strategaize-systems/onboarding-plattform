@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import { DebriefBlockClient } from "./DebriefBlockClient";
+import { RosterPanel } from "./RosterPanel";
+import type { RosterEntry } from "../roster-actions";
 import type { SopContent } from "@/workers/sop/types";
 import type { DiagnosisContent } from "@/workers/diagnosis/types";
 import type { DialogueSummary, DialogueGap } from "@/types/dialogue-session";
@@ -271,6 +273,29 @@ export default async function DebriefBlockPage({
 
   const blockTitle = block.title?.de ?? block.title?.en ?? blockKey;
 
+  // V9.75 SLC-V9.75-C — Stufe-1 Mitarbeiter-Register (session-scoped). Sichtbar
+  // ab blueprint+ (AC-C-5). Ordnung via Matrix-Single-Source fn_tier_rank, kein
+  // hartkodierter TS-Mirror; das verbindliche Gate sitzt in den Roster-Actions.
+  const { data: tierRow } = await supabase
+    .from("capture_session")
+    .select("tier")
+    .eq("id", sessionId)
+    .single();
+  const { data: tierRank } = await supabase.rpc("fn_tier_rank", {
+    p_tier: (tierRow?.tier as string | null) ?? "",
+  });
+  const canManageRoster = typeof tierRank === "number" && tierRank >= 1;
+
+  let rosterEntries: RosterEntry[] = [];
+  if (canManageRoster) {
+    const { data: rosterRows } = await supabase
+      .from("employee_roster_draft")
+      .select("id, name, role_hint, block_key, promoted_invitation_id")
+      .eq("capture_session_id", sessionId)
+      .order("created_at", { ascending: true });
+    rosterEntries = (rosterRows ?? []) as RosterEntry[];
+  }
+
   return (
     <div>
       <div className="mb-6">
@@ -309,6 +334,14 @@ export default async function DebriefBlockPage({
         dialogueGaps={dialogueGaps}
         dialogueTranscript={dialogueTranscript}
       />
+
+      {canManageRoster && (
+        <RosterPanel
+          sessionId={sessionId}
+          blockKey={blockKey}
+          initialEntries={rosterEntries}
+        />
+      )}
     </div>
   );
 }
