@@ -1,5 +1,30 @@
 # Decisions
 
+## DEC-232 — V9.8 Q-V9.8-E: Embedding-Normalisierung synonymer Themes deferred
+- Status: accepted
+- Reason: /architecture V9.8. Founder-Steer „nicht ueberdesignen". Titan/pgvector-Stack vorhanden, aber Embedding-Normalisierung ist deutlich schwerer (Embed-Pipeline + Clustering/Threshold + Re-Mapping) als der Prompt-Injektions-Ansatz und ohne erwiesenen Bedarf Overkill. Prompt-Vokabular-Kontrolle (DEC-229/231) reduziert den Wildwuchs erst messbar; Embedding kommt nur, wenn das nicht reicht.
+- Consequence: V9.8 = reine Prompt-Injektion. Embedding-Normalisierung als V9.8+-Kandidat dokumentiert (nachruestbar ohne Code-Schuld, da Vokabular-Loader die einzige Quelle-Schnittstelle ist). Akzeptanz R2: Ziel „deutlich weniger Synonym-Wildwuchs", nicht „null".
+
+## DEC-231 — V9.8 Q-V9.8-D: Vokabular-Injektion nur im Synthese-Prompt (Extraktion deferred)
+- Status: accepted
+- Reason: /architecture V9.8. PRD-Default war „beide Prompts". Code-Grounding: Extraktion (`email-pattern-prompt`) laeuft in 50er-Batches (hohe Call-Zahl → hohe Token-Kosten bei Vokabular-Injektion) und ihre `themes` sind intermediaer — die Synthese (`buildSynthesisUserPrompt`) re-thematisiert konsolidiert und ist bounded (1 Call/Section, DEC-216). Die in `knowledge_unit` propagierten Themes (DEC-228) stammen aus `email_synthesized_unit` = Synthese-Output. Daher ist Synthese der propagations-bindende, token-effiziente, ausreichende Kontrollpunkt.
+- Consequence: `buildSynthesisUserPrompt(sectionName, patterns, …, existingTags)` bekommt einen Vokabular-Block + „use-existing-where-fits/only-add-if-novel"-Regel; `handle-synthesis-job.ts` laedt das Vokabular nach `run`-Load (tenant_id, Z.270). `email-pattern-prompt.ts` bleibt unveraendert. Extraktion-Injektion ist eine spaetere Option, falls Synthese-Kontrolle nicht reicht.
+
+## DEC-230 — V9.8 Q-V9.8-C: Vokabular-Injektion als Top-N nach Haeufigkeit, Cap (Default 60) pro Tenant
+- Status: accepted
+- Reason: /architecture V9.8 (R1 Token-Budget/Strict-JSON-Stabilitaet). Ein grosser Tenant-Tag-Bestand wuerde den Synthese-Prompt aufblaehen. Top-N nach Verwendungshaeufigkeit liefert die wiederverwendungs-staerksten Tags; ein Cap bound das Token-Budget.
+- Consequence: `getTenantTagVocabulary(admin, tenantId, capN=60)` → `SELECT unnest(themes) tag, count(*) c FROM knowledge_unit WHERE tenant_id=$1 GROUP BY tag ORDER BY c DESC LIMIT capN`. Global pro Tenant (nicht section-gescoped) fuer V1-Einfachheit. Cap-N in /slice-planning justierbar.
+
+## DEC-229 — V9.8 Q-V9.8-B: Vokabular-Quelle = on-the-fly-Aggregation aus knowledge_unit.themes (keine tenant_tag-Tabelle)
+- Status: accepted
+- Reason: /architecture V9.8. Lean (Founder „nicht ueberdesignen") — keine neue Tabelle/kein Schreibpfad. Die **kuratierte/promotete** Tag-Menge in `knowledge_unit.themes` (DEC-228) IST das kanonische, kontrollierte Vokabular; daraus aggregieren statt aus dem rohen `email_synthesized_unit` (das den zu bekaempfenden Wildwuchs enthaelt) ist selbstverstaerkend. Cold-Start (leeres `knowledge_unit.themes`) → erste Laeufe generieren frei und seeden das Vokabular (akzeptiert).
+- Consequence: Vokabular = on-the-fly-Query (DEC-230) ueber `knowledge_unit.themes` pro Tenant. Kein `tenant_tag`-Schema. FEAT-088 haengt an FEAT-089 (Themes muessen erst propagiert werden) → Slice-Reihenfolge A=FEAT-089, B=FEAT-088.
+
+## DEC-228 — V9.8 Q-V9.8-A: Theme-Export-Ziel = dedizierte knowledge_unit.themes text[]-Spalte + GIN (nicht metadata JSONB)
+- Status: accepted
+- Reason: /architecture V9.8. Findbarkeit ist Produktkern; eine typisierte `text[]`-Spalte mit GIN-Index ist sauber such-/facetten-faehig (Array-Containment-Queries), `metadata` JSONB waere weniger direkt indexier-/abfragbar. Code-Grounding: `knowledge_unit` hat heute keine themes/tags-Spalte (Mig 021), `metadata` JSONB existiert (Mig 093); `handbook-import.ts` droppt `email_synthesized_unit.themes` (Mig 119) beim Promote.
+- Consequence: Migration 123 `ALTER TABLE knowledge_unit ADD COLUMN themes text[] NOT NULL DEFAULT '{}'` + `gin(themes)`-Index (additiv, kein Backfill, forward-only). `mapSynthesizedUnitToKnowledgeUnit` schreibt `themes` mit. OKF-`tags`-Emission bleibt out-of-scope (DEC-224 steht; spaetere Opportunity, da Themes jetzt verfuegbar werden).
+
 ## DEC-227 — V9.75 SLC-V9.75-A: bulk-email NULL-Session Worker-Carve-out (session-loser Forward-Bucket-Run)
 - Status: accepted
 - Reason: SLC-V9.75-A MT-3/MT-4 (IMP-1279). Die V9.1-Continuous-Forward-Bucket-Pipeline laeuft autonom OHNE capture_session (`email_bulk_run.capture_session_id` nullable). Ein per-Session-Tier-Gate wuerde diese session-losen Runs faelschlich blockieren (V9.1-Regression). Die Worker-Defense muss session-lose bulk-email-Runs daher ausnehmen, statt fail-closed zu toeten.

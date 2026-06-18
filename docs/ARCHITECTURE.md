@@ -9562,3 +9562,48 @@ MIG-Nummern (121/122) sind **Skizze** — finale Nummer + File-Split entscheidet
 ### 11. Empfohlener naechster Schritt
 
 `/slice-planning V9.75` — SLC-Schnitt A (Tier-Gating-Foundation: Migration + Matrix-Funktionen + Dispatch-Guards + Worker-Defense + Bypass-Test-Matrix + ISSUE-097-Closure, TDD-RED zuerst) → B (Fahrplan-PDF-Renderer, 0 Migrationen, Reuse mandanten-report-v2) → C (Register + Bruecke, parallel zu B nach A). Cumulative-Single-Branch-Worktree `v9-75-exit-readiness`, EIN Master-Merge, AC-Matrizen gegen SC-V9.75-1..8. Geschaetzt 3 Slices, 2 Migrationen, **0 neue LLM-Jobs, 0 neue Deps** (React-PDF bereits vorhanden).
+
+## V9.8 Architecture Addendum — Controlled Tag-Vokabular + Tag-Export-Propagation (BL-505)
+
+### 1. Architektur-Summary
+Zwei kleine, additive Erweiterungen der bestehenden Bulk-Import-Pipeline — **kein neuer Service, kein neuer Worker, kein neuer LLM-Job, keine neue Dependency**:
+1. **Tag-Export-Propagation (FEAT-089):** neue Spalte `knowledge_unit.themes text[]` + GIN-Index; `handbook-import.ts` schreibt `email_synthesized_unit.themes` beim Promote mit. Macht Tags fuer Handbuch-Suche/Downstream queryable.
+2. **Controlled Tag-Vokabular (FEAT-088):** der `email_bulk_synthesis`-Worker laedt vor dem Prompt-Bau das pro-Tenant Tag-Vokabular (= aggregierte `knowledge_unit.themes`) und injiziert es in den Synthese-Prompt mit „use-existing-where-fits / only-add-if-novel"-Regel.
+
+FEAT-089 ist Fundament: das Vokabular (FEAT-088) speist sich aus den propagierten `knowledge_unit.themes`. Reihenfolge: FEAT-089 → FEAT-088.
+
+### 2. Komponenten & Verantwortung
+| Komponente | Datei | Aenderung |
+|---|---|---|
+| Migration `knowledge_unit.themes` | `sql/migrations/123_*.sql` (geplant) | `ADD COLUMN themes text[] NOT NULL DEFAULT '{}'` + `CREATE INDEX … USING gin(themes)`. Additiv, kein Backfill (Bestand = `{}`). |
+| Promote-Mapping | `src/lib/bulk-email/handbook-import.ts` (`mapSynthesizedUnitToKnowledgeUnit`) | `themes: unit.themes ?? []` ins `knowledge_unit`-INSERT aufnehmen. |
+| Vokabular-Loader | `src/lib/bulk-email/*` (neuer schlanker Helper) | `getTenantTagVocabulary(admin, tenantId, capN)` → `SELECT unnest(themes) tag, count(*) c FROM knowledge_unit WHERE tenant_id=$1 GROUP BY tag ORDER BY c DESC LIMIT capN`. |
+| Synthese-Prompt | `src/lib/ai/bedrock-sonnet/email-synthesis-prompt.ts` (`buildSynthesisUserPrompt`) | neuer Parameter `existingTags: string[]`; rendert Vokabular-Block + Regel. |
+| Synthese-Worker | `src/workers/bulk-email/handle-synthesis-job.ts` | nach `run`-Load (tenant_id vorhanden, Z.270) Vokabular fetchen, an `buildSynthesisUserPrompt` durchreichen. |
+
+### 3. Datenfluss
+Promote (`handbook-import`): `email_synthesized_unit.themes` → `knowledge_unit.themes`. Synthese (`handle-synthesis-job`): `knowledge_unit.themes` (Tenant, Top-N) → Vokabular-Block → `buildSynthesisUserPrompt` → Sonnet (eu-central-1) → `email_synthesized_unit.themes` (an Vokabular ausgerichtet). Selbstverstaerkende Schleife: nur **promotete** Tags werden Vokabular → kontrolliertes Wachstum, kein Wildwuchs-Feedback.
+
+### 4. Fork-Entscheidungen (Q-V9.8-A..E)
+- **Q-A → DEC-228:** dedizierte `knowledge_unit.themes text[]`-Spalte + GIN (NICHT `metadata` JSONB). Findbarkeit = Produktkern; typed array + GIN ist sauber such-/facetten-faehig. OKF-tags-Emission bleibt out-of-scope (DEC-224 steht; spaetere Opportunity).
+- **Q-B → DEC-229:** Vokabular-Quelle = on-the-fly-Aggregation aus `knowledge_unit.themes` pro Tenant (KEINE neue `tenant_tag`-Tabelle). Lean; die kuratierte/promotete Tag-Menge IST das kanonische Vokabular. Cold-Start (leer) → freie Generierung seedet (akzeptiert).
+- **Q-C → DEC-230:** Top-N nach Haeufigkeit, Cap (Default 60) global pro Tenant. Bounded Token-Budget (R1); meist-genutzte Tags gewinnen.
+- **Q-D → DEC-231:** Injektion NUR im Synthese-Prompt (V1). Extraktion-Injektion deferred — Extraktion laeuft in 50er-Batches (hohe Call-Zahl/Token-Kosten) und ihre Themes sind intermediaer (Synthese re-thematisiert); Synthese ist bounded (1 Call/Section, DEC-216) + propagations-bindend. Bewusste Verfeinerung des PRD-„default both".
+- **Q-E → DEC-232:** Embedding-Normalisierung (Titan/pgvector) deferred (Founder „nicht ueberdesignen"). V9.8+-Kandidat; Stack vorhanden, ohne Code-Schuld nachruestbar.
+
+### 5. Security / Privacy
+Themes sind non-PII Kurz-Tags (`preis-einwand`). Tenant-Isolation: Vokabular-Query strikt `WHERE tenant_id` + bestehende `knowledge_unit`-RLS — kein Cross-Tenant-Tag im Prompt/Speicher (SC-4). Keine Data-Residency-Aenderung: kein neuer externer Call; das Vokabular ist eine lokale DB-Query, injiziert in den bereits EU-gehosteten (Bedrock eu-central-1) Synthese-Call.
+
+### 6. Constraints / Tradeoffs
+- Additiv-only, 0 neue Deps/Jobs/Worker. Migration 123 additiv, forward-only (kein Re-Tagging Bestand).
+- Tradeoff R2: ohne Embedding-Normalisierung haengt Konsolidierung an Prompt-Disziplin → Ziel „deutlich weniger Synonym-Wildwuchs", nicht „null".
+- Cap-N (DEC-230) ist ein Token/Findbarkeit-Tradeoff; Default 60, in /slice-planning justierbar.
+
+### 7. Offene technische Fragen
+Keine BLOCKING. Justierung Cap-N (DEC-230) + exakte Vokabular-Block-Formulierung sind /slice-planning/-backend-Feindetail. `email_pattern.themes` (Extraktion) bleibt unveraendert.
+
+### 8. Migrations-Skizze
+**Migration 123 (FEAT-089):** `ALTER TABLE knowledge_unit ADD COLUMN themes text[] NOT NULL DEFAULT '{}'::text[];` + `CREATE INDEX IF NOT EXISTS idx_knowledge_unit_themes ON knowledge_unit USING gin (themes);` + `NOTIFY pgrst, 'reload schema'`. Additiv, verlustfrei, kein Backfill. Rollback: `DROP INDEX … ; ALTER TABLE … DROP COLUMN themes;`.
+
+### 9. Empfohlener naechster Schritt
+`/slice-planning V9.8` — SLC-Schnitt: A = FEAT-089 (Migration 123 + handbook-import-Propagation + DB-Test), B = FEAT-088 (Vokabular-Loader + Synthese-Prompt-Injektion + Worker-Wiring + hermetische Tests). A vor B (Vokabular speist sich aus propagierten Themes). Geschaetzt 2 Slices, 1 Migration, 0 neue Deps/Jobs.
