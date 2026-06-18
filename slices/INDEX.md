@@ -1000,8 +1000,8 @@ V9.75 = 3 Slices SLC-V9.75-A/B/C (version-anchored Naming). Reine Verpackung des
 | ID | Slice | Feature | Status | Priority | Created |
 |----|-------|---------|--------|----------|---------|
 | SLC-V9.75-A | [Tier-Gating Foundation](SLC-V9.75-A-tier-gating-foundation.md) | FEAT-085 / BL-506 | done | Blocker | 2026-06-17 |
-| SLC-V9.75-B | [Stufe-1-Fahrplan-Report-Renderer](SLC-V9.75-B-fahrplan-report-renderer.md) | FEAT-086 / BL-507 | planned | High | 2026-06-17 |
-| SLC-V9.75-C | [Stufe-1-Mitarbeiter-Register + Bruecke](SLC-V9.75-C-mitarbeiter-register.md) | FEAT-087 / BL-508 | planned | Medium | 2026-06-17 |
+| SLC-V9.75-B | [Stufe-1-Fahrplan-Report-Renderer](SLC-V9.75-B-fahrplan-report-renderer.md) | FEAT-086 / BL-507 | done | High | 2026-06-17 |
+| SLC-V9.75-C | [Stufe-1-Mitarbeiter-Register + Bruecke](SLC-V9.75-C-mitarbeiter-register.md) | FEAT-087 / BL-508 | done | Medium | 2026-06-17 |
 
 ### V9.75 Execution Order (Cumulative-Single-Branch `v9-75-exit-readiness`)
 - **SLC-V9.75-A zuerst** (Tier-Gating-Foundation, security-kritisch, TDD-RED; enthaelt Worktree-Setup MT-0 + Migration 121). Hard-Dependency: B und C brauchen die tier-Spalte + Gate-Logik.

@@ -15,7 +15,7 @@
       "title": "V9.75 Stufe-1-Fahrplan-Report-Renderer (Standortbestimmung)",
       "type": "feature",
       "priority": "high",
-      "status": "open",
+      "status": "done",
       "version": "V9.75",
       "description": "Kundenseitiger priorisierter To-Do-/Standortbestimmungs-/Fahrplan-Report aus block_diagnosis (Ampel/Reifegrad/Risiko/Hebel + Owner/Aufwand/naechster-Schritt) + Orchestrator quality_report (coverage/gap_questions/recommendation). Der EINZIGE echt fehlende Renderer: V8-Teaser-Report (Stufe 0) + handbook_snapshot (Stufe 2) existieren, der bezahlte Stufe-1-Zwischen-Report dazwischen nicht (gap_questions liegen heute nur in DB + treiben interne Re-Verdichtung; Diagnose fliesst nur ins Handbuch). Spec: Dev-System docs/PRODUKT_PRICING_STRATEGIE_2026-06-15.md + OPERATIVES_STUFEN_MAPPING_2026-06-15.md.",
       "createdAt": "2026-06-15"
@@ -25,7 +25,7 @@
       "title": "V9.75 Stufe-1-Mitarbeiter-Register + Bruecke zu Einladung",
       "type": "feature",
       "priority": "high",
-      "status": "open",
+      "status": "done",
       "version": "V9.75",
       "description": "Leichtgewichtiges Mitarbeiter-Register/Organigramm: im Meeting (Block-fuer-Block) Personen mit Name+Funktion festhalten OHNE E-Mail (neue Tabelle employee_roster_draft o.ae. + Erfassungs-UI im Debrief/Meeting-View; optional Tag pro Block/Bereich). Bruecke -> Stufe 2: Chef ergaenzt E-Mail -> bestehendes rpc_create_employee_invitation(email, display_name=Name, role_hint=Funktion). Downstream voll reuse (Einladung/Onboarding/Bridge-Engine bridge_proposal/Mitarbeiter-Capture). Business-System NICHT beteiligt. Heute fehlt nur das E-Mail-lose Register (Explore-verifiziert 2026-06-15). Spec: Dev-System docs/OPERATIVES_STUFEN_MAPPING_2026-06-15.md.",
       "createdAt": "2026-06-15"
