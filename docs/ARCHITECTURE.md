@@ -9454,8 +9454,8 @@ Quelle der Wahrheit ist die SQL-Funktion `fn_min_tier_for_job(job_type)`. **Tier
 | `rpc_trigger_handbook_snapshot` → handbook | `074_*.sql` | dito (inline) |
 | `triggerDiagnosisGeneration` → diagnosis | `…/[blockKey]/diagnosis-actions.ts` | TS-Guard `assertSessionTierAllows()` vor `.insert()` |
 | `triggerSopGeneration` → sop | `…/[blockKey]/sop-actions.ts` | TS-Guard |
-| Walkthrough-Pipeline | `src/lib/walkthrough/pipeline-trigger.ts` | TS-Guard am initialen Trigger; Folge-Jobs erben (siehe Schicht 2) |
-| Bulk-Email-Pipeline | `src/lib/bulk-email/pipeline-trigger.ts` (`enqueue()` Helper) | TS-Guard im `enqueue()`-Helper (zentraler Pipeline-Funnel) |
+| Walkthrough-Trigger (initialer Customer-Entry) | `src/app/actions/walkthrough.ts` | TS-Guard `assertSessionTierAllows()` + `session_tier`-Stempel am initialen Trigger; Re-Gate + Stempel der Folge-Stages in `src/lib/walkthrough/pipeline-trigger.ts` (Schicht 2) |
+| Bulk-Email-Import (Customer-Entry) | `src/app/dashboard/bulk-email-import/actions.ts` | TS-Guard + Stempel am Customer-Entry; Re-Gate + Stempel im Pipeline-Funnel `src/lib/bulk-email/pipeline-trigger.ts` (Folge-Jobs; autonome NULL-Session-Forward-Runs ausgenommen) |
 | Dialogue Recording-Ready | `src/app/api/dialogue/recording-ready/route.ts` | TS-Guard vor `admin.from('ai_jobs').insert()` |
 
 Da `032`/`047`/`074` PL/pgSQL-RPCs sind und die TS-Dispatches direkt `.insert()`en, gibt es **keinen** einzelnen zentralen Enqueue-Punkt — das Gate muss an beiden Welten sitzen. Der TS-Guard `src/lib/auth/assert-session-tier.ts` liest `capture_session.tier` + ruft die SQL-Erlaubnislogik (oder spiegelt die Matrix als TS-Konstante mit Test-Paritaet gegen die SQL-Funktion).
