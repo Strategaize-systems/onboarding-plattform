@@ -1024,3 +1024,37 @@ V9.75 = 3 Slices SLC-V9.75-A/B/C (version-anchored Naming). Reine Verpackung des
 | Pflicht | Blockiert | Aktion |
 |---|---|---|
 | Keine Code-Side-Pflicht. Live-Apply Migration 121+122 + Coolify-Redeploy erfolgt im /deploy (Founder-gated) | Live-Smoke (nicht Code-Side) | /backend SLC-V9.75-A direkt startbar (Worktree-Setup = MT-0) |
+
+## V9.8 Slices (Controlled Tag-Vokabular + Tag-Export-Propagation)
+
+V9.8-Scope (Slice-Planning 2026-06-18 via RPT-494, BL-505). 2 additive Erweiterungen der bestehenden Bulk-Pipeline — 0 neue Deps/Jobs/Worker, 1 additive Migration (123). Architektur DEC-228..232 (RPT-493). Schliesst die 2 Findbarkeits-Luecken aus dem V9.5-/deploy-Smoke. **Cumulative-Single-Branch-Worktree `v9-8-tag-vokabular`, /qa pro Slice, EIN Master-Merge nach Gesamt-/qa.** Internal-Test-Mode, kein Customer-Outreach ([[module-lifecycle-discipline]]).
+
+| ID | Slice | Feature | Status | Priority | Created |
+|----|-------|---------|--------|----------|---------|
+| SLC-V9.8-A | [Tag-Export-Propagation (themes → knowledge_unit)](SLC-V9.8-A-tag-export-propagation.md) | FEAT-089 / BL-505 | planned | High | 2026-06-18 |
+| SLC-V9.8-B | [Controlled Tenant-Tag-Vokabular (Prompt-Injektion)](SLC-V9.8-B-controlled-tag-vokabular.md) | FEAT-088 / BL-505 | planned | High | 2026-06-18 |
+
+### V9.8 Execution Order (Cumulative-Single-Branch `v9-8-tag-vokabular`)
+- **SLC-V9.8-A zuerst** (FEAT-089). Erzeugt `knowledge_unit.themes text[]` + GIN (Migration 123) und propagiert `email_synthesized_unit.themes` beim Promote. Hard-Dependency: B's Vokabular-Quelle IST diese Spalte.
+- **SLC-V9.8-B nach A** (FEAT-088). On-the-fly-Vokabular-Loader (Top-60/Tenant aus `knowledge_unit.themes`) + Injektion in den Synthese-Prompt + Worker-Wiring. 0 Migration.
+- **Strikt sequentiell — NICHT parallelisierbar** (B liest die Spalte, die A anlegt+befuellt).
+- `/qa` Pflicht nach JEDEM /backend-Slice. Gesamt-/qa nach B. **EIN Master-Merge** `v9-8-tag-vokabular` → `main` (--no-ff) nach Gesamt-/qa + Pre-Merge-Re-Check. Migration 123 Live-Apply im /deploy (vor Code-Redeploy, R-A-1).
+
+### V9.8 Parallel-Execution-Tabelle
+
+| Slice | Parallel-Group | MIG Reserved | File-Touchpoints (Kern) | Notes |
+|---|---|---|---|---|
+| SLC-V9.8-A | S1 (seq, zuerst) | **123** | sql/migrations/123_v98_knowledge_unit_themes.sql, src/lib/bulk-email/handbook-import.ts, src/app/dashboard/bulk-email-import/[run_id]/curation/actions.ts | erzeugt+befuellt knowledge_unit.themes; blockt B |
+| SLC-V9.8-B | S2 (nach A) | keine | src/lib/bulk-email/tag-vocabulary.ts, src/lib/ai/bedrock-sonnet/email-synthesis-prompt.ts, src/lib/ai/bedrock-sonnet/email-synthesis.ts, src/workers/bulk-email/handle-synthesis-job.ts | liest knowledge_unit.themes; Hard-Dep auf A (Mig 123 live) |
+
+### V9.8 Pflicht-Gates
+- SLC-V9.8-A: DB-Test (themes-Spalte + GIN + Containment-Query, node:20-Sidecar) + Mapper-Unit-Test (themes propagiert, null→`[]`) + 0 Regression Promote/Snapshot.
+- SLC-V9.8-B: hermetischer Vokabular-Test (Frequenz/Sort/Cap-60) + DB-Sidecar Tenant-Isolation (SC-4) + Prompt-Content-Test (existingTags-Block + Regel da / leer→Baseline).
+- Behavioral SC-2/SC-3 (LLM reused Bestands-Tags) = Live-Smoke/observational, nicht hermetisch (R-B-3).
+- Beide: `tsc` 0, `eslint` 0, `next build` PASS, `npm audit --omit=dev` 0 neue Vulns (0 neue Deps).
+
+### V9.8 Pre-Slice User-Pflichten
+
+| Pflicht | Blockiert | Aktion |
+|---|---|---|
+| Keine Code-Side-Pflicht. Live-Apply Migration 123 + Coolify-Redeploy erfolgt im /deploy (Founder-gated) | Live-Smoke (nicht Code-Side) | /backend SLC-V9.8-A direkt startbar (Worktree-Setup als MT-0) |
