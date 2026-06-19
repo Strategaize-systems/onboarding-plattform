@@ -257,4 +257,4 @@ V9.8-Scope (Requirements 2026-06-18 via RPT-492, BL-505). Status READY fuer /arc
 | ID | Feature | Status | Spec | Created |
 |----|---------|--------|------|---------|
 | FEAT-088 | Controlled Tenant-Tag-Vokabular (pro-Tenant wachsend + Injektion in Extraktions-/Synthese-Prompt, use-existing-where-fits/only-add-if-novel) | planned | [Spec](FEAT-088-controlled-tag-vokabular.md) | 2026-06-18 |
-| FEAT-089 | Tag-Export-Propagation (email_synthesized_unit.themes → knowledge_unit beim Handbook-Import, queryable) | planned | [Spec](FEAT-089-tag-export-propagation.md) | 2026-06-18 |
+| FEAT-089 | Tag-Export-Propagation (email_synthesized_unit.themes → knowledge_unit beim Handbook-Import, queryable) | in_progress | [Spec](FEAT-089-tag-export-propagation.md) | 2026-06-18 |
