@@ -1031,7 +1031,7 @@ V9.8-Scope (Slice-Planning 2026-06-18 via RPT-494, BL-505). 2 additive Erweiteru
 
 | ID | Slice | Feature | Status | Priority | Created |
 |----|-------|---------|--------|----------|---------|
-| SLC-V9.8-A | [Tag-Export-Propagation (themes → knowledge_unit)](SLC-V9.8-A-tag-export-propagation.md) | FEAT-089 / BL-505 | in_progress | High | 2026-06-18 |
+| SLC-V9.8-A | [Tag-Export-Propagation (themes → knowledge_unit)](SLC-V9.8-A-tag-export-propagation.md) | FEAT-089 / BL-505 | done | High | 2026-06-18 |
 | SLC-V9.8-B | [Controlled Tenant-Tag-Vokabular (Prompt-Injektion)](SLC-V9.8-B-controlled-tag-vokabular.md) | FEAT-088 / BL-505 | planned | High | 2026-06-18 |
 
 ### V9.8 Execution Order (Cumulative-Single-Branch `v9-8-tag-vokabular`)
