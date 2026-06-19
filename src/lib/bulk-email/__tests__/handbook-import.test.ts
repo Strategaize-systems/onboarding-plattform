@@ -37,6 +37,7 @@ function makeUnit(
     description:
       "Wir reagieren auf den Einwand mit Wertargumentation statt Preisnachlass. Erfolg in 4 von 5 Faellen dokumentiert.",
     evidence_snippets: [],
+    themes: ["vertrieb", "einwand-behandlung"],
     aggregated_confidence: 0.9,
     evidence_count: 3,
     source_pattern_ids: [
@@ -199,6 +200,26 @@ describe("mapSynthesizedUnitToKnowledgeUnit", () => {
       mapArgs({ source_pattern_ids: null }),
     );
     expect(result.metadata?.source_pattern_ids).toEqual([]);
+  });
+
+  it("propagates themes 1:1 to knowledge_unit.themes (V9.8 AC-A-2 / DEC-228)", () => {
+    const result = mapSynthesizedUnitToKnowledgeUnit(
+      mapArgs({ themes: ["pricing", "prozesse", "fuehrung"] }),
+    );
+    expect(result.themes).toEqual(["pricing", "prozesse", "fuehrung"]);
+  });
+
+  it("defaults themes to [] when unit.themes is null (AC-A-2: null/leer → '{}')", () => {
+    const result = mapSynthesizedUnitToKnowledgeUnit(mapArgs({ themes: null }));
+    expect(result.themes).toEqual([]);
+  });
+
+  it("preserves theme order (Reihenfolge erhalten, AC-A-2)", () => {
+    const ordered = ["z-thema", "a-thema", "m-thema"];
+    const result = mapSynthesizedUnitToKnowledgeUnit(
+      mapArgs({ themes: ordered }),
+    );
+    expect(result.themes).toEqual(ordered);
   });
 
   it("renders body with original description + Source-Attribution Markdown block (no pseudonyms)", () => {

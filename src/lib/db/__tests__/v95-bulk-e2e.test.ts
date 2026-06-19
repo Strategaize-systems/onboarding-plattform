@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
+
 import { describe, it, expect } from "vitest";
 import type { Client } from "pg";
 import { withTestDb } from "@/test/db";
@@ -105,9 +108,31 @@ async function flipStatus(
   expect(res.rowCount).toBe(1);
 }
 
+/**
+ * V9.8 SLC-V9.8-A: Mig 123 (knowledge_unit.themes) ist erst /deploy LIVE
+ * (R-A-1) — fuer die e2e-Propagation wird sie hier IN der gerollbackten
+ * Test-Transaktion self-applied (BEGIN/COMMIT der Migration entfernt, weil
+ * withTestDb bereits in einer Transaktion laeuft). Idempotent (IF NOT EXISTS).
+ */
+async function applyThemesMigration(client: Client): Promise<void> {
+  const sql = readFileSync(
+    path.join(
+      process.cwd(),
+      "sql/migrations/123_v98_knowledge_unit_themes.sql",
+    ),
+    "utf8",
+  )
+    .replace(/^\s*BEGIN;\s*$/gm, "")
+    .replace(/^\s*COMMIT;\s*$/gm, "");
+  await client.query(sql);
+}
+
 describe("V9.5 E2E (AC-D-6): Patterns → Synthese → Critic → Curation → Handbook-Import", () => {
   it("walks the full stage chain on the live schema", async () => {
     await withTestDb(async (client) => {
+      // V9.8 SLC-V9.8-A: knowledge_unit.themes self-apply (Mig 123 erst /deploy LIVE).
+      await applyThemesMigration(client);
+
       const f = await seedRunWithPatterns(client);
 
       // ── Stage-Link Extraktor→Synthese (SLC-V9.5-B AC-B-5): Enqueue-Row.
@@ -265,13 +290,14 @@ describe("V9.5 E2E (AC-D-6): Patterns → Synthese → Critic → Curation → H
         title: string;
         description: string;
         evidence_snippets: unknown[] | null;
+        themes: string[] | null;
         aggregated_confidence: string;
         evidence_count: number;
         source_pattern_ids: string[] | null;
         curated_section: string | null;
         created_at: string;
       }>(
-        `SELECT id, title, description, evidence_snippets,
+        `SELECT id, title, description, evidence_snippets, themes,
                 aggregated_confidence, evidence_count, source_pattern_ids,
                 curated_section, created_at::text
          FROM public.email_synthesized_unit
@@ -289,6 +315,7 @@ describe("V9.5 E2E (AC-D-6): Patterns → Synthese → Critic → Curation → H
           title: u.title,
           description: u.description,
           evidence_snippets: u.evidence_snippets,
+          themes: u.themes,
           aggregated_confidence: parseFloat(u.aggregated_confidence),
           evidence_count: u.evidence_count,
           source_pattern_ids: u.source_pattern_ids,
@@ -314,9 +341,9 @@ describe("V9.5 E2E (AC-D-6): Patterns → Synthese → Critic → Curation → H
           `INSERT INTO public.knowledge_unit
              (tenant_id, capture_session_id, block_checkpoint_id, block_key,
               unit_type, source, title, body, confidence, status, updated_by,
-              evidence_refs, metadata)
+              evidence_refs, themes, metadata)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11,
-                   $12::jsonb, $13::jsonb)
+                   $12::jsonb, $13::text[], $14::jsonb)
            RETURNING id`,
           [
             kuInput.tenant_id,
@@ -331,6 +358,7 @@ describe("V9.5 E2E (AC-D-6): Patterns → Synthese → Critic → Curation → H
             kuInput.status,
             kuInput.updated_by,
             JSON.stringify(kuInput.evidence_refs ?? []),
+            kuInput.themes,
             JSON.stringify(kuInput.metadata ?? null),
           ],
         );
@@ -341,8 +369,9 @@ describe("V9.5 E2E (AC-D-6): Patterns → Synthese → Critic → Curation → H
           `INSERT INTO public.knowledge_unit
              (tenant_id, capture_session_id, block_checkpoint_id, block_key,
               unit_type, source, title, body, confidence, status, updated_by,
-              evidence_refs)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb)
+              evidence_refs, themes)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb,
+                   $13::text[])
            RETURNING id`,
           [
             kuInput.tenant_id,
@@ -357,6 +386,7 @@ describe("V9.5 E2E (AC-D-6): Patterns → Synthese → Critic → Curation → H
             kuInput.status,
             kuInput.updated_by,
             JSON.stringify(kuInput.evidence_refs ?? []),
+            kuInput.themes,
           ],
         );
         kuId = kuRes.rows[0].id;
@@ -425,8 +455,9 @@ describe("V9.5 E2E (AC-D-6): Patterns → Synthese → Critic → Curation → H
         source: string;
         unit_type: string;
         block_key: string;
+        themes: string[];
       }>(
-        `SELECT title, body, confidence, status, source, unit_type, block_key
+        `SELECT title, body, confidence, status, source, unit_type, block_key, themes
          FROM public.knowledge_unit WHERE id = $1`,
         [kuId],
       );
@@ -438,6 +469,25 @@ describe("V9.5 E2E (AC-D-6): Patterns → Synthese → Critic → Curation → H
       expect(kuRow.block_key).toBe("kommunikation");
       expect(kuRow.body).toContain("**Belege**: 3 Quell-Patterns");
       expect(kuRow.body).toContain(`/dashboard/bulk-email-import/${f.runId}`);
+
+      // V9.8 AC-A-2 / DEC-228: themes der Quell-Unit (["pricing"]) verlustfrei
+      // in knowledge_unit.themes propagiert.
+      expect(kuRow.themes).toEqual(["pricing"]);
+
+      // AC-A-4: Containment-Query (GIN-gestuetzt via idx_knowledge_unit_themes)
+      // findet die promotete Unit; ein nicht vorhandenes Theme nicht.
+      const hit = await client.query<{ id: string }>(
+        `SELECT id FROM public.knowledge_unit
+         WHERE id = $1 AND themes @> ARRAY['pricing']`,
+        [kuId],
+      );
+      expect(hit.rowCount).toBe(1);
+      const miss = await client.query<{ id: string }>(
+        `SELECT id FROM public.knowledge_unit
+         WHERE id = $1 AND themes @> ARRAY['nicht-vorhanden']`,
+        [kuId],
+      );
+      expect(miss.rowCount).toBe(0);
 
       // P1/P2-Scan (AC-D-2 / R-D-2): keine Pseudonym-Token im promoteten
       // Handbuch-Content — obwohl die ROHEN Patterns sie enthalten.
