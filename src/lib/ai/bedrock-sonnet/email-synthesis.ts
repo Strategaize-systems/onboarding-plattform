@@ -129,17 +129,22 @@ function extractJsonCandidate(raw: string): string {
  *
  * Der Worker (MT-4) rekonziliert die zurueckgegebenen source_pattern_ids gegen
  * die tatsaechlichen Input-Pattern-IDs (Defense gegen Modell-ID-Drift).
+ *
+ * V9.8 SLC-V9.8-B MT-3 (FEAT-088): `existingTags` ist das kontrollierte
+ * Tenant-Tag-Vokabular und wird unveraendert an buildSynthesisUserPrompt
+ * durchgereicht (leeres Array = V9.5-Baseline-Prompt, 0 Regression).
  */
 export async function synthesizeSection(
   sectionName: string,
   patterns: SynthesisInputPattern[],
+  existingTags: string[] = [],
   options?: SonnetInvocationOptions,
 ): Promise<SonnetCallResult<SynthesisResult>> {
   const modelId = resolveModelId(options?.modelId);
   const temperature = options?.temperature ?? 0.2;
   const maxTokens = options?.maxTokens ?? 4096;
 
-  const userPrompt = buildSynthesisUserPrompt(sectionName, patterns);
+  const userPrompt = buildSynthesisUserPrompt(sectionName, patterns, existingTags);
 
   const caller = injectedCaller ?? productionCaller;
   const raw = await caller({

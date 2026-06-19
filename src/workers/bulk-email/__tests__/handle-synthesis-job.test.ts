@@ -827,3 +827,100 @@ describe("executeEmailBulkSynthesis — critic gate (SLC-V9.5-C MT-2)", () => {
     expect(state.updates.find((u) => u.patch.status === "synthesized")).toBeDefined();
   });
 });
+
+// ─── SLC-V9.8-B MT-3 — Tag-Vokabular-Wiring (FEAT-088, AC-B-3 / AC-B-5) ──────
+
+describe("executeEmailBulkSynthesis — tag vocabulary wiring (SLC-V9.8-B MT-3)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  function capturingSynthesizer(): {
+    synthesizer: SectionSynthesizer;
+    tagsSeen: string[][];
+  } {
+    const tagsSeen: string[][] = [];
+    const synthesizer: SectionSynthesizer = async (section, _patterns, existingTags) => {
+      tagsSeen.push(existingTags);
+      return {
+        data: oneUnitResult(section, [P1, P2]),
+        tokensIn: 10,
+        tokensOut: 5,
+        costUsd: 0.001,
+        latencyMs: 10,
+        modelId: "m",
+        region: "eu-central-1",
+      };
+    };
+    return { synthesizer, tagsSeen };
+  }
+
+  it("(V1 / AC-B-3+5) loads the tenant vocabulary once and passes it to the synthesizer", async () => {
+    const { client } = makeAdminStub({
+      bulkRun: runningBulkRun(),
+      patterns: [pat(P1, "sec/a", "t-a"), pat(P2, "sec/a", "t-b")],
+    });
+    const { synthesizer, tagsSeen } = capturingSynthesizer();
+    const loadedFor: string[] = [];
+    await executeEmailBulkSynthesis(makeJob(), {
+      adminClient: client as never,
+      synthesizer,
+      critic: keepAllCritic().critic,
+      costStore: makeCostStore(0),
+      tagVocabularyLoader: async (tenantId) => {
+        loadedFor.push(tenantId);
+        return ["pricing", "lieferung"];
+      },
+    });
+    expect(loadedFor).toEqual([TENANT_ID]);
+    expect(tagsSeen).toEqual([["pricing", "lieferung"]]);
+  });
+
+  it("(V2 / AC-B-2) degrades to empty vocabulary when the loader throws — run still synthesized", async () => {
+    const { client, state } = makeAdminStub({
+      bulkRun: runningBulkRun(),
+      patterns: [pat(P1, "sec/a", "t-a"), pat(P2, "sec/a", "t-b")],
+    });
+    const { synthesizer, tagsSeen } = capturingSynthesizer();
+    await executeEmailBulkSynthesis(makeJob(), {
+      adminClient: client as never,
+      synthesizer,
+      critic: keepAllCritic().critic,
+      costStore: makeCostStore(0),
+      tagVocabularyLoader: async () => {
+        throw new Error("vocab db down");
+      },
+    });
+    expect(tagsSeen).toEqual([[]]);
+    expect(state.updates.find((u) => u.patch.status === "synthesized")).toBeDefined();
+  });
+
+  it("(V3) passes the same vocabulary to every section call (1 load/run)", async () => {
+    const { client } = makeAdminStub({
+      bulkRun: runningBulkRun(),
+      patterns: [
+        pat(P1, "sec/a", "t-a"),
+        pat(P2, "sec/a", "t-b"),
+        pat(P3, "sec/b", "t-c"),
+      ],
+    });
+    const { synthesizer, tagsSeen } = capturingSynthesizer();
+    let loadCount = 0;
+    await executeEmailBulkSynthesis(makeJob(), {
+      adminClient: client as never,
+      synthesizer,
+      critic: keepAllCritic().critic,
+      costStore: makeCostStore(0),
+      tagVocabularyLoader: async () => {
+        loadCount += 1;
+        return ["pricing"];
+      },
+    });
+    expect(loadCount).toBe(1); // exactly one vocabulary load per run
+    expect(tagsSeen).toHaveLength(2); // 2 sections, both got the vocabulary
+    expect(tagsSeen.every((t) => t.length === 1 && t[0] === "pricing")).toBe(true);
+  });
+});

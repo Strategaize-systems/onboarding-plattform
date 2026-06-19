@@ -70,10 +70,18 @@ export interface SynthesisInputPatternForPrompt {
  * kompaktes JSON-Array der Patterns. Der thread_id-Kontext bleibt drin, damit
  * das Modell Cross-Thread-Belege erkennt — aber die Ausgabe-Description bleibt
  * thread-agnostisch (Vorgabe 1 im System-Prompt).
+ *
+ * V9.8 SLC-V9.8-B MT-2 (FEAT-088, DEC-231): `existingTags` ist das kontrollierte
+ * Tenant-Tag-Vokabular (Top-N aus knowledge_unit.themes, getTenantTagVocabulary).
+ * Bei nicht-leerem Vokabular wird ein Block + Use-existing-where-fits-Regel
+ * injiziert, damit das Modell bestehende Tags reused statt Synonyme zu erfinden.
+ * Leeres Vokabular → Block weggelassen, der Prompt ist byte-identisch zur
+ * V9.5-Baseline (AC-B-2, 0 Regression).
  */
 export function buildSynthesisUserPrompt(
   sectionName: string,
   patterns: SynthesisInputPatternForPrompt[],
+  existingTags: string[] = [],
 ): string {
   const compact = patterns.map((p) => ({
     id: p.id,
@@ -85,6 +93,10 @@ export function buildSynthesisUserPrompt(
     thread_id: p.thread_id,
   }));
 
+  const cleanTags = existingTags
+    .map((t) => (typeof t === "string" ? t.trim() : ""))
+    .filter((t) => t.length > 0);
+
   const lines: string[] = [];
   lines.push(`Themenbereich (suggested_section): ${sectionName}`);
   lines.push(`Anzahl Eingabe-Pattern-Fragmente: ${patterns.length}`);
@@ -92,6 +104,18 @@ export function buildSynthesisUserPrompt(
   lines.push("Eingabe-Patterns (JSON-Array):");
   lines.push(JSON.stringify(compact, null, 2));
   lines.push("");
+  if (cleanTags.length > 0) {
+    lines.push(
+      "Bestehendes Tag-Vokabular dieses Unternehmens (nach Haeufigkeit):",
+    );
+    lines.push(JSON.stringify(cleanTags));
+    lines.push(
+      "Nutze fuer das `themes`-Feld jeder Unit zuerst einen passenden Tag aus " +
+        "dieser Liste. Entscheide nur dann ein NEUES Tag, wenn inhaltlich " +
+        "keiner passt — vermeide Synonyme zu bereits bestehenden Tags.",
+    );
+    lines.push("");
+  }
   lines.push(
     "Verdichte diese Fragmente zu konsolidierten Units im vorgegebenen " +
       "Strict-JSON-Format. Beginne mit `{` und beende mit `}`.",
