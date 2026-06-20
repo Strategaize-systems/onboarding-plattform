@@ -59,6 +59,9 @@ export interface SynthesizedUnitForImport {
   description: string;
   /** jsonb [{ text, source_pattern_id }] aus der Synthese. */
   evidence_snippets: unknown[] | null;
+  /** Im Bulk-Lauf erarbeitete themes (MIG-111). Werden 1:1 nach
+   *  knowledge_unit.themes propagiert (V9.8 SLC-V9.8-A / DEC-228). */
+  themes: string[] | null;
   aggregated_confidence: number;
   evidence_count: number;
   source_pattern_ids: string[] | null;
@@ -114,6 +117,10 @@ export interface KnowledgeUnitInsertInput {
   confidence: KnowledgeUnitConfidence;
   /** Pattern ist schon GF-akzeptiert → status='accepted' direkt. */
   status: "accepted";
+  /** Tag-Export (V9.8 SLC-V9.8-A / DEC-228): aus SynthesizedUnitForImport.themes
+   *  propagiert. Spalte knowledge_unit.themes via MIG-123 (NOT NULL DEFAULT '{}').
+   *  null/leer der Quelle → []. */
+  themes: string[];
   updated_by: string;
   evidence_refs?: unknown[];
   metadata?: SourceAttribution;
@@ -221,6 +228,8 @@ export interface MapSynthesizedUnitArgs {
  *   - source='email_bulk', unit_type='observation', status='accepted' —
  *     Promotion-Target unveraendert (SC-V9.5-5 / AC-D-1).
  *   - evidence_refs aus unit.evidence_snippets falls Array, sonst [].
+ *   - themes aus unit.themes falls Array, sonst [] (V9.8 SLC-V9.8-A / DEC-228 —
+ *     Tag-Export verlustfrei in knowledge_unit.themes, MIG-123).
  *   - metadata mit source_pattern_ids + evidence_count (Provenance-Audit).
  *
  * Wirft Error wenn curated_section leer/null ist — Caller (MT-3) muss vorher
@@ -270,6 +279,7 @@ export function mapSynthesizedUnitToKnowledgeUnit(
     body,
     confidence: mapConfidenceToTier(args.unit.aggregated_confidence),
     status: "accepted",
+    themes: Array.isArray(args.unit.themes) ? args.unit.themes : [],
     updated_by: args.curatorUserId,
     evidence_refs: Array.isArray(args.unit.evidence_snippets)
       ? args.unit.evidence_snippets

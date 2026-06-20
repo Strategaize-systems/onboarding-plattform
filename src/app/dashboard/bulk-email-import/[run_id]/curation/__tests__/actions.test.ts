@@ -568,6 +568,7 @@ interface AdminMockOpts {
     title: string;
     description: string;
     evidence_snippets: unknown[] | null;
+    themes: string[] | null;
     aggregated_confidence: number;
     evidence_count: number;
     source_pattern_ids: string[] | null;
@@ -739,6 +740,7 @@ function makeUnitRow(
     title: string;
     description: string;
     evidence_snippets: unknown[] | null;
+    themes: string[] | null;
     aggregated_confidence: number;
     evidence_count: number;
     source_pattern_ids: string[] | null;
@@ -752,6 +754,7 @@ function makeUnitRow(
     title: "Title",
     description: "Description text.",
     evidence_snippets: [],
+    themes: ["pricing", "prozesse"],
     aggregated_confidence: 0.9,
     evidence_count: 3,
     source_pattern_ids: [
@@ -961,6 +964,8 @@ describe("importToHandbook — Happy Path", () => {
     expect(metadata.synthesized_unit_id).toBe(UNIT_ID_1);
     expect(metadata.evidence_count).toBe(3);
     expect(metadata.participant_pseudonyms).toBeUndefined();
+    // V9.8 AC-A-2 / DEC-228: themes der Quell-Unit fliessen in den INSERT.
+    expect(knowledgeUnitInserts[0]?.themes).toEqual(["pricing", "prozesse"]);
     expect(unitUpdates).toHaveLength(3);
     expect(unitUpdates[0]?.patch.imported_knowledge_unit_id).toBe("ku-1");
     expect(rpcCalls).toHaveLength(1);

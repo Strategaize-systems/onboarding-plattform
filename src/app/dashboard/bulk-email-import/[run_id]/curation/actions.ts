@@ -664,7 +664,7 @@ export async function importToHandbook(
   const { data: unitRows, error: unitError } = await adminClient
     .from("email_synthesized_unit")
     .select(
-      "id, title, description, evidence_snippets, aggregated_confidence, evidence_count, source_pattern_ids, curated_section, created_at, curator_user_id",
+      "id, title, description, evidence_snippets, themes, aggregated_confidence, evidence_count, source_pattern_ids, curated_section, created_at, curator_user_id",
     )
     .eq("bulk_run_id", bulkRunId)
     .in("curation_status", ["accepted", "edited"])
@@ -681,6 +681,7 @@ export async function importToHandbook(
     title: string;
     description: string;
     evidence_snippets: unknown[] | null;
+    themes: string[] | null;
     aggregated_confidence: number;
     evidence_count: number;
     source_pattern_ids: string[] | null;
@@ -771,6 +772,7 @@ export async function importToHandbook(
       title: unit.title,
       description: unit.description,
       evidence_snippets: unit.evidence_snippets,
+      themes: unit.themes,
       aggregated_confidence: Number(unit.aggregated_confidence),
       evidence_count: Number(unit.evidence_count),
       source_pattern_ids: unit.source_pattern_ids,

@@ -57,6 +57,10 @@ import {
   type CostCapStore,
 } from "../../lib/bulk-email/cost-cap";
 import { USD_TO_EUR_APPROX } from "../../lib/bulk-email/cost-estimate";
+import {
+  getTenantTagVocabulary,
+  DEFAULT_TAG_VOCABULARY_CAP,
+} from "../../lib/bulk-email/tag-vocabulary";
 import type { ClaimedJob } from "../condensation/claim-loop";
 
 const UUID_REGEX =
@@ -100,6 +104,7 @@ interface PatternRow {
 export type SectionSynthesizer = (
   sectionName: string,
   patterns: SynthesisInputPattern[],
+  existingTags: string[],
 ) => Promise<{
   data: SynthesisResult;
   tokensIn: number;
@@ -110,8 +115,12 @@ export type SectionSynthesizer = (
   region: string;
 }>;
 
-const defaultSectionSynthesizer: SectionSynthesizer = async (section, patterns) => {
-  const result = await synthesizeSection(section, patterns);
+const defaultSectionSynthesizer: SectionSynthesizer = async (
+  section,
+  patterns,
+  existingTags,
+) => {
+  const result = await synthesizeSection(section, patterns, existingTags);
   return {
     data: result.data,
     tokensIn: result.tokensIn,
@@ -160,6 +169,11 @@ export interface HandleEmailBulkSynthesisDeps {
   costStore?: CostCapStore;
   /** Pluggable for tests — defaults to ENV V9_BULK_EMAIL_RUN_CAP_EUR or 20. */
   runCapEur?: number;
+  /**
+   * V9.8 SLC-V9.8-B (FEAT-088): laedt das kontrollierte Tenant-Tag-Vokabular.
+   * Default delegiert an getTenantTagVocabulary(adminClient, tenantId, 60).
+   */
+  tagVocabularyLoader?: (tenantId: string) => Promise<string[]>;
 }
 
 /**
@@ -255,6 +269,10 @@ export async function executeEmailBulkSynthesis(
   const critic = deps.critic ?? defaultUnitCritic;
   const costStore = deps.costStore ?? createCostCapStoreFromSupabase(adminClient);
   const runCapEur = resolveRunCap(deps.runCapEur);
+  const tagVocabularyLoader =
+    deps.tagVocabularyLoader ??
+    ((tenantId: string) =>
+      getTenantTagVocabulary(adminClient, tenantId, DEFAULT_TAG_VOCABULARY_CAP));
   const startMs = Date.now();
 
   const payload = job.payload as unknown as EmailBulkSynthesisPayload;
@@ -350,6 +368,28 @@ export async function executeEmailBulkSynthesis(
       else partitions.set(key, [p]);
     }
 
+    // 6b. Tenant-Tag-Vokabular laden (V9.8 SLC-V9.8-B, FEAT-088, DEC-229/230).
+    //     Soft-Enhancement: ein DB-Fehler beim Vokabular darf den (teuren)
+    //     Synthese-Run NICHT failen → degradiere auf leeres Vokabular (der
+    //     Prompt bleibt dann die V9.5-Baseline, AC-B-2). Genau 1 Load/Run.
+    let tagVocabulary: string[] = [];
+    try {
+      tagVocabulary = await tagVocabularyLoader(run.tenant_id);
+    } catch (vocabErr) {
+      captureWarning(
+        `email_bulk_synthesis: tag-vocabulary load failed for tenant ${run.tenant_id} — continuing without vocabulary`,
+        {
+          source: LOG_SOURCE,
+          metadata: {
+            jobId: job.id,
+            bulkRunId,
+            error:
+              vocabErr instanceof Error ? vocabErr.message : String(vocabErr),
+          },
+        },
+      );
+    }
+
     // 7. Pro Section: Synthese-Call + Cost-Akkumulation + Live-Cap.
     let accumulatedSynthEur = numericOrZero(run.synthesis_cost_eur);
     let totalUsdCost = 0;
@@ -370,7 +410,7 @@ export async function executeEmailBulkSynthesis(
 
       let callResult: Awaited<ReturnType<SectionSynthesizer>>;
       try {
-        callResult = await synthesizer(section, inputPatterns);
+        callResult = await synthesizer(section, inputPatterns, tagVocabulary);
       } catch (synthErr) {
         // Schema-Drift auf einer Section: skip die Section (continue), kein
         // Run-Abbruch (analog Extraktor-Per-Thread-Skip). Andere Errors
