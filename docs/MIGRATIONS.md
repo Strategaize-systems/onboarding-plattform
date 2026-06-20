@@ -4,8 +4,8 @@ Die aktuelle DB-Struktur entspricht dem Stand von Blueprint V3.4 (Migration 020)
 
 Der uebernommene Blueprint-Stand ist noch nicht auf einer Onboarding-Plattform-Instanz ausgefuehrt worden — die erste Hetzner-Migration geschieht mit SLC-001 (Schema-Fundament).
 
-### MIG-123 — V9.8 FEAT-089 knowledge_unit.themes Tag-Export-Spalte (Migration 123, CODE-COMPLETE — Live-Apply im /deploy)
-- Date: 2026-06-19 (Datei geschrieben /backend SLC-V9.8-A; Live-Apply im /deploy V9.8 ausstehend)
+### MIG-123 — V9.8 FEAT-089 knowledge_unit.themes Tag-Export-Spalte (Migration 123, LIVE-applied 2026-06-20)
+- Date: 2026-06-19 (Datei geschrieben /backend SLC-V9.8-A) / **LIVE-applied 2026-06-20 im /deploy V9.8** (base64+psql -U postgres auf `supabase-db-bwkg80w04wgccos48gcws8cs-083208599632`, BEGIN/ALTER/CREATE INDEX/NOTIFY/COMMIT; verifiziert: themes ARRAY NOT NULL DEFAULT '{}', GIN idx_knowledge_unit_themes, Containment-Query laeuft; VOR Code-Redeploy per R-A-1)
 - Scope: `sql/migrations/123_v98_knowledge_unit_themes.sql` (geschrieben). `ALTER TABLE knowledge_unit ADD COLUMN IF NOT EXISTS themes text[] NOT NULL DEFAULT '{}'` + `CREATE INDEX IF NOT EXISTS idx_knowledge_unit_themes ON knowledge_unit USING gin (themes)` + `NOTIFY pgrst, 'reload schema'`. Additiv, verlustfrei, kein Backfill (Bestand = `{}`), forward-only, idempotent. DB-Test `src/lib/db/__tests__/migration-123-knowledge-unit-themes.test.ts` (Self-Apply in gerollbackter Tx → Spalte/Index/Containment/Idempotenz) — laeuft im /qa-Sidecar.
 - Reason: V9.8 FEAT-089 / BL-505 — Tag-Export-Propagation: `email_synthesized_unit.themes` (Mig 119) sollen beim Promote in `knowledge_unit` queryable landen (Handbuch-Findbarkeit). DEC-228 (dedizierte Spalte statt metadata JSONB).
 - Affected Areas: `knowledge_unit` (+1 Spalte, +1 GIN-Index). `handbook-import.ts::mapSynthesizedUnitToKnowledgeUnit` schreibt themes mit (FEAT-089). Vokabular-Loader (FEAT-088) liest daraus (DEC-229).
