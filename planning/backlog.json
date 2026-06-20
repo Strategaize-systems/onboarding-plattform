@@ -1659,6 +1659,66 @@
       "version": null,
       "description": "Zweiter Output-Emitter analog zum OKF-Emitter (BL-162/163), aber fuer den Prozedur-/Know-how-Teil: serialisiert kuratierte SOPs (sop-Tabelle, steps action/responsible/timeframe) in Anthropic Agent-Skills-Bundles (SKILL.md + ggf. Ressourcen) nach Strategaize-Agent-Skills-Profil (Dev-System Rule strategaize-agent-skills-profile.md). Komplementaer: OKF = Wissen/Fakten (knowledge_unit/diagnosis), Agent Skills = Prozeduren/SOPs. Damit gibt OP Firmen-Wissen in Googles Format UND Firmen-Prozeduren in Anthropics Format aus (Capture-Frontend fuer beide offenen B2B-Standards). SCHRITT 0 (BLOCKING, Founder 2026-06-15): bestehende SOP-Generierungs-Vorgabe src/workers/sop/sop-prompt.ts ist ~4-5 Monate alt und MUSS zuerst auf Aktualitaet geprueft/aktualisiert werden (alle seither dazugekommenen Erkenntnisse; ggf. Skill-shaped verfeinert: Trigger/Pre-Checks/Inputs/Outputs/Done). Vorgabe getauscht -> SOP-Output aendert sich -> dann erst Emitter. Reine Serialisierung, KEIN DB-Umbau (sop-Tabelle vorhanden), Emitter isoliert (kein Skills-Detail in Business-Logik). Auslieferung: Agent-Skills-Ordner neben dem OKF-Wissens-Ordner im Handbuch-ZIP. Spaeter auch fuer Intelligence Studio relevant (knowledge_item + eigene Prozeduren, gleicher Profil-Standard, Port per Pattern-Reuse). Sequenzierung: NACH V9.7 OKF, Versionsnummer offen. Detail-Proposal: dev-system docs/AGENT_SKILLS_OP_SOP_EXPORT_BACKLOG.md.",
       "createdAt": "2026-06-15"
+    },
+    {
+      "id": "BL-509",
+      "title": "StB-Vertikale Phase 1 — StB-Onboarding-Rahmen (Stufe-1 Eigen-Kanzlei) [FEAT-090]",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V10",
+      "description": "Minimaler Wholesale/StB-Account-Rahmen: der StB onboardet seine EIGENE Kanzlei als Tenant (Stufe-1). Reuse OP-Tenant-Onboarding (FEAT-031). Kein Billing/Anrechnung in V10.",
+      "createdAt": "2026-06-20"
+    },
+    {
+      "id": "BL-510",
+      "title": "StB-Vertikale Phase 1 — Modul-Domaene + Content-Seed M-04/05/06 + KI-Hebel-Katalog [FEAT-091]",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V10",
+      "description": "Daten-/Liefer-Domaene fuer 'Modul' (Fragebogen Stufe-1-Kern + Stufe-2-Vertiefung, Output-Kontrakt Entscheidung/Standard/Implementierungsschritt, KI-Hebel Reifegrad 1-4) + Seed der 3 Module M-04/05/06 aus IP. Lebende-Dokumente-Foundation.",
+      "createdAt": "2026-06-20"
+    },
+    {
+      "id": "BL-511",
+      "title": "StB-Vertikale Phase 1 — Blueprint-Diagnostik (eigene Kanzlei) [FEAT-092]",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V10",
+      "description": "Einstiegs-Blueprint fuer die eigene Kanzlei des StB: Strukturen sichtbar, Routing in die relevanten Module. Reuse OP-Capture/Questionnaire-Maschinerie (Architektur-Fork: neu vs. bestehende Diagnose).",
+      "createdAt": "2026-06-20"
+    },
+    {
+      "id": "BL-512",
+      "title": "StB-Vertikale Phase 1 — Modul-Fragebogen-Capture (Stufe-1-Kern + Stufe-2-Vertiefung) [FEAT-093]",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V10",
+      "description": "Der StB beantwortet die Modul-Fragebogen fuer die eigene Kanzlei (Kern + Vertiefung). KI-getriebener Daten-Bedarf ('wir sagen welche Daten wir brauchen'). Reuse OP-Capture-Mode.",
+      "createdAt": "2026-06-20"
+    },
+    {
+      "id": "BL-513",
+      "title": "StB-Vertikale Phase 1 — KI-Output-Generierung pro Modul [FEAT-094]",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V10",
+      "description": "KI draftet pro Modul Entscheidung/Standard/Implementierungsschritt aus den Antworten (~70-80% KI-getrieben, Founder-Imperativ; StB macht die ~20% Vertiefung). Reuse Bedrock/Claude eu-central-1 + ai_jobs-Worker.",
+      "createdAt": "2026-06-20"
+    },
+    {
+      "id": "BL-514",
+      "title": "StB-Vertikale Phase 1 — Modul-Workspace-Reader + KI-Hebel-Liste [FEAT-095]",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V10",
+      "description": "Konsum-Ansicht: der StB liest die Modul-Outputs (Entscheidung/Standard/Implementierungsschritt) + KI-Hebel-Liste (Reifegrad 1-4) fuer die eigene Kanzlei. Reuse Handbuch-Reader (FEAT-028).",
+      "createdAt": "2026-06-20"
     }
   ]
 }

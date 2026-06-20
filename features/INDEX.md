@@ -258,3 +258,16 @@ V9.8-Scope (Requirements 2026-06-18 via RPT-492, BL-505). Status READY fuer /arc
 |----|---------|--------|------|---------|
 | FEAT-088 | Controlled Tenant-Tag-Vokabular (pro-Tenant wachsend + Injektion in Extraktions-/Synthese-Prompt, use-existing-where-fits/only-add-if-novel) | deployed | [Spec](FEAT-088-controlled-tag-vokabular.md) | 2026-06-18 |
 | FEAT-089 | Tag-Export-Propagation (email_synthesized_unit.themes → knowledge_unit beim Handbook-Import, queryable) | deployed | [Spec](FEAT-089-tag-export-propagation.md) | 2026-06-18 |
+
+## V10 — StB-Vertikale Phase 1 (Stufe-1-Kern) Features
+
+V10-Scope (Requirements 2026-06-20 via RPT-505, BL-509..514). Erste produktisierbare Branchen-Vertikale (Steuerberater als Kunde UND Kanal), in die OP-Codebase eingebaut (Founder-BLOCKING). **Stufe 1 = StB onboardet eigene Kanzlei** (Henne-Ei-Loeser), kein Mandanten-Pfad. Liefer-Domaene Blueprint→Modul-Workspace, 3 Prio-A-Module M-04/05/06, KI-getrieben (~70-80%). Reuse ~60-70% OP-Infra; der EINE echte Neubau = die Modul-Workspace-Lieferdomaene. DATEV-Begriffs-Abgrenzung als Positionierungs-Constraint. Forks → /architecture V10. Internal-Test-Mode.
+
+| ID | Feature | Status | Spec | Created |
+|----|---------|--------|------|---------|
+| FEAT-090 | StB-Onboarding-Rahmen (Stufe-1 Eigen-Kanzlei-Account, Reuse OP-Tenant-Onboarding, kein Billing) | planned | [Spec](FEAT-090-stb-onboarding-rahmen.md) | 2026-06-20 |
+| FEAT-091 | Modul-Domaene + Content-Seed M-04/05/06 + KI-Hebel-Katalog (Reifegrad 1-4, lebende Dokumente) | planned | [Spec](FEAT-091-modul-domaene-seed.md) | 2026-06-20 |
+| FEAT-092 | Blueprint-Diagnostik (eigene Kanzlei, Strukturen sichtbar, Routing in die Module) | planned | [Spec](FEAT-092-blueprint-diagnostik.md) | 2026-06-20 |
+| FEAT-093 | Modul-Fragebogen-Capture (Stufe-1-Kern + Stufe-2-Vertiefung, KI-getriebener Daten-Bedarf) | planned | [Spec](FEAT-093-modul-fragebogen-capture.md) | 2026-06-20 |
+| FEAT-094 | KI-Output-Generierung pro Modul (Entscheidung/Standard/Implementierungsschritt, ~70-80% KI) | planned | [Spec](FEAT-094-ki-output-generierung.md) | 2026-06-20 |
+| FEAT-095 | Modul-Workspace-Reader + KI-Hebel-Liste (Output-Konsum, Reifegrad 1-4) | planned | [Spec](FEAT-095-modul-workspace-reader.md) | 2026-06-20 |

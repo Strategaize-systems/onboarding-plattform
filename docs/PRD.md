@@ -2792,3 +2792,76 @@ SaaS Product (Internal-Test-Mode, kein Customer-Outreach — module-lifecycle-di
 
 ### Detail-Spec
 V9.8-Requirements-Baseline 2026-06-18 als RPT-492. Code-gegroundet (handbook-import.ts Export-Gap + beide Prompt-Files Free-Theme-Generierung + knowledge_unit/synthesized-Schema). **Status: READY fuer /architecture V9.8.** Keine BLOCKING-OQs; 5 Forks Q-V9.8-A..E mit Default-Empfehlung sind /architecture-Aufgabe. Feature-Skeleton-Specs `/features/FEAT-088..089-*.md`. Naechster Schritt: `/architecture V9.8` (Vokabular-Quelle + Injektions-Strategie + Theme-Export-Ziel + Migration-Skizze).
+
+## V10 — StB-Vertikale Phase 1 (Stufe-1-Kern: StB onboardet eigene Kanzlei)
+
+### Problem Statement (V10)
+Steuerberater (StB) sind selbst ein Lehrbuch-Nachfolge-/Kapazitaetsfall (Personal frisst ~44 % vom Umsatz, kaum Nachwuchs) und wollen ihr Geschaeft Richtung Beratung verschieben — koennen die operative Struktur-/Organisations-Arbeit aber nicht selbst leisten. Es fehlt ein Produkt, das (a) die operative Wirk-Schicht einer Firma sichtbar macht und in Standard-Outputs ueberfuehrt und (b) KI-getrieben geliefert wird, damit Strategaize nicht zum Engpass wird. **Bevor** der StB das fuer seine Mandanten beauftragt, muss er den Wert an der **eigenen Kanzlei** erleben (Henne-Ei).
+
+### Goal (V10)
+Den Stufe-1-Kern der StB-Vertikale bauen: der StB onboardet die **eigene Kanzlei**, durchlaeuft einen Blueprint + 3 Prio-A-Finanz-Module (M-04/05/06) und erhaelt KI-gedraftete Modul-Outputs (Entscheidung/Standard/Implementierungsschritt) + eine KI-Hebel-Liste (Reifegrad 1-4). Erste produktisierbare Branchen-Vertikale; eingebaut in die OP-Codebase (Reuse-first).
+
+### Primary user(s) (V10)
+- **Primaer:** der Steuerberater als Kunde fuer die **eigene Kanzlei** (`tenant_admin` des eigenen Tenants).
+- **Nicht in V10:** Mandanten des StB (Stufe-2), Endkunden, Multiplikator-Hierarchie.
+
+### V10 In Scope
+- **FEAT-090** Minimaler StB-Onboarding-/Account-Rahmen (eigene Kanzlei = Tenant, Reuse OP-Onboarding).
+- **FEAT-091** Modul-Domaene + Content-Seed M-04/05/06 + KI-Hebel-Katalog (Reifegrad 1-4); Module als lebende Dokumente aus IP-Bestand.
+- **FEAT-092** Blueprint-Diagnostik fuer die eigene Kanzlei (Strukturen sichtbar, Routing in die Module).
+- **FEAT-093** Modul-Fragebogen-Capture (Stufe-1-Kern + Stufe-2-Vertiefung), KI-getriebener Daten-Bedarf, Voice optional.
+- **FEAT-094** KI-Output-Generierung pro Modul (Entscheidung/Standard/Implementierungsschritt, ~70-80 % KI; StB macht ~20 % Vertiefung).
+- **FEAT-095** Modul-Workspace-Reader + KI-Hebel-Liste (Output-Konsum, Reifegrad 1-4).
+- 3 Module: **M-04** Grundlegende Finanzsteuerung (GuV/Bilanz/Cash), **M-05** Ergebnisrechnung n. Produkten/Segmenten (DB), **M-06** Liquiditaetsplanung & Zahlungsstroeme — alle Kern „Finanzen & Controlling".
+
+### V10 Out of Scope
+- Stufe-2 (Mandanten-Pfad), Wholesale-Fakturierung an den StB, Billing/Anrechnung.
+- Die uebrigen 43 Module (M-01..03, M-07..46).
+- Workspace-Monats-Mechanik (Sparring-/Champion-Sessions, Teamstunden-Tracking) = menschliche Ops, keine V10-Software.
+- Wissensnetzwerk-Moat / Cross-Tenant-anonymisierter Pool (Stufe-3, spaetere Version, compliance-heavy).
+- Curriculum / Personalentwicklungs-Zertifikat / Community (V-lean / parked).
+- DATEV-Datenimport-Implementierung (nur: Datenmodell soll Import nicht ausschliessen — Architektur-Merker).
+
+### Core Features (V10)
+FEAT-090..095 (siehe `/features/INDEX.md`). Der EINE echte Neubau ist die **Modul-Workspace-Lieferdomaene** (FEAT-091..095); FEAT-090 + Infrastruktur sind ueberwiegend Reuse.
+
+### Constraints (V10)
+- **Eingebaut in die OP-Codebase** (Founder-BLOCKING 2026-06-20) — kein neues Repo. Pattern-Reuse-Pflicht (`strategaize-pattern-reuse.md`).
+- **Reuse ~60-70 % OP-Infra:** Tenant/RLS/Rollen, ai_jobs-Queue + Worker + Bedrock/Claude + Whisper, pgvector-RAG (`knowledge_chunks`), Tier-Gating-Foundation (free/blueprint/handbook).
+- **EU-Data-Residency:** jede LLM-/Embedding-/Speech-Nutzung bleibt EU (Bedrock Frankfurt eu-central-1) — `data-residency.md`.
+- **DATEV-Begriffs-Abgrenzung (Positionierungs-Constraint):** unser Reifegrad/Handbuch = operative Wirk-Schicht / Mandanten-Schicht (Schicht 3), NICHT DATEVs kanzlei-eigener „ReifegradCheck"/„Organisationshandbuch". V1 = Stufe-1 (eigene Kanzlei) sitzt auf derselben Flaeche → „haben-wir-schon"-Reflex via Naming/Positionierung aktiv vermeiden.
+- **Internal-Test-Mode**, kein Customer-Outreach (`module-lifecycle-discipline`): Live/Pilot/Anwalt erst nach Modul-1+2+3-Vollstaendigkeit.
+- Naechste freie Migration = **124**.
+
+### Risks / Assumptions (V10)
+- **R1:** KI-Output-Qualitaet (~70-80 % Draft) ist fuer Modul-Inhalte unbewiesen — braucht realen Test mit echter Kanzlei-Antwort (post-Build Live-Smoke, Founder-eigene Kanzlei).
+- **R2:** Architektur-Fork Modul-Domaene (neue Tabellen vs. Reuse `template`/`capture_session`/`knowledge_unit`) kann den Scope erheblich treiben — /architecture muss ihn frueh aufloesen.
+- **R3:** Blueprint reuse-vs-neu (Exit-Readiness/Partner-Diagnose als Blueprint nutzen vs. schlanker Neubau) beeinflusst Scope + Konsistenz.
+- **Annahme:** OP-Capability-Scan (2026-06-20) belegt ~60-70 % Reuse; die Liefer-Domaene ist der echte Neubau.
+- **Annahme:** Das M-04/05/06-IP (Fragebogen Stufe-1+2 + KI-Hebel Reifegrad 1-4 + Output-Kontrakt) ist reif genug zum Seeden (`StrategAIze Module.xlsx` + M-04-Spec + Workspace-Vorlage).
+
+### Success Criteria (V10)
+- SC-1: Ein StB kann seine eigene Kanzlei als Tenant onboarden (Stufe-1) und sich als `tenant_admin` einloggen.
+- SC-2: Der StB durchlaeuft Blueprint + die 3 Module (Stufe-1-Kern + Stufe-2-Vertiefung) fuer die eigene Kanzlei.
+- SC-3: Pro Modul werden Entscheidung/Standard/Implementierungsschritt KI-gedraftet (~70-80 % Abdeckung) + eine KI-Hebel-Liste (Reifegrad 1-4) erzeugt.
+- SC-4: Der StB konsumiert die Modul-Outputs + KI-Hebel-Liste in einer lesbaren Workspace-Ansicht.
+- SC-5: Alle LLM-Calls EU-Region; Tenant-Isolation (RLS) verifiziert; Cost geloggt.
+- SC-6: Positionierungs-/Naming-Copy vermeidet den DATEV-„haben-wir-schon"-Reflex (operative Wirk-Schicht klar markiert).
+- SC-7: tsc0/eslint0, Tests GREEN (hermetisch + DB-Sidecar wo Schema/RLS betroffen), `next build` PASS, 0 Regression der bestehenden OP-Funktionen.
+
+### Open Questions
+**Fuer /architecture V10 (nicht V10-blockierend):**
+- Q-V10-A: Modul-Domaene — neue Tabellen (`modul`/`modul_output`/`ki_hebel`) vs. Reuse `template`/`capture_session`/`knowledge_unit`-Maschinerie (Reuse-Optimierung vs. saubere neue Domaene).
+- Q-V10-B: Blueprint — schlanker neuer Diagnostik-Einstieg vs. Reuse Exit-Readiness/Partner-Diagnose als Blueprint.
+- Q-V10-C: Kapselungs-Grad der StB-Modul-Domaene im OP-Repo (wie stark abtrennbar als eigenes Modul).
+- Q-V10-D: DATEV-Datenimport-Schnittstelle — Datenmodell so schneiden, dass spaeterer Import nicht verbaut ist.
+- Q-V10-E: KI-Output-Pipeline — Single-Pass vs. Reuse des 3-Agenten-Orchestrators (`src/workers/condensation/*`) fuer die Modul-Output-Tiefe; Cost-Cap.
+
+**Fuer Founder (Versionierungs-Entscheidung, nicht V10-blockierend):**
+- Q-V10-F: Das Discovery-Mapping sah StB Phase 1/2/3 → OP V10/V11/V12. Der Deferred-Renumber 2026-06-20 (Handoff „V10+→V11+", Shift um 1) hat V11 (alt Auto-Response) + V12 (alt CRM) belegt → Phase 2/3 kollidieren erneut. Entscheidung offen: V11/V12 jetzt fuer StB-Phasen reservieren (Deferred weiter schieben) **oder** Phase 2/3 spaeter die naechste freie Nummer geben. Heute kein Blocker (Phase 1 ist noch nicht gebaut).
+
+### Delivery mode
+SaaS Product (Internal-Test-Mode, kein Customer-Outreach — `module-lifecycle-discipline`). V10 = erste produktisierbare Branchen-Vertikale, Stufe-1-Kern.
+
+### Detail-Spec
+V10-Requirements-Baseline 2026-06-20 als RPT-505. Grounding: Dev-System `StrategAIze Module.xlsx` (46 Module/11 Kategorien, M-04/05/06 = Kern Finanzen&Controlling), `M-04 – Grundlegende Finanzsteuerung`-Modul-Spec, `StrategAIze Workspace.docx`, `docs/STB_VERTIKALE_R3R4_UEBERSICHT_2026-06-18.md` (§2 Wirk-Schicht, §3 Stufe-1, §4 Lieferkette, §8 DATEV, §9 KI-Lieferung) + OP-Capability-Scan 2026-06-20. **Status: READY fuer /architecture V10.** Keine BLOCKING-OQs; Forks Q-V10-A..E = /architecture-Aufgabe, Q-V10-F = Founder-Versionierung. 6 Feature-Skeleton-Specs `/features/FEAT-090..095-*.md`. Naechster Schritt: `/architecture V10` (Modul-Domaene-Schnitt + Blueprint-Reuse + KI-Output-Pipeline + Migration-Skizze ab 124).
