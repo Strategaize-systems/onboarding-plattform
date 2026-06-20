@@ -332,7 +332,7 @@
     {
       "id": "v9-8",
       "name": "V9.8",
-      "status": "active",
+      "status": "released",
       "order": 19.8,
       "summary": "**V9.8 Tag-Vokabular + Tag-Export (= BL-505). /requirements DONE 2026-06-18 (RPT-492) — active.** Zwei verbundene Luecken aus dem V9.5-/deploy-Smoke (Founder 2026-06-14), code-gegroundet: (1) Export-Gap — email_synthesized_unit.themes propagieren NICHT in knowledge_unit (handbook-import.ts droppt themes; knowledge_unit hat keine themes-Spalte, nur metadata JSONB Mig 093); (2) Tag-Wildwuchs — email-pattern-/email-synthesis-prompt.ts generieren themes frei pro Lauf ohne Vokabular-Injektion, Synonym-Fragmentierung. Ziel: pro-Tenant wachsendes Tag-Vokabular (LLM use-existing-where-fits/only-add-if-novel; Hauptkategorien=Sections, Tags variieren leicht nicht stark) fuer Findbarkeit im Handbuch. 2 Features: FEAT-088 Controlled-Vokabular (Prompt-Injektion) + FEAT-089 Tag-Export-Propagation. Lean (Prompt-Injektion); Embedding-Normalisierung (Titan/pgvector) deferred (Founder-Steer: nicht ueberdesignen). 5 Forks Q-V9.8-A..E entschieden (DEC-228..232, RPT-493). /architecture DONE (RPT-493) + /slice-planning DONE (RPT-494): 2 strikt sequentielle Slices SLC-V9.8-A (FEAT-089, Mig 123) → SLC-V9.8-B (FEAT-088, 0 Mig). Naechster Schritt: /backend SLC-V9.8-A."
     }
