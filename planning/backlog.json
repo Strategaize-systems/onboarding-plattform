@@ -1672,12 +1672,12 @@
     },
     {
       "id": "BL-510",
-      "title": "StB-Vertikale Phase 1 — Modul-Domaene + Content-Seed M-04/05/06 + KI-Hebel-Katalog [FEAT-091]",
+      "title": "StB-Vertikale Phase 1 — Modul-Domaene + Content-Seed (B1-Cut, M-04 zuerst) + KI-Hebel-Katalog [FEAT-091]",
       "type": "feature",
       "priority": "high",
       "status": "in_progress",
       "version": "V10",
-      "description": "Daten-/Liefer-Domaene fuer 'Modul' (Fragebogen Stufe-1-Kern + Stufe-2-Vertiefung, Output-Kontrakt Entscheidung/Standard/Implementierungsschritt, KI-Hebel Reifegrad 1-4) + Seed der 3 Module M-04/05/06 aus IP. Lebende-Dokumente-Foundation.",
+      "description": "Daten-/Liefer-Domaene fuer 'Modul' (Fragebogen Stufe-1-Kern + Stufe-2-Vertiefung, Output-Kontrakt Entscheidung/Standard/Implementierungsschritt, KI-Hebel Reifegrad 1-4). Schema = SLC-169 (done). Seed re-scoped per B1-Abgleich (DEC-242): SLC-170 = M-04-only (voll ausgearbeitet); M-05 gestrichen; Blueprint + M-06 + restlicher 18-Cut = content-gated Folge-Seed SLC-170b (BL-519/BL-520). Cut/Quelle: docs/stb-vertikale/modul-bibliothek-seed-source.md.",
       "createdAt": "2026-06-20"
     },
     {
@@ -1758,6 +1758,26 @@
       "status": "open",
       "version": null,
       "description": "Folgeprodukt/Upsell: nach ~6 Monaten zweiter Lauf der gleichen Engine auf die geflaggten Bereiche, Delta-Vergleich, Score-Verbesserung sichtbar -> hebt das Assessment. Wiederkehrender Umsatz + Netzwerk-Bindung; V1-Preis nicht verteuern (eigener Verkaufsanlass). Preis-/Struktur-Entscheidung. Kleiner Build (gleiche Engine, Delta-View). Version offen.",
+      "createdAt": "2026-06-21"
+    },
+    {
+      "id": "BL-519",
+      "title": "StB-Vertikale — Blueprint-Content autorieren (Diagnose + Ampel + Modul-Routing) [SLC-170b Welle 2]",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V10",
+      "description": "Founder-Autoring (Produkt-IP, kein Build): Blueprint-Diagnose-Fragen ueber die ganze Kanzlei + Ampel-/Reifegrad-Logik + Routing (welche Antwort -> welches Modul). NEUER StB-Kanzlei-Inhalt, NICHT Exit-Readiness recyceln (DEC-234, DATEV-Abgrenzung). Hoechste Prioritaet nach M-04, weil Einstieg+Routing -> entsperrt SLC-172. Vorlage: docs/stb-vertikale/modul-bibliothek-seed-source.md §5. Danach Seed via SLC-170b.",
+      "createdAt": "2026-06-21"
+    },
+    {
+      "id": "BL-520",
+      "title": "StB-Vertikale — restlichen 18-Cut autorieren (M-06/M-07, HR M-26/27/28, Nachfolge M-35/M-42, Rest) [SLC-170b Wellen 3-5]",
+      "type": "feature",
+      "priority": "medium",
+      "status": "open",
+      "version": "V10",
+      "description": "Founder-Autoring (Produkt-IP, kein Build): die uebrigen 16 StB-KERN-Module auf M-04-Tiefe (Themenbaum + Stufe-1/2-Fragebogen + KI-Hebel mit Reifegrad 1-4). Reihenfolge: Finanzen (M-06/M-07) -> HR (M-26/27/28) -> Nachfolge (M-35/M-42) -> Rest (M-01/02/03, M-08, M-15/16, M-36/38, M-39). Jedes Modul erst seedbar bei M-04-Tiefe; Seed via SLC-170b. M-05 NICHT enthalten (DEC-242). Vorlage: docs/stb-vertikale/modul-bibliothek-seed-source.md.",
       "createdAt": "2026-06-21"
     }
   ]
