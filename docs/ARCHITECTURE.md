@@ -9607,3 +9607,92 @@ Keine BLOCKING. Justierung Cap-N (DEC-230) + exakte Vokabular-Block-Formulierung
 
 ### 9. Empfohlener naechster Schritt
 `/slice-planning V9.8` — SLC-Schnitt: A = FEAT-089 (Migration 123 + handbook-import-Propagation + DB-Test), B = FEAT-088 (Vokabular-Loader + Synthese-Prompt-Injektion + Worker-Wiring + hermetische Tests). A vor B (Vokabular speist sich aus propagierten Themes). Geschaetzt 2 Slices, 1 Migration, 0 neue Deps/Jobs.
+
+---
+
+## V10 Architecture Addendum — StB-Vertikale Phase 1 (Stufe-1-Kern: StB onboardet eigene Kanzlei) (RPT-506, 2026-06-21)
+
+### 0. Status
+- Quelle: `/architecture V10`, RPT-506. Grounding: PRD `## V10`, `STB_VERTIKALE_R3R4_UEBERSICHT_2026-06-18.md` (§2 Wirk-Schicht, §4 Liefer-Architektur, §9 KI-Lieferung), OP-Capability-Scan 2026-06-20, 3 read-only Code-Maps (Knowledge-Schema / AI-Pipeline / Repo-Konventionen).
+- DECs: DEC-233..DEC-239. Migration: MIG-124 (SQL-Datei `124_v10_stb_modul_domain.sql`). Naechster Schritt: `/slice-planning V10`.
+
+### 1. Architektur-Zusammenfassung
+Die StB-Vertikale Phase 1 wird **in die OP-Codebase** gebaut (Founder-BLOCKING 2026-06-20, kein neues Repo). ~60-70 % ist **Reuse** vorhandener OP-Infra (Tenant/RLS/Rollen, `template`/`capture_session`/`block_checkpoint`/`knowledge_unit`, ai_jobs-Worker, Bedrock eu-central-1, Tier-Gating, Cost-Cap). Der **eine echte Neubau** ist die **Modul-Workspace-Lieferdomaene**: ein Blueprint-Diagnostik-Lauf (eigene Kanzlei) routet in 3 Finanz-Module (M-04/05/06); pro Modul werden via KI strukturierte Deliverables erzeugt — das **Output-Triple** (Entscheidung / Standard / Implementierungsschritt) + eine **KI-Hebel-Liste** (Reifegrad 1-4) — und in einem Workspace-Reader konsumiert. Stufe-1 = StB onboardet die **eigene** Kanzlei (= normaler Tenant, `tenant_admin`); Mandanten/Partner-Hierarchie ist V11+ (out of V10).
+
+Leitprinzip: **Capture-Flow wiederverwenden, Liefer-Output als saubere neue Domaene.** Die generische Knowledge-Maschinerie traegt Fragebogen + Antworten + Blueprint-Diagnostik; das modulspezifische, strukturierte Deliverable bekommt eine eigene Tabelle, weil das flache `knowledge_unit` (Text-`body`) das Triple + Reifegrad-gestaffelte Hebel nicht sauber queryable abbildet.
+
+### 2. Fork-Entscheidungen (Q-V10-A..E) auf einen Blick
+- **Q-A → DEC-233 (Modul-Domaene-Schnitt):** Hybrid. Reuse `template` (Modul-Definition) + `capture_session`/`block_checkpoint` (Lauf + Antworten) + `knowledge_unit` **nur** fuer Blueprint-Diagnostik-Findings. **NEU:** eine Tabelle `modul_output` fuer das strukturierte Modul-Deliverable (Triple + KI-Hebel mit Reifegrad). Begruendung: flaches `knowledge_unit` modelliert das Triple/Reifegrad nicht clean; Workspace-Reader (FEAT-095) braucht queryable Struktur; haelt `knowledge_unit`-Semantik intakt; saubere DATEV-Import-Flaeche.
+- **Q-B → DEC-234 (Blueprint):** Mechanismus reusen, Inhalt neu. Blueprint = neue `template`-Row `stb_blueprint_kanzlei` v1.0 (mit `diagnosis_schema`/`diagnosis_prompt`), laeuft als `capture_session`, Findings → `knowledge_unit` (Reuse, bestehender `diagnosis_generation`-Job). **NICHT** den Exit-Readiness-Template-Inhalt reusen (anderer Zweck + DATEV-„ReifegradCheck"-Abgrenzung, SC-6).
+- **Q-C → DEC-236 (Kapselung):** Gebundene Cross-Cutting-Sub-Domaene nach bulk-email/handbook-Konvention: `src/lib/stb-vertikale/*`, `src/workers/stb-vertikale/*`, Reader unter Tenant-Cockpit-Route-Group (`dashboard/stb/*`), Capture-Eintritt reust den bestehenden `capture/`-Wizard, `src/components/stb/*`, 1 Migration, i18n `stb.*`. Kein separates Package, nicht verstreut. V10 = eigener Tenant → Tenant-Cockpit, NICHT `partner/` (Mandanten-Hierarchie = V11+).
+- **Q-D → DEC-237 (DATEV-Import):** Nur Daten-Modell-Merker, keine Implementierung. Modul-Input + `modul_output` so geschnitten, dass ein spaeterer importierter Finanz-Datensatz als Evidenz/Source andocken kann ohne Schema-Aenderung; `capture_session.metadata.imported_dataset_ref` als offener Slot; `evidence_refs` bleibt offen. Keine Tabelle, keine Integration in V10.
+- **Q-E → DEC-235 (KI-Output-Pipeline):** ai_jobs-Worker + Cost-Cap reusen; **lean Per-Modul-Synthese (Draft + Bounded-Critic, ~2-4 LLM-Calls/Modul) nach dem bulk-email-`handle-synthesis-job`-Muster** — NICHT der schwere condensation-Orchestrator (Analyst→Challenger 5-17 Calls = Overkill fuer 3 Module im Internal-Test) und NICHT Single-Pass (verliert Cost-Cap/Job-Tracking/Quality-Gate). Neuer `job_type = module_output_synthesis`, tier-gated, Bedrock Sonnet eu-central-1 via `src/lib/llm.ts`, strukturierter JSON-Output, `ai_cost_ledger` + Cost-Cap (Run-Cap + Tenant-Monatscap + Worker-Live-Cap).
+
+### 3. Main Components
+1. **StB-Onboarding (FEAT-090, ~Reuse, DEC-238).** Kein neuer Code-Kern: der StB onboardet die eigene Kanzlei via bestehendem Tenant-Provisioning (Invitation `role_hint='tenant_admin'` ODER Self-Signup), keine neue Rolle, keine Partner/Mandanten-Hierarchie in V10. RLS via `auth.user_tenant_id()`/`auth.user_role()` (Zwei-Teil-USING).
+2. **Modul-Domaene + Content-Seed (FEAT-091).** 4 `template`-Rows: 1 Blueprint (`stb_blueprint_kanzlei`) + 3 Module (`stb_modul_m04`/`m05`/`m06`), jede mit `blocks` (Fragebogen Stufe-1-Kern + Stufe-2-Vertiefung ueber Block-Set/`ebene`/`required`) + KI-Hebel-Katalog-Referenz. Content aus Dev-System-IP (`StrategAIze Module.xlsx` + M-04-Spec). Module = lebende Dokumente (per Template-Version nachschaerfbar).
+3. **Blueprint-Diagnostik (FEAT-092, DEC-234).** `capture_session` auf `stb_blueprint_kanzlei` → `block_checkpoint` → `diagnosis_generation`-Job (Reuse) → `knowledge_unit`-Diagnostik-Findings (Ampel/Reifegrad/Empfehlung) → empfiehlt/routet die 3 Module.
+4. **Modul-Fragebogen-Capture (FEAT-093, Reuse `capture/`-Wizard).** Pro Modul `capture_session` → Stufe-1-Kern-Blocks (Pflicht) + optional Stufe-2-Vertiefung → `block_checkpoint.content`. Voice optional via vorhandenem Whisper-Pfad.
+5. **KI-Output-Generierung (FEAT-094, DEC-235, NEU).** `src/workers/stb-vertikale/handle-module-output-job.ts`: lean Fan-out (Triple-Synthese) + Bounded-Critic → schreibt `modul_output`-Rows (Triple + KI-Hebel mit Reifegrad 1-4). Tier-gated, cost-capped, EU-Region. ~70-80 % Draft-Ziel; StB macht ~20 % Vertiefung (Edit-Status auf `modul_output`).
+6. **Modul-Workspace-Reader (FEAT-095, NEU).** `dashboard/stb/*`: liest `modul_output` (RLS) gruppiert nach Modul + Output-Kind + KI-Hebel-Liste nach Reifegrad. Konsum-only.
+
+### 4. Data Model
+**NEU — `modul_output`** (das einzige neue Kern-Schema in V10):
+```
+modul_output (
+  id uuid PK,
+  tenant_id uuid NOT NULL REFERENCES tenants,
+  capture_session_id uuid NOT NULL REFERENCES capture_session,
+  block_checkpoint_id uuid REFERENCES block_checkpoint,   -- Herkunfts-Submission
+  modul_key text NOT NULL,                                -- 'm04'|'m05'|'m06'
+  output_kind text NOT NULL
+    CHECK (output_kind IN ('entscheidung','standard','implementierungsschritt','ki_hebel')),
+  title text,
+  body text NOT NULL,
+  reifegrad smallint CHECK (reifegrad BETWEEN 1 AND 4),   -- nur bei output_kind='ki_hebel'
+  evidence_refs jsonb NOT NULL DEFAULT '[]',
+  source text NOT NULL DEFAULT 'ai_draft',                -- ai_draft|edited|manual
+  status text NOT NULL DEFAULT 'proposed'
+    CHECK (status IN ('proposed','accepted','edited','rejected')),
+  ai_job_id uuid,                                         -- erzeugender Synthese-Job
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  updated_by uuid
+)
+-- Indizes: (tenant_id), (capture_session_id), (modul_key); RLS tenant-scoped (Zwei-Teil-USING),
+-- ai_draft-Writes service_role, Edit/Status tenant_admin.
+```
+**Reuse (unveraendert):** `template` (+ `diagnosis_schema`/`diagnosis_prompt`/`metadata`), `capture_session` (+ `tier`, `metadata`), `block_checkpoint`, `knowledge_unit` (Blueprint-Findings), `validation_layer`, `ai_jobs`, `ai_cost_ledger`.
+
+### 5. Data Flow
+1. StB onboardet eigene Kanzlei → Tenant + `tenant_admin` (Reuse).
+2. Blueprint: `capture_session(stb_blueprint_kanzlei)` → Blocks → `block_checkpoint` → `diagnosis_generation` → `knowledge_unit`-Findings → Modul-Empfehlung.
+3. Pro Modul M-04/05/06: `capture_session(stb_modul_mXX)` → Stufe-1-Kern-Blocks → `block_checkpoint` → `rpc_enqueue_module_output` (tier-gated) → `ai_jobs(module_output_synthesis)` → Worker (lean Fan-out + Critic) → `modul_output`-Rows. Optional Stufe-2-Vertiefung → Re-Synthese.
+4. Workspace-Reader liest `modul_output` (RLS) + KI-Hebel-Liste nach Reifegrad.
+
+### 6. External Dependencies
+Keine neue externe Abhaengigkeit. Bedrock Sonnet 4 `eu.anthropic.claude-sonnet-4-20250514-v1:0` (eu-central-1) via `src/lib/llm.ts` (vorhanden). Titan-Embeddings (vorhanden, optional fuer Modul-Output-Semantik — deferred). Whisper-Pfad (vorhanden, Voice optional). **DATEV-Import = V11+ (nur Merker, DEC-237).**
+
+### 7. Security / Privacy
+- Tenant-Isolation: `modul_output`-RLS strikt `tenant_id = auth.user_tenant_id()` + Rollen-Check; ai_draft-Writes nur `service_role`. KEIN Cross-Tenant-Pool in V10 (= V12/Stufe-3-Moat, compliance-heavy).
+- Data-Residency: jeder LLM-Call EU (Bedrock Frankfurt), Cost in `ai_cost_ledger` geloggt, Tier-Gating gegen ungewollte Jobs.
+- DATEV-Begriffs-Abgrenzung (SC-6): Naming/Copy markiert „operative Wirk-/Mandanten-Schicht" — NICHT DATEVs kanzlei-eigener „ReifegradCheck"/„Organisationshandbuch". Positionierungs-Constraint, kein Code-Mechanismus.
+- Gating (DEC-239): neue `job_type`s tier-gated + neue Routen hinter Env-Flag (`NEXT_PUBLIC_ENABLE_STB_VERTIKALE`) → V10 OFF bis bereit (`module-lifecycle-discipline`, Internal-Test-Mode).
+
+### 8. Constraints / Tradeoffs
+- **DEC-233:** dedizierte `modul_output`-Tabelle statt `knowledge_unit`-JSON-in-body — +1 Tabelle/Enum/RLS gegen Reader-Klarheit + DATEV-Import-Flaeche. Bewusst.
+- **DEC-235:** lean Fan-out + Critic statt vollem Orchestrator — Kosten/Scope-Proportionalitaet (3 Module, Founder-Internal-Test). Tradeoff: weniger Iterations-Tiefe als condensation; akzeptiert (Live-Smoke an Founder-eigener Kanzlei = R1-Validierung).
+- **DEC-234:** Blueprint-Mechanismus-Reuse, neuer Inhalt — kein neuer Diagnostik-Engine; Tradeoff: Blueprint-Content muss neu autoriert werden.
+- Additiv: 1 Migration (124), 1 neue Tabelle, 1 neuer `job_type`, 0 Aenderung an bestehenden OP-Funktionen (SC-7).
+
+### 9. Migrations-Skizze (MIG-124)
+`124_v10_stb_modul_domain.sql` (additiv): (1) `CREATE TABLE modul_output` (+ Enum-CHECKs, Indizes, RLS-Matrix Zwei-Teil-USING + GRANTs authenticated/service_role); (2) `module_output_synthesis` in `fn_min_tier_for_job` mappen (→ `blueprint`-Tier) + `ai_jobs.job_type`-CHECK + `ai_cost_ledger.role`-CHECK je um die neuen Werte erweitern (Live-Stand vorab via `pg_get_constraintdef` verifizieren — IMP-1228-Disziplin); (3) `rpc_enqueue_module_output(p_capture_session_id, p_modul_key)` (tier-gated, INSERT ai_jobs, Pattern aus `rpc_create_block_checkpoint`); (4) `NOTIFY pgrst, 'reload schema'`. **Template-Seeds (Blueprint + M-04/05/06) als separate Seed-Migration** (Content aus Dev-System-IP) — Schnitt in /slice-planning. `capture_session.metadata.imported_dataset_ref` braucht keine Schema-Aenderung (jsonb vorhanden). Naechste freie SQL-Datei = **124**.
+
+### 10. Offene technische Fragen
+- **Seed-Content-Tiefe:** Nur M-04 hat eine vollstaendige Spec; M-05/M-06 Fragebogen + KI-Hebel muessen aus `StrategAIze Module.xlsx` extrahiert/autoriert werden (Seed-Slice, /slice-planning/-backend).
+- **Reifegrad-Inferenz:** deterministisch (aus Evidenz-Dichte/Confidence) vs. LLM-gewertet — im /backend-Slice festlegen.
+- **Blueprint→Modul-Routing:** in V10 nur 3 Finanz-Module → Routing trivial; Detail-Regeln in den Slice.
+- **Q-V10-F (Founder, Versionierung, NICHT-blockierend):** StB Phase 2/3 → V11/V12 reservieren (Deferred weiter schieben) vs. spaeter naechste freie Nr. **Empfehlung:** V11/V12 fuer StB reservieren (StB-Vertikale ist jetzt die Prioritaets-Linie; die Deferred-Items haben 0 Backlog-Surface). Founder-Bestaetigung offen.
+
+### 11. Empfohlener naechster Schritt
+`/slice-planning V10` — grobe SLC-Richtung: (A) MIG-124 `modul_output`-Domaene + RPC + Tier-Job-Mapping (backend); (B) Template-Seeds Blueprint + M-04/05/06 (backend, IP-Extraktion); (C) Modul-Output-Synthese-Worker lean Fan-out+Critic + Cost-Cap (backend); (D) Capture-Eintritt-Reuse + Stufe-1/Stufe-2-Flow (frontend/backend); (E) Workspace-Reader + KI-Hebel-Liste (frontend); (F) FEAT-090 Onboarding-Reuse + Env-Gate (klein). Reihenfolge + genauer Schnitt = /slice-planning.
