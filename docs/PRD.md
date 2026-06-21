@@ -2858,7 +2858,7 @@ FEAT-090..095 (siehe `/features/INDEX.md`). Der EINE echte Neubau ist die **Modu
 - Q-V10-E: KI-Output-Pipeline — Single-Pass vs. Reuse des 3-Agenten-Orchestrators (`src/workers/condensation/*`) fuer die Modul-Output-Tiefe; Cost-Cap.
 
 **Fuer Founder (Versionierungs-Entscheidung, nicht V10-blockierend):**
-- Q-V10-F: Das Discovery-Mapping sah StB Phase 1/2/3 → OP V10/V11/V12. Der Deferred-Renumber 2026-06-20 (Handoff „V10+→V11+", Shift um 1) hat V11 (alt Auto-Response) + V12 (alt CRM) belegt → Phase 2/3 kollidieren erneut. Entscheidung offen: V11/V12 jetzt fuer StB-Phasen reservieren (Deferred weiter schieben) **oder** Phase 2/3 spaeter die naechste freie Nummer geben. Heute kein Blocker (Phase 1 ist noch nicht gebaut).
+- Q-V10-F: **RESOLVED 2026-06-21 (Founder, DEC-240):** StB Phase 1/2/3 → OP V10/V11/V12. V11/V12 als planned-Stubs reserviert (V11=Stufe-2 Mandanten-Pfad, V12=Stufe-3 Wissensnetzwerk-Moat); deferred Bulk-Cluster +2 verschoben V11-V17→V13-V19 (roadmap-only, 0 Backlog-Surface). Phase-2/3-Detail via spaeterer /discovery.
 
 ### Delivery mode
 SaaS Product (Internal-Test-Mode, kein Customer-Outreach — `module-lifecycle-discipline`). V10 = erste produktisierbare Branchen-Vertikale, Stufe-1-Kern.
