@@ -14,8 +14,9 @@
 Der StB durchlaeuft fuer die eigene Kanzlei einen Blueprint-Diagnostik-Lauf: `capture_session` auf `stb_blueprint_kanzlei` → `block_checkpoint` → bestehender `diagnosis_generation`-Job → `knowledge_unit`-Diagnostik-Findings (Ampel/Reifegrad/Empfehlung) → Empfehlung/Routing in die 3 Finanz-Module M-04/05/06. Mechanismus-Reuse (DEC-234), Inhalt aus SLC-170.
 
 ## Architektur-Anker
-- DEC-234: Blueprint reust die Template-/Diagnostik-Maschinerie (`capture_session` + `diagnosis_generation`-Job + `knowledge_unit`-Findings); Content = `stb_blueprint_kanzlei` (SLC-170).
-- ARCHITECTURE §3.3 + §5.2. Reuse-Vorbilder: V6.3 `partner_diagnostic` Light-Pipeline-Renderer + bestehender Diagnose-Worker.
+- DEC-234: Blueprint reust die Template-/Diagnostik-Maschinerie (`capture_session` + Diagnose-Pipeline + `knowledge_unit`-Findings); Content = `stb_blueprint_kanzlei` (SLC-170).
+- **Konkrete Reuse-Targets (QA-verifiziert 2026-06-21):** `src/workers/condensation/handle-job.ts` routet per `template.metadata.usage_kind` → `src/workers/condensation/light-pipeline.ts` (V6.3 DGN-A `runLightPipeline`) → `rpc_finalize_partner_diagnostic` (MIG-094). job_type `diagnosis_generation` existiert bereits im `ai_jobs`-CHECK. NICHT der schwere Orchestrator (v8-pipeline).
+- ARCHITECTURE §3.3 + §5.2. Reuse-Vorbild: V6.3 `partner_diagnostic` Light-Pipeline.
 - DATEV-Abgrenzung (SC-6): Naming/Copy = „operative Wirk-Schicht", NICHT DATEV-„ReifegradCheck".
 
 ## Akzeptanzkriterien
@@ -42,7 +43,7 @@ Der StB durchlaeuft fuer die eigene Kanzlei einen Blueprint-Diagnostik-Lauf: `ca
 - Dependencies: MT-1.
 
 ## Risiken & Dependencies
-- **R-172-1 (Diagnose-Worker-Reuse):** den bestehenden `diagnosis_generation`-Job code-verifizieren (Input-Shape `capture_session` + Template-`diagnosis_schema`/`diagnosis_prompt`) — Reuse, kein neuer Engine (`strategaize-pattern-reuse.md`).
+- **R-172-1 (Routing-Branch-Entscheidung, QA-Finding — Scope-relevant):** der condensation-Worker `handle-job.ts` routet per `usage_kind`; aktuell nur `self_service_partner_diagnostic` + `mandanten_report_teaser_v1` erkannt — ein unbekannter Wert faellt auf Standard-`block_checkpoint` durch (KEINE Diagnose). Zwei Optionen: **(a)** `stb_blueprint_kanzlei` nutzt `usage_kind='self_service_partner_diagnostic'` → 0 Worker-Code, falls die Blueprint-Output-Shape zur Partner-Diagnostik passt (Empfehlung, prüfen); **(b)** neuer Wert `stb_blueprint` + neuer Branch in `handle-job.ts` + ggf. eigene `rpc_finalize_*` → **dann +1 Migration (MIG-126)** und Slice ist NICHT pure-Reuse (backend.md: atomare RPC als zusaetzliche File-Anforderung notieren, Decision-Trail in DECISIONS.md). Entscheidung im /backend treffen + mit SLC-170 MT-1 (`usage_kind`-Wert) abgleichen.
 - **R-172-2 (Shared Capture-Wizard mit SLC-173):** beide Slices reusen den `capture/`-Wizard. Wenn beide gemeinsame Komponenten anfassen → gleiche Parallel-Group, sequenzieren oder File-Touchpoints disjunkt halten (Blueprint = `dashboard/stb/blueprint/*`, Modul = `dashboard/stb/modul/*`). Pre-Merge-Re-Check Pattern-Drift-Schritt Pflicht.
 - **Dependency:** SLC-170 (Template), SLC-171 (Env-Gate). Liefert Modul-Routing → SLC-173.
 

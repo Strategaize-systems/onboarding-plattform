@@ -31,7 +31,7 @@ Den Content der Vertikale als idempotente Seed-Migration anlegen: 4 `template`-R
 ### MT-1: MIG-125 Blueprint-Template `stb_blueprint_kanzlei`
 - Goal: Blueprint-Diagnostik-Template (eigene Kanzlei) seedbar.
 - Files: `sql/migrations/125_v10_stb_template_seed.sql` (neu, Teil 1).
-- Expected behavior: `INSERT ... ON CONFLICT (slug, version) DO UPDATE` mit `blocks` (Struktur-Fragen operative Wirk-Schicht), `diagnosis_schema` (Ampel/Reifegrad + Modul-Routing-Hinweis M-04/05/06), `diagnosis_prompt`, `metadata.usage_kind='stb_blueprint'`.
+- Expected behavior: `INSERT ... ON CONFLICT (slug, version) DO UPDATE` mit `blocks` (Struktur-Fragen operative Wirk-Schicht), `diagnosis_schema` (Ampel/Reifegrad + Modul-Routing-Hinweis M-04/05/06), `diagnosis_prompt`, `metadata.usage_kind=<value>`. **`usage_kind`-Wert mit SLC-172 abgestimmt (QA-Finding):** der condensation-Worker `handle-job.ts` routet per `usage_kind`; aktuell nur `self_service_partner_diagnostic` + `mandanten_report_teaser_v1` erkannt. Entweder `self_service_partner_diagnostic` reusen (wenn Blueprint-Output = Diagnostik-Shape, 0 Worker-Code) ODER neuen Wert `stb_blueprint` + Branch in SLC-172 (siehe SLC-172 R-172-1). Default-Empfehlung: Reuse `self_service_partner_diagnostic` falls Shape passt.
 - Verification: Row vorhanden, `diagnosis_schema` valid-JSON, 2. Apply idempotent.
 - Dependencies: none.
 
