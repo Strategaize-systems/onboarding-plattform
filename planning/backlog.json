@@ -1719,6 +1719,46 @@
       "version": "V10",
       "description": "Konsum-Ansicht: der StB liest die Modul-Outputs (Entscheidung/Standard/Implementierungsschritt) + KI-Hebel-Liste (Reifegrad 1-4) fuer die eigene Kanzlei. Reuse Handbuch-Reader (FEAT-028).",
       "createdAt": "2026-06-20"
+    },
+    {
+      "id": "BL-515",
+      "title": "Exit-Ready Produkt 1 — Uebertragbarkeits-/Devil's-Advocate-Report (Kaeufer-Sprache) [B.1]",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": null,
+      "description": "Neue Report-Variante (Reuse PDF-Renderer V8 Mandanten-Report / V9.75 Fahrplan), die bestehende knowledge_unit + block_diagnosis + Owner-Dependency-Tags in Kaeufer-/Exit-Sprache umdeutet: Uebergabe-Ampel-Scorecard (rot/gelb/gruen pro Dimension), Owner-Dependence-Index prominent, pro Finding 'so saehe das ein Kaeufer / hier setzt die Buy-Side-DD an / so mildern Sie es vor dem Verkauf ab'. Engine-Output existiert, fehlt nur Framing-Schicht. Hoechster Hebel der letzten 30%. Strategie-Quelle: dev-system docs/STRATEGAIZE_PRODUKT_STRATEGIE_REIFEGRAD_2026-06-21. Version offen — Slotting vor B1-Vertiefung per /discovery.",
+      "createdAt": "2026-06-21"
+    },
+    {
+      "id": "BL-516",
+      "title": "Exit-Ready Produkt 1 — KI-/Zukunftsfaehigkeit ins Exit-Framing umdeuten [B.2]",
+      "type": "improvement",
+      "priority": "medium",
+      "status": "open",
+      "version": null,
+      "description": "Bestehenden Baustein 'Strukturelle KI-Reife' (Diagnose-Werkzeug V6.3, 093_v63_partner_diagnostic_seed.sql) in die Kaeufer-/Exit-Spur umdeuten (KEIN Engine-Neubau — existiert bereits, nur Framing). Optionale Erweiterung: 'ist das Geschaeftsmodell KI-resilient' als Zukunfts-Risiko-Dimension fuer tech-affine Kaeufer. Nur wenn Pitch auf KI-Readiness fuehrt. Version offen.",
+      "createdAt": "2026-06-21"
+    },
+    {
+      "id": "BL-517",
+      "title": "Exit-Ready Produkt 1 — Devil's-Advocate-Positionierung: Scope/Spur + Makler-Disclaimer + Ehrlichkeits-Sektion [B.4]",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": null,
+      "description": "Report + Produkt-Copy: explizite Spur (wir = operative Substanz/Uebertragbarkeit/Owner-Dependence, NICHT Finanz-/Steuer-/Rechts-DD = Pruefer/Anwalt-Spur), Makler-Disclaimer 'basiert auf Angaben des Eigentuemers', + Vollstaendigkeits-/Ehrlichkeits-Sektion (Orchestrator-Coverage sichtbar: was bewertet / was mangels Input nicht bewertbar). Positionierung, kein Engine-Build. FOLGE-GATE (BLOCKING vor Customer-Live, nicht jetzt): Legal-Review AGB/Disclaimer/Scope/Berufshaftung, pro Land (Berufsrecht). Version offen.",
+      "createdAt": "2026-06-21"
+    },
+    {
+      "id": "BL-518",
+      "title": "Exit-Ready Produkt 1 — 6-Monats-Re-Assessment als Upsell (Delta-Snapshot) [B.3]",
+      "type": "feature",
+      "priority": "medium",
+      "status": "open",
+      "version": null,
+      "description": "Folgeprodukt/Upsell: nach ~6 Monaten zweiter Lauf der gleichen Engine auf die geflaggten Bereiche, Delta-Vergleich, Score-Verbesserung sichtbar -> hebt das Assessment. Wiederkehrender Umsatz + Netzwerk-Bindung; V1-Preis nicht verteuern (eigener Verkaufsanlass). Preis-/Struktur-Entscheidung. Kleiner Build (gleiche Engine, Delta-View). Version offen.",
+      "createdAt": "2026-06-21"
     }
   ]
 }
