@@ -1058,3 +1058,57 @@ V9.8-Scope (Slice-Planning 2026-06-18 via RPT-494, BL-505). 2 additive Erweiteru
 | Pflicht | Blockiert | Aktion |
 |---|---|---|
 | Keine Code-Side-Pflicht. Live-Apply Migration 123 + Coolify-Redeploy erfolgt im /deploy (Founder-gated) | Live-Smoke (nicht Code-Side) | /backend SLC-V9.8-A direkt startbar (Worktree-Setup als MT-0) |
+
+## V10 Slices (StB-Vertikale Phase 1 — Stufe-1-Kern: StB onboardet eigene Kanzlei)
+
+| ID | Slice | Feature | Status | Priority | Created |
+|----|-------|---------|--------|----------|---------|
+| SLC-169 | [StB Modul-Domaene-Schema (MIG-124)](SLC-169-stb-modul-domaene-schema.md) | FEAT-091 | planned | High | 2026-06-21 |
+| SLC-170 | [StB Template-Content-Seed (MIG-125)](SLC-170-stb-template-content-seed.md) | FEAT-091 | planned | High | 2026-06-21 |
+| SLC-171 | [StB-Onboarding-Rahmen + Env-Gate](SLC-171-stb-onboarding-rahmen-envgate.md) | FEAT-090 | planned | Medium | 2026-06-21 |
+| SLC-172 | [Blueprint-Diagnostik (eigene Kanzlei)](SLC-172-stb-blueprint-diagnostik.md) | FEAT-092 | planned | High | 2026-06-21 |
+| SLC-173 | [Modul-Fragebogen-Capture (Stufe-1+2)](SLC-173-stb-modul-fragebogen-capture.md) | FEAT-093 | planned | High | 2026-06-21 |
+| SLC-174 | [Modul-Output-Synthese-Worker (lean Fan-out+Critic)](SLC-174-stb-modul-output-synthese-worker.md) | FEAT-094 | planned | High | 2026-06-21 |
+| SLC-175 | [Modul-Workspace-Reader + KI-Hebel-Liste](SLC-175-stb-modul-workspace-reader.md) | FEAT-095 | planned | High | 2026-06-21 |
+
+### V10 Execution Order (Dependency-getrieben)
+
+```
+Group A (Foundation)   : SLC-169 (MIG-124 Schema) · SLC-170 (MIG-125 Seed) · SLC-171 (Onboarding+Env-Gate)
+        |  (169 liefert Tabelle+RPC; 170 liefert Templates; 171 liefert Env-Gate)
+        v
+Group B (Capture)      : SLC-172 (Blueprint) · SLC-173 (Modul-Capture)   [beide nach SLC-170]
+        |  (173 liefert Capture-Antworten; 169-RPC enqueued den Job)
+        v
+Group C (Synthese)     : SLC-174 (Worker)   [nach SLC-169 + SLC-173]
+        |  (174 schreibt modul_output-Rows)
+        v
+Group D (Reader)       : SLC-175 (Workspace-Reader)   [nach SLC-174]
+```
+
+Empfohlene Reihenfolge (Single-Founder): **169 → 170 → 171 → 172 → 173 → 174 → 175.** Group A + Group B sind parallel-FAEHIG (eigene Worktrees), aber wegen Single-Founder-Kontextlast + geteiltem Capture-Wizard (172/173) wird **mostly-sequenziell empfohlen**; optionale Parallelisierung nur innerhalb Group A (169/170/171, max 3, disjunkte Files + MIG 124/125/keine).
+
+### V10 Parallel-Execution-Tabelle
+
+| Slice | Parallel-Group | MIG Reserved | File-Touchpoints (Kern) | Notes |
+|---|---|---|---|---|
+| SLC-169 | A | **124** | sql/migrations/124_v10_stb_modul_domain.sql, src/lib/db/__tests__/migration-124-*.test.ts | modul_output + RPC + Tier/CHECK; blockt 174/175 |
+| SLC-170 | A | **125** | sql/migrations/125_v10_stb_template_seed.sql, docs/stb-vertikale/*-seed-source.md | 4 Template-Seeds; blockt 172/173; disjunkt zu 169 |
+| SLC-171 | A | keine | src/lib/stb-vertikale/{tenant-marker,feature-gate}.ts, src/app/dashboard/stb/* (Layout-Guard), .env.example | Reuse-Provisioning + Env-Gate; konsumiert von 172/173/174/175 |
+| SLC-172 | B | keine | src/app/dashboard/stb/blueprint/*, src/lib/stb-vertikale/blueprint*.ts | Reuse diagnosis_generation; dep SLC-170/171; shared Wizard mit 173 |
+| SLC-173 | B | keine | src/app/dashboard/stb/modul/*, src/lib/stb-vertikale/modul-capture.ts | Reuse capture/-Wizard; dep SLC-170/171; ruft 169-RPC; shared Wizard mit 172 |
+| SLC-174 | C | keine | src/workers/stb-vertikale/handle-module-output-job.ts, src/lib/stb-vertikale/{synthesis-prompt,synthesize-module-output,critic}.ts | Job-Typ in MIG-124; dep SLC-169 + SLC-173 |
+| SLC-175 | D | keine | src/app/dashboard/stb/workspace/*, src/components/stb/*, i18n stb.* | dep SLC-174 (Rows) + SLC-169; letzter Slice |
+
+### V10 Pflicht-Gates
+- Jeder Slice: `/qa` Pflicht nach /backend bzw. /frontend; `tsc` 0, `eslint` 0, `next build` PASS, `npm audit --omit=dev` 0 neue Vulns (0 neue Deps geplant).
+- DB-Slices (169/170): node:20-Sidecar gegen Coolify-DB (`coolify-test-setup.md`), RLS-Pen-Test mit SAVEPOINT-Pattern; Constraint-Vorab-Inspektion `pg_get_constraintdef` (169, IMP-1228).
+- Worker-Slice (174): hermetischer Worker-Test (Happy + Cost-Cap-Reject + LLM-Fail) + DB-Sidecar modul_output-Write/RLS.
+- Reader-Slice (175): Browser-Smoke (Render + Print + 0 Console-Errors); falls Security-Header betroffen → `csp-check.mjs` (`security-headers-live-smoke.md`).
+- Worktree-Isolation pro Slice (SaaS-Pflicht); Pre-Merge-Re-Check (6 Schritte) vor jedem Master-Merge — besonders MIG-124/125-Kollision + Capture-Wizard-Pattern-Drift (172/173).
+- Gesamt-/qa ueber alle V10-Slices vor /final-check.
+
+### V10 Live-Apply-Ordering (fuer /deploy)
+- MIG-124 (SLC-169) LIVE-Apply **vor** Worker-Code-Redeploy (R-169-2): Worker schreibt modul_output.
+- MIG-125 (SLC-170) LIVE-Apply vor Capture-/Blueprint-Code-Redeploy.
+- Env-Flag `NEXT_PUBLIC_ENABLE_STB_VERTIKALE` bleibt OFF bis V10 bereit (Internal-Test-Mode, `module-lifecycle-discipline`).
