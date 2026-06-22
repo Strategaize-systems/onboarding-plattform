@@ -1665,7 +1665,7 @@
       "title": "StB-Vertikale Phase 1 — StB-Onboarding-Rahmen (Stufe-1 Eigen-Kanzlei) [FEAT-090]",
       "type": "feature",
       "priority": "high",
-      "status": "in_progress",
+      "status": "done",
       "version": "V10",
       "description": "Minimaler Wholesale/StB-Account-Rahmen: der StB onboardet seine EIGENE Kanzlei als Tenant (Stufe-1). Reuse OP-Tenant-Onboarding (FEAT-031). Kein Billing/Anrechnung in V10. SLC-171 /backend done (RPT-516): Marker capture_session.metadata.stb_vertical_stage (DEC-243, kein DDL) + Env-Gate NEXT_PUBLIC_ENABLE_STB_VERTIKALE; NEXT /qa.",
       "createdAt": "2026-06-20"
