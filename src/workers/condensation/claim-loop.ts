@@ -164,7 +164,7 @@ export async function evaluateWorkerTierGate(
   return false;
 }
 
-const JOB_TYPES = ["knowledge_unit_condensation", "recondense_with_gaps", "sop_generation", "diagnosis_generation", "evidence_extraction", "dialogue_transcription", "dialogue_extraction", "bridge_generation", "walkthrough_stub_processing", "walkthrough_transcribe", "walkthrough_redact_pii", "walkthrough_extract_steps", "walkthrough_map_subtopics", "handbook_snapshot_generation", "lead_push_retry", "email_bulk_parse", "email_bulk_pre_filter", "email_bulk_thread_redact", "email_bulk_pattern_extract", "email_bulk_synthesis"] as const;
+const JOB_TYPES = ["knowledge_unit_condensation", "recondense_with_gaps", "sop_generation", "diagnosis_generation", "evidence_extraction", "dialogue_transcription", "dialogue_extraction", "bridge_generation", "walkthrough_stub_processing", "walkthrough_transcribe", "walkthrough_redact_pii", "walkthrough_extract_steps", "walkthrough_map_subtopics", "handbook_snapshot_generation", "lead_push_retry", "email_bulk_parse", "email_bulk_pre_filter", "email_bulk_thread_redact", "email_bulk_pattern_extract", "email_bulk_synthesis", "module_output_synthesis"] as const;
 
 /**
  * Start the polling claim-loop.
@@ -191,7 +191,8 @@ export async function startClaimLoop(
   emailBulkPreFilterHandler?: JobHandler,
   emailBulkThreadRedactHandler?: JobHandler,
   emailBulkPatternExtractHandler?: JobHandler,
-  emailBulkSynthesisHandler?: JobHandler
+  emailBulkSynthesisHandler?: JobHandler,
+  moduleOutputHandler?: JobHandler
 ): Promise<never> {
   const pollMs = parseInt(process.env.AI_WORKER_POLL_MS || "2000", 10);
   const adminClient = createAdminClient();
@@ -339,6 +340,11 @@ export async function startClaimLoop(
           emailBulkSynthesisHandler
         ) {
           await emailBulkSynthesisHandler(job);
+        } else if (
+          job.job_type === "module_output_synthesis" &&
+          moduleOutputHandler
+        ) {
+          await moduleOutputHandler(job);
         } else {
           await handler(job);
         }
