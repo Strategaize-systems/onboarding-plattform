@@ -790,3 +790,12 @@
 - Workaround: Compile-Phase als Gate nutzen + Fail per git-stash-Gegenprobe gegen Pre-Change-Stand verifizieren (IMP-1242). 
 - Next Action: Route/Logger so haerten, dass Modul-Init ohne ENVs nicht wirft (lazy createClient) ODER Build-Doku mit ENV-Anforderung; spaetestens im /final-check V9.5 als bekannter Umstand fuehren.
 
+### ISSUE-106 — Modul-Output-Worker Idempotenz-Skip blockt RPC-erlaubte Stufe-2-Re-Synthese (V10 SLC-174)
+- Status: open
+- Severity: Low
+- Area: StB-Vertikale / Modul-Output-Synthese
+- Summary: Der Worker `module_output_synthesis` (SLC-174, `handle-module-output-job.ts`) bricht idempotent ab (`existingCount > 0 → skip + complete`), sobald fuer (capture_session, modul_key) bereits `modul_output`-Rows existieren. Die Enqueue-RPC `rpc_enqueue_module_output` (MIG-124) dedupliziert hingegen NUR nicht-terminale Jobs und erlaubt bewusst einen Re-Enqueue nach Abschluss ("Stufe-2-Re-Synthese bleibt moeglich"). Folge: ein nach erfolgreichem Lauf neu enqueuter Synthese-Job wird vom Worker uebersprungen statt neu generiert → Re-Synthese ist ein No-Op.
+- Impact: Innerhalb SLC-174-Scope korrekt (Skip-on-existing ist die bewusste Idempotenz-Semantik, AC-konform). Wird erst relevant, wenn ein Re-Synthese-/Status-Edit-Flow (SLC-175+) den StB die KI-Outputs neu draften lassen will — dann passiert nichts.
+- Workaround: Bis dahin keiner noetig (kein Re-Synthese-Pfad live).
+- Next Action: Die kuenftige Re-Synthese-/Status-Edit-Slice (SLC-175+) muss vor dem Re-Enqueue die bestehenden `modul_output`-Rows der (session, modul_key) loeschen ODER der Worker braucht einen `force`-/`regenerate`-Payload-Flag, der den Idempotenz-Skip umgeht. Quelle: /qa SLC-174 RPT-522 L-1.
+
