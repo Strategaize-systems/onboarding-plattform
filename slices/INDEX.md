@@ -1066,7 +1066,7 @@ V9.8-Scope (Slice-Planning 2026-06-18 via RPT-494, BL-505). 2 additive Erweiteru
 | SLC-169 | [StB Modul-Domaene-Schema (MIG-124)](SLC-169-stb-modul-domaene-schema.md) | FEAT-091 | done | High | 2026-06-21 |
 | SLC-170 | [StB Template-Content-Seed — M-04-only (MIG-125)](SLC-170-stb-template-content-seed.md) | FEAT-091 | done | High | 2026-06-21 |
 | SLC-170b | [StB Template-Seed Folge — Blueprint + restl. 18-Cut (content-gated)](SLC-170b-stb-template-seed-followup.md) | FEAT-091, FEAT-092 | planned | High | 2026-06-21 |
-| SLC-171 | [StB-Onboarding-Rahmen + Env-Gate](SLC-171-stb-onboarding-rahmen-envgate.md) | FEAT-090 | planned | Medium | 2026-06-21 |
+| SLC-171 | [StB-Onboarding-Rahmen + Env-Gate](SLC-171-stb-onboarding-rahmen-envgate.md) | FEAT-090 | in_progress | Medium | 2026-06-21 |
 | SLC-172 | [Blueprint-Diagnostik (eigene Kanzlei)](SLC-172-stb-blueprint-diagnostik.md) | FEAT-092 | planned | High | 2026-06-21 |
 | SLC-173 | [Modul-Fragebogen-Capture (Stufe-1+2)](SLC-173-stb-modul-fragebogen-capture.md) | FEAT-093 | planned | High | 2026-06-21 |
 | SLC-174 | [Modul-Output-Synthese-Worker (lean Fan-out+Critic)](SLC-174-stb-modul-output-synthese-worker.md) | FEAT-094 | planned | High | 2026-06-21 |

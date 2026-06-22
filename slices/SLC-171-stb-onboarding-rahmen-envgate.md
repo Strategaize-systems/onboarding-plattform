@@ -17,6 +17,7 @@ Der StB onboardet die EIGENE Kanzlei als normaler Tenant (`tenant_admin`) via be
 - DEC-238: StB = `tenant_admin` der eigenen Kanzlei via vorhandenem Tenant-Provisioning (Invitation `role_hint='tenant_admin'` ODER Self-Signup `provisionSelfSignupTenant`). Keine neue Rolle, keine Partner/Mandanten-Hierarchie (V11+).
 - DEC-239: Gating via Env-Flag `NEXT_PUBLIC_ENABLE_STB_VERTIKALE` (Default OFF) + Tier-Gating fuer Job-Typen.
 - StB-Vertical-Marker als `tenant.metadata`/`capture_session.metadata`-jsonb-Flag (kein DDL — ARCH: „0 Aenderung an bestehenden OP-Funktionen", 1 Migration gesamt = 124).
+  - **DEC-243 (Spec-Schema-Drift-Fix, /backend 2026-06-22):** `tenants` hat KEINE metadata/settings-jsonb-Spalte — der `tenant.metadata`-Pfad ist ohne neue Migration nicht moeglich, was die "1 MIG = 124"-Invariante verletzen wuerde. Marker lebt daher in **`capture_session.metadata.stb_vertical_stage`** (Founder-delegiert). Folge: MT-1 = thin Helper + RLS-erbt (kein Provisioning-Touchpoint); der Set-Aufruf wird in **SLC-173** (Capture-Erstellung) verdrahtet. AC-171-2 „Tenant erkennbar" = „die StB-Capture-Sessions des Tenants tragen den Marker".
 
 ## Akzeptanzkriterien
 - **AC-171-1:** StB legt die eigene Kanzlei als Tenant an (Reuse FEAT-031-Wizard / Provisioning) und loggt als `tenant_admin` ein. Kein neuer Provisioning-Pfad.
