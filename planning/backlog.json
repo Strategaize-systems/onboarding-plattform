@@ -1695,7 +1695,7 @@
       "title": "StB-Vertikale Phase 1 — Modul-Fragebogen-Capture (Stufe-1-Kern + Stufe-2-Vertiefung) [FEAT-093]",
       "type": "feature",
       "priority": "high",
-      "status": "open",
+      "status": "in_progress",
       "version": "V10",
       "description": "Der StB beantwortet die Modul-Fragebogen fuer die eigene Kanzlei (Kern + Vertiefung). KI-getriebener Daten-Bedarf ('wir sagen welche Daten wir brauchen'). Reuse OP-Capture-Mode.",
       "createdAt": "2026-06-20"
