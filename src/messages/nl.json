@@ -563,5 +563,34 @@
       "processed": "Voltooid",
       "failed": "Mislukt"
     }
+  },
+  "stb": {
+    "workspace": {
+      "backToDashboard": "Terug naar dashboard",
+      "backToWorkspace": "Terug naar workspace",
+      "title": "Module-workspace",
+      "intro": "De operationele werklaag van het eigen kantoor: beslissing, standaard en implementatiestap per module, plus de AI-hefbomen op volwassenheidsniveau.",
+      "loadError": "De moduleresultaten konden niet worden geladen. Probeer het later opnieuw.",
+      "emptyTitle": "Nog geen moduleresultaten",
+      "emptyBody": "Zodra een modulevragenlijst is ingevuld en de synthese is doorlopen, verschijnen de resultaten hier.",
+      "lastGenerated": "laatst {date}",
+      "outputCount": "{count} leveringsoutputs",
+      "kiHebelCount": "{count} AI-hefbomen",
+      "detailIntro": "Operationele werklaag ({modul}) — geen organisatiehandboek.",
+      "detailLoadError": "De resultaten van deze module konden niet worden geladen. Probeer het later opnieuw.",
+      "detailEmptyTitle": "Nog geen resultaat",
+      "detailEmptyBody": "Voor deze module is er nog geen output. Zodra de vragenlijst is ingevuld en de synthese is afgerond, verschijnen de beslissing, standaard, implementatiestap en de AI-hefbomen hier.",
+      "noEntry": "Geen vermelding.",
+      "kiHebelHeading": "AI-hefbomen",
+      "kiHebelEmpty": "Geen AI-hefbomen aangegeven.",
+      "reifegrad": "Volwassenheidsniveau {grade}",
+      "reifegradNone": "geen",
+      "print": "Afdrukken als PDF",
+      "kind": {
+        "entscheidung": "Beslissing",
+        "standard": "Standaard",
+        "implementierungsschritt": "Implementatiestap"
+      }
+    }
   }
 }

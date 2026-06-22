@@ -563,5 +563,34 @@
       "processed": "Complete",
       "failed": "Failed"
     }
+  },
+  "stb": {
+    "workspace": {
+      "backToDashboard": "Back to dashboard",
+      "backToWorkspace": "Back to workspace",
+      "title": "Module workspace",
+      "intro": "Your firm's operational layer of effect: decision, standard and implementation step per module, plus the AI levers by maturity level.",
+      "loadError": "The module results could not be loaded. Please try again later.",
+      "emptyTitle": "No module results yet",
+      "emptyBody": "Once a module questionnaire has been completed and the synthesis has run, the results will appear here.",
+      "lastGenerated": "last {date}",
+      "outputCount": "{count} delivery outputs",
+      "kiHebelCount": "{count} AI levers",
+      "detailIntro": "Operational layer of effect ({modul}) — not an organisation handbook.",
+      "detailLoadError": "The results for this module could not be loaded. Please try again later.",
+      "detailEmptyTitle": "No result yet",
+      "detailEmptyBody": "There is no output for this module yet. Once the questionnaire is completed and the synthesis is finished, the decision, standard, implementation step and the AI levers will appear here.",
+      "noEntry": "No entry.",
+      "kiHebelHeading": "AI levers",
+      "kiHebelEmpty": "No AI levers identified.",
+      "reifegrad": "Maturity level {grade}",
+      "reifegradNone": "none",
+      "print": "Print as PDF",
+      "kind": {
+        "entscheidung": "Decision",
+        "standard": "Standard",
+        "implementierungsschritt": "Implementation step"
+      }
+    }
   }
 }
