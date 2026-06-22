@@ -1705,7 +1705,7 @@
       "title": "StB-Vertikale Phase 1 — KI-Output-Generierung pro Modul [FEAT-094]",
       "type": "feature",
       "priority": "high",
-      "status": "in_progress",
+      "status": "done",
       "version": "V10",
       "description": "KI draftet pro Modul Entscheidung/Standard/Implementierungsschritt aus den Antworten (~70-80% KI-getrieben, Founder-Imperativ; StB macht die ~20% Vertiefung). Reuse Bedrock/Claude eu-central-1 + ai_jobs-Worker.",
       "createdAt": "2026-06-20"
