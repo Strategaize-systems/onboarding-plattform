@@ -270,4 +270,4 @@ V10-Scope (Requirements 2026-06-20 via RPT-505, BL-509..514). Erste produktisier
 | FEAT-092 | Blueprint-Diagnostik (eigene Kanzlei, Strukturen sichtbar, Routing in die Module) | planned | [Spec](FEAT-092-blueprint-diagnostik.md) | 2026-06-20 |
 | FEAT-093 | Modul-Fragebogen-Capture (Stufe-1-Kern + Stufe-2-Vertiefung, KI-getriebener Daten-Bedarf) | done | [Spec](FEAT-093-modul-fragebogen-capture.md) | 2026-06-20 |
 | FEAT-094 | KI-Output-Generierung pro Modul (Entscheidung/Standard/Implementierungsschritt, ~70-80% KI) | done | [Spec](FEAT-094-ki-output-generierung.md) | 2026-06-20 |
-| FEAT-095 | Modul-Workspace-Reader + KI-Hebel-Liste (Output-Konsum, Reifegrad 1-4) | in_progress | [Spec](FEAT-095-modul-workspace-reader.md) | 2026-06-20 |
+| FEAT-095 | Modul-Workspace-Reader + KI-Hebel-Liste (Output-Konsum, Reifegrad 1-4) | done | [Spec](FEAT-095-modul-workspace-reader.md) | 2026-06-20 |

@@ -1715,7 +1715,7 @@
       "title": "StB-Vertikale Phase 1 — Modul-Workspace-Reader + KI-Hebel-Liste [FEAT-095]",
       "type": "feature",
       "priority": "high",
-      "status": "in_progress",
+      "status": "done",
       "version": "V10",
       "description": "Konsum-Ansicht: der StB liest die Modul-Outputs (Entscheidung/Standard/Implementierungsschritt) + KI-Hebel-Liste (Reifegrad 1-4) fuer die eigene Kanzlei. Reuse Handbuch-Reader (FEAT-028).",
       "createdAt": "2026-06-20"
