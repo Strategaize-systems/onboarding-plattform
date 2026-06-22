@@ -1,0 +1,79 @@
+import { redirect, notFound } from "next/navigation";
+import { getLocale } from "next-intl/server";
+import { createClient } from "@/lib/supabase/server";
+import { getCaptureSession } from "@/lib/db/capture-session-queries";
+import { getTemplateById } from "@/lib/db/template-queries";
+import { QuestionnaireWorkspace } from "@/app/capture/[sessionId]/block/[blockKey]/questionnaire-form";
+import { isValidModulKey, modulBasePath } from "@/lib/stb-vertikale/modul-capture";
+
+// StB-Modul Block-Detail (SLC-173). Reuse QuestionnaireWorkspace via basePath;
+// Save/Resume + Voice (Whisper) kommen unveraendert aus der Wizard-Komponente.
+export default async function StbModulBlockPage({
+  params,
+}: {
+  params: Promise<{ modulKey: string; sessionId: string; blockKey: string }>;
+}) {
+  const { modulKey, sessionId, blockKey } = await params;
+  if (!isValidModulKey(modulKey)) {
+    notFound();
+  }
+
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    redirect("/login");
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("id, tenant_id")
+    .eq("id", user.id)
+    .single();
+  if (!profile) {
+    redirect("/login");
+  }
+
+  const session = await getCaptureSession(supabase, sessionId);
+  if (!session) {
+    notFound();
+  }
+  if (session.tenant_id !== profile.tenant_id) {
+    notFound();
+  }
+
+  const template = await getTemplateById(supabase, session.template_id);
+  if (!template) {
+    notFound();
+  }
+
+  const block = template.blocks.find((b) => b.key === blockKey);
+  if (!block) {
+    notFound();
+  }
+
+  const locale = await getLocale();
+
+  const { data: blockCheckpoints } = await supabase
+    .from("block_checkpoint")
+    .select("id, checkpoint_type, content_hash, created_at")
+    .eq("capture_session_id", sessionId)
+    .eq("block_key", blockKey)
+    .order("created_at", { ascending: false });
+
+  return (
+    <QuestionnaireWorkspace
+      sessionId={sessionId}
+      activeBlockKey={blockKey}
+      templateName={template.name}
+      blocks={template.blocks}
+      ownerFields={template.owner_fields ?? []}
+      savedAnswers={session.answers}
+      locale={locale}
+      existingCheckpoints={blockCheckpoints ?? []}
+      basePath={modulBasePath(modulKey)}
+    />
+  );
+}
