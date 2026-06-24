@@ -17,11 +17,17 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { chatWithLLM } from "@/lib/llm";
 import { getTemplateBySlug, getTemplateById } from "@/lib/db/template-queries";
-import { createCaptureSession } from "@/lib/db/capture-session-queries";
+import {
+  createCaptureSession,
+  getCaptureSession,
+} from "@/lib/db/capture-session-queries";
 import { setStbVerticalStage } from "@/lib/stb-vertikale/tenant-marker";
 import {
   BLUEPRINT_SLUG,
   BLUEPRINT_BASE_PATH,
+  ADAPTIVE_AMPEL_META_KEY,
+  deriveVertiefungCouplings,
+  coupledKernFrageIds,
   parseAmpel,
   type Ampel,
 } from "@/lib/stb-vertikale/blueprint";
@@ -29,9 +35,6 @@ import {
 // Klassischer Capture-Mode (Default-Pfad). Die StB-Vertikale-Kennung lebt im
 // metadata-Marker (DEC-243), nicht im capture_mode.
 const STB_BLUEPRINT_CAPTURE_MODE = "questionnaire";
-
-/** JSONB-Key unter capture_session.metadata fuer die adaptiven Live-Ampeln. */
-const ADAPTIVE_AMPEL_KEY = "blueprint_adaptive_ampel" as const;
 
 /** error_log-Source der Audit-Eintraege (data-residency.md Nachweispflicht). */
 const ASSESS_AUDIT_SOURCE = "blueprint_adaptive_ampel" as const;
@@ -222,16 +225,76 @@ export async function assessAnswerAmpel(
     .single();
   const currentMeta = (row?.metadata ?? {}) as Record<string, unknown>;
   const currentAmpel =
-    (currentMeta[ADAPTIVE_AMPEL_KEY] as Record<string, string> | undefined) ?? {};
+    (currentMeta[ADAPTIVE_AMPEL_META_KEY] as Record<string, string> | undefined) ??
+    {};
   await admin
     .from("capture_session")
     .update({
       metadata: {
         ...currentMeta,
-        [ADAPTIVE_AMPEL_KEY]: { ...currentAmpel, [frageId]: ampel },
+        [ADAPTIVE_AMPEL_META_KEY]: { ...currentAmpel, [frageId]: ampel },
       },
     })
     .eq("id", sessionId);
 
   return { ok: true, ampel };
+}
+
+/**
+ * Adaptive Vertiefung — Batch-Auswertung (R-172-2: Reveal nach Submit auf
+ * Block-Ebene, statt die geteilte Wizard-Komponente anzufassen). Bewertet alle
+ * beantworteten, an eine Vertiefung gekoppelten Kern-Fragen via `assessAnswerAmpel`
+ * (Reuse) und stasht die Ampeln. Danach blendet die Uebersicht ueber
+ * `surfacedVertiefungFrageIds` die freigeschalteten Vertiefungsfragen ein.
+ *
+ * Idempotent: re-evaluierbar (eine spaeter geaenderte Kern-Antwort kann eine
+ * Vertiefung neu ein- oder ausblenden). Owner-/Tenant-Check via die wiederbenutzte
+ * `assessAnswerAmpel` (Defense-in-Depth dort) + Vorpruefung hier.
+ */
+export async function assessBlueprintKernAnswers(
+  sessionId: string
+): Promise<{ ok: boolean; assessed: number; error?: string }> {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { ok: false, assessed: 0, error: "Nicht authentifiziert" };
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("tenant_id")
+    .eq("id", user.id)
+    .single();
+  if (!profile?.tenant_id) {
+    return { ok: false, assessed: 0, error: "Profil/Tenant nicht gefunden" };
+  }
+
+  const session = await getCaptureSession(supabase, sessionId);
+  if (!session || session.tenant_id !== profile.tenant_id) {
+    return { ok: false, assessed: 0, error: "Kein Zugriff auf diese Session" };
+  }
+
+  const template = await getTemplateById(supabase, session.template_id);
+  if (!template || template.slug !== BLUEPRINT_SLUG) {
+    return { ok: false, assessed: 0, error: "Kein Blueprint-Template fuer diese Session" };
+  }
+
+  const couplings = deriveVertiefungCouplings(template.blocks);
+  const coupledIds = new Set(coupledKernFrageIds(couplings));
+
+  let assessed = 0;
+  for (const block of template.blocks) {
+    for (const q of block.questions) {
+      if (!coupledIds.has(q.frage_id)) continue;
+      const answer = (session.answers[`${block.key}.${q.id}`] ?? "").trim();
+      if (!answer) continue;
+      const res = await assessAnswerAmpel(sessionId, q.frage_id, answer);
+      if (res.ok) assessed += 1;
+    }
+  }
+
+  return { ok: true, assessed };
 }

@@ -6,6 +6,7 @@ import {
   deriveVertiefungCouplings,
   surfacedVertiefungFrageIds,
   coupledKernFrageIds,
+  filterAdaptiveBlocks,
   isYellowOrRed,
   parseAmpel,
 } from "../blueprint";
@@ -146,6 +147,48 @@ describe("surfacedVertiefungFrageIds", () => {
     expect(
       surfacedVertiefungFrageIds(couplings, { "F-BP-999": "red" })
     ).toEqual([]);
+  });
+});
+
+describe("filterAdaptiveBlocks", () => {
+  const couplings = deriveVertiefungCouplings(BLOCKS);
+
+  it("entfernt den Vertiefungs-Block komplett, solange keine Kern-Antwort gelb/rot ist", () => {
+    const surfaced = surfacedVertiefungFrageIds(couplings, {
+      "F-BP-004": "green",
+    });
+    const filtered = filterAdaptiveBlocks(BLOCKS, surfaced);
+    expect(filtered.map((b) => b.key)).toEqual(["stufe1_kern"]);
+    // Kern-Block bleibt vollstaendig (inkl. ungekoppelter g1-Frage).
+    expect(filtered[0].questions).toHaveLength(6);
+  });
+
+  it("blendet nur die gekoppelte Vertiefungsfrage ein, Kern bleibt voll", () => {
+    const surfaced = surfacedVertiefungFrageIds(couplings, {
+      "F-BP-004": "yellow",
+      "F-BP-013": "red",
+    });
+    const filtered = filterAdaptiveBlocks(BLOCKS, surfaced);
+    expect(filtered.map((b) => b.key)).toEqual([
+      "stufe1_kern",
+      "stufe2_vertiefung",
+    ]);
+    expect(filtered[0].questions).toHaveLength(6); // Kern unveraendert
+    expect(
+      filtered[1].questions.map((q) => q.frage_id).sort()
+    ).toEqual(["F-BP-016", "F-BP-020"]);
+  });
+
+  it("haelt alle Vertiefungsfragen, wenn alle gekoppelten Kern-Fragen gelb/rot sind", () => {
+    const surfaced = surfacedVertiefungFrageIds(couplings, {
+      "F-BP-004": "red",
+      "F-BP-005": "yellow",
+      "F-BP-007": "red",
+      "F-BP-009": "yellow",
+      "F-BP-013": "red",
+    });
+    const filtered = filterAdaptiveBlocks(BLOCKS, surfaced);
+    expect(filtered[1].questions).toHaveLength(5);
   });
 });
 

@@ -24,6 +24,12 @@ export const BLUEPRINT_SLUG = "stb_blueprint_kanzlei" as const;
 /** Pfad-Praefix fuer die wiederverwendeten Wizard-Komponenten (basePath). */
 export const BLUEPRINT_BASE_PATH = "/dashboard/stb/blueprint" as const;
 
+/**
+ * JSONB-Key unter `capture_session.metadata`, in dem die adaptiven Live-Ampeln
+ * stashen (Single-Source fuer Writer `assessAnswerAmpel` + Reader Wizard-Seiten).
+ */
+export const ADAPTIVE_AMPEL_META_KEY = "blueprint_adaptive_ampel" as const;
+
 /** Ebene-Marker im Template (`question.ebene`), case-insensitiv verglichen. */
 const EBENE_KERN = "kern";
 const EBENE_VERTIEFUNG = "vertiefung";
@@ -118,6 +124,29 @@ export function surfacedVertiefungFrageIds(
     }
   }
   return Array.from(surfaced);
+}
+
+/**
+ * Adaptiver Block-Filter fuer den Wizard (R-172-2: Reveal auf Block-Ebene, die
+ * geteilte `QuestionnaireWorkspace` bleibt unangetastet). Pro Block bleiben alle
+ * Nicht-Vertiefungsfragen erhalten; Vertiefungsfragen NUR, wenn ihre frage_id in
+ * `surfaced` steht. Bloecke, die dadurch leer werden (z.B. der Vertiefungs-Block
+ * vor jeder gelb/roten Kern-Antwort), fallen ganz weg. Reine Funktion (AC-172-6).
+ */
+export function filterAdaptiveBlocks(
+  blocks: TemplateBlock[],
+  surfaced: string[]
+): TemplateBlock[] {
+  const surfacedSet = new Set(surfaced);
+  return blocks
+    .map((block) => ({
+      ...block,
+      questions: block.questions.filter(
+        (q) =>
+          ebeneOf(q) !== EBENE_VERTIEFUNG || surfacedSet.has(q.frage_id)
+      ),
+    }))
+    .filter((block) => block.questions.length > 0);
 }
 
 /**
