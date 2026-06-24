@@ -808,3 +808,12 @@
 - Workaround: `error_log`-Audit deckt die Nachweispflicht (data-residency.md) ab; Kosten sind im Bedrock-Billing sichtbar.
 - Next Action: Wenn Blueprint-Volumen relevant wird, die Assess-Calls entweder unter einen bestehenden `job_type` ledgern oder einen `blueprint_ampel_assess`-job_type (Migration) + synthetic-ai_jobs-Pattern einfuehren. Quelle: SLC-172 /architecture DEC-249, RPT-529.
 
+### ISSUE-108 — Blueprint-Reveal-Batch unter Bedrock-Throttle: fail-open→yellow kann Vertiefung über-surfacen (SLC-172)
+- Status: open
+- Severity: Low
+- Area: StB-Vertikale / Blueprint-Diagnostik / Adaptive Vertiefung
+- Summary: `assessBlueprintKernAnswers` (SLC-172 MT-1) loopt sequentiell über bis zu 5 gekoppelte Kern-Antworten, jede ein eigener EU-Bedrock-Call. Im /qa-Runtime-Smoke 2026-06-24 trat wiederholt `ServiceUnavailableException: Too many connections` auf (Bedrock-Account-Throttle, da der Live-App-Container den Account teilt). Ein throttled Call faellt per Design fail-open auf `yellow` zurück → die gekoppelte Vertiefungsfrage wird eingeblendet, obwohl die Kern-Antwort evtl. `green` gewesen waere.
+- Impact: Bei Account-Throttle kann die „Gratis-Test bleibt 15 Fragen bei gruen"-Eigenschaft (AC-172-6) punktuell nicht greifen — der StB sieht dann eine Vertiefungsfrage zu viel. Sichere Richtung (über-fragen statt eine nötige Vertiefung unterdrücken), keine Daten-/Tenant-Auswirkung. Connectivity+Auth zu eu-central-1 sind bewiesen (sonst kein 503).
+- Workaround: Re-Klick „Kern auswerten" sobald der Throttle abklingt re-evaluiert idempotent (eine dann grüne Kern-Antwort blendet die Vertiefung wieder aus).
+- Next Action: Optional MT-2/Polish — sanfter Retry-Backoff in `assessAnswerAmpel` bei `ServiceUnavailableException` (statt sofortigem fail-open), oder Batch-Parallelitaet drosseln. Quelle: SLC-172 MT-1 /qa Runtime-Smoke, RPT-532.
+
