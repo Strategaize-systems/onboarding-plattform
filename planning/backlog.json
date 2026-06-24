@@ -1685,7 +1685,7 @@
       "title": "StB-Vertikale Phase 1 — Blueprint-Diagnostik (eigene Kanzlei) [FEAT-092]",
       "type": "feature",
       "priority": "high",
-      "status": "open",
+      "status": "in_progress",
       "version": "V10",
       "description": "Einstiegs-Blueprint fuer die eigene Kanzlei des StB: Strukturen sichtbar, Routing in die relevanten Module. Reuse OP-Capture/Questionnaire-Maschinerie (Architektur-Fork: neu vs. bestehende Diagnose).",
       "createdAt": "2026-06-20"

@@ -29,7 +29,7 @@ Der StB durchlaeuft fuer die eigene Kanzlei einen Blueprint-Diagnostik-Lauf: `ca
 - **AC-172-3:** Ergebnis empfiehlt/routet deterministisch in die relevanten Module — Block→`modul_key`-Map aus dem Blueprint-Template (SLC-170b), Schwellwert auf `block_diagnosis` (Ampel/Reifegrad). Kein LLM-Routing.
 - **AC-172-4:** DATEV-Begriffs-Abgrenzung in Naming/Output gewahrt (Copy-Review).
 - **AC-172-5:** Tenant-Isolation (RLS) verifiziert; self-service Trigger nur fuer eigenen Tenant; `tsc`/`eslint` 0; hermetische Tests GREEN. MIG-127 (`rpc_seed_blueprint_diagnosis_input`) per DB-Sidecar (node:22 + SAVEPOINT) belegt: A–G-KU-Count + Idempotenz-Re-Run + Tenant-Scope.
-- **AC-172-6 (adaptiv, Choice A):** Eine Vertiefungsfrage (F-BP-016/017/018/019/020) wird nur eingeblendet, wenn die gekoppelte Kern-Frage (F-BP-004/005/007/009/013) per Live-`assessAnswerAmpel` gelb/rot ergibt; bei gruen bleibt der Gratis-Test bei 15 Fragen. Kopplung via gemeinsames `unterbereich` (a2/b1/c1/d1/f1). Assess-Call = EU-Bedrock (`chatWithLLM`), in `error_log` auditiert (provider/region/model); Live-Ampel in `capture_session.answers._adaptive_ampel`.
+- **AC-172-6 (adaptiv, Choice A):** Eine Vertiefungsfrage (F-BP-016/017/018/019/020) wird nur eingeblendet, wenn die gekoppelte Kern-Frage (F-BP-004/005/007/009/013) per Live-`assessAnswerAmpel` gelb/rot ergibt; bei gruen bleibt der Gratis-Test bei 15 Fragen. Kopplung via gemeinsames `unterbereich` (a2/b1/c1/d1/f1). Assess-Call = EU-Bedrock (`chatWithLLM`), in `error_log` auditiert (provider/region/model); Live-Ampel in `capture_session.metadata.blueprint_adaptive_ampel` (NICHT `answers` — Schema `record<string,string>`).
 
 ## Micro-Tasks
 
