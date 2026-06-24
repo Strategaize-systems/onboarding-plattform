@@ -1762,12 +1762,12 @@
     },
     {
       "id": "BL-519",
-      "title": "StB-Vertikale — Blueprint-Content autorieren (Diagnose + Ampel + Modul-Routing) [SLC-170b Welle 2]",
+      "title": "StB-Vertikale — Blueprint-Content autorieren + seeden (Diagnose + Ampel + Modul-Routing) [SLC-170b Welle 1]",
       "type": "feature",
       "priority": "high",
-      "status": "open",
+      "status": "done",
       "version": "V10",
-      "description": "Founder-Autoring (Produkt-IP, kein Build): Blueprint-Diagnose-Fragen ueber die ganze Kanzlei + Ampel-/Reifegrad-Logik + Routing (welche Antwort -> welches Modul). NEUER StB-Kanzlei-Inhalt, NICHT Exit-Readiness recyceln (DEC-234, DATEV-Abgrenzung). Hoechste Prioritaet nach M-04, weil Einstieg+Routing -> entsperrt SLC-172. Vorlage: docs/stb-vertikale/modul-bibliothek-seed-source.md §5. Danach Seed via SLC-170b.",
+      "description": "DONE 2026-06-23 (/backend SLC-170b Welle 1, RPT-527, MIG-126 LIVE). Founder autorierte den Blueprint (docs/stb-vertikale/M-BP-seed-source.md, abgenommen: 4 Bausteine Themenbaum/20 Fragen/Ampel-Reifegrad-Logik+Diagnose-Prompt/Routing 17 Module, NEUER StB-Inhalt DEC-234). Geseedet als template-Row stb_blueprint_kanzlei v1.0 (MIG-126, idempotent, live-verifiziert). Entsperrt SLC-172 (Blueprint-Capture+Diagnose+Routing-Display).",
       "createdAt": "2026-06-21"
     },
     {
