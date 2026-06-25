@@ -3,7 +3,7 @@
 - Version: V10
 - Feature: FEAT-092
 - Backlog: BL-511
-- Status: planned
+- Status: done
 - Priority: High
 - Created: 2026-06-21
 - Parallel-Group: B (nach SLC-170b Blueprint-Welle) — parallel-faehig zu SLC-173, aber shared Capture-Wizard → siehe R-172-2
