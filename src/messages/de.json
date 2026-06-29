@@ -563,5 +563,34 @@
       "processed": "Fertig",
       "failed": "Fehlgeschlagen"
     }
+  },
+  "stb": {
+    "workspace": {
+      "backToDashboard": "Zurück zum Dashboard",
+      "backToWorkspace": "Zurück zum Workspace",
+      "title": "Modul-Workspace",
+      "intro": "Die operative Wirk-Schicht der eigenen Kanzlei: Entscheidung, Standard und Implementierungsschritt je Modul, plus die KI-Hebel nach Reifegrad.",
+      "loadError": "Die Modul-Ergebnisse konnten nicht geladen werden. Bitte später erneut versuchen.",
+      "emptyTitle": "Noch keine Modul-Ergebnisse",
+      "emptyBody": "Sobald ein Modul-Fragebogen ausgefüllt und die Synthese durchgelaufen ist, erscheinen hier die Ergebnisse.",
+      "lastGenerated": "zuletzt {date}",
+      "outputCount": "{count} Liefer-Outputs",
+      "kiHebelCount": "{count} KI-Hebel",
+      "detailIntro": "Operative Wirk-Schicht ({modul}) — kein Organisationshandbuch.",
+      "detailLoadError": "Die Ergebnisse dieses Moduls konnten nicht geladen werden. Bitte später erneut versuchen.",
+      "detailEmptyTitle": "Noch kein Ergebnis",
+      "detailEmptyBody": "Für dieses Modul liegt noch kein Output vor. Sobald der Fragebogen ausgefüllt und die Synthese abgeschlossen ist, erscheinen Entscheidung, Standard, Implementierungsschritt und die KI-Hebel hier.",
+      "noEntry": "Kein Eintrag.",
+      "kiHebelHeading": "KI-Hebel",
+      "kiHebelEmpty": "Keine KI-Hebel ausgewiesen.",
+      "reifegrad": "Reifegrad {grade}",
+      "reifegradNone": "ohne",
+      "print": "Als PDF drucken",
+      "kind": {
+        "entscheidung": "Entscheidung",
+        "standard": "Standard",
+        "implementierungsschritt": "Implementierungsschritt"
+      }
+    }
   }
 }

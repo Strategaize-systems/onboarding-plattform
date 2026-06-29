@@ -799,3 +799,21 @@
 - Workaround: Bis dahin keiner noetig (kein Re-Synthese-Pfad live).
 - Next Action: Die kuenftige Re-Synthese-/Status-Edit-Slice (SLC-175+) muss vor dem Re-Enqueue die bestehenden `modul_output`-Rows der (session, modul_key) loeschen ODER der Worker braucht einen `force`-/`regenerate`-Payload-Flag, der den Idempotenz-Skip umgeht. Quelle: /qa SLC-174 RPT-522 L-1.
 
+### ISSUE-107 — Adaptive Blueprint-Ampel-Assessment (SLC-172) wird in V1 nicht ins `ai_cost_ledger` geschrieben
+- Status: open
+- Severity: Low
+- Area: StB-Vertikale / Blueprint-Diagnostik / Cost-Tracking
+- Summary: Die adaptive Vertiefung-Schicht (SLC-172 MT-1, DEC-249, Choice A) ruft pro gekoppelter Kern-Frage einen kleinen EU-Bedrock-Call (`assessAnswerAmpel`). Diese Mikro-Calls (max 5/Lauf, ~256 tok) werden in V1 NICHT ins `ai_cost_ledger` geschrieben — der synthetic-`ai_jobs`-INSERT-Pattern (backend.md) wuerde einen neuen `ai_jobs.job_type`-CHECK-Wert erfordern (Migration), was fuer Mikro-Kosten unverhaeltnismaessig ist.
+- Impact: Vernachlaessigbare, nicht ge-ledgerte LLM-Kosten in der Blueprint-Capture. Data-Residency bleibt gewahrt (EU-Bedrock via `chatWithLLM`); ein Audit-Eintrag (provider/region/model) geht in `error_log`.
+- Workaround: `error_log`-Audit deckt die Nachweispflicht (data-residency.md) ab; Kosten sind im Bedrock-Billing sichtbar.
+- Next Action: Wenn Blueprint-Volumen relevant wird, die Assess-Calls entweder unter einen bestehenden `job_type` ledgern oder einen `blueprint_ampel_assess`-job_type (Migration) + synthetic-ai_jobs-Pattern einfuehren. Quelle: SLC-172 /architecture DEC-249, RPT-529.
+
+### ISSUE-108 — Blueprint-Reveal-Batch unter Bedrock-Throttle: fail-open→yellow kann Vertiefung über-surfacen (SLC-172)
+- Status: open
+- Severity: Low
+- Area: StB-Vertikale / Blueprint-Diagnostik / Adaptive Vertiefung
+- Summary: `assessBlueprintKernAnswers` (SLC-172 MT-1) loopt sequentiell über bis zu 5 gekoppelte Kern-Antworten, jede ein eigener EU-Bedrock-Call. Im /qa-Runtime-Smoke 2026-06-24 trat wiederholt `ServiceUnavailableException: Too many connections` auf (Bedrock-Account-Throttle, da der Live-App-Container den Account teilt). Ein throttled Call faellt per Design fail-open auf `yellow` zurück → die gekoppelte Vertiefungsfrage wird eingeblendet, obwohl die Kern-Antwort evtl. `green` gewesen waere.
+- Impact: Bei Account-Throttle kann die „Gratis-Test bleibt 15 Fragen bei gruen"-Eigenschaft (AC-172-6) punktuell nicht greifen — der StB sieht dann eine Vertiefungsfrage zu viel. Sichere Richtung (über-fragen statt eine nötige Vertiefung unterdrücken), keine Daten-/Tenant-Auswirkung. Connectivity+Auth zu eu-central-1 sind bewiesen (sonst kein 503).
+- Workaround: Re-Klick „Kern auswerten" sobald der Throttle abklingt re-evaluiert idempotent (eine dann grüne Kern-Antwort blendet die Vertiefung wieder aus).
+- Next Action: Optional MT-2/Polish — sanfter Retry-Backoff in `assessAnswerAmpel` bei `ServiceUnavailableException` (statt sofortigem fail-open), oder Batch-Parallelitaet drosseln. Quelle: SLC-172 MT-1 /qa Runtime-Smoke, RPT-532.
+

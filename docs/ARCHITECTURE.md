@@ -9718,3 +9718,30 @@ Vertiefung von DEC-234 (Q-V10-B) vor SLC-172, gegen den **heutigen** Code verifi
 5. **Modul-Routing (M-04/05/06) ist echt neu** — kein bestehender Mechanismus emittiert es. Lean + deterministisch + ohne neue Tabelle: Block→`modul_key`-Map liegt im Blueprint-Template (`diagnosis_schema`/`metadata`, autoriert in **SLC-170b**); SLC-172 MT-2 liest `block_diagnosis` (Ampel/Reifegrad) + Schwellwert → rendert „relevante Module". Kein LLM-Routing (trivial bei 3 Modulen), keine MIG-126.
 
 **Sequencing-Konsequenz (BLOCKING):** `stb_blueprint_kanzlei` existiert noch **nicht** — Inhalt (Blocks + `diagnosis_schema` + `diagnosis_prompt` + Block→`modul_key`-Routing-Map) = Founder-IP in **SLC-170b** (content-gated). Q-B1-1 loest die **Mechanismus-Haelfte** jetzt; die **Content-Haelfte** gehoert zu SLC-170b. **SLC-172 ist hart auf SLC-170b (Blueprint-Welle) geblockt.** Autoring-Ziel fuer SLC-170b: `diagnosis_schema`-Modell (Subtopics mit Standard-Diagnose-Feldern ampel/reifegrad/empfehlung) + Block→`modul_key`-Map — dieselbe Mechanik wie Exit-Readiness, Inhalt neu.
+
+### 13. SLC-172 Wiring — Block-Reconciliation + adaptive Vertiefung + KU-Seed-RPC (DEC-249, 2026-06-24)
+
+SLC-170b ist geseedet (MIG-126 live); §12 (DEC-244) hatte den Diagnose-**Pfad** geklaert. Diese Sektion fixiert das konkrete SLC-172-Wiring nach dem Founder-Entscheid **Vertiefung-Surfacing = A/adaptiv** (M-BP §7.7). Verifiziert gegen `handle-diagnosis-job.ts`, `admin/debrief/.../diagnosis-actions.ts`, `assert-session-tier.ts`, MIG-094/126.
+
+**Kern-Befund (Reconciliation):** Die Diagnose-Engine keyed ALLES auf **einen** `block_key` — sie laedt `diagnosis_schema.blocks[block_key]` UND die KUs `WHERE capture_session_id=… AND block_key=…`. Der Blueprint hat aber Capture-Bloecke (`stufe1_kern`/`stufe2_vertiefung`) ≠ Diagnose-Bloecke (A–G). **Loesung:** KUs werden mit `block_key ∈ {A..G}` geseedet (nicht `stufe1/stufe2`); pro A–G werden die Capture-Antworten ueber `diagnosis_schema.blocks[X].subtopics[].question_keys` eingesammelt; dann **7 `diagnosis_generation`-Jobs** (je A–G) → Engine laeuft unveraendert → 7 `block_diagnosis`-Rows.
+
+**Komponentensicht (alles code-only ausser MIG-127):**
+
+| Komponente | Verantwortung | Reuse / Neu |
+|---|---|---|
+| Blueprint-Capture-Eintritt (`dashboard/stb/blueprint/page.tsx`) | StB startet `capture_session` auf `stb_blueprint_kanzlei` (tier=`blueprint`), durchlaeuft `stufe1_kern` | Reuse Capture-Wizard + `rpc_create_block_checkpoint` |
+| **Adaptive Vertiefung** (Kopplungstabelle + `assessAnswerAmpel`) | Bei den 5 gekoppelten Kern-Fragen (F-BP-004/005/007/009/013) synchroner Mini-Bedrock-Call → Ampel; bei gelb/rot gekoppelte Vertiefungsfrage (016/017/018/019/020) einblenden | **Neu** (kein Live-Assessment heute); Bedrock-Reuse `chatWithLLM` (EU) |
+| KU-Seed (`rpc_seed_blueprint_diagnosis_input`, **MIG-127**) | Atomar je A–G KUs aus `answers` bauen (Q+A im `body`) + Checkpoint-Ref | **Neu (RPC)**, Muster aus `rpc_finalize_partner_diagnostic` |
+| Tenant-Trigger (`triggerBlueprintDiagnosis`) | 7× `diagnosis_generation` enqueuen, Owner-Auth + Tier-Gate | Klon von `triggerDiagnosisGeneration` (Owner statt `strategaize_admin`) |
+| Reader (`SubtopicDiagnosisCard`) | `block_diagnosis` A–G rendern: Ampel/Reifegrad/Empfehlung je Unterthema | `fetchDiagnosis` + Layout-Reuse `BerichtRenderer`/`BlockSectionCard`; Subtopic-Nesting **neu** |
+| Modul-Routing-Card (`blueprint-routing.ts`) | Pro `metadata.routing[]`-Eintrag: Subtopic-Ampel ∈ `activate_when.ampel` → primaer(+sekundaer) `modul_key` mit Link in den Modul-Capture (SLC-173) | **Neu**, deterministisch, kein LLM |
+
+**Daten-/Request-Fluss:** Capture `stufe1_kern` (+ adaptiv eingeblendete Vertiefung) → `block_checkpoint` → `rpc_seed_blueprint_diagnosis_input` (KUs A–G) → `triggerBlueprintDiagnosis` (7 Jobs) → Worker `handle-diagnosis-job` (je A–G) → `block_diagnosis` → Reader + Routing-Card.
+
+**Adaptive Schicht — Details:** Kopplung = statische Tabelle (Single-Source, abgeleitet aus den `unterbereich`-geteilten Subtopics a2/b1/c1/d1/f1). `assessAnswerAmpel` = ein kleiner EU-Bedrock-Call (temp 0, ~64 tok), Ergebnis in `capture_session.metadata.blueprint_adaptive_ampel` (JSONB-Marker-Slot, kein Schema-Touch; NICHT in `answers`, das `record<string,string>` ist — /backend-Refinement MT-1). Kopplung zur Laufzeit aus dem Template abgeleitet (gemeinsames `unterbereich`), nicht hartkodiert. Audit via `error_log` (provider/region/model, data-residency.md); **kein `ai_cost_ledger` in V1** (Mikro-Kosten; vermeidet eine ai_jobs-job_type-CHECK-Migration) — bewusster Tradeoff (KNOWN_ISSUES). Falls die Live-Schicht (§7.3) sich als zu flaky erweist, degradiert dieselbe Kopplungstabelle trivial auf Fallback B (optionaler Block) — aber Founder waehlte A.
+
+**Constraints/Tradeoffs:** (a) **Migrationsbedarf korrigiert** — SLC-172 ist NICHT migrationsfrei (MIG-127, atomarer KU-Seed; DEC-244 „migrationsfrei" galt nur dem Trigger-Pfad). (b) Tenant-Isolation: KU-Seed-RPC SECURITY DEFINER, Trigger Owner-scoped, Reader via RLS — im /qa per DB-Sidecar zu belegen. (c) DATEV-Abgrenzung (SC-6) in Naming/Copy gewahrt.
+
+**Offene technische Fragen (im /backend zu fixieren):** (1) Braucht `block_diagnosis`/`rpc_create_diagnosis` eine `block_checkpoint` mit GLEICHEM `block_key` wie die Diagnose, oder darf der eine bestehende Capture-Checkpoint fuer alle 7 A–G referenziert werden? (entscheidet, ob MIG-127 7 thin Checkpoints anlegt oder den Capture-Checkpoint reused) — durch Lesen von MIG-050/052 + `rpc_create_diagnosis` aufloesen. (2) Genaues Wizard-Einblende-UX der adaptiv getriggerten Vertiefungsfrage (inline-Nachfrage vs. Folge-Step). (3) Latenz-Budget der bis zu 5 synchronen Assess-Calls (ggf. nur beim Block-Advance statt pro Frage).
+
+**Empfohlene Implementierungs-Reihenfolge:** MT-1 (Capture-Eintritt + adaptive Vertiefung) → MT-2 (KU-Seed-RPC MIG-127 + Tenant-Trigger + 7 Jobs) → MT-3 (Subtopic-Reader + Modul-Routing-Card). Danach `/qa` (DB-Sidecar fuer MIG-127 + Tenant-RLS + AC-Matrix).
