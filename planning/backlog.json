@@ -1779,6 +1779,46 @@
       "version": "V10",
       "description": "Founder-Autoring (Produkt-IP, kein Build): die uebrigen 16 StB-KERN-Module auf M-04-Tiefe (Themenbaum + Stufe-1/2-Fragebogen + KI-Hebel mit Reifegrad 1-4). Reihenfolge: Finanzen (M-06/M-07) -> HR (M-26/27/28) -> Nachfolge (M-35/M-42) -> Rest (M-01/02/03, M-08, M-15/16, M-36/38, M-39). Jedes Modul erst seedbar bei M-04-Tiefe; Seed via SLC-170b. M-05 NICHT enthalten (DEC-242). Vorlage: docs/stb-vertikale/modul-bibliothek-seed-source.md.",
       "createdAt": "2026-06-21"
+    },
+    {
+      "id": "BL-521",
+      "title": "module-delivery Phase 1 — Scoring-Auswertung + Modul-Reife-Ampel",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V10.1",
+      "description": "LLM-Autoring-Lauf setzt die 5 Scoring-Flags an den 17 Modulen (Founder-Abnahme, Seed-Migration MIG-129, deterministisch) + Runtime-Auswertung: Modul-Reife-Ampel (green/yellow/red) aus Flag-Zustaenden + Antwort-Signalen. FEAT-096.",
+      "createdAt": "2026-07-02"
+    },
+    {
+      "id": "BL-522",
+      "title": "module-delivery Phase 2 — Adaptive Echtzeit-Rueckfragen",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V10.1",
+      "description": "Live-LLM bewertet die konkrete Antwort im Interview (Vollstaendigkeit/Risiko) und triggert kontextuelle per-Frage-Rueckfragen (Bedrock Frankfurt, cost-capped, Trigger-Schwelle + Max-Rueckfragen-Guardrail). FEAT-097.",
+      "createdAt": "2026-07-02"
+    },
+    {
+      "id": "BL-523",
+      "title": "module-delivery Phase 3 — SOP-/Handbuch-Bruecke",
+      "type": "feature",
+      "priority": "medium",
+      "status": "open",
+      "version": "V10.1",
+      "description": "Bewertete modul_output-Rows + Scoring steuern, welche Outputs zu SOP-/Handbuch-Sektionen werden (Bruecke zur Legacy src/workers/sop/*-Pipeline). FEAT-098.",
+      "createdAt": "2026-07-02"
+    },
+    {
+      "id": "BL-524",
+      "title": "module-delivery Skill-Artefakt (/module-delivery Autoring/Setup)",
+      "type": "feature",
+      "priority": "medium",
+      "status": "open",
+      "version": "V10.1",
+      "description": "Claude-Code-Skill /module-delivery: fuehrt den Founder durch den Flag-Autoring-Abnahme-Flow (LLM-Vorschlag pro Modul -> Founder-Abnahme -> Seed). Gegenstueck zum OP-Runtime-Feature. Teil Phase 1.",
+      "createdAt": "2026-07-02"
     }
   ]
 }

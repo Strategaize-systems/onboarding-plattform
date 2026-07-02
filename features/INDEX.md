@@ -271,3 +271,13 @@ V10-Scope (Requirements 2026-06-20 via RPT-505, BL-509..514). Erste produktisier
 | FEAT-093 | Modul-Fragebogen-Capture (Stufe-1-Kern + Stufe-2-Vertiefung, KI-getriebener Daten-Bedarf) | deployed | [Spec](FEAT-093-modul-fragebogen-capture.md) | 2026-06-20 |
 | FEAT-094 | KI-Output-Generierung pro Modul (Entscheidung/Standard/Implementierungsschritt, ~70-80% KI) | deployed | [Spec](FEAT-094-ki-output-generierung.md) | 2026-06-20 |
 | FEAT-095 | Modul-Workspace-Reader + KI-Hebel-Liste (Output-Konsum, Reifegrad 1-4) | deployed | [Spec](FEAT-095-modul-workspace-reader.md) | 2026-06-20 |
+
+## V10.1 — /module-delivery Scoring-/Interview-Engine (Stufe-1-Vertiefung) Features
+
+V10.1-Scope (Requirements 2026-07-02 via RPT-544, DEC-252, BL-521..524). Neue Delivery-Schicht zwischen Modul-Capture und Modul-Synthese; schliesst die Luecke, dass die 5 Scoring-Flags (`TemplateQuestionSchema`) bisher ueberall `false` + ungenutzt sind. Fachmodule bleiben unangetastet M-04-treu (DEC-251). LLM ausschliesslich Bedrock Frankfurt (data-residency). Artefakt-Dualitaet Skill + Runtime. Forks → /architecture V10.1. Internal-Test-Mode. Spec-Detail in PRD §V10.1.
+
+| ID | Feature | Status | Spec | Created |
+|----|---------|--------|------|---------|
+| FEAT-096 | Phase 1 — Scoring-Auswertung + Modul-Reife-Ampel (LLM-Autoring-Lauf setzt 5 Flags an 17 Modulen, Founder-Abnahme, Seed MIG-129; Ampel green/yellow/red aus Flag+Antwort) | planned | PRD §V10.1 | 2026-07-02 |
+| FEAT-097 | Phase 2 — Adaptive Echtzeit-Rueckfragen (Live-LLM bewertet Antwort per-Frage, cost-capped, Trigger-Schwelle + Max-Rueckfragen-Guardrail) | planned | PRD §V10.1 | 2026-07-02 |
+| FEAT-098 | Phase 3 — SOP-/Handbuch-Bruecke (bewertete modul_output + Scoring → Legacy src/workers/sop/*) | planned | PRD §V10.1 | 2026-07-02 |

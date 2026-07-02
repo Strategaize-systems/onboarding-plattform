@@ -2863,5 +2863,74 @@ FEAT-090..095 (siehe `/features/INDEX.md`). Der EINE echte Neubau ist die **Modu
 ### Delivery mode
 SaaS Product (Internal-Test-Mode, kein Customer-Outreach — `module-lifecycle-discipline`). V10 = erste produktisierbare Branchen-Vertikale, Stufe-1-Kern.
 
+## V10.1 — /module-delivery Scoring-/Interview-Engine (Stufe-1-Vertiefung)
+
+### Problem Statement (V10.1)
+V10 liefert eine **statische 1x-Erfassung** pro Fachmodul: der StB beantwortet Kern-/Vertiefungs-Fragen, die Synthese draftet Outputs. Was fehlt, ist **Erhebungs-Intelligenz**: das System erkennt heute nicht, wenn eine Antwort ein Risiko (Inhaberabhaengigkeit, Deal-Blocker), einen K.o.-Fall oder einen SOP-Bedarf signalisiert, und fragt nicht gezielt nach. Die fuenf Scoring-Flags (`owner_dependency`/`deal_blocker`/`sop_trigger`/`ko_hart`/`ko_soft`) existieren im `TemplateQuestionSchema`, sind aber ueberall `false` und werden **nirgends ausgewertet**. Ergebnis: Antwortqualitaet und Modul-Reife bleiben unbewertet, Rueckfragen passieren nur als generische Post-Submit-Gap-Questions.
+
+### Goal (V10.1)
+Eine neue **Delivery-Schicht zwischen Modul-Capture und Modul-Synthese**, die (a) die Scoring-Flags mit Werten fuellt (LLM-Autoring-Lauf, Founder nimmt ab), (b) im Interview **in Echtzeit** die konkrete Antwort bewertet und gezielte Rueckfragen stellt, (c) ein **Modul-Reife-/Ampel-Urteil** aus den aggregierten Signalen erzeugt, und (d) die bewerteten Outputs als **SOP-/Handbuch-Bruecke** nutzbar macht. Fachmodule bleiben unangetastet M-04-treu (DEC-251).
+
+### Primary user(s) (V10.1)
+- **Primaer:** der Steuerberater als `tenant_admin` der eigenen Kanzlei (wie V10) — jetzt in einem intelligenteren, adaptiven Erhebungs-Flow.
+- **Sekundaer (Autoring):** der Founder, der den LLM-gesetzten Scoring-Flag-Vorschlag pro Modul abnimmt (kein Handsetzen).
+- **Nicht in V10.1:** Mandanten (Stufe-2/V11), Endkunden, Multiplikator-Hierarchie.
+
+### V10.1 In Scope
+- **FEAT-096 (Phase 1) — Scoring-Auswertung + Modul-Reife-Ampel:** LLM-Autoring-Lauf setzt die 5 Flags automatisch an den 17 Modulen (Founder-Abnahme, neue Seed-Migration, zur Laufzeit deterministisch/pruefbar) + Runtime-Auswertungs-Logik, die pro Modul ein Reife-/Ampel-Signal (green/yellow/red) aus Flag-Zustaenden + Antwort-Signalen aggregiert.
+- **FEAT-097 (Phase 2) — Adaptive Echtzeit-Rueckfragen:** Live-LLM bewertet die konkrete Antwort (Vollstaendigkeit/Risiko) waehrend der Erfassung und triggert kontextuelle Rueckfragen per-Frage (erweitert das block-level-Adaptive des Blueprints auf Frage-Ebene). Bedrock Frankfurt, cost-capped.
+- **FEAT-098 (Phase 3) — SOP-/Handbuch-Bruecke:** bewertete `modul_output`-Rows + Scoring steuern, welche Outputs zu SOP-/Handbuch-Sektionen werden (Bruecke zur bestehenden `src/workers/sop/*`-Pipeline).
+- **Artefakt-Dualitaet:** ein Claude-Code-Skill `/module-delivery` (Autoring/Setup: Flag-Vorschlag + Founder-Abnahme + Seed) + OP-Runtime-Feature (Worker/Server-Actions/UI fuer die eigentliche Delivery).
+
+### V10.1 Out of Scope
+- Aenderung der M-04-treuen Fachmodul-Inhalte (Fragen/Themenbaeume/KI-Hebel bleiben) — nur die Flags werden gesetzt.
+- Cross-Modul-Personalisierung / lernende Empfehlungen / Re-Interview-Loops (parked).
+- `evidence`-Capture-Mode-Ausbau (parked).
+- Stufe-2 (Mandanten, V11) / Stufe-3 (Wissensnetzwerk, V12).
+- Kein Customer-Outreach/Pilot/Anwalt/DSGVO-Pre-Live (`module-lifecycle-discipline`).
+
+### Core Features (V10.1)
+FEAT-096 (Phase 1) · FEAT-097 (Phase 2) · FEAT-098 (Phase 3). Echter Neubau = die Scoring-/Auswertungs-/adaptive-Rueckfrage-Logik; Infra (Job-Dispatch, Bedrock Draft+Critic, RLS, Cost-Cap, `QuestionnaireWorkspace`, `capture_session.metadata`) ist Reuse.
+
+### Constraints (V10.1)
+- **Eingebaut in die OP-Codebase** — kein neues Repo. Pattern-Reuse-Pflicht (`strategaize-pattern-reuse.md`).
+- **Fachmodule M-04-treu unangetastet** (DEC-251) — nur Flags werden gesetzt, keine Content-Aenderung.
+- **Flags NIE von Hand gesetzt** (Founder-Praemisse, DEC-252) — LLM-Autoring-Lauf, Founder-Abnahme.
+- **EU-Data-Residency:** jede LLM-Nutzung (Autoring-Lauf + Live-Bewertung) ueber Bedrock Frankfurt eu-central-1 — `data-residency.md`. Kein US-Endpoint.
+- **Echtzeit-Constraint:** Live-LLM-Bewertung im Capture-Pfad muss latenz-/kosten-bewusst sein (Cost-Cap-Reuse, ggf. schnelles Modell fuer die Live-Bewertung, teureres fuer Autoring).
+- **Reifegrad bleibt deterministisch** aus `ki_hebel`-Katalog (DEC-245) — V10.1 ergaenzt ein antwort-basiertes Modul-Reife-**Ampel**-Signal, ersetzt nicht den KI-Hebel-Reifegrad.
+- **Internal-Test-Mode** (`module-lifecycle-discipline`).
+- Naechste freie Migration = **129**.
+
+### Risks / Assumptions (V10.1)
+- **R1 (Echtzeit-Latenz/Kosten):** Live-LLM-Bewertung pro Antwort kann den Erfassungs-Flow verlangsamen und Kosten treiben — /architecture muss Modell-Wahl (schnell/guenstig fuer Live vs. stark fuer Autoring), Debouncing/Trigger-Schwelle und Cost-Cap festlegen.
+- **R2 (Flag-Autoring-Qualitaet):** LLM-gesetzte Flags koennen falsch/zu aggressiv sein — Founder-Abnahme-Gate + deterministisches Seed sind Pflicht; Fehl-Flags erzeugen sonst stoerende Rueckfragen.
+- **R3 (Rueckfrage-Nervfaktor):** zu viele adaptive Rueckfragen frustrieren — Trigger-Schwelle + Max-Rueckfragen-pro-Block noetig (Produkt-Guardrail).
+- **R4 (SOP-Legacy-Kopplung, Phase 3):** die SOP-Bruecke beruehrt die Legacy-`src/workers/sop/*`-Pipeline, die von `modul_output` entkoppelt ist — Integrations-Risiko, /architecture muss den Bruecken-Kontrakt sauber schneiden.
+- **Annahme:** Die block-level-Adaptive-Mechanik des Blueprints (`capture_session.metadata.blueprint_adaptive_ampel`) ist als Muster auf Frage-Ebene uebertragbar.
+- **Annahme:** Job-Dispatch + Bedrock-Adapter + Cost-Cap sind fuer Live-Bewertung wiederverwendbar (ggf. neuer synchroner Pfad statt Worker-Queue fuer die Echtzeit-Anforderung — /architecture-Fork).
+
+### Success Criteria (V10.1)
+- SC-1: Ein LLM-Autoring-Lauf setzt die 5 Scoring-Flags an allen 17 Modulen; der Founder nimmt sie ab; sie sind via Seed-Migration deterministisch in der DB.
+- SC-2: Waehrend der Modul-Erfassung bewertet ein Live-LLM die konkrete Antwort und stellt bei Bedarf eine kontextuelle Rueckfrage (Echtzeit, per-Frage), mit Trigger-Schwelle + Max-Rueckfragen-Guardrail.
+- SC-3: Pro Modul wird ein Reife-/Ampel-Signal (green/yellow/red) aus Flag-Zustaenden + Antwort-Signalen erzeugt und im Workspace sichtbar.
+- SC-4: Bewertete Outputs speisen die SOP-/Handbuch-Bruecke (welche `modul_output` zu SOP-Sektionen werden).
+- SC-5: Der `/module-delivery`-Skill fuehrt den Founder durch den Flag-Autoring-Abnahme-Flow.
+- SC-6: Alle LLM-Calls (Autoring + Live) EU-Region (Bedrock Frankfurt); Tenant-Isolation (RLS) verifiziert; Cost geloggt + gecapped.
+- SC-7: Fachmodul-Inhalte unveraendert (nur Flags gesetzt); 0 Regression Blueprint-Diagnostik + Modul-Synthese.
+- SC-8: tsc0/eslint0, Tests GREEN (hermetisch + DB-Sidecar wo Schema/RLS/Seed betroffen), `next build` PASS.
+
+### Open Questions
+**Fuer /architecture V10.1:**
+- Q-V10.1-A: Echtzeit-Bewertung — synchroner LLM-Call im Server-Action-Pfad vs. neuer schneller Job-Typ; Modell-Wahl (Haiku-Live vs. Sonnet-Autoring); Debounce/Trigger-Schwelle.
+- Q-V10.1-B: Flag-Autoring-Lauf — eigener Skill-getriebener Batch-Job vs. Erweiterung `/module-author`; Speicher-Ort des Founder-approvten Flag-Sets (Seed-Migration MIG-129 vs. editierbare Tabelle).
+- Q-V10.1-C: Reife-Ampel-Aggregation — Formel/Schwellen (welche Flag-Kombination → yellow/red), Speicherort (neue Spalte/Tabelle vs. `modul_output`/`capture_session.metadata`).
+- Q-V10.1-D: SOP-Bruecke — Kontrakt `modul_output` + Scoring → `src/workers/sop/*`; ob die Legacy-SOP-Pipeline erweitert oder abgeloest wird.
+- Q-V10.1-E: Skill-vs-Runtime-Schnitt — was macht der `/module-delivery`-Skill (Autoring/Setup) vs. das OP-Runtime-Feature (Live-Delivery); Uebergabe-Artefakt.
+- Q-V10.1-F: Rueckfrage-Speicherung — wo landen adaptive Rueckfragen + Antworten (neuer `block_checkpoint`-Zweig vs. `capture_session.metadata` vs. eigene Tabelle) und wie fliessen sie in die Synthese.
+
+### Delivery mode
+SaaS Product (Internal-Test-Mode, kein Customer-Outreach — `module-lifecycle-discipline`). V10.1 = Stufe-1-Vertiefung der StB-Vertikale (Erhebungs-Intelligenz), baut auf V10; `v11`/`v12` bleiben fuer Stufe-2/3 reserviert (DEC-240).
+
 ### Detail-Spec
 V10-Requirements-Baseline 2026-06-20 als RPT-505. Grounding: Dev-System `StrategAIze Module.xlsx` (46 Module/11 Kategorien, M-04/05/06 = Kern Finanzen&Controlling), `M-04 – Grundlegende Finanzsteuerung`-Modul-Spec, `StrategAIze Workspace.docx`, `docs/STB_VERTIKALE_R3R4_UEBERSICHT_2026-06-18.md` (§2 Wirk-Schicht, §3 Stufe-1, §4 Lieferkette, §8 DATEV, §9 KI-Lieferung) + OP-Capability-Scan 2026-06-20. **Status: READY fuer /architecture V10.** Keine BLOCKING-OQs; Forks Q-V10-A..E = /architecture-Aufgabe, Q-V10-F = Founder-Versionierung. 6 Feature-Skeleton-Specs `/features/FEAT-090..095-*.md`. Naechster Schritt: `/architecture V10` (Modul-Domaene-Schnitt + Blueprint-Reuse + KI-Output-Pipeline + Migration-Skizze ab 124).

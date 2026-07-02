@@ -356,6 +356,13 @@
       "status": "planned",
       "order": 20.2,
       "summary": "**V12 StB-Vertikale Phase 3 (Stufe-3: Wissensnetzwerk-Moat) — reserviert, Detail via spaetere /discovery.** Cross-Mandanten/Cross-Kanzlei-Wissensnetzwerk als Verteidigungsgraben (anonymisierte Benchmark-/Pattern-Schicht ueber die Vertikale). Baut auf V10+V11. Phasen-Slot reserviert per Founder-Entscheidung 2026-06-21 (DEC-240, Q-V10-F). Internal-Test-Mode (module-lifecycle-discipline)."
+    },
+    {
+      "id": "v10-1",
+      "name": "V10.1",
+      "status": "active",
+      "order": 20.05,
+      "summary": "**V10.1 /module-delivery Scoring-/Interview-Engine (Stufe-1-Vertiefung) — /requirements DONE 2026-07-02 (RPT-544, DEC-252), active.** Neue Delivery-Schicht zwischen Modul-Capture und Modul-Synthese: (Phase 1 / FEAT-096) LLM-Autoring-Lauf setzt die 5 Scoring-Flags (owner_dependency/deal_blocker/sop_trigger/ko_hart/ko_soft) automatisch an den 17 Modulen (Founder-Abnahme, kein Handsetzen, Seed-Migration MIG-129, deterministisch) + Modul-Reife-Ampel (green/yellow/red) aus Flag+Antwort-Signalen; (Phase 2 / FEAT-097) adaptive Echtzeit-Rueckfragen im Interview (Live-LLM bewertet die konkrete Antwort per-Frage, erweitert das block-level-Adaptive des Blueprints auf Frage-Ebene, cost-capped); (Phase 3 / FEAT-098) SOP-/Handbuch-Bruecke (bewertete modul_output-Rows -> src/workers/sop/*). Artefakt-Dualitaet: Claude-Code-Skill /module-delivery (Autoring/Setup) + OP-Runtime-Feature (Live-Delivery). Fachmodule bleiben unangetastet M-04-treu (DEC-251); die 5 Flags waren bis dato ueberall false + ungenutzt = die geschlossene Luecke. LLM ausschliesslich Bedrock Frankfurt (data-residency). Reifegrad bleibt deterministisch aus ki_hebel-Katalog (DEC-245) — V10.1 ergaenzt Antwort-Ampel, ersetzt nicht. v11 (Stufe-2 Mandanten) + v12 (Stufe-3 Wissensnetzwerk) bleiben reserviert (DEC-240). Internal-Test-Mode (module-lifecycle-discipline). Naechste freie Migration = 129. Naechster Schritt: /architecture V10.1."
     }
   ]
 }
