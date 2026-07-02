@@ -266,7 +266,7 @@ V10-Scope (Requirements 2026-06-20 via RPT-505, BL-509..514). Erste produktisier
 | ID | Feature | Status | Spec | Created |
 |----|---------|--------|------|---------|
 | FEAT-090 | StB-Onboarding-Rahmen (Stufe-1 Eigen-Kanzlei-Account, Reuse OP-Tenant-Onboarding, kein Billing) | deployed | [Spec](FEAT-090-stb-onboarding-rahmen.md) | 2026-06-20 |
-| FEAT-091 | Modul-Domaene + Content-Seed (B1-Cut: M-04 zuerst, dann 18-Cut content-gated; M-05 raus, DEC-242) + KI-Hebel-Katalog (Reifegrad 1-4, lebende Dokumente) | in_progress | [Spec](FEAT-091-modul-domaene-seed.md) | 2026-06-20 |
+| FEAT-091 | Modul-Domaene + Content-Seed (B1-Cut: M-04 zuerst, dann 18-Cut content-gated; M-05 raus, DEC-242) + KI-Hebel-Katalog (Reifegrad 1-4, lebende Dokumente) | done | [Spec](FEAT-091-modul-domaene-seed.md) | 2026-06-20 |
 | FEAT-092 | Blueprint-Diagnostik (eigene Kanzlei, Strukturen sichtbar, Routing in die Module) | in_progress | [Spec](FEAT-092-blueprint-diagnostik.md) | 2026-06-20 |
 | FEAT-093 | Modul-Fragebogen-Capture (Stufe-1-Kern + Stufe-2-Vertiefung, KI-getriebener Daten-Bedarf) | deployed | [Spec](FEAT-093-modul-fragebogen-capture.md) | 2026-06-20 |
 | FEAT-094 | KI-Output-Generierung pro Modul (Entscheidung/Standard/Implementierungsschritt, ~70-80% KI) | deployed | [Spec](FEAT-094-ki-output-generierung.md) | 2026-06-20 |

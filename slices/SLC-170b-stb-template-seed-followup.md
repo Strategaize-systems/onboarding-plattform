@@ -3,7 +3,7 @@
 - Version: V10
 - Feature: FEAT-091 (Content-Teil) + FEAT-092 (Blueprint)
 - Backlog: BL-519 (Blueprint-Autoring) + BL-520 (restl. Module-Autoring)
-- Status: planned (content-gated — startet je Modul erst bei Founder-Autoring auf M-04-Tiefe)
+- Status: done (alle 18 Module content-fertig + geseedet: M-04=MIG-125, M-BP=MIG-126, 16 Fachmodule=MIG-128 LIVE 2026-07-02)
 - Priority: High
 - Created: 2026-06-21 (B1-Abgleich, DEC-242)
 - MIG: pro Welle eigene additive Seed-Migration (≥ 126), idempotent `ON CONFLICT (slug, version) DO UPDATE`
