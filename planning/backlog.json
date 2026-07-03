@@ -1795,7 +1795,7 @@
       "title": "module-delivery Phase 2 — Adaptive Echtzeit-Rueckfragen",
       "type": "feature",
       "priority": "high",
-      "status": "in_progress",
+      "status": "done",
       "version": "V10.1",
       "description": "Live-LLM bewertet die konkrete Antwort im Interview (Vollstaendigkeit/Risiko) und triggert kontextuelle per-Frage-Rueckfragen (Bedrock Frankfurt, cost-capped, Trigger-Schwelle + Max-Rueckfragen-Guardrail). FEAT-097.",
       "createdAt": "2026-07-02"
