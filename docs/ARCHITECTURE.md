@@ -9745,3 +9745,70 @@ SLC-170b ist geseedet (MIG-126 live); §12 (DEC-244) hatte den Diagnose-**Pfad**
 **Offene technische Fragen (im /backend zu fixieren):** (1) Braucht `block_diagnosis`/`rpc_create_diagnosis` eine `block_checkpoint` mit GLEICHEM `block_key` wie die Diagnose, oder darf der eine bestehende Capture-Checkpoint fuer alle 7 A–G referenziert werden? (entscheidet, ob MIG-127 7 thin Checkpoints anlegt oder den Capture-Checkpoint reused) — durch Lesen von MIG-050/052 + `rpc_create_diagnosis` aufloesen. (2) Genaues Wizard-Einblende-UX der adaptiv getriggerten Vertiefungsfrage (inline-Nachfrage vs. Folge-Step). (3) Latenz-Budget der bis zu 5 synchronen Assess-Calls (ggf. nur beim Block-Advance statt pro Frage).
 
 **Empfohlene Implementierungs-Reihenfolge:** MT-1 (Capture-Eintritt + adaptive Vertiefung) → MT-2 (KU-Seed-RPC MIG-127 + Tenant-Trigger + 7 Jobs) → MT-3 (Subtopic-Reader + Modul-Routing-Card). Danach `/qa` (DB-Sidecar fuer MIG-127 + Tenant-RLS + AC-Matrix).
+
+## V10.1 Architecture Addendum — /module-delivery Scoring-/Interview-Engine (Stufe-1-Vertiefung) (RPT-545, 2026-07-02)
+
+### 0. Status
+- Quelle: `/architecture V10.1`, RPT-545. Grounding: PRD `## V10.1`, DEC-252 (Discovery-Scope), 2 read-only Code-Maps (Modul-/Blueprint-Strukturen + Echtzeit-LLM-/Capture-Internals). Fork-Entscheidungen Q-V10.1-A..F via Founder (B+D) + code-verankerte Engineering-Calls (A/C/E/F).
+- DECs: DEC-253 (Fork-Bundle). Migration: MIG-129 (Flag-Seed). Naechster Schritt: `/slice-planning V10.1`.
+
+### 1. Architektur-Zusammenfassung
+`/module-delivery` ist eine **duenne neue Schicht** ueber der fertigen V10-Maschinerie (Blueprint-Diagnostik + Modul-Capture + Modul-Synthese), die die bisher toten 5 Scoring-Flags (`TemplateQuestionSchema.flags`, heute ueberall `false`) mit Leben fuellt. Drei Phasen: **(P1)** ein einmaliger LLM-Autoring-Lauf setzt die Flags an den 17 Modulen (Founder-Abnahme → deterministischer Seed MIG-129) + eine **regel-basierte Modul-Reife-Ampel**; **(P2)** **Echtzeit-Rueckfragen** waehrend der Modul-Erfassung (synchroner Bedrock-Haiku-Call pro Kern-Frage, spiegelt exakt das bestehende Blueprint-`assessAnswerAmpel`-Muster); **(P3)** eine **duenne SOP-Bruecke** (bewertete `modul_output` + Scoring → bestehende `sop`-Tabelle, Legacy-Worker unberuehrt). **Kein neuer Async-Infra-Kern** — der synchrone LLM-Pfad existiert bereits (`blueprint/actions.ts`), Rueckfrage-Antworten fliessen ueber das vorhandene **Evidence-Merge-Muster** in die Synthese. Artefakt-Dualitaet: **Skill** `/module-delivery` = Design-Time (Flag-Klassifikation Sonnet + Abnahme + Seed-Emission), **Runtime OP** = Live-Delivery (Haiku-Bewertung + Regel-Ampel + SOP-Bruecke). Fachmodule bleiben unangetastet M-04-treu (DEC-251).
+
+### 2. Fork-Entscheidungen (Q-V10.1-A..F) auf einen Blick — DEC-253
+- **Q-A (Echtzeit-Topologie + Modell):** **Synchroner Server-Action-Call** (Reuse `chatWithLLM()`-Muster von `assessAnswerAmpel`, `src/app/dashboard/stb/blueprint/actions.ts:177`), fail-open. **Modell: Haiku 4.5** (`eu.anthropic.claude-haiku-4-5-20251001-v1:0`, $1/$5) fuer Live-Bewertung (Latenz/Kosten); **Sonnet 4** fuer den einmaligen Autoring-Lauf. Trigger = Antwort-Blur/Submit pro Kern-Frage (nicht per-Keystroke), ggf. Block-Advance-Batch als Latenz-Fallback. **Keine neue Async-Infra.**
+- **Q-B (Flag-Storage) → Founder: Seed-Migration MIG-129.** Flags werden in die bestehende Template-JSONB (`TemplateQuestion.flags` in `template.blocks[].questions[]`) geschrieben — deterministisch/pruefbar, konsistent zu MIG-128. Nachjustieren = neuer Autoring-Lauf + neue Seed-Migration. Keine Override-Tabelle in V1.
+- **Q-C (Reife-Ampel):** **Deterministische Pure-Function** (kein LLM), Muster wie `surfacedVertiefungFrageIds`. Regel: ein getriggerter `ko_hart` → **red**; getriggerter `ko_soft`/`deal_blocker`/`owner_dependency` (bei Fehl-/Luecken-Antwort) → **yellow**; sonst **green**. Speicherung in `capture_session.metadata` (spiegelt Blueprint-`blueprint_adaptive_ampel`) — **keine zweite Migration**. „Getriggert" = die Live-Haiku-Bewertung (P2) markiert eine geflaggte Frage als riskant/unvollstaendig.
+- **Q-D (SOP-Bruecke) → Founder: Duenne Bruecke, Legacy unberuehrt.** Neues Mapping `modul_output` + Scoring → `sop`-Rows (bestehende `sop`-Tabelle wiederverwenden); Legacy-`src/workers/sop/*` bleibt unangetastet. Niedrigstes Risiko; Phase-3-Ausbau als eigener spaeterer Slice.
+- **Q-E (Skill-vs-Runtime):** **Skill** `/module-delivery` (Dev-System) = Design-Time: Sonnet-Flag-Klassifikation ueber die 17 Module → Founder-Abnahme-Flow → emittiert MIG-129 (Pattern wie `gen-mig128`-Parser-Generator, deterministisch). **Runtime OP-Feature** = Live-Haiku-Bewertung (P2) + Regel-Ampel (P1-Runtime) + SOP-Bruecke (P3). Uebergabe-Artefakt = die MIG-129-Seed-Datei.
+- **Q-F (Rueckfrage-Speicherung + Synthese-Fluss):** **Evidence-Merge-Muster** (KORREKTUR der naiven „synthetische question.id"-Annahme: `assembleQaPairs` iteriert Template-Fragen, nicht Answer-Keys — freie Keys wuerden uebersprungen). Rueckfrage-Antwort wird per Key `followup.<blockKey>.<questionId>` an die **Eltern-Antwort konkateniert** (exakt wie `evidence.<block>.<qid>` heute in `mergeAnswers`, `module-context.ts`) → Synthese sieht angereicherte Antworten **ohne Schema-/Logik-Aenderung**. Welche Fragen Rueckfragen ausloesten, wird zusaetzlich in `capture_session.metadata` fuer die Ampel-Aggregation vermerkt.
+
+### 3. Main Components
+1. **Skill `/module-delivery` (Design-Time, FEAT-096 P1-Autoring, DEC-253/E).** Fuehrt einen Sonnet-Klassifikationslauf ueber die 17 Modul-Fragebogen (setzt pro Frage die 5 Flags), zeigt dem Founder den Vorschlag pro Modul zur Abnahme, emittiert nach Abnahme eine deterministische Seed-Migration `129_v101_module_delivery_flags_seed.sql` (Generator-Muster wie `gen-mig128-fachmodule-seed.py`).
+2. **Live-Scoring-Server-Action (Runtime, FEAT-097 P2).** `assessModulAnswer(sessionId, modulKey, frageId, answer)` in `src/lib/stb-vertikale/module-delivery/*` — synchroner Haiku-Call (temp 0, kleiner Token-Budget), bewertet Vollstaendigkeit/Risiko der Antwort **im Kontext der Frage-Flags**; fail-open (kein Block bei LLM-Fehler); erzeugt bei Bedarf eine kontextuelle Rueckfrage. Guardrail: Trigger-Schwelle + Max-Rueckfragen/Block.
+3. **Rueckfrage-UI (Runtime, FEAT-097 P2).** Inline im Modul-Capture-Wizard (Reuse `QuestionnaireWorkspace`): nach Antwort einer geflaggten Kern-Frage erscheint bei Trigger eine adaptive Rueckfrage; Antwort → per `followup.<block>.<qid>`-Merge in `block_checkpoint.content`.
+4. **Modul-Reife-Ampel (Runtime, FEAT-096 P1-Runtime, DEC-253/C).** Pure-Function `computeModulReifeAmpel(flags, triggerHits)` → green/yellow/red, in `capture_session.metadata`; im Workspace-Reader (`dashboard/stb/workspace/*`) pro Modul sichtbar.
+5. **SOP-Bruecke (Runtime, FEAT-098 P3, DEC-253/D).** Mapping `modul_output` (accepted) + Scoring → `sop`-Rows; Legacy-Worker unberuehrt. Eigener spaeterer Slice.
+
+### 4. Data Model
+- **KEINE neue Tabelle.** Nur additive Nutzung bestehender Strukturen:
+  - `template.blocks[].questions[].flags` (JSONB) — von MIG-129 mit den Founder-approvten Flag-Werten befuellt (heute `false`).
+  - `capture_session.metadata` (JSONB) — neue Marker-Slots `modul_delivery_ampel` (per modulKey → green/yellow/red) + `modul_delivery_followups` (per frageId → Trigger-/Rueckfrage-State). Kein Schema-Touch (Muster wie `blueprint_adaptive_ampel`).
+  - `block_checkpoint.content.answers` — Rueckfrage-Antworten via `followup.<block>.<qid>`-Key (Merge in Eltern-Antwort, Muster wie Evidence).
+  - `sop` (bestehend) — P3-Bruecke schreibt hier.
+- **1 Migration: MIG-129** (Daten-Seed, kein DDL): UPDATE der 17 Modul-`template`-Rows mit den Flag-Werten + `NOTIFY pgrst`.
+
+### 5. Data Flow
+1. **Design-Time (einmalig):** Skill `/module-delivery` → Sonnet klassifiziert Flags je Frage → Founder-Abnahme → MIG-129 → Live-Apply (Coolify, `sql-migration-hetzner.md`).
+2. **Capture (P2):** Modul-`capture_session` → StB beantwortet Kern-Frage → `assessModulAnswer` (sync Haiku, liest Frage-Flags) → bei Trigger inline-Rueckfrage → Antwort → `followup.*`-Merge in `block_checkpoint.content` + Trigger-Hit in `capture_session.metadata`.
+3. **Ampel (P1-Runtime):** nach Block-Abschluss `computeModulReifeAmpel(flags, triggerHits)` → `capture_session.metadata.modul_delivery_ampel` → Workspace-Reader zeigt Modul-Ampel.
+4. **Synthese (unveraendert):** `assembleQaPairs` sammelt angereicherte Antworten (inkl. gemergter Followups) → bestehende `module_output_synthesis` (kein Touch).
+5. **SOP-Bruecke (P3):** accepted `modul_output` + Scoring → `sop`-Rows.
+
+### 6. External Dependencies
+Keine neue externe Abhaengigkeit. **NEU genutzt: Bedrock Haiku 4.5** (`eu.anthropic.claude-haiku-4-5-20251001-v1:0`, eu-central-1) fuer Live-Bewertung — Adapter `src/lib/ai/bedrock-haiku/*` existiert (V9 SLC-166). Sonnet 4 (vorhanden) fuer Autoring. Beide EU (data-residency).
+
+### 7. Security / Privacy
+- Data-Residency: Live-Haiku + Autoring-Sonnet beide eu-central-1 (Bedrock Frankfurt). Audit der Live-Calls via `error_log` (provider/region/model), Muster wie `assessAnswerAmpel`; **kein `ai_cost_ledger` fuer den Mikro-Live-Call in V1** (vermeidet ai_jobs-job_type-CHECK-Migration) — bewusster Tradeoff (KNOWN_ISSUES, wie ISSUE-107 beim Blueprint). Der Autoring-Lauf (Batch, teurer) SOLL ledger-getrackt sein.
+- Tenant-Isolation: alle Reads/Writes ueber bestehende RLS (`capture_session`/`block_checkpoint`/`modul_output`), keine neue BYPASSRLS-Flaeche. MIG-129 = reiner Content-Seed (kein RLS-Impact).
+- Gating: hinter bestehendem `NEXT_PUBLIC_ENABLE_STB_VERTIKALE`-Flag (Internal-Test-Mode, `module-lifecycle-discipline`).
+
+### 8. Constraints / Tradeoffs
+- **DEC-253/A:** synchroner Haiku-Live-Call statt Job-Queue — Echtzeit-Zwang; Tradeoff: Latenz pro Frage (Mitigation: Haiku statt Sonnet, Block-Advance-Batch-Fallback, fail-open) + keine Ledger-Kostenverfolgung des Mikro-Calls in V1.
+- **DEC-253/B:** Flags im Template-JSONB-Seed statt Override-Tabelle — Determinismus vs. Iterations-Reibung (Re-Autoring = neue Migration). Bewusst (Founder).
+- **DEC-253/C:** regel-basierte Ampel statt LLM — pruefbar/guenstig; Tradeoff: Regel-Schwellen sind grob (Founder kann spaeter verfeinern).
+- **DEC-253/D:** duenne SOP-Bruecke statt Legacy-Ablösung — niedriges Risiko; Tradeoff: zwei SOP-Erzeugungspfade koexistieren (Legacy + Bruecke), Konsolidierung spaeter.
+- Additiv: 1 Migration (129, reiner Seed), 0 neue Tabelle, 0 Aenderung bestehender OP-Funktionen (Regressions-Ziel).
+
+### 9. Migrations-Skizze (MIG-129)
+`129_v101_module_delivery_flags_seed.sql` (additiv, Daten-Seed): UPDATE der 17 `stb_modul_*`-`template`-Rows — setzt in `blocks[].questions[].flags` die Founder-approvten Werte (`owner_dependency`/`deal_blocker`/`sop_trigger`/`ko_hart`/`ko_soft`), idempotent (deterministischer Generator, uuid5-stabile Frage-Refs wie MIG-128), + `NOTIFY pgrst, 'reload schema'`. Kein DDL, kein RLS-Touch. Naechste freie SQL-Datei = **129**. Live-Apply via `sql-migration-hetzner.md`; DB-Sidecar-Verify (App-Zod, Muster RPT-542): Flags gesetzt + Modul-Content unveraendert.
+
+### 10. Offene technische Fragen (im /slice-planning / /backend zu fixieren)
+- **F-A:** Trigger-Schwelle + Max-Rueckfragen/Block — konkrete Werte (Produkt-Guardrail gegen Nervfaktor, R3).
+- **F-B:** Latenz-Budget — assess pro Frage vs. beim Block-Advance (wie Blueprint offene Frage 3).
+- **F-C:** Autoring-Lauf-Kalibrierung — Prompt-Guardrails, damit Sonnet Flags nicht zu aggressiv setzt (R2); Abnahme-UX pro Modul.
+- **F-D:** SOP-Bruecken-Kontrakt (P3) — welche `output_kind`/Scoring-Kombination wird SOP-Sektion; Mapping-Detail (eigener Slice).
+- **F-E:** Rueckfrage-Fluss in die Ampel — wie „Trigger-Hit" nach Rueckfrage-Antwort aufgeloest wird (bleibt yellow/red oder heilt bei guter Nachantwort).
+
+### 11. Empfohlener naechster Schritt
+`/slice-planning V10.1` — 3 Phasen in Slices schneiden. Vorschlag-Reihenfolge: **P1** (Skill-Autoring-Lauf + MIG-129 + Regel-Ampel) → **P2** (Live-Haiku-Bewertung + inline-Rueckfrage + Followup-Merge) → **P3** (SOP-Bruecke). P1 zuerst, weil P2 die gesetzten Flags braucht.
