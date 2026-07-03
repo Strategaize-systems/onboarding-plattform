@@ -162,6 +162,44 @@ describe("assembleQaPairs", () => {
     expect(pairs[0].answer).toContain("[Beleg] Auszug aus GuV");
   });
 
+  it("appends followup.<block>.<qid> answers to their question (SLC-180)", () => {
+    const checkpoints: CheckpointSnapshot[] = [
+      {
+        block_key: "stufe1_kern",
+        content: {
+          answers: {
+            [Q1_ID]: "Marge",
+            [`followup.stufe1_kern.${Q1_ID}`]: "Konkret: 18% EBIT-Marge 2025",
+          },
+        },
+      },
+    ];
+    const pairs = assembleQaPairs(makeBlocks(), checkpoints);
+    expect(pairs).toHaveLength(1);
+    expect(pairs[0].answer).toContain("Marge");
+    expect(pairs[0].answer).toContain("[Nachfrage] Konkret: 18% EBIT-Marge 2025");
+  });
+
+  it("appends both evidence and followup to the same question (SLC-180)", () => {
+    const checkpoints: CheckpointSnapshot[] = [
+      {
+        block_key: "stufe1_kern",
+        content: {
+          answers: {
+            [Q1_ID]: "Marge",
+            [`evidence.stufe1_kern.${Q1_ID}`]: "Auszug aus GuV",
+            [`followup.stufe1_kern.${Q1_ID}`]: "18% EBIT",
+          },
+        },
+      },
+    ];
+    const pairs = assembleQaPairs(makeBlocks(), checkpoints);
+    expect(pairs).toHaveLength(1);
+    expect(pairs[0].answer).toContain("Marge");
+    expect(pairs[0].answer).toContain("[Beleg] Auszug aus GuV");
+    expect(pairs[0].answer).toContain("[Nachfrage] 18% EBIT");
+  });
+
   it("returns empty when no answers", () => {
     expect(assembleQaPairs(makeBlocks(), [])).toEqual([]);
     expect(

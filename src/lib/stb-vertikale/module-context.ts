@@ -11,7 +11,8 @@
 //       (modul_key, output_contract{kinds, ki_hebel_kind, reifegrad_range},
 //        themenmodell[], dod, output_artefakte[], symptome[], abgrenzung, ki_hebel[])
 //   - block_checkpoint.content: src/app/capture/[sessionId]/block/[blockKey]/submit-action.ts
-//       ({ answers: { <question.id>: text, "evidence.<block>.<qid>": text }, block_key, ... })
+//       ({ answers: { <question.id>: text, "evidence.<block>.<qid>": text,
+//         "followup.<block>.<qid>": text }, block_key, ... })
 //   - Block/Question: src/lib/db/template-queries.ts (TemplateBlock, TemplateQuestion)
 
 import { z } from "zod";
@@ -126,13 +127,21 @@ function blockTitleDe(block: TemplateBlock): string {
 
 /**
  * Merged alle `content.answers` der uebergebenen Checkpoints zu einer Map
- * `question.id -> answer`. `evidence.<block>.<qid>`-Schluessel (optionaler
- * Evidence-Merge aus submit-action.ts) werden an ihre Frage-UUID angehaengt.
+ * `question.id -> answer`. Zwei Praefix-Schluessel werden an ihre Frage-UUID
+ * angehaengt statt eigenstaendig gesetzt:
+ *   - `evidence.<block>.<qid>`  (Dokument-Beleg-Merge, submit-action.ts) -> `[Beleg]`
+ *   - `followup.<block>.<qid>`  (Inline-Rueckfrage-Antwort, SLC-180)     -> `[Nachfrage]`
  * Spaetere Checkpoints (weiter hinten im Array) gewinnen bei Kollision —
- * der Caller uebergibt die Checkpoints latest-last.
+ * der Caller uebergibt die Checkpoints latest-last. Innerhalb eines Checkpoints
+ * werden die Eltern-Antworten (`<qid>`) vor den Praefix-Schluesseln eingefuegt
+ * (submit-action.ts-Reihenfolge), damit das Anhaengen die Eltern-Antwort findet.
  */
 function mergeAnswers(checkpoints: CheckpointSnapshot[]): Map<string, string> {
   const byQuestionId = new Map<string, string>();
+  const append = (qid: string, label: string, value: string) => {
+    const existing = byQuestionId.get(qid);
+    byQuestionId.set(qid, existing ? `${existing}\n\n${label} ${value}` : `${label} ${value}`);
+  };
   for (const cp of checkpoints) {
     const content = (cp.content ?? {}) as CheckpointContent;
     const answers = content.answers ?? {};
@@ -142,9 +151,11 @@ function mergeAnswers(checkpoints: CheckpointSnapshot[]): Map<string, string> {
       if (key.startsWith("evidence.")) {
         // evidence.<block>.<questionId> -> haenge an die Frage-Antwort an.
         const qid = key.split(".").pop();
-        if (!qid) continue;
-        const existing = byQuestionId.get(qid);
-        byQuestionId.set(qid, existing ? `${existing}\n\n[Beleg] ${value}` : `[Beleg] ${value}`);
+        if (qid) append(qid, "[Beleg]", value);
+      } else if (key.startsWith("followup.")) {
+        // followup.<block>.<questionId> -> Inline-Rueckfrage-Antwort (SLC-180).
+        const qid = key.split(".").pop();
+        if (qid) append(qid, "[Nachfrage]", value);
       } else {
         byQuestionId.set(key, value);
       }

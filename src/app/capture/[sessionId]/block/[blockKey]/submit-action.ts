@@ -120,6 +120,18 @@ export async function submitBlock(
     }
   }
 
+  // 4c. Carry inline follow-up answers (SLC-180) — keys "followup.<blockKey>.<qid>"
+  // in capture_session.answers. They are copied verbatim (NOT prefix-stripped) so
+  // mergeAnswers (module-context.ts) appends them as "[Nachfrage]" to their parent
+  // answer at synthesis time. Runs after the parent-answer pass above so parent
+  // keys are inserted first (mergeAnswers relies on that order).
+  const followupPrefix = `followup.${blockKey}.`;
+  for (const [key, value] of Object.entries(allAnswers)) {
+    if (key.startsWith(followupPrefix) && value) {
+      blockAnswers[key] = value;
+    }
+  }
+
   // 5. Build checkpoint content
   const content = {
     answers: blockAnswers,
