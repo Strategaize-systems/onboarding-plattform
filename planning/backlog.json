@@ -1785,7 +1785,7 @@
       "title": "module-delivery Phase 1 — Scoring-Auswertung + Modul-Reife-Ampel",
       "type": "feature",
       "priority": "high",
-      "status": "open",
+      "status": "in_progress",
       "version": "V10.1",
       "description": "LLM-Autoring-Lauf setzt die 5 Scoring-Flags an den 17 Modulen (Founder-Abnahme, Seed-Migration MIG-129, deterministisch) + Runtime-Auswertung: Modul-Reife-Ampel (green/yellow/red) aus Flag-Zustaenden + Antwort-Signalen. FEAT-096.",
       "createdAt": "2026-07-02"
