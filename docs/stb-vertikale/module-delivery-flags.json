@@ -1,0 +1,820 @@
+{
+  "_meta": {
+    "source": "/module-delivery Sonnet-4 Klassifikation (SLC-177 MT-1)",
+    "model": "eu.anthropic.claude-sonnet-4-20250514-v1:0",
+    "region": "eu-central-1",
+    "tokensIn": 43828,
+    "tokensOut": 32338,
+    "costUsd": 0.6166,
+    "approved": "2026-07-03, Founder \"alles ok\" (per-Modul-Review HTML, alle 337 Fragen)",
+    "note": "Nur Fragen mit >=1 true-Flag; fehlende Fragen = alle false (Default). Flags flach je Frage (TemplateQuestionSchema).",
+    "flagged_questions": 233
+  },
+  "modules": {
+    "stb_modul_m01": {
+      "F-M01-001": {
+        "deal_blocker": true
+      },
+      "F-M01-002": {
+        "deal_blocker": true
+      },
+      "F-M01-003": {
+        "deal_blocker": true
+      },
+      "F-M01-004": {
+        "sop_trigger": true
+      },
+      "F-M01-005": {
+        "sop_trigger": true
+      },
+      "F-M01-006": {
+        "owner_dependency": true,
+        "deal_blocker": true
+      },
+      "F-M01-010": {
+        "deal_blocker": true
+      },
+      "F-M01-012": {
+        "sop_trigger": true
+      },
+      "F-M01-013": {
+        "sop_trigger": true
+      },
+      "F-M01-014": {
+        "sop_trigger": true
+      },
+      "F-M01-015": {
+        "sop_trigger": true
+      },
+      "F-M01-017": {
+        "owner_dependency": true
+      }
+    },
+    "stb_modul_m02": {
+      "F-M02-001": {
+        "deal_blocker": true
+      },
+      "F-M02-002": {
+        "ko_soft": true
+      },
+      "F-M02-003": {
+        "sop_trigger": true
+      },
+      "F-M02-004": {
+        "owner_dependency": true,
+        "sop_trigger": true
+      },
+      "F-M02-005": {
+        "owner_dependency": true,
+        "deal_blocker": true
+      },
+      "F-M02-006": {
+        "owner_dependency": true
+      },
+      "F-M02-007": {
+        "owner_dependency": true,
+        "ko_soft": true
+      },
+      "F-M02-008": {
+        "ko_hart": true
+      },
+      "F-M02-009": {
+        "owner_dependency": true,
+        "deal_blocker": true
+      },
+      "F-M02-011": {
+        "sop_trigger": true
+      },
+      "F-M02-012": {
+        "owner_dependency": true
+      },
+      "F-M02-013": {
+        "ko_soft": true
+      },
+      "F-M02-014": {
+        "sop_trigger": true
+      },
+      "F-M02-015": {
+        "sop_trigger": true
+      }
+    },
+    "stb_modul_m03": {
+      "F-M03-001": {
+        "owner_dependency": true,
+        "sop_trigger": true
+      },
+      "F-M03-002": {
+        "sop_trigger": true
+      },
+      "F-M03-003": {
+        "owner_dependency": true,
+        "deal_blocker": true
+      },
+      "F-M03-004": {
+        "sop_trigger": true
+      },
+      "F-M03-005": {
+        "sop_trigger": true
+      },
+      "F-M03-006": {
+        "ko_soft": true
+      },
+      "F-M03-007": {
+        "sop_trigger": true
+      },
+      "F-M03-008": {
+        "sop_trigger": true
+      },
+      "F-M03-009": {
+        "owner_dependency": true,
+        "deal_blocker": true
+      },
+      "F-M03-010": {
+        "sop_trigger": true
+      },
+      "F-M03-011": {
+        "sop_trigger": true
+      },
+      "F-M03-013": {
+        "owner_dependency": true
+      },
+      "F-M03-015": {
+        "sop_trigger": true
+      },
+      "F-M03-016": {
+        "sop_trigger": true
+      },
+      "F-M03-017": {
+        "owner_dependency": true,
+        "sop_trigger": true
+      }
+    },
+    "stb_modul_m04": {
+      "F-M04-001": {
+        "owner_dependency": true
+      },
+      "F-M04-002": {
+        "sop_trigger": true
+      },
+      "F-M04-003": {
+        "sop_trigger": true
+      },
+      "F-M04-004": {
+        "owner_dependency": true,
+        "ko_soft": true
+      },
+      "F-M04-008": {
+        "sop_trigger": true
+      },
+      "F-M04-009": {
+        "sop_trigger": true
+      },
+      "F-M04-011": {
+        "sop_trigger": true,
+        "ko_soft": true
+      },
+      "F-M04-012": {
+        "sop_trigger": true
+      },
+      "F-M04-006": {
+        "owner_dependency": true
+      },
+      "F-M04-007": {
+        "owner_dependency": true
+      },
+      "F-M04-013": {
+        "sop_trigger": true
+      },
+      "F-M04-014": {
+        "sop_trigger": true
+      },
+      "F-M04-015": {
+        "sop_trigger": true
+      },
+      "F-M04-016": {
+        "owner_dependency": true
+      },
+      "F-M04-018": {
+        "sop_trigger": true
+      },
+      "F-M04-019": {
+        "sop_trigger": true
+      },
+      "F-M04-020": {
+        "sop_trigger": true
+      },
+      "F-M04-022": {
+        "sop_trigger": true
+      },
+      "F-M04-023": {
+        "sop_trigger": true
+      },
+      "F-M04-025": {
+        "sop_trigger": true
+      },
+      "F-M04-026": {
+        "owner_dependency": true
+      }
+    },
+    "stb_modul_m06": {
+      "F-M06-001": {
+        "sop_trigger": true
+      },
+      "F-M06-002": {
+        "ko_soft": true
+      },
+      "F-M06-004": {
+        "sop_trigger": true
+      },
+      "F-M06-005": {
+        "owner_dependency": true,
+        "sop_trigger": true
+      },
+      "F-M06-006": {
+        "sop_trigger": true
+      },
+      "F-M06-008": {
+        "ko_soft": true
+      },
+      "F-M06-009": {
+        "sop_trigger": true
+      },
+      "F-M06-011": {
+        "owner_dependency": true
+      },
+      "F-M06-012": {
+        "sop_trigger": true
+      },
+      "F-M06-013": {
+        "sop_trigger": true
+      },
+      "F-M06-015": {
+        "sop_trigger": true
+      },
+      "F-M06-017": {
+        "sop_trigger": true
+      },
+      "F-M06-018": {
+        "sop_trigger": true
+      },
+      "F-M06-019": {
+        "deal_blocker": true,
+        "ko_soft": true
+      },
+      "F-M06-020": {
+        "sop_trigger": true
+      }
+    },
+    "stb_modul_m07": {
+      "F-M07-001": {
+        "owner_dependency": true,
+        "sop_trigger": true
+      },
+      "F-M07-002": {
+        "sop_trigger": true
+      },
+      "F-M07-003": {
+        "deal_blocker": true,
+        "sop_trigger": true
+      },
+      "F-M07-004": {
+        "sop_trigger": true
+      },
+      "F-M07-005": {
+        "deal_blocker": true
+      },
+      "F-M07-006": {
+        "deal_blocker": true,
+        "sop_trigger": true
+      },
+      "F-M07-007": {
+        "owner_dependency": true,
+        "sop_trigger": true
+      },
+      "F-M07-008": {
+        "owner_dependency": true,
+        "sop_trigger": true
+      },
+      "F-M07-009": {
+        "sop_trigger": true
+      },
+      "F-M07-011": {
+        "sop_trigger": true
+      },
+      "F-M07-012": {
+        "sop_trigger": true
+      },
+      "F-M07-013": {
+        "deal_blocker": true
+      },
+      "F-M07-014": {
+        "sop_trigger": true
+      },
+      "F-M07-016": {
+        "owner_dependency": true,
+        "sop_trigger": true
+      },
+      "F-M07-018": {
+        "ko_soft": true
+      },
+      "F-M07-019": {
+        "owner_dependency": true,
+        "sop_trigger": true
+      },
+      "F-M07-021": {
+        "owner_dependency": true,
+        "sop_trigger": true
+      }
+    },
+    "stb_modul_m08": {
+      "F-M08-001": {
+        "deal_blocker": true
+      },
+      "F-M08-002": {
+        "deal_blocker": true
+      },
+      "F-M08-003": {
+        "deal_blocker": true
+      },
+      "F-M08-004": {
+        "deal_blocker": true
+      },
+      "F-M08-005": {
+        "deal_blocker": true
+      },
+      "F-M08-006": {
+        "deal_blocker": true
+      },
+      "F-M08-007": {
+        "deal_blocker": true,
+        "sop_trigger": true
+      },
+      "F-M08-008": {
+        "deal_blocker": true,
+        "sop_trigger": true
+      },
+      "F-M08-009": {
+        "deal_blocker": true
+      },
+      "F-M08-010": {
+        "sop_trigger": true
+      },
+      "F-M08-011": {
+        "ko_soft": true
+      },
+      "F-M08-012": {
+        "sop_trigger": true
+      },
+      "F-M08-013": {
+        "deal_blocker": true,
+        "sop_trigger": true
+      },
+      "F-M08-014": {
+        "deal_blocker": true
+      },
+      "F-M08-015": {
+        "owner_dependency": true,
+        "deal_blocker": true
+      },
+      "F-M08-016": {
+        "sop_trigger": true
+      },
+      "F-M08-017": {
+        "owner_dependency": true,
+        "deal_blocker": true
+      }
+    },
+    "stb_modul_m15": {
+      "F-M15-001": {
+        "owner_dependency": true,
+        "deal_blocker": true
+      },
+      "F-M15-002": {
+        "deal_blocker": true
+      },
+      "F-M15-003": {
+        "owner_dependency": true
+      },
+      "F-M15-004": {
+        "sop_trigger": true
+      },
+      "F-M15-005": {
+        "owner_dependency": true
+      },
+      "F-M15-006": {
+        "owner_dependency": true
+      },
+      "F-M15-008": {
+        "owner_dependency": true
+      },
+      "F-M15-014": {
+        "sop_trigger": true
+      },
+      "F-M15-015": {
+        "owner_dependency": true,
+        "sop_trigger": true
+      }
+    },
+    "stb_modul_m16": {
+      "F-M16-001": {
+        "owner_dependency": true,
+        "deal_blocker": true
+      },
+      "F-M16-002": {
+        "owner_dependency": true,
+        "deal_blocker": true,
+        "ko_soft": true
+      },
+      "F-M16-003": {
+        "deal_blocker": true,
+        "ko_soft": true
+      },
+      "F-M16-006": {
+        "owner_dependency": true,
+        "sop_trigger": true
+      },
+      "F-M16-007": {
+        "sop_trigger": true
+      },
+      "F-M16-008": {
+        "sop_trigger": true
+      },
+      "F-M16-014": {
+        "owner_dependency": true
+      },
+      "F-M16-015": {
+        "owner_dependency": true,
+        "sop_trigger": true
+      },
+      "F-M16-017": {
+        "owner_dependency": true
+      }
+    },
+    "stb_modul_m26": {
+      "F-M26-002": {
+        "deal_blocker": true
+      },
+      "F-M26-003": {
+        "owner_dependency": true,
+        "deal_blocker": true,
+        "ko_hart": true
+      },
+      "F-M26-004": {
+        "deal_blocker": true,
+        "ko_soft": true
+      },
+      "F-M26-005": {
+        "deal_blocker": true
+      },
+      "F-M26-006": {
+        "ko_soft": true
+      },
+      "F-M26-007": {
+        "owner_dependency": true,
+        "deal_blocker": true,
+        "ko_soft": true
+      },
+      "F-M26-008": {
+        "sop_trigger": true
+      },
+      "F-M26-009": {
+        "owner_dependency": true,
+        "deal_blocker": true,
+        "ko_soft": true
+      },
+      "F-M26-011": {
+        "deal_blocker": true,
+        "ko_soft": true
+      },
+      "F-M26-013": {
+        "sop_trigger": true
+      },
+      "F-M26-016": {
+        "ko_soft": true
+      },
+      "F-M26-018": {
+        "sop_trigger": true
+      },
+      "F-M26-021": {
+        "owner_dependency": true,
+        "deal_blocker": true,
+        "ko_hart": true
+      },
+      "F-M26-022": {
+        "owner_dependency": true,
+        "deal_blocker": true
+      },
+      "F-M26-023": {
+        "owner_dependency": true,
+        "deal_blocker": true,
+        "ko_soft": true
+      },
+      "F-M26-024": {
+        "ko_soft": true
+      }
+    },
+    "stb_modul_m27": {
+      "F-M27-001": {
+        "owner_dependency": true
+      },
+      "F-M27-002": {
+        "sop_trigger": true
+      },
+      "F-M27-004": {
+        "sop_trigger": true
+      },
+      "F-M27-005": {
+        "sop_trigger": true
+      },
+      "F-M27-006": {
+        "sop_trigger": true
+      },
+      "F-M27-007": {
+        "sop_trigger": true
+      },
+      "F-M27-010": {
+        "sop_trigger": true
+      },
+      "F-M27-013": {
+        "owner_dependency": true
+      },
+      "F-M27-014": {
+        "sop_trigger": true
+      },
+      "F-M27-015": {
+        "sop_trigger": true
+      },
+      "F-M27-017": {
+        "sop_trigger": true
+      },
+      "F-M27-021": {
+        "sop_trigger": true
+      },
+      "F-M27-023": {
+        "owner_dependency": true
+      },
+      "F-M27-024": {
+        "owner_dependency": true
+      }
+    },
+    "stb_modul_m28": {
+      "F-M28-001": {
+        "sop_trigger": true
+      },
+      "F-M28-002": {
+        "sop_trigger": true
+      },
+      "F-M28-003": {
+        "owner_dependency": true
+      },
+      "F-M28-005": {
+        "sop_trigger": true
+      },
+      "F-M28-006": {
+        "sop_trigger": true
+      },
+      "F-M28-007": {
+        "sop_trigger": true
+      },
+      "F-M28-008": {
+        "owner_dependency": true,
+        "deal_blocker": true,
+        "ko_soft": true
+      },
+      "F-M28-010": {
+        "sop_trigger": true
+      },
+      "F-M28-012": {
+        "owner_dependency": true,
+        "sop_trigger": true
+      },
+      "F-M28-013": {
+        "sop_trigger": true
+      },
+      "F-M28-015": {
+        "sop_trigger": true
+      },
+      "F-M28-016": {
+        "sop_trigger": true
+      },
+      "F-M28-018": {
+        "sop_trigger": true
+      },
+      "F-M28-020": {
+        "sop_trigger": true
+      },
+      "F-M28-021": {
+        "sop_trigger": true
+      },
+      "F-M28-022": {
+        "sop_trigger": true
+      },
+      "F-M28-023": {
+        "owner_dependency": true,
+        "deal_blocker": true,
+        "ko_soft": true
+      }
+    },
+    "stb_modul_m35": {
+      "F-M35-001": {
+        "deal_blocker": true,
+        "ko_soft": true
+      },
+      "F-M35-002": {
+        "ko_soft": true
+      },
+      "F-M35-003": {
+        "deal_blocker": true,
+        "ko_soft": true
+      },
+      "F-M35-004": {
+        "deal_blocker": true
+      },
+      "F-M35-005": {
+        "ko_soft": true
+      },
+      "F-M35-006": {
+        "ko_hart": true
+      },
+      "F-M35-007": {
+        "deal_blocker": true
+      },
+      "F-M35-008": {
+        "ko_hart": true
+      },
+      "F-M35-009": {
+        "ko_hart": true
+      },
+      "F-M35-010": {
+        "ko_soft": true
+      },
+      "F-M35-011": {
+        "deal_blocker": true
+      },
+      "F-M35-013": {
+        "ko_hart": true
+      },
+      "F-M35-015": {
+        "ko_soft": true
+      },
+      "F-M35-018": {
+        "ko_soft": true
+      },
+      "F-M35-019": {
+        "owner_dependency": true,
+        "deal_blocker": true
+      },
+      "F-M35-024": {
+        "ko_hart": true
+      }
+    },
+    "stb_modul_m36": {
+      "F-M36-001": {
+        "sop_trigger": true
+      },
+      "F-M36-002": {
+        "ko_soft": true
+      },
+      "F-M36-007": {
+        "sop_trigger": true
+      },
+      "F-M36-009": {
+        "owner_dependency": true
+      },
+      "F-M36-010": {
+        "ko_soft": true
+      },
+      "F-M36-017": {
+        "owner_dependency": true
+      }
+    },
+    "stb_modul_m38": {
+      "F-M38-001": {
+        "sop_trigger": true,
+        "ko_hart": true
+      },
+      "F-M38-002": {
+        "sop_trigger": true,
+        "ko_hart": true
+      },
+      "F-M38-003": {
+        "sop_trigger": true,
+        "ko_soft": true
+      },
+      "F-M38-004": {
+        "sop_trigger": true,
+        "ko_soft": true
+      },
+      "F-M38-005": {
+        "sop_trigger": true,
+        "ko_soft": true
+      },
+      "F-M38-006": {
+        "sop_trigger": true,
+        "ko_soft": true
+      },
+      "F-M38-007": {
+        "deal_blocker": true
+      },
+      "F-M38-008": {
+        "sop_trigger": true,
+        "ko_soft": true
+      },
+      "F-M38-009": {
+        "owner_dependency": true,
+        "ko_soft": true
+      },
+      "F-M38-010": {
+        "sop_trigger": true,
+        "ko_hart": true
+      },
+      "F-M38-011": {
+        "sop_trigger": true,
+        "ko_soft": true
+      },
+      "F-M38-012": {
+        "deal_blocker": true
+      },
+      "F-M38-013": {
+        "deal_blocker": true
+      },
+      "F-M38-014": {
+        "sop_trigger": true
+      },
+      "F-M38-015": {
+        "sop_trigger": true
+      }
+    },
+    "stb_modul_m39": {
+      "F-M39-001": {
+        "owner_dependency": true,
+        "deal_blocker": true,
+        "sop_trigger": true,
+        "ko_soft": true
+      },
+      "F-M39-002": {
+        "owner_dependency": true,
+        "sop_trigger": true
+      },
+      "F-M39-003": {
+        "owner_dependency": true
+      },
+      "F-M39-004": {
+        "owner_dependency": true
+      },
+      "F-M39-006": {
+        "owner_dependency": true
+      },
+      "F-M39-008": {
+        "owner_dependency": true,
+        "deal_blocker": true,
+        "ko_soft": true
+      },
+      "F-M39-010": {
+        "owner_dependency": true,
+        "sop_trigger": true
+      },
+      "F-M39-011": {
+        "sop_trigger": true
+      },
+      "F-M39-015": {
+        "owner_dependency": true
+      }
+    },
+    "stb_modul_m42": {
+      "F-M42-001": {
+        "owner_dependency": true
+      },
+      "F-M42-002": {
+        "owner_dependency": true
+      },
+      "F-M42-003": {
+        "owner_dependency": true
+      },
+      "F-M42-004": {
+        "owner_dependency": true
+      },
+      "F-M42-005": {
+        "owner_dependency": true
+      },
+      "F-M42-006": {
+        "owner_dependency": true
+      },
+      "F-M42-007": {
+        "owner_dependency": true
+      },
+      "F-M42-009": {
+        "owner_dependency": true
+      },
+      "F-M42-011": {
+        "owner_dependency": true
+      },
+      "F-M42-012": {
+        "owner_dependency": true
+      },
+      "F-M42-015": {
+        "owner_dependency": true
+      }
+    }
+  }
+}
