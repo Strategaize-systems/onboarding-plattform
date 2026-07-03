@@ -1124,7 +1124,7 @@ Quelle: /slice-planning V10.1 (RPT-546), Architektur DEC-253. 6 Slices entlang 3
 | SLC-177 | [MIG-129 Scoring-Flag-Seed (Autoring-Run)](SLC-177-mig129-scoring-flag-seed.md) | FEAT-096 | planned | High | 2026-07-02 |
 | SLC-178 | [Modul-Reife-Ampel (Pure-Function + Reader)](SLC-178-modul-reife-ampel.md) | FEAT-096 | done | High | 2026-07-02 |
 | SLC-179 | [Live-Haiku Scoring-Server-Action](SLC-179-live-scoring-assessment-action.md) | FEAT-097 | done | High | 2026-07-02 |
-| SLC-180 | [Inline-Rückfrage-UI + Followup-Merge](SLC-180-inline-rueckfrage-ui-followup-merge.md) | FEAT-097 | in_progress | High | 2026-07-02 |
+| SLC-180 | [Inline-Rückfrage-UI + Followup-Merge](SLC-180-inline-rueckfrage-ui-followup-merge.md) | FEAT-097 | done | High | 2026-07-02 |
 | SLC-181 | [SOP-/Handbuch-Brücke](SLC-181-sop-bruecke.md) | FEAT-098 | planned | Medium | 2026-07-02 |
 
 ### V10.1 Execution Order (Dependency-getrieben)
