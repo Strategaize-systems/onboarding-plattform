@@ -576,6 +576,12 @@
       "lastGenerated": "last {date}",
       "outputCount": "{count} delivery outputs",
       "kiHebelCount": "{count} AI levers",
+      "ampel": {
+        "label": "Maturity signal: {state}",
+        "green": "Solid",
+        "yellow": "Watch",
+        "red": "Action needed"
+      },
       "detailIntro": "Operational layer of effect ({modul}) — not an organisation handbook.",
       "detailLoadError": "The results for this module could not be loaded. Please try again later.",
       "detailEmptyTitle": "No result yet",

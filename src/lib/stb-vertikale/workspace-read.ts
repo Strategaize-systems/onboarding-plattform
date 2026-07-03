@@ -16,6 +16,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
+import type { Ampel } from "@/lib/stb-vertikale/blueprint";
+import { MODUL_DELIVERY_AMPEL_META_KEY } from "@/lib/stb-vertikale/module-delivery/reife-ampel";
+
 // ─── Output-Kind-Vokabular ──────────────────────────────────────────────────
 // Das Liefer-Triple in kanonischer Lese-Reihenfolge (Entscheidung -> Standard ->
 // Implementierungsschritt). `ki_hebel` ist der vierte Kind, separat gerendert.
@@ -123,6 +126,13 @@ export interface ModulSummary {
   kiHebelCount: number;
   /** Juengstes created_at innerhalb des Moduls (ISO) — fuer "zuletzt erzeugt". */
   latestCreatedAt: string | null;
+  /**
+   * Reife-/Ampel-Signal des Moduls (SLC-178, aus capture_session.metadata).
+   * Optional: von der Server-Page nach dem Verdichten gesetzt (nicht von
+   * `summarizeModulOutputs`, das rein aus modul_output-Rows arbeitet).
+   * `null`/undefined = noch nicht bewertet -> Reader zeigt kein Signal.
+   */
+  ampel?: Ampel | null;
 }
 
 /**
@@ -180,6 +190,39 @@ export async function readWorkspaceOutputs(
     .order("created_at", { ascending: true });
   if (error) throw error;
   return (data ?? []).map((row) => ModulOutputRowSchema.parse(row));
+}
+
+const AMPEL_VALUES = new Set<string>(["green", "yellow", "red"]);
+
+/**
+ * Liest die pro-Modul Reife-Ampeln (SLC-178) des aktuellen Tenants aus
+ * `capture_session.metadata.modul_delivery_ampel` (RLS-scoped, authenticated
+ * Client — die Policy scoped auf den eigenen Tenant/Owner). Ergebnis:
+ * `modulKey -> Ampel`. Bei mehreren Sessions je Modul gewinnt die zuletzt
+ * gelesene; defensiv gegen kaputte metadata-Shapes.
+ */
+export async function readModulDeliveryAmpeln(
+  client: SupabaseClient,
+): Promise<Record<string, Ampel>> {
+  const { data, error } = await client
+    .from("capture_session")
+    .select("metadata");
+  if (error) throw error;
+
+  const out: Record<string, Ampel> = {};
+  for (const row of data ?? []) {
+    const meta = (row.metadata ?? {}) as Record<string, unknown>;
+    const map = meta[MODUL_DELIVERY_AMPEL_META_KEY];
+    if (!map || typeof map !== "object") continue;
+    for (const [modulKey, value] of Object.entries(
+      map as Record<string, unknown>,
+    )) {
+      if (typeof value === "string" && AMPEL_VALUES.has(value)) {
+        out[modulKey] = value as Ampel;
+      }
+    }
+  }
+  return out;
 }
 
 /**

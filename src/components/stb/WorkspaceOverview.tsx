@@ -12,6 +12,14 @@ import {
   modulKeyToLabel,
   type ModulSummary,
 } from "@/lib/stb-vertikale/workspace-read";
+import type { Ampel } from "@/lib/stb-vertikale/blueprint";
+
+// Reife-Ampel-Badge-Styles je Signal (SLC-178). green/yellow/red.
+const AMPEL_BADGE: Record<Ampel, { badge: string; dot: string }> = {
+  green: { badge: "bg-emerald-50 text-emerald-700", dot: "bg-emerald-500" },
+  yellow: { badge: "bg-amber-50 text-amber-700", dot: "bg-amber-500" },
+  red: { badge: "bg-red-50 text-red-700", dot: "bg-red-600" },
+};
 
 function useDateFormatter() {
   const locale = useLocale();
@@ -69,9 +77,29 @@ export function WorkspaceOverview({
                 className="block rounded-xl border border-slate-200 bg-white p-5 transition-colors hover:border-brand-primary/50"
               >
                 <div className="flex items-baseline justify-between gap-4">
-                  <h2 className="text-base font-semibold text-slate-900">
-                    {modulKeyToLabel(s.modulKey)}
-                  </h2>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-base font-semibold text-slate-900">
+                      {modulKeyToLabel(s.modulKey)}
+                    </h2>
+                    {s.ampel ? (
+                      <span
+                        className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium ${
+                          AMPEL_BADGE[s.ampel].badge
+                        }`}
+                        aria-label={t("ampel.label", {
+                          state: t(`ampel.${s.ampel}`),
+                        })}
+                      >
+                        <span
+                          className={`h-2 w-2 rounded-full ${
+                            AMPEL_BADGE[s.ampel].dot
+                          }`}
+                          aria-hidden="true"
+                        />
+                        {t(`ampel.${s.ampel}`)}
+                      </span>
+                    ) : null}
+                  </div>
                   <span className="text-xs text-muted-foreground">
                     {t("lastGenerated", { date: formatDate(s.latestCreatedAt) })}
                   </span>

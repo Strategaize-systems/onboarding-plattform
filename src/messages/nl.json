@@ -576,6 +576,12 @@
       "lastGenerated": "laatst {date}",
       "outputCount": "{count} leveringsoutputs",
       "kiHebelCount": "{count} AI-hefbomen",
+      "ampel": {
+        "label": "Rijpheidssignaal: {state}",
+        "green": "Solide",
+        "yellow": "In de gaten houden",
+        "red": "Actie nodig"
+      },
       "detailIntro": "Operationele werklaag ({modul}) — geen organisatiehandboek.",
       "detailLoadError": "De resultaten van deze module konden niet worden geladen. Probeer het later opnieuw.",
       "detailEmptyTitle": "Nog geen resultaat",
