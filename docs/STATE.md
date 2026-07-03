@@ -441,7 +441,12 @@ V4.1 (Unternehmerhandbuch ausgebaut) und V4.2 (Self-Service-Cockpit ausgebaut) s
 V2 — 12/12 Slices done, released (REL-004).
 
 ## Blockers
-- aktuell keine
+- Kein technischer Blocker. **Koordinations-Hinweis (Pre-Merge-Re-Check-Prep, V10.1):** Zwei parallele Founder-Hold-Branches vom selben Base `724e5a0` (main HEAD), keiner gepusht/gemergt — jeder Branch markiert nur seine eigene Slice `done`:
+  - `v10-1-slc177-mig129-flag-seed` → SLC-177 done (MIG-129 `129_v101_module_delivery_flags_seed.sql` vorhanden; /qa PASS RPT-548/549; DEC-254). Markiert im OP-Record auch SLC-176 done — **ABER** die zugehoerige `.claude/skills/module-delivery/` liegt im Dev-System-Repo **untracked** (nie committet, Coordination-Hold immoscheckheft↔Dev-System) → SLC-176 realer Skill-Commit steht aus.
+  - `v10-1-slc178-modul-reife-ampel` → SLC-178 done (kein MIG). Hat SLC-177s Code (MIG-129/Flags) NICHT im Tree → Ampel laeuft bis Merge auf green-Baseline (by-design DEC-253/C).
+  - main `724e5a0` zeigt weiterhin 176/177/178 = planned (stale bis Merge).
+  - **Merge-Plan:** Reihenfolge 177 → 178 (Dependency + MIG-129 zuerst; 178 migrationsfrei → keine MIG-Kollision: main=128, 177 bringt 129, 178 keine). Vor Merge je Branch `git fetch && git rebase origin/main` + Tests + `git diff origin/main..HEAD`-Scope-Review (git-release.md 6-Punkt-Check). SLC-176-Skill separat im Dev-System committen. Records auf main konvergieren erst beim Merge — NICHT vorab cross-branch faelschen.
+- Repo-Hygiene offen: ISSUE-109 (2 pre-existing eslint-Items SLC-144/150) fuer /final-check V10.1.
 
 ## Last Stable Version
 - V10 — 2026-06-29 — RELEASED (REL-036) + **STABLE 2026-07-01 bestaetigt (/post-launch T+~48h, RPT-541)**, Internal-Test-Mode (Feature OFF-gated), Deploy-Commit `9df7340`. V10 StB-Vertikale Phase 1 (Stufe-1-Kern: StB onboardet eigene Kanzlei): 8 Slices (SLC-169..175 + 170b Welle 1), Features FEAT-090/092/093/094/095 deployed (091 in_progress content-gated), MIG-124/125/126/127 live, 0 neue Deps, ENV-Fix eu-Inference-Profile (ISSUE-099 resolved). **Burn-In ~48h seit Boot 2026-06-29 10:48:34 UTC**: app=`104639029998` + worker=`104639052590` Up `(healthy)` **RestartCount=0**; Worker 0 fatal/panic; DB error_log 606 info / 0 error/warn/fatal; Cron voll alive (imap-sync `*/5` latest 07-01 09:15 + signup-cleanup + capture-reminders); ai_jobs 0 failed (Internal-Test-Stille); ENV eu-prefixed + `SOURCE_COMMIT=9df7340` + Gate OFF korrekt; App `/login` 200. 0 V10-Regression. Deferred gated live-validation (E2E StB-Worker-LLM + Browser + behavioral RLS-Sidecar) offen — Feature OFF, kein Burn-In-Failure. **V10 = Last-Stable-Version ab 2026-07-01.** Kein Customer-Outreach ([[module-lifecycle-discipline]]).

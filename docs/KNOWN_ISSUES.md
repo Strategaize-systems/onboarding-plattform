@@ -1,5 +1,14 @@
 # Known Issues
 
+### ISSUE-109 — 2 pre-existing eslint-Verstoesse blockieren repo-weites `eslint 0` (fuer /final-check V10.1)
+- Status: open
+- Severity: Low
+- Area: Repo-Hygiene / Lint (Fremd-Slices SLC-144 / SLC-150)
+- Summary: `eslint .` meldet auf `origin/main` (und damit allen V10.1-Branches) 1 error + 1 warning, beide NICHT in V10.1-Scope: (1) `react/no-unescaped-entities` in `src/app/admin/text-overrides/page.tsx:263` (eingefuehrt SLC-144, unescaptes `"` in JSX-Text), (2) `jsx-a11y/alt-text` warning in `src/lib/pdf/mandanten-report-v2/pages/cover.tsx:190` (SLC-150, `<Image>` ohne `alt`). Beide auf `origin/main` HEAD vorhanden.
+- Impact: SLC-178 (und jede V10.1-Slice) erreicht `eslint 0` nur fuer die eigenen geaenderten Files; das repo-weite `eslint 0`-Gate, das `/final-check` V10.1 erwartet, ist durch diese 2 Fremd-Items rot. Kein Laufzeit-Defekt (1 escaping-Kosmetik + 1 a11y-Warning im PDF-Cover).
+- Workaround: Slice-QA bewertet `eslint 0` gegen die slice-eigenen Files (SLC-178 clean).
+- Next Action: Im `/final-check` V10.1 (oder als eigener Hygiene-Commit auf `main`) beheben: `"` → `&quot;`/typografische Anfuehrung in `text-overrides/page.tsx:263`; `alt=""` (dekorativ) an `<Image>` in `cover.tsx:190`. Auf `main` fixen (nicht pro Slice-Branch), damit alle parallelen V10.1-Branches profitieren. Quelle: /qa SLC-178 RPT-551.
+
 ### ISSUE-105 — V9.75 SLC-V9.75-A Worker-Defense killt 3 ungestempelte gated Dispatch-Pfade fail-closed (Funktions-Regression)
 - Status: resolved
 - Severity: Blocker
