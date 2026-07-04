@@ -1805,7 +1805,7 @@
       "title": "module-delivery Phase 3 — SOP-/Handbuch-Bruecke",
       "type": "feature",
       "priority": "medium",
-      "status": "in_progress",
+      "status": "done",
       "version": "V10.1",
       "description": "Bewertete modul_output-Rows + Scoring steuern, welche Outputs zu SOP-/Handbuch-Sektionen werden (Bruecke zur Legacy src/workers/sop/*-Pipeline). FEAT-098.",
       "createdAt": "2026-07-02"
