@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { logout } from "@/app/login/actions";
-import { Users, FileText, BookOpen, ClipboardCheck, LogOut, Menu, X, Shield, Building2, BarChart3, Pencil, HelpCircle, Eye } from "lucide-react";
+import { Users, FileText, BookOpen, ClipboardCheck, LogOut, Menu, X, Shield, Building2, BarChart3, Pencil, HelpCircle, Eye, Sparkles } from "lucide-react";
 import { useState } from "react";
 
 const NAV_ITEMS = [
+  { href: "/admin/mein-tag", label: "Mein Tag", icon: Sparkles },
   { href: "/admin/tenants", label: "Tenants", icon: Users },
   { href: "/admin/partners", label: "Partner", icon: Building2 },
   { href: "/admin/reviews", label: "Reviews", icon: ClipboardCheck },
