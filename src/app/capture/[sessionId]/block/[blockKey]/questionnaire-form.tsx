@@ -39,6 +39,8 @@ import type { TemplateBlock, TemplateQuestion } from "@/lib/db/template-queries"
 import { saveAnswer } from "./actions";
 import { submitBlock } from "./submit-action";
 import { GapQuestionsSection } from "./gap-questions-section";
+import { InlineRueckfrage } from "@/components/stb/InlineRueckfrage";
+import { assessModulAnswer } from "@/lib/stb-vertikale/module-delivery/assess-answer";
 import { FileUploadZone } from "./evidence/FileUploadZone";
 import { EvidenceFileList } from "./evidence/EvidenceFileList";
 import { MappingReview } from "./evidence/MappingReview";
@@ -67,6 +69,12 @@ interface Props {
    * Beeinflusst: Sidebar Block-Switch, "Zurueck zur Uebersicht", Submit-Redirect.
    */
   basePath?: string;
+  /**
+   * SLC-180 — StB-Modul-Opt-in fuer Live-Scoring. Nur im Modul-Flow gesetzt
+   * (dashboard/stb/modul/...). Wenn undefined (GF-/Employee-Capture) laeuft KEINE
+   * Live-Bewertung; die Inline-Rueckfrage nach gespeicherten Kern-Fragen entfaellt.
+   */
+  modulKey?: string;
 }
 
 export function QuestionnaireWorkspace({
@@ -79,6 +87,7 @@ export function QuestionnaireWorkspace({
   locale,
   existingCheckpoints,
   basePath = "/capture",
+  modulKey,
 }: Props) {
   const router = useRouter();
   // All questions from all blocks — flattened for counting
@@ -155,6 +164,14 @@ export function QuestionnaireWorkspace({
   const [submitting, setSubmitting] = useState(false);
   const [blockSubmitted, setBlockSubmitted] = useState(existingCheckpoints.length > 0);
 
+  // ─── SLC-180 — StB-Modul live scoring (inline Rueckfrage, only when modulKey set) ─
+  const [assessing, setAssessing] = useState(false);
+  const [rueckfrage, setRueckfrage] = useState<{
+    questionId: string;
+    text: string;
+  } | null>(null);
+  const [followupSaving, setFollowupSaving] = useState(false);
+
   // Debounce timer for autosave
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
 
@@ -218,6 +235,9 @@ export function QuestionnaireWorkspace({
     setAnswerText("");
     setMessage(null);
     setSidebarOpen(false);
+    // SLC-180 — the inline Rueckfrage is scoped to the question just answered.
+    setRueckfrage(null);
+    setAssessing(false);
   }
 
   function toggleBlock(blockKey: string) {
@@ -370,6 +390,21 @@ export function QuestionnaireWorkspace({
       setAnswers((prev) => ({ ...prev, [answerKey]: textToSave }));
       await doSave(answerKey, textToSave);
 
+      // 2b. SLC-180 — StB-Modul: geflaggte Kern-Frage live bewerten. Fire-and-forget,
+      // damit die Speichern-UX nicht auf die Haiku-Latenz wartet; die Rueckfrage
+      // erscheint inline, sobald das Ergebnis eintrifft. Nur im Modul-Flow (modulKey).
+      if (modulKey && activeQ) {
+        const flagged =
+          activeQ.ko_hart ||
+          activeQ.ko_soft ||
+          activeQ.deal_blocker ||
+          activeQ.owner_dependency ||
+          activeQ.sop_trigger;
+        if (flagged) {
+          void runAssessment(activeBlockKey, activeQ.id, activeQ.frage_id, textToSave);
+        }
+      }
+
       // 3. Clear state + refresh event history
       setAnswerText("");
       setChatInput("");
@@ -381,6 +416,73 @@ export function QuestionnaireWorkspace({
     } finally {
       setSaving(false);
     }
+  }
+
+  // ─── SLC-180 — StB-Modul live scoring ───────────────────────────
+  // Bewertet die gespeicherte Antwort einer geflaggten Kern-Frage (Haiku, SLC-179).
+  // fail-open: ein Fehler blockt die Capture NIE. `frageId` ist die Business-ID
+  // (assessModulAnswer matcht darauf); der Rueckfrage-State scoped auf die UUID `qId`.
+  const runAssessment = useCallback(
+    async (bk: string, qId: string, frageId: string, answerValue: string) => {
+      if (!modulKey) return;
+      setAssessing(true);
+      try {
+        const res = await assessModulAnswer(sessionId, modulKey, frageId, answerValue);
+        if (res.ok && res.rueckfrage) {
+          setRueckfrage({ questionId: qId, text: res.rueckfrage });
+        } else {
+          // ok / geheilt / gekappt / fail-open -> keine (bzw. Rueckfrage entfernen).
+          setRueckfrage((prev) => (prev?.questionId === qId ? null : prev));
+        }
+      } catch {
+        // UI-seitig ebenfalls fail-open: den Wizard nie blockieren.
+      } finally {
+        setAssessing(false);
+      }
+    },
+    [modulKey, sessionId],
+  );
+
+  // Nachantwort auf die Inline-Rueckfrage: als followup.<block>.<qid> persistieren
+  // und die angereicherte Antwort erneut bewerten (F-E-Heilung). Optional-inline:
+  // scheitert das Persistieren, bleibt die Rueckfrage sichtbar/verwerfbar.
+  async function submitFollowup(text: string) {
+    if (!modulKey || !rueckfrage || !activeQ) return;
+    const q = activeQ;
+    setFollowupSaving(true);
+    setMessage(null);
+    try {
+      const saveResult = await saveAnswer(
+        sessionId,
+        `followup.${activeBlockKey}`,
+        q.id,
+        text,
+      );
+      if (saveResult?.error) {
+        setMessage({ text: saveResult.error, type: "error" });
+        return;
+      }
+      // Erneute Bewertung der angereicherten Antwort (Eltern + Nachantwort) -> Heilung.
+      const parent = answers[`${activeBlockKey}.${q.id}`] ?? "";
+      const combined = parent ? `${parent}\n\n[Nachfrage-Antwort] ${text}` : text;
+      const res = await assessModulAnswer(sessionId, modulKey, q.frage_id, combined);
+      if (res.ok && !res.rueckfrage) {
+        setRueckfrage((prev) => (prev?.questionId === q.id ? null : prev));
+        setMessage({ text: "Ergänzung gespeichert — Rückfrage geklärt", type: "success" });
+      } else {
+        setMessage({ text: "Ergänzung gespeichert", type: "success" });
+      }
+      setTimeout(() => setMessage(null), 4000);
+    } catch {
+      setMessage({ text: "Ergänzung konnte nicht gespeichert werden", type: "error" });
+    } finally {
+      setFollowupSaving(false);
+    }
+  }
+
+  function dismissRueckfrage() {
+    // Verwerfen ohne Persist: der Trigger-Hit bleibt (SLC-178-Ampel spiegelt ihn).
+    setRueckfrage(null);
   }
 
   // ─── Voice recording ─────────────────────────────────────────────
@@ -880,6 +982,22 @@ export function QuestionnaireWorkspace({
                   </div>
                 </div>
               </div>
+
+              {/* SLC-180 — StB-Modul Live-Scoring: Pruef-Indikator + Inline-Rueckfrage */}
+              {modulKey && assessing && (
+                <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50/60 px-4 py-2.5 text-xs font-medium text-amber-700">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Antwort wird geprüft…
+                </div>
+              )}
+              {modulKey && rueckfrage && rueckfrage.questionId === activeQ.id && (
+                <InlineRueckfrage
+                  rueckfrage={rueckfrage.text}
+                  saving={followupSaving}
+                  onSubmit={submitFollowup}
+                  onDismiss={dismissRueckfrage}
+                />
+              )}
 
               {/* Side-by-side: Chat+Answer (2/3) + Event History (1/3) */}
               <div

@@ -20,6 +20,7 @@ import {
   modulKeyToSlug,
   modulBasePath,
 } from "@/lib/stb-vertikale/modul-capture";
+import { persistModulReifeAmpel } from "@/lib/stb-vertikale/module-delivery/persist-ampel";
 
 // Klassischer Capture-Mode (StubComponent=null -> Default-Pfad). Die StB-
 // Vertikale-Kennung lebt im metadata-Marker (DEC-243), nicht im capture_mode.
@@ -154,6 +155,10 @@ export async function enqueueModulOutput(
   if (!result.job_id) {
     return { ok: false, error: "Enqueue fehlgeschlagen (keine Job-ID)" };
   }
+
+  // Modul-Abschluss: Reife-Ampel deterministisch berechnen + stashen (SLC-178).
+  // Non-blocking — ein Fehler hier darf den Enqueue-Erfolg nicht kippen.
+  await persistModulReifeAmpel(sessionId, modulKey);
 
   return {
     ok: true,

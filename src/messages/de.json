@@ -576,6 +576,12 @@
       "lastGenerated": "zuletzt {date}",
       "outputCount": "{count} Liefer-Outputs",
       "kiHebelCount": "{count} KI-Hebel",
+      "ampel": {
+        "label": "Reife-Ampel: {state}",
+        "green": "Solide",
+        "yellow": "Beobachten",
+        "red": "Handlungsbedarf"
+      },
       "detailIntro": "Operative Wirk-Schicht ({modul}) — kein Organisationshandbuch.",
       "detailLoadError": "Die Ergebnisse dieses Moduls konnten nicht geladen werden. Bitte später erneut versuchen.",
       "detailEmptyTitle": "Noch kein Ergebnis",

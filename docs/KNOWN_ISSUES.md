@@ -1,5 +1,23 @@
 # Known Issues
 
+### ISSUE-110 — V10.1 Haiku 4.5 eu-central-1 Inference-Profile-Verfuegbarkeit unverifiziert (Live-Scoring latent no-op)
+- Status: open
+- Severity: Medium
+- Area: Data-Residency / Bedrock-Adapter (V10.1 module-delivery Live-Scoring)
+- Summary: `assessModulAnswer` (SLC-179) ruft `invokeHaiku` mit Modell `eu.anthropic.claude-haiku-4-5-20251001-v1:0` in `eu-central-1` (BEDROCK_HAIKU_REGION hardcoded, DSGVO-konform). Ob genau dieses Inference-Profile in eu-central-1 GA/aktiviert ist, wurde noch NICHT live verifiziert (analog ISSUE-099 eu-Praefix / ISSUE-093 Haiku-3-Deprecation). `src/lib/ai/bedrock-haiku/index.ts:21` markiert die Live-Verify explizit fuer /deploy.
+- Impact: Ist das Modell in eu-central-1 nicht verfuegbar, schlaegt jeder Haiku-Call fehl → `assessModulAnswer` **fail-open** → `{ok:true, rueckfrage:null}`, kein Crash, aber V10.1-Live-Scoring liefert 0 Rueckfragen + Ampel bleibt green-Baseline. Feature ist INERT (Flag OFF), daher kein User-Impact heute, aber der Kern-Value von V10.1 waere zur Laufzeit ein No-op.
+- Workaround: fail-open verhindert Ausfall; Ampel/SOP-Bruecke funktionieren deterministisch weiter (kein LLM).
+- Next Action: Im /deploy vor Feature-Enable: Live-Smoke `invokeHaiku` gegen eu-central-1 (1 echter assess-Call, Response + region im error_log pruefen). Bei Nicht-Verfuegbarkeit: Inference-Profile-ID/Region gegen Bedrock-Konsole abgleichen. Quelle: /final-check V10.1 RPT-559.
+
+### ISSUE-109 — 2 pre-existing eslint-Verstoesse blockieren repo-weites `eslint 0` (fuer /final-check V10.1)
+- Status: open
+- Severity: Low
+- Area: Repo-Hygiene / Lint (Fremd-Slices SLC-144 / SLC-150)
+- Summary: `eslint .` meldet auf `origin/main` (und damit allen V10.1-Branches) 1 error + 1 warning, beide NICHT in V10.1-Scope: (1) `react/no-unescaped-entities` in `src/app/admin/text-overrides/page.tsx:263` (eingefuehrt SLC-144, unescaptes `"` in JSX-Text), (2) `jsx-a11y/alt-text` warning in `src/lib/pdf/mandanten-report-v2/pages/cover.tsx:190` (SLC-150, `<Image>` ohne `alt`). Beide auf `origin/main` HEAD vorhanden.
+- Impact: SLC-178 (und jede V10.1-Slice) erreicht `eslint 0` nur fuer die eigenen geaenderten Files; das repo-weite `eslint 0`-Gate, das `/final-check` V10.1 erwartet, ist durch diese 2 Fremd-Items rot. Kein Laufzeit-Defekt (1 escaping-Kosmetik + 1 a11y-Warning im PDF-Cover).
+- Workaround: Slice-QA bewertet `eslint 0` gegen die slice-eigenen Files (SLC-178 clean).
+- Next Action: Im `/final-check` V10.1 (oder als eigener Hygiene-Commit auf `main`) beheben: `"` → `&quot;`/typografische Anfuehrung in `text-overrides/page.tsx:263`; `alt=""` (dekorativ) an `<Image>` in `cover.tsx:190`. Auf `main` fixen (nicht pro Slice-Branch), damit alle parallelen V10.1-Branches profitieren. Quelle: /qa SLC-178 RPT-551.
+
 ### ISSUE-105 — V9.75 SLC-V9.75-A Worker-Defense killt 3 ungestempelte gated Dispatch-Pfade fail-closed (Funktions-Regression)
 - Status: resolved
 - Severity: Blocker

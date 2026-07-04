@@ -74,6 +74,7 @@ export default async function StbModulBlockPage({
       locale={locale}
       existingCheckpoints={blockCheckpoints ?? []}
       basePath={modulBasePath(modulKey)}
+      modulKey={modulKey}
     />
   );
 }

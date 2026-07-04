@@ -1122,10 +1122,10 @@ Quelle: /slice-planning V10.1 (RPT-546), Architektur DEC-253. 6 Slices entlang 3
 |----|-------|---------|--------|----------|---------|
 | SLC-176 | [/module-delivery Skill (Dev-System)](SLC-176-module-delivery-skill.md) | FEAT-096 | done | High | 2026-07-02 |
 | SLC-177 | [MIG-129 Scoring-Flag-Seed (Autoring-Run)](SLC-177-mig129-scoring-flag-seed.md) | FEAT-096 | done | High | 2026-07-02 |
-| SLC-178 | [Modul-Reife-Ampel (Pure-Function + Reader)](SLC-178-modul-reife-ampel.md) | FEAT-096 | planned | High | 2026-07-02 |
-| SLC-179 | [Live-Haiku Scoring-Server-Action](SLC-179-live-scoring-assessment-action.md) | FEAT-097 | planned | High | 2026-07-02 |
-| SLC-180 | [Inline-Rückfrage-UI + Followup-Merge](SLC-180-inline-rueckfrage-ui-followup-merge.md) | FEAT-097 | planned | High | 2026-07-02 |
-| SLC-181 | [SOP-/Handbuch-Brücke](SLC-181-sop-bruecke.md) | FEAT-098 | planned | Medium | 2026-07-02 |
+| SLC-178 | [Modul-Reife-Ampel (Pure-Function + Reader)](SLC-178-modul-reife-ampel.md) | FEAT-096 | done | High | 2026-07-02 |
+| SLC-179 | [Live-Haiku Scoring-Server-Action](SLC-179-live-scoring-assessment-action.md) | FEAT-097 | done | High | 2026-07-02 |
+| SLC-180 | [Inline-Rückfrage-UI + Followup-Merge](SLC-180-inline-rueckfrage-ui-followup-merge.md) | FEAT-097 | done | High | 2026-07-02 |
+| SLC-181 | [SOP-/Handbuch-Brücke](SLC-181-sop-bruecke.md) | FEAT-098 | done | Medium | 2026-07-02 |
 
 ### V10.1 Execution Order (Dependency-getrieben)
 
@@ -1156,7 +1156,7 @@ Empfohlene Reihenfolge (Single-Founder): **176 → 177 → (178 ∥ 179) → 180
 | SLC-178 | C | keine | src/lib/stb-vertikale/module-delivery/reife-ampel.ts, src/app/dashboard/stb/workspace/*, i18n stb.* | Regel-Ampel in metadata; dep 177; disjunkt zu 179 |
 | SLC-179 | C | keine | src/lib/stb-vertikale/module-delivery/assess-answer.ts, .../assess-answer-prompt.ts | sync Haiku, fail-open; dep 177; disjunkt zu 178 |
 | SLC-180 | D | keine | src/app/dashboard/stb/modul/*, src/app/capture/[sessionId]/block/[blockKey]/submit-action.ts, src/components/stb/*, module-context.ts (mergeAnswers) | Followup-Merge; dep 179; Capture-Wizard-Drift beachten |
-| SLC-181 | E | (130 bedingt) | src/lib/stb-vertikale/module-delivery/sop-bridge.ts | dünne Brücke; Legacy src/workers/sop/* UNBERÜHRT; dep 177+180; letzter Slice |
+| SLC-181 | E | MIG-130 (Provenance) | sop-bridge.ts (pure) + sop-bridge-action.ts (Server-Action) + 130_v101_sop_bridge_provenance.sql | dünne Brücke; standard+impl.schritt→sop (DEC-256); Legacy src/workers/sop/* UNBERÜHRT; dep 177+180; letzter Slice |
 
 ### V10.1 Pflicht-Gates
 - Jeder Slice: `/qa` Pflicht nach /backend bzw. /frontend; `tsc` 0, `eslint` 0, `next build` PASS, 0 neue Deps (Haiku-Adapter existiert).
