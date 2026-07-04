@@ -1825,7 +1825,7 @@
       "title": "Berater-KI-Workspace-Shell (Hybrid-Layout + Route + Rollen-Gate)",
       "type": "feature",
       "priority": "high",
-      "status": "open",
+      "status": "in_progress",
       "version": "V10.2",
       "description": "FEAT-099: strategaize_admin-gated Workspace-Route mit Hybrid-Layout (Berichts-Buttons oben + Frage-Box Text+Sprache mitte + Antwort-Fenster unten), KI-Workspace-Hybrid-Muster, keine Widget-Karten.",
       "createdAt": "2026-07-04"
