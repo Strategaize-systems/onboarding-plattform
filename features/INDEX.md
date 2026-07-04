@@ -281,3 +281,13 @@ V10.1-Scope (Requirements 2026-07-02 via RPT-544, DEC-252, BL-521..524). Neue De
 | FEAT-096 | Phase 1 — Scoring-Auswertung + Modul-Reife-Ampel (LLM-Autoring-Lauf setzt 5 Flags an 17 Modulen, Founder-Abnahme, Seed MIG-129; Ampel green/yellow/red aus Flag+Antwort) | deployed | PRD §V10.1 | 2026-07-02 |
 | FEAT-097 | Phase 2 — Adaptive Echtzeit-Rueckfragen (Live-LLM bewertet Antwort per-Frage, cost-capped, Trigger-Schwelle + Max-Rueckfragen-Guardrail) | deployed | PRD §V10.1 | 2026-07-02 |
 | FEAT-098 | Phase 3 — SOP-/Handbuch-Bruecke (accepted modul_output standard+impl.schritt + Scoring → bestehende sop-Tabelle; Legacy src/workers/sop/* unberuehrt) | deployed | PRD §V10.1 | 2026-07-02 |
+
+## V10.2 — Berater-KI-Workspace "Mein Tag" (operative Querschnitts-Schicht) Features
+
+V10.2-Scope (Requirements 2026-07-04 via RPT-562). Cross-Mandanten-Tageseinstieg fuer den Berater (strategaize_admin) nach dem KI-Workspace-Hybrid-Muster (Berichts-Buttons + Frage-Box Text+Sprache + Antwort-Fenster). Kein 1:1-BS-Port — OP aggregiert Wissens-/Capture-/Mandanten-/Reife-Status. 0 neue Kern-Tabellen (Reuse capture_session/block_diagnosis/modul_output/knowledge_unit/ai_jobs/error_log/knowledge_chunks + Whisper-V5). EU-Data-Residency (Bedrock Frankfurt). Founder-Entscheidungen 2026-07-04: Berater cross-Mandant · Hybrid-Reports · RAG im ersten Cut · Sprache drin · Slot V10.2 (DEC-240 unberuehrt). Forks Q-V10.2-A..E → /architecture V10.2. Internal-Test-Mode. Spec-Detail in PRD §V10.2.
+
+| ID | Feature | Status | Spec | Created |
+|----|---------|--------|------|---------|
+| FEAT-099 | Berater-KI-Workspace-Shell (Route + strategaize_admin-Gate + Hybrid-Layout Berichts-Buttons/Frage-Box/Antwort-Fenster) | planned | PRD §V10.2 | 2026-07-04 |
+| FEAT-100 | 5 Standard-Berichte cross-Mandant (visuell + 2-3-Satz-KI-Kurzfazit Haiku 4.5 EU): Mandanten-Uebersicht, Review-Queue, Wo-stockt-es, System-/Gen-Status, Activity-Timeline | planned | PRD §V10.2 | 2026-07-04 |
+| FEAT-101 | RAG-Frage-Antwort (Text+Whisper-Sprache → Titan-V2-Embedding → knowledge_chunks mit Mandanten-Scoping → Bedrock-Antwort + Quellen) | planned | PRD §V10.2 | 2026-07-04 |
