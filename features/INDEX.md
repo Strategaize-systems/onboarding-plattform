@@ -280,4 +280,4 @@ V10.1-Scope (Requirements 2026-07-02 via RPT-544, DEC-252, BL-521..524). Neue De
 |----|---------|--------|------|---------|
 | FEAT-096 | Phase 1 — Scoring-Auswertung + Modul-Reife-Ampel (LLM-Autoring-Lauf setzt 5 Flags an 17 Modulen, Founder-Abnahme, Seed MIG-129; Ampel green/yellow/red aus Flag+Antwort) | in_progress | PRD §V10.1 | 2026-07-02 |
 | FEAT-097 | Phase 2 — Adaptive Echtzeit-Rueckfragen (Live-LLM bewertet Antwort per-Frage, cost-capped, Trigger-Schwelle + Max-Rueckfragen-Guardrail) | done | PRD §V10.1 | 2026-07-02 |
-| FEAT-098 | Phase 3 — SOP-/Handbuch-Bruecke (bewertete modul_output + Scoring → Legacy src/workers/sop/*) | planned | PRD §V10.1 | 2026-07-02 |
+| FEAT-098 | Phase 3 — SOP-/Handbuch-Bruecke (accepted modul_output standard+impl.schritt + Scoring → bestehende sop-Tabelle; Legacy src/workers/sop/* unberuehrt) | in_progress | PRD §V10.1 | 2026-07-02 |
