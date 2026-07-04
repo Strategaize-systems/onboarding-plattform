@@ -7,7 +7,6 @@
 // (defense-in-depth), damit kein beliebiger String an loadReport durchreicht.
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   loadReport,
@@ -15,6 +14,7 @@ import {
   type WorkspaceReport,
 } from "@/lib/workspace/reports";
 import { summarizeReport } from "@/lib/workspace/fazit";
+import { assertStrategaizeAdmin } from "@/lib/workspace/admin-gate";
 
 /** Kanonische Report-Labels (deutsch) — Single Source, auch von ReportButtons genutzt. */
 export const REPORT_LABELS: Record<ReportKey, string> = {
@@ -30,27 +30,6 @@ const VALID_KEYS = Object.keys(REPORT_LABELS) as ReportKey[];
 
 function isValidKey(key: unknown): key is ReportKey {
   return typeof key === "string" && (VALID_KEYS as string[]).includes(key);
-}
-
-/**
- * Re-gate: strategaize_admin. Liefert den User oder null.
- * MUSS vor jedem createAdminClient-Zugriff in einer Action laufen.
- */
-async function assertStrategaizeAdmin() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  if (!profile || profile.role !== "strategaize_admin") return null;
-  return user;
 }
 
 export type LoadReportResult =
