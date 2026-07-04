@@ -31,6 +31,15 @@ export default async function MeinTagPage() {
     redirect("/dashboard");
   }
 
+  // Mandantenliste fuer den Frage-Selector (SLC-184). strategaize_admin darf
+  // tenants cross-Mandant lesen (RLS). Reine UX — der tenant_id wird in der
+  // RAG-Action erneut server-seitig validiert (DEC-258).
+  const { data: tenantRows } = await supabase
+    .from("tenants")
+    .select("id, name")
+    .order("name", { ascending: true });
+  const tenants = (tenantRows ?? []) as Array<{ id: string; name: string }>;
+
   return (
     <div className="space-y-6">
       <div>
@@ -42,7 +51,7 @@ export default async function MeinTagPage() {
         </p>
       </div>
 
-      <WorkspaceShell />
+      <WorkspaceShell tenants={tenants} />
     </div>
   );
 }
