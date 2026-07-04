@@ -1,7 +1,6 @@
-// SLC-182 MT-3 — Report-Button-Reihe (Platzhalter fuer FEAT-100).
-// Fuenf Standard-Berichte cross-Mandant. Buttons sind funktionale Stubs:
-// Klick ruft onSelect(reportKey), die Shell schaltet dann den AnswerPanel
-// auf loading -> Stub-Antwort. Echte Berichte folgen in SLC-183.
+// SLC-182 MT-3 / SLC-183 — Report-Button-Reihe (FEAT-100).
+// Fuenf Standard-Berichte cross-Mandant. Klick ruft onSelect(reportKey); die Shell
+// laedt darueber den echten Bericht via loadWorkspaceReportAction (SLC-183).
 "use client";
 
 import {
