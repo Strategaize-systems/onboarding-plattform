@@ -116,8 +116,9 @@ export function AnswerPanel({
     );
   }
 
-  // Antwort ODER Coverage-Hinweis (answer kann null sein, wenn keine Grundlage existiert).
-  if (answer || coverage?.warning) {
+  // Antwort ODER Coverage-Hinweis ODER Quellen (answer kann null sein, wenn keine
+  // Grundlage existiert oder das LLM leer antwortet — Quellen bleiben dann sichtbar).
+  if (answer || coverage?.warning || sources.length > 0) {
     return (
       <div className="rounded-xl border border-slate-200 bg-white p-6">
         <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-brand-primary">
