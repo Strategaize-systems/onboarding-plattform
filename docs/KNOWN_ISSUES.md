@@ -1,5 +1,14 @@
 # Known Issues
 
+### ISSUE-110 — V10.1 Haiku 4.5 eu-central-1 Inference-Profile-Verfuegbarkeit unverifiziert (Live-Scoring latent no-op)
+- Status: open
+- Severity: Medium
+- Area: Data-Residency / Bedrock-Adapter (V10.1 module-delivery Live-Scoring)
+- Summary: `assessModulAnswer` (SLC-179) ruft `invokeHaiku` mit Modell `eu.anthropic.claude-haiku-4-5-20251001-v1:0` in `eu-central-1` (BEDROCK_HAIKU_REGION hardcoded, DSGVO-konform). Ob genau dieses Inference-Profile in eu-central-1 GA/aktiviert ist, wurde noch NICHT live verifiziert (analog ISSUE-099 eu-Praefix / ISSUE-093 Haiku-3-Deprecation). `src/lib/ai/bedrock-haiku/index.ts:21` markiert die Live-Verify explizit fuer /deploy.
+- Impact: Ist das Modell in eu-central-1 nicht verfuegbar, schlaegt jeder Haiku-Call fehl → `assessModulAnswer` **fail-open** → `{ok:true, rueckfrage:null}`, kein Crash, aber V10.1-Live-Scoring liefert 0 Rueckfragen + Ampel bleibt green-Baseline. Feature ist INERT (Flag OFF), daher kein User-Impact heute, aber der Kern-Value von V10.1 waere zur Laufzeit ein No-op.
+- Workaround: fail-open verhindert Ausfall; Ampel/SOP-Bruecke funktionieren deterministisch weiter (kein LLM).
+- Next Action: Im /deploy vor Feature-Enable: Live-Smoke `invokeHaiku` gegen eu-central-1 (1 echter assess-Call, Response + region im error_log pruefen). Bei Nicht-Verfuegbarkeit: Inference-Profile-ID/Region gegen Bedrock-Konsole abgleichen. Quelle: /final-check V10.1 RPT-559.
+
 ### ISSUE-109 — 2 pre-existing eslint-Verstoesse blockieren repo-weites `eslint 0` (fuer /final-check V10.1)
 - Status: open
 - Severity: Low
