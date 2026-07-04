@@ -854,3 +854,12 @@
 - Workaround: V10.2 FEAT-101 baut einen Coverage-Guard ein (DEC-261): count(knowledge_unit) vs count(knowledge_chunks, source_type='knowledge_unit') pro Mandant; bei Lücke ehrlicher UI-Hinweis + optionaler Re-Embed-Trigger (Reuse `embedKnowledgeUnits`) statt erfundener Antwort.
 - Next Action: Eigener Folge-Slice — Embedding-Reliability härten: Status-Persistenz statt fire-and-forget (z.B. echter ai_jobs-Job-Typ `knowledge_embed` mit Retry/Claim), Coverage-Monitoring pro Mandant. Aufgedeckt in /architecture V10.2 (RPT-563).
 
+### ISSUE-113 — "use server"-File exportierte ein Objekt (REPORT_LABELS) → Server-Action-Module-Crash zur Laufzeit (V10.2 FEAT-100)
+- Status: resolved
+- Severity: Blocker
+- Area: Next.js / Server-Actions / admin/mein-tag
+- Summary: `src/app/admin/mein-tag/actions.ts` (Direktive `"use server"`) exportierte neben den async Server-Actions auch `export const REPORT_LABELS` (ein Objekt). Next.js erlaubt in einem `"use server"`-Modul ausschliesslich async-Function-Exports; ein exportiertes Objekt wirft bei der Modul-Evaluation `Error: A "use server" file can only export async functions, found object.` (digest 2245492165@E352). `tsc`, `eslint` und `next build` (Turbopack) liefen alle EXIT 0 — der Fehler manifestierte sich NUR zur Laufzeit beim ersten Report-Button-Klick (Server-Action-Aufruf).
+- Impact: FEAT-100 (5 Standard-Berichte + Haiku-Kurzfazit) crashte in Produktion — Report-Klick → Error-Boundary „This page couldn't load". Feature ist strategaize_admin-gated (kein Mandanten-Impact). Frage-Antwort (FEAT-101) und Shell (FEAT-099) waren nicht betroffen (rag-action.ts exportiert nur async Functions + Types).
+- Workaround: keiner (harter Crash).
+- Next Action: Resolved im V10.2-Deploy-Hotfix — `export` von `REPORT_LABELS` entfernt (modul-intern, nur von `generateReportFazitAction` genutzt; `ReportButtons.tsx` haelt ohnehin seine eigene Label-Liste). Aufgedeckt im /deploy Live-Browser-Smoke 2026-07-04 (RPT-573). Prozess-Lehre → IMP im Dev-System (Build-gruen ≠ Runtime-gruen bei "use server"-Exports; Live-Browser-Smoke Pflicht-Gate).
+
