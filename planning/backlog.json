@@ -1835,7 +1835,7 @@
       "title": "5 Standard-Berichte cross-Mandant (visuell + KI-Kurzfazit)",
       "type": "feature",
       "priority": "high",
-      "status": "in_progress",
+      "status": "done",
       "version": "V10.2",
       "description": "FEAT-100: Mandanten-Uebersicht, Meine-Review-Queue, Wo-stockt-es, System-/Generierungs-Status, Activity-Timeline — je visuelle Aggregation aus Bestandsdaten + 2-3-Satz-KI-Kurzfazit via Haiku 4.5 eu-central-1. 0 neue Kern-Tabellen.",
       "createdAt": "2026-07-04"

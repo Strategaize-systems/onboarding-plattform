@@ -289,5 +289,5 @@ V10.2-Scope (Requirements 2026-07-04 via RPT-562). Cross-Mandanten-Tageseinstieg
 | ID | Feature | Status | Spec | Created |
 |----|---------|--------|------|---------|
 | FEAT-099 | Berater-KI-Workspace-Shell (Route + strategaize_admin-Gate + Hybrid-Layout Berichts-Buttons/Frage-Box/Antwort-Fenster) | done | PRD §V10.2 | 2026-07-04 |
-| FEAT-100 | 5 Standard-Berichte cross-Mandant (visuell + 2-3-Satz-KI-Kurzfazit Haiku 4.5 EU): Mandanten-Uebersicht, Review-Queue, Wo-stockt-es, System-/Gen-Status, Activity-Timeline | planned | PRD §V10.2 | 2026-07-04 |
+| FEAT-100 | 5 Standard-Berichte cross-Mandant (visuell + 2-3-Satz-KI-Kurzfazit Haiku 4.5 EU): Mandanten-Uebersicht, Review-Queue, Wo-stockt-es, System-/Gen-Status, Activity-Timeline | done | PRD §V10.2 | 2026-07-04 |
 | FEAT-101 | RAG-Frage-Antwort (Text+Whisper-Sprache → Titan-V2-Embedding → knowledge_chunks mit Mandanten-Scoping → Bedrock-Antwort + Quellen) | planned | PRD §V10.2 | 2026-07-04 |

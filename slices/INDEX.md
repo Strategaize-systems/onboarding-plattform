@@ -1179,7 +1179,7 @@ Empfohlene Reihenfolge (Single-Founder): **176 → 177 → (178 ∥ 179) → 180
 | ID | Slice | Feature | Status | Priority | Created |
 |----|-------|---------|--------|----------|---------|
 | SLC-182 | [Workspace-Shell + Gate + Nav](SLC-182-workspace-shell-gate-nav.md) | FEAT-099 | done | High | 2026-07-04 |
-| SLC-183 | [5 Standard-Berichte cross-Mandant (visuell) + KI-Kurzfazit](SLC-183-standard-berichte-kurzfazit.md) | FEAT-100 | in_progress | High | 2026-07-04 |
+| SLC-183 | [5 Standard-Berichte cross-Mandant (visuell) + KI-Kurzfazit](SLC-183-standard-berichte-kurzfazit.md) | FEAT-100 | done | High | 2026-07-04 |
 | SLC-184 | [RAG-Frage-Antwort + Coverage-Guard + Sprach-Eingabe](SLC-184-rag-frage-antwort-coverage-guard.md) | FEAT-101 | planned | High | 2026-07-04 |
 
 ### V10.2 Reihenfolge + Parallel-Readiness
