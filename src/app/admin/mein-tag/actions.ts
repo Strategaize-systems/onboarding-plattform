@@ -16,8 +16,11 @@ import {
 import { summarizeReport } from "@/lib/workspace/fazit";
 import { assertStrategaizeAdmin } from "@/lib/workspace/admin-gate";
 
-/** Kanonische Report-Labels (deutsch) — Single Source, auch von ReportButtons genutzt. */
-export const REPORT_LABELS: Record<ReportKey, string> = {
+// Kanonische Report-Labels (deutsch) fuer den KI-Kurzfazit-Titel. Modul-intern:
+// ein "use server"-File darf ausschliesslich async Functions exportieren (Next.js
+// Runtime-Constraint) — ein exportiertes Objekt crasht die Server-Action-Module-
+// Evaluation zur Laufzeit (ISSUE-113). ReportButtons.tsx haelt seine eigene Label-Liste.
+const REPORT_LABELS: Record<ReportKey, string> = {
   mandanten_uebersicht: "Mandanten-Übersicht",
   review_queue: "Meine Review-Queue",
   wo_stockt_es: "Wo stockt es",
