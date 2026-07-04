@@ -9812,3 +9812,54 @@ Keine neue externe Abhaengigkeit. **NEU genutzt: Bedrock Haiku 4.5** (`eu.anthro
 
 ### 11. Empfohlener naechster Schritt
 `/slice-planning V10.1` — 3 Phasen in Slices schneiden. Vorschlag-Reihenfolge: **P1** (Skill-Autoring-Lauf + MIG-129 + Regel-Ampel) → **P2** (Live-Haiku-Bewertung + inline-Rueckfrage + Followup-Merge) → **P3** (SOP-Bruecke). P1 zuerst, weil P2 die gesetzten Flags braucht.
+
+## V10.2 Architecture Addendum — Berater-KI-Workspace "Mein Tag" (Cross-Mandant) (RPT-563, 2026-07-04)
+
+### 1. Architektur-Summary
+Ein neuer **cross-Mandanten Berater-Workspace** unter `/admin/mein-tag`, gebaut fast vollstaendig aus Reuse: der bestehende `strategaize_admin`-Gate (`src/app/admin/layout.tsx:27`), das Cross-Tenant-Aggregat-Pattern (`src/lib/cockpit/load-cross-tenant.ts` via `createAdminClient`), der Bedrock-Haiku-Client (`src/lib/ai/bedrock-haiku`), der bestehende Bedrock-Sonnet-Pfad (module_output_synthesis), der Titan-Embedding-Adapter (`src/lib/ai/embeddings`), die RAG-RPC (`rpc_search_knowledge_chunks`, MIG-036) und der Whisper-Provider (`src/lib/ai/whisper`). **Kernentscheid: V10.2 ist migrations-frei** — die gesamte Aggregation liegt im Query-Layer (service-role nach Gate), es entstehen keine neuen Tabellen, Views, RPCs oder CHECK-Constraint-Aenderungen. Echter Neubau = (a) die Workspace-Shell/UI, (b) fuenf Bericht-Loader + je ein Haiku-Kurzfazit, (c) die RAG-Frage-Antwort-Kette (Embedding → Search → Sonnet-Antwort mit Quellen) inkl. Coverage-Guard, (d) eine duenne admin-gated Transcribe-Route.
+
+### 2. Hauptkomponenten
+| Komponente | Ort (neu/reuse) | Verantwortung |
+|---|---|---|
+| **Workspace-Page** | `src/app/admin/mein-tag/page.tsx` (neu) | Server-Component, Gate via `admin/layout.tsx`-Reuse, rendert Shell |
+| **WorkspaceShell** | `src/components/workspace/` (neu) | Hybrid-Layout: Berichts-Buttons oben · Frage-Box (Text+Sprache) mitte · Antwort-Fenster unten |
+| **Bericht-Loader** | `src/lib/workspace/reports/*.ts` (neu) | 5 Loader (je `loadX(admin): Promise<XReport>`) via `createAdminClient` nach Gate |
+| **KI-Kurzfazit** | `src/lib/workspace/fazit.ts` (neu) | `invokeHaiku` mit expliziter modelId, zod-Schema, fail-open, error_log-Audit |
+| **RAG-Kette** | `src/lib/workspace/rag.ts` + `src/app/admin/mein-tag/rag-action.ts` (neu) | Frage → Titan-Embedding → `rpc_search_knowledge_chunks(tenant)` → Sonnet-Antwort+Zitate; Coverage-Guard |
+| **Admin-Transcribe** | `src/app/api/admin/transcribe/route.ts` (neu, duenn) | strategaize_admin-gated Wrapper um `getWhisperProvider()`; in-memory, DSGVO |
+| **Cross-Tenant-Aggregat** | `load-cross-tenant.ts` (reuse/erweitern) | Basis fuer Bericht 1 (Mandanten-Uebersicht) |
+| **Ampel-Compute** | `computeModulReifeAmpel` (`module-delivery/reife-ampel.ts:44`, reuse) | Modul-Reife-Rollup pro Mandant (pure fn) |
+| **AdminSidebar** | `src/components/admin-sidebar.tsx:9` (reuse/erweitern) | neues NAV_ITEM `/admin/mein-tag` |
+
+### 3. Datenfluss
+- **Berichte:** Page (Gate) → `createAdminClient` → Bericht-Loader (Multi-Query cross-Tenant) → visuelle Aggregation gerendert → Button-Klick auf "Kurzfazit" → Server-Action `invokeHaiku(zahlen)` → 2-3-Satz-Text (on-demand, kein Cache in V1).
+- **RAG:** Frage (Text ODER Sprache→`/api/admin/transcribe`→Text) + gewaehlter Mandant → Server-Action: Titan-`embed(frage)` → `rpc_search_knowledge_chunks(embedding, tenant_id, limit)` → Top-Chunks → Coverage-Guard (siehe §7) → Sonnet-Prompt mit Kontext+Zitier-Instruktion → Antwort + Quellenliste.
+
+### 4. Datenmodell / Storage
+**Keine Aenderung.** Reuse-Reads: `tenants`, `profiles`, `capture_session`, `block_checkpoint`, `block_diagnosis`, `modul_output`, `capture_session.metadata.modul_delivery_ampel`, `knowledge_unit`, `validation_layer`, `ai_jobs`, `error_log`, `knowledge_chunks`, `bridge_run`, `handbook_snapshot`. Timeline-Quellen (created_at, tenant-scoped): `capture_events`, `diagnose_event`, `modul_output`, `validation_layer`, `block_checkpoint`, `ai_jobs`.
+
+### 5. Externe Abhaengigkeiten
+Bedrock Frankfurt eu-central-1 (Haiku 4.5 für Kurzfazit; Sonnet für RAG-Antwort; Titan V2 für Query-Embedding) — alle Adapter existieren, Region hardcoded EU. Whisper self-hosted `http://whisper:9000` (in-memory). Keine neuen Provider.
+
+### 6. Security / Privacy
+- **Cross-Tenant nur nach Gate:** `createAdminClient` (BYPASSRLS) wird ausschliesslich nach `strategaize_admin`-Check aufgerufen (`admin/layout.tsx`-Gate + expliziter Re-Check im Server-Action/Loader, kein Fallback auf `auth.user()` — security-audit-fable5-standard).
+- **RAG-tenant_id server-derived:** die gewaehlte Mandanten-ID wird server-seitig nach dem Admin-Gate an `rpc_search_knowledge_chunks` gebunden; nie ungeprueft aus dem Client uebernommen. Kein tenant → keine Suche (fail-closed).
+- **Whisper in-memory** (keine Persistenz, DSGVO, DEC-017-Linie); Admin-Transcribe-Route strategaize_admin-gated.
+- **Kein Customer-Outreach** (module-lifecycle-discipline, Internal-Test-Mode).
+
+### 7. Constraints, Tradeoffs, Risiken
+- **0 Migrationen** (DEC-260): Aggregation im Query-Layer statt Views/RPCs — bewusst boring/reviewable. Tradeoff: bei sehr vielen Mandanten Multi-Query-Last; akzeptabel im Internal-Test-Mode, View-Optimierung ist ein spaeterer Slice.
+- **RAG-Coverage-Risiko (KRITISCH, ISSUE-112):** `embedKnowledgeUnits()` (`src/workers/condensation/embed-knowledge-units.ts`) ist **fire-and-forget** (`handle-job.ts:208` `.catch(log)`); scheitert er, bleibt `knowledge_chunks` fuer den Tenant still leer und `rpc_search_knowledge_chunks` liefert 0 → eine RAG-Antwort waere wertlos/halluzinationsanfaellig. **Mitigation in FEAT-101 (DEC-261):** Coverage-Guard vor der Antwort — Query `count(knowledge_unit) vs count(knowledge_chunks, source_type='knowledge_unit')` pro Mandant; bei Luecke: ehrlicher Hinweis "keine/teilweise indexierten Erkenntnisse" statt erfundener Antwort, plus optionaler Re-Embed-Trigger (Reuse `embedKnowledgeUnits`). Kein neuer Embedding-Pipeline-Bau in V10.2.
+- **Kosten-Audit statt Ledger (DEC-259):** LLM-Calls schreiben `error_log`-Audit (Provider/Region/Model), NICHT `ai_cost_ledger` — konsistent mit dem Micro-Call-Praezedenzfall ISSUE-107 (assess-answer). Vermeidet CHECK-Constraint-Migration für neue Ledger-Rollen. `ai_cost_ledger`-Integration deferred, falls Volumen relevant wird.
+- **ISSUE-111-Falle:** Haiku-Call MUSS explizit `modelId: "eu.anthropic.claude-haiku-4-5-20251001-v1:0"` uebergeben (nicht auf `BEDROCK_V9_HAIKU_MODEL_ID`-ENV verlassen — der wird vom V9-bulk-email geteilt).
+
+### 8. Offene technische Fragen (→ /slice-planning V10.2)
+- F-A2: Bericht-Loader-Modularisierung — 5 separate Loader vs. 1 Sammel-Loader (Latenz vs. Granularitaet).
+- F-B2: RAG-Reranking — reicht der pgvector-Top-N oder leichtes Re-Ranking vor Sonnet-Injektion.
+- F-C2: Sprach-Aufnahme-UI — MediaRecorder-Blob (Reuse `questionnaire-form.tsx transcribeRecording`-Pattern) an admin-Transcribe.
+
+### 9. Empfohlene Implementierungs-Richtung
+Slice-Schnitt: **SLC-A Shell + Gate + Nav** (FEAT-099) → **SLC-B 5 Berichte (visuell) + Kurzfazit** (FEAT-100) → **SLC-C RAG-Kette + Coverage-Guard + Sprach-Eingabe** (FEAT-101). SLC-A zuerst (Shell traegt B+C). B vor C, weil die visuellen Berichte 0 LLM-Abhaengigkeit haben (schneller Nutzen) und C den kritischen Coverage-Guard braucht.
+
+### 10. Empfohlener naechster Schritt
+`/slice-planning V10.2` — 3 Slices schneiden (SLC-A/B/C wie §9), je mit Acceptance-Kriterien; die fire-and-forget-Coverage-Guard-Anforderung als AC in SLC-C verankern.
