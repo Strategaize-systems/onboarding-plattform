@@ -1180,7 +1180,7 @@ Empfohlene Reihenfolge (Single-Founder): **176 → 177 → (178 ∥ 179) → 180
 |----|-------|---------|--------|----------|---------|
 | SLC-182 | [Workspace-Shell + Gate + Nav](SLC-182-workspace-shell-gate-nav.md) | FEAT-099 | done | High | 2026-07-04 |
 | SLC-183 | [5 Standard-Berichte cross-Mandant (visuell) + KI-Kurzfazit](SLC-183-standard-berichte-kurzfazit.md) | FEAT-100 | done | High | 2026-07-04 |
-| SLC-184 | [RAG-Frage-Antwort + Coverage-Guard + Sprach-Eingabe](SLC-184-rag-frage-antwort-coverage-guard.md) | FEAT-101 | planned | High | 2026-07-04 |
+| SLC-184 | [RAG-Frage-Antwort + Coverage-Guard + Sprach-Eingabe](SLC-184-rag-frage-antwort-coverage-guard.md) | FEAT-101 | done | High | 2026-07-04 |
 
 ### V10.2 Reihenfolge + Parallel-Readiness
 Strikt sequentiell: **SLC-182 (Group 1) → SLC-183 (Group 2) → SLC-184 (Group 3)**. SLC-182 trägt die Shell (183+184 erweitern deren Komponenten). SLC-183 vor SLC-184: 183 hat 0 LLM-Abhängigkeit (schneller Nutzen), und beide berühren `QuestionBox`/`AnswerPanel`/`page.tsx` → nicht sauber parallelisierbar für einen Founder.

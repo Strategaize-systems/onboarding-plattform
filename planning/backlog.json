@@ -1845,7 +1845,7 @@
       "title": "RAG-Frage-Antwort-Box (Text + Whisper-Sprache)",
       "type": "feature",
       "priority": "high",
-      "status": "open",
+      "status": "done",
       "version": "V10.2",
       "description": "FEAT-101: Frage-Box Text + Whisper-Sprache (V5-Reuse) -> Titan-V2-Embedding -> knowledge_chunks-Suche mit Mandanten-Auswahl-Scoping (fail-closed) -> Bedrock-Antwort mit Quellenangaben. pgvector-Infra liegt bereit.",
       "createdAt": "2026-07-04"
