@@ -1785,7 +1785,7 @@
       "title": "module-delivery Phase 1 — Scoring-Auswertung + Modul-Reife-Ampel",
       "type": "feature",
       "priority": "high",
-      "status": "open",
+      "status": "in_progress",
       "version": "V10.1",
       "description": "LLM-Autoring-Lauf setzt die 5 Scoring-Flags an den 17 Modulen (Founder-Abnahme, Seed-Migration MIG-129, deterministisch) + Runtime-Auswertung: Modul-Reife-Ampel (green/yellow/red) aus Flag-Zustaenden + Antwort-Signalen. FEAT-096.",
       "createdAt": "2026-07-02"
@@ -1815,7 +1815,7 @@
       "title": "module-delivery Skill-Artefakt (/module-delivery Autoring/Setup)",
       "type": "feature",
       "priority": "medium",
-      "status": "open",
+      "status": "done",
       "version": "V10.1",
       "description": "Claude-Code-Skill /module-delivery: fuehrt den Founder durch den Flag-Autoring-Abnahme-Flow (LLM-Vorschlag pro Modul -> Founder-Abnahme -> Seed). Gegenstueck zum OP-Runtime-Feature. Teil Phase 1.",
       "createdAt": "2026-07-02"
