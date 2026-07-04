@@ -13,12 +13,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-export type ReportKey =
-  | "mandanten_uebersicht"
-  | "review_queue"
-  | "wo_stockt_es"
-  | "system_status"
-  | "activity_timeline";
+import type { ReportKey } from "@/lib/workspace/reports";
 
 interface ReportButtonsProps {
   onSelect: (reportKey: ReportKey) => void;

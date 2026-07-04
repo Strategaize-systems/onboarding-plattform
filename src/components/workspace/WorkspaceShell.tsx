@@ -1,48 +1,67 @@
-// SLC-182 MT-2 — Hybrid-KI-Workspace-Layout (statische Shell).
+// SLC-182/183 (OP V10.2) — Hybrid-KI-Workspace-Layout.
 // Drei Zonen: (oben) Mandanten-Selector-SLOT + Report-Buttons,
-// (mitte) Frage-Box, (unten) Antwort-Panel.
-// Owns lokalen status-State, damit Report-/Frage-Klicks den AnswerPanel
-// demonstrierbar durch empty -> loading -> Stub-Antwort schalten (fuer den
-// Smoke-Test). Keine Live-Daten, kein LLM, keine DB — folgt SLC-183/184.
+// (mitte) Frage-Box, (unten) Ergebnis-Zone (Bericht ODER Antwort).
+//
+// SLC-183: Report-Buttons laden echte Cross-Mandanten-Berichte via
+// loadWorkspaceReportAction (Server-Action, re-gated). Die Ergebnis-Zone rendert
+// je nach reportStatus: loading (Skeleton) / error (Hinweis) / Bericht (ReportView)
+// / sonst das Frage-Antwort-Panel. Der Frage-Pfad (QuestionBox) bleibt der
+// SLC-182-Stub — echtes RAG folgt in SLC-184.
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 
-import { ReportButtons, type ReportKey } from "./ReportButtons";
+import type { ReportKey, WorkspaceReport } from "@/lib/workspace/reports";
+import { Skeleton } from "@/components/ui/skeleton";
+
+import { loadWorkspaceReportAction } from "@/app/admin/mein-tag/actions";
+import { ReportButtons } from "./ReportButtons";
 import { QuestionBox } from "./QuestionBox";
 import { AnswerPanel, type WorkspaceStatus } from "./AnswerPanel";
+import { ReportView } from "./reports/ReportView";
 
-const REPORT_STUBS: Record<ReportKey, string> = {
-  mandanten_uebersicht: "Mandanten-Übersicht: Live-Daten folgen in SLC-183.",
-  review_queue: "Meine Review-Queue: Live-Daten folgen in SLC-183.",
-  wo_stockt_es: "Wo stockt es: Live-Daten folgen in SLC-183.",
-  system_status: "System-Status: Live-Daten folgen in SLC-183.",
-  activity_timeline: "Activity-Timeline: Live-Daten folgen in SLC-183.",
-};
+type ReportStatus = "idle" | "loading" | "error";
 
 export function WorkspaceShell() {
-  const [status, setStatus] = useState<WorkspaceStatus>("empty");
+  const [, startTransition] = useTransition();
+
+  // Bericht-Zweig (SLC-183).
+  const [reportStatus, setReportStatus] = useState<ReportStatus>("idle");
+  const [report, setReport] = useState<WorkspaceReport | null>(null);
+
+  // Frage-Zweig (SLC-182-Stub, RAG folgt SLC-184).
+  const [answerStatus, setAnswerStatus] = useState<WorkspaceStatus>("empty");
   const [answer, setAnswer] = useState<string | null>(null);
 
-  // Stub-Ablauf: Klick -> loading -> nach kurzer Verzoegerung Stub-Antwort.
-  // Ersetzt in SLC-183/184 durch echte Berichts-/RAG-Calls.
-  const runStub = (stubAnswer: string) => {
+  const handleSelectReport = (key: ReportKey) => {
+    // Frage-Antwort verdrängen, Bericht-Zone übernimmt.
     setAnswer(null);
-    setStatus("loading");
-    setTimeout(() => {
-      setAnswer(stubAnswer);
-      setStatus("empty");
-    }, 600);
-  };
-
-  const handleSelectReport = (reportKey: ReportKey) => {
-    runStub(REPORT_STUBS[reportKey]);
+    setAnswerStatus("empty");
+    setReport(null);
+    setReportStatus("loading");
+    startTransition(async () => {
+      const result = await loadWorkspaceReportAction(key);
+      if (result.ok) {
+        setReport(result.report);
+        setReportStatus("idle");
+      } else {
+        setReportStatus("error");
+      }
+    });
   };
 
   const handleSubmitQuestion = (question: string) => {
-    runStub(
-      `Frage erhalten: „${question}“\n\nDie KI-gestützte Antwort folgt in SLC-184.`,
-    );
+    // SLC-182-Stub: freie Frage. Echtes RAG folgt SLC-184.
+    setReport(null);
+    setReportStatus("idle");
+    setAnswer(null);
+    setAnswerStatus("loading");
+    setTimeout(() => {
+      setAnswer(
+        `Frage erhalten: „${question}“\n\nDie KI-gestützte Antwort folgt in SLC-184.`,
+      );
+      setAnswerStatus("empty");
+    }, 600);
   };
 
   return (
@@ -59,8 +78,23 @@ export function WorkspaceShell() {
       {/* Middle-Zone: Frage-Box */}
       <QuestionBox onSubmit={handleSubmitQuestion} />
 
-      {/* Bottom-Zone: Antwort-Panel */}
-      <AnswerPanel status={status} answer={answer} />
+      {/* Bottom-Zone: Bericht ODER Frage-Antwort */}
+      {reportStatus === "loading" ? (
+        <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-6">
+          <Skeleton className="h-5 w-1/3" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-11/12" />
+          <Skeleton className="h-4 w-2/3" />
+        </div>
+      ) : reportStatus === "error" ? (
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-6 text-sm text-slate-500">
+          Bericht konnte nicht geladen werden. Bitte versuche es erneut.
+        </div>
+      ) : report ? (
+        <ReportView report={report} />
+      ) : (
+        <AnswerPanel status={answerStatus} answer={answer} />
+      )}
     </div>
   );
 }
