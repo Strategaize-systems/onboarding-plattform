@@ -845,3 +845,12 @@
 - Workaround: Re-Klick „Kern auswerten" sobald der Throttle abklingt re-evaluiert idempotent (eine dann grüne Kern-Antwort blendet die Vertiefung wieder aus).
 - Next Action: Optional MT-2/Polish — sanfter Retry-Backoff in `assessAnswerAmpel` bei `ServiceUnavailableException` (statt sofortigem fail-open), oder Batch-Parallelitaet drosseln. Quelle: SLC-172 MT-1 /qa Runtime-Smoke, RPT-532.
 
+### ISSUE-112 — Fire-and-forget knowledge_chunks-Embedding kann still fehlschlagen → RAG-Coverage-Lücke (V10.2 FEAT-101)
+- Status: open
+- Severity: Medium
+- Area: RAG / knowledge_chunks / Embedding-Worker
+- Summary: `knowledge_chunks` (RAG-Index, MIG-036) wird ausschliesslich via `embedKnowledgeUnits()` (`src/workers/condensation/embed-knowledge-units.ts`) befüllt, aufgerufen fire-and-forget aus `src/workers/condensation/handle-job.ts:208` (`.catch(log)`). Scheitert der Embedding-Batch (Bedrock-Throttle, Titan-Fehler), bleibt `knowledge_chunks` für den betroffenen Mandanten still leer — es gibt kein Retry, kein Monitoring, keinen sichtbaren Fehlerstatus. `rpc_search_knowledge_chunks` liefert dann 0 Treffer.
+- Impact: Die V10.2-RAG-Frage-Box (FEAT-101) liefert für einen Mandanten mit unvollständigem Index leere/wertlose Antworten. Ohne Guard bestünde Halluzinationsrisiko. Betrifft nur die RAG-Antwortqualität, keine Daten-/Tenant-Sicherheit.
+- Workaround: V10.2 FEAT-101 baut einen Coverage-Guard ein (DEC-261): count(knowledge_unit) vs count(knowledge_chunks, source_type='knowledge_unit') pro Mandant; bei Lücke ehrlicher UI-Hinweis + optionaler Re-Embed-Trigger (Reuse `embedKnowledgeUnits`) statt erfundener Antwort.
+- Next Action: Eigener Folge-Slice — Embedding-Reliability härten: Status-Persistenz statt fire-and-forget (z.B. echter ai_jobs-Job-Typ `knowledge_embed` mit Retry/Claim), Coverage-Monitoring pro Mandant. Aufgedeckt in /architecture V10.2 (RPT-563).
+

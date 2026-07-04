@@ -1819,6 +1819,36 @@
       "version": "V10.1",
       "description": "Claude-Code-Skill /module-delivery: fuehrt den Founder durch den Flag-Autoring-Abnahme-Flow (LLM-Vorschlag pro Modul -> Founder-Abnahme -> Seed). Gegenstueck zum OP-Runtime-Feature. Teil Phase 1.",
       "createdAt": "2026-07-02"
+    },
+    {
+      "id": "BL-525",
+      "title": "Berater-KI-Workspace-Shell (Hybrid-Layout + Route + Rollen-Gate)",
+      "type": "feature",
+      "priority": "high",
+      "status": "done",
+      "version": "V10.2",
+      "description": "FEAT-099: strategaize_admin-gated Workspace-Route mit Hybrid-Layout (Berichts-Buttons oben + Frage-Box Text+Sprache mitte + Antwort-Fenster unten), KI-Workspace-Hybrid-Muster, keine Widget-Karten.",
+      "createdAt": "2026-07-04"
+    },
+    {
+      "id": "BL-526",
+      "title": "5 Standard-Berichte cross-Mandant (visuell + KI-Kurzfazit)",
+      "type": "feature",
+      "priority": "high",
+      "status": "done",
+      "version": "V10.2",
+      "description": "FEAT-100: Mandanten-Uebersicht, Meine-Review-Queue, Wo-stockt-es, System-/Generierungs-Status, Activity-Timeline — je visuelle Aggregation aus Bestandsdaten + 2-3-Satz-KI-Kurzfazit via Haiku 4.5 eu-central-1. 0 neue Kern-Tabellen.",
+      "createdAt": "2026-07-04"
+    },
+    {
+      "id": "BL-527",
+      "title": "RAG-Frage-Antwort-Box (Text + Whisper-Sprache)",
+      "type": "feature",
+      "priority": "high",
+      "status": "done",
+      "version": "V10.2",
+      "description": "FEAT-101: Frage-Box Text + Whisper-Sprache (V5-Reuse) -> Titan-V2-Embedding -> knowledge_chunks-Suche mit Mandanten-Auswahl-Scoping (fail-closed) -> Bedrock-Antwort mit Quellenangaben. pgvector-Infra liegt bereit.",
+      "createdAt": "2026-07-04"
     }
   ]
 }

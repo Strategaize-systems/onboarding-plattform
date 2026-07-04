@@ -1173,3 +1173,31 @@ Empfohlene Reihenfolge (Single-Founder): **176 → 177 → (178 ∥ 179) → 180
 
 ### V10.1 Offene technische Fragen (bei Slice-Start / im /backend zu fixieren)
 - F-A (SLC-179): Trigger-Schwelle + Max-Rückfragen/Block. · F-B (SLC-179): Latenz-Budget pro Frage vs. Block-Advance. · F-C (SLC-176/177): Autoring-Prompt-Guardrails gegen Über-Flagging + Abnahme-UX. · F-D (SLC-181): SOP-Brücken-Mapping-Kontrakt. · F-E (SLC-178/180): Trigger-Hit-Heilung nach guter Nachantwort.
+
+## V10.2 Slices (Berater-KI-Workspace "Mein Tag" — operative Querschnitts-Schicht)
+
+| ID | Slice | Feature | Status | Priority | Created |
+|----|-------|---------|--------|----------|---------|
+| SLC-182 | [Workspace-Shell + Gate + Nav](SLC-182-workspace-shell-gate-nav.md) | FEAT-099 | done | High | 2026-07-04 |
+| SLC-183 | [5 Standard-Berichte cross-Mandant (visuell) + KI-Kurzfazit](SLC-183-standard-berichte-kurzfazit.md) | FEAT-100 | done | High | 2026-07-04 |
+| SLC-184 | [RAG-Frage-Antwort + Coverage-Guard + Sprach-Eingabe](SLC-184-rag-frage-antwort-coverage-guard.md) | FEAT-101 | done | High | 2026-07-04 |
+
+### V10.2 Reihenfolge + Parallel-Readiness
+Strikt sequentiell: **SLC-182 (Group 1) → SLC-183 (Group 2) → SLC-184 (Group 3)**. SLC-182 trägt die Shell (183+184 erweitern deren Komponenten). SLC-183 vor SLC-184: 183 hat 0 LLM-Abhängigkeit (schneller Nutzen), und beide berühren `QuestionBox`/`AnswerPanel`/`page.tsx` → nicht sauber parallelisierbar für einen Founder.
+
+| Slice | Parallel-Group | MIG | File-Touchpoints | Notes |
+|---|---|---|---|---|
+| SLC-182 | 1 | keine | admin-sidebar.tsx, app/admin/mein-tag/page.tsx, components/workspace/{WorkspaceShell,ReportButtons,QuestionBox,AnswerPanel}.tsx | trägt 183+184 |
+| SLC-183 | 2 | keine | lib/workspace/reports/*, lib/workspace/fazit.ts, components/workspace/reports/*, app/admin/mein-tag/{page,fazit-action}.ts(x) | nach 182 |
+| SLC-184 | 3 | keine | app/api/admin/transcribe/route.ts, lib/workspace/rag.ts, app/admin/mein-tag/rag-action.ts, components/workspace/{QuestionBox,AnswerPanel,TenantSelector}.tsx | nach 183 (shared QuestionBox/AnswerPanel) |
+
+### V10.2 Pflicht-Gates
+- **0 Migrationen** über alle 3 Slices (DEC-260) — kein MIG-Live-Apply, keine DB-Sidecar-Migrations-Tests.
+- Worktree-Isolation pro Slice (SaaS-Pflicht); Pre-Merge-Re-Check (6 Schritte) — besonders **Pattern-Drift auf `QuestionBox`/`AnswerPanel`** zwischen SLC-183 und SLC-184.
+- Security: `createAdminClient` (BYPASSRLS) NUR nach strategaize_admin-Re-Check; RAG-`tenant_id` server-derived (kein Client-Trust); Whisper in-memory (DSGVO). Kein `ai_cost_ledger`, error_log-Audit (DEC-259).
+- **Coverage-Guard (AC-184-3) ist verbindlich** (ISSUE-112) — RAG-Antwort bei fehlender Indexierung ehrlich statt halluziniert.
+- `/qa` nach jedem Slice: `tsc` 0, `eslint` 0, `next build` PASS; hermetische Tests + Browser-Smoke (Live-Haiku/Sonnet/Whisper im /qa-Runtime).
+- Gesamt-/qa über alle 3 Slices vor /final-check.
+
+### V10.2 Offene technische Fragen (bei Slice-Start / im /frontend zu fixieren)
+- F-A2 (SLC-183): Loader-Modularisierung (5 separate vs. 1 Sammel-Loader). · F-B2 (SLC-184): RAG-Reranking (pgvector-Top-N vs. leichtes Re-Ranking). · F-C2 (SLC-184): Sprach-Aufnahme-UI (MediaRecorder-Reuse `questionnaire-form.tsx`).

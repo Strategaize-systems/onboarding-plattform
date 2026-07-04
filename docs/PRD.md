@@ -2934,3 +2934,69 @@ SaaS Product (Internal-Test-Mode, kein Customer-Outreach — `module-lifecycle-d
 
 ### Detail-Spec
 V10-Requirements-Baseline 2026-06-20 als RPT-505. Grounding: Dev-System `StrategAIze Module.xlsx` (46 Module/11 Kategorien, M-04/05/06 = Kern Finanzen&Controlling), `M-04 – Grundlegende Finanzsteuerung`-Modul-Spec, `StrategAIze Workspace.docx`, `docs/STB_VERTIKALE_R3R4_UEBERSICHT_2026-06-18.md` (§2 Wirk-Schicht, §3 Stufe-1, §4 Lieferkette, §8 DATEV, §9 KI-Lieferung) + OP-Capability-Scan 2026-06-20. **Status: READY fuer /architecture V10.** Keine BLOCKING-OQs; Forks Q-V10-A..E = /architecture-Aufgabe, Q-V10-F = Founder-Versionierung. 6 Feature-Skeleton-Specs `/features/FEAT-090..095-*.md`. Naechster Schritt: `/architecture V10` (Modul-Domaene-Schnitt + Blueprint-Reuse + KI-Output-Pipeline + Migration-Skizze ab 124).
+
+## V10.2 — Berater-KI-Workspace "Mein Tag" (operative Querschnitts-Schicht)
+
+### Problem Statement (V10.2)
+Der Berater (`strategaize_admin`, heute der Founder) hat **keinen operativen Tageseinstieg ueber alle Mandanten**. Der Status ist verstreut ueber `/admin/tenants` (Cross-Tenant-Fortschritt), `/admin/reviews` (offene Reviews), `/dashboard` (Single-Tenant-Metriken), Diagnose-Ampeln und Modul-Outputs — eine Klick-Safari. Es fehlt der eine "wo muss ich heute hin"-Blick und die Moeglichkeit, eine freie Frage an den erfassten Wissensbestand zu stellen.
+
+### Goal (V10.2)
+Ein **cross-Mandanten-Berater-Workspace** als taeglicher Ankerpunkt nach dem KI-Workspace-Hybrid-Muster: 4-5 visuelle Standard-Berichte (je mit KI-Kurzfazit) + eine RAG-Frage-Box (Text + Sprache) -> Antwort. Vollstaendig auf vorhandenem OP-Datenbestand, **0 neue Kern-Tabellen**.
+
+### Primary user(s) (V10.2)
+- **Primaer:** der Berater als `strategaize_admin` (cross-Mandant) — heute der Founder.
+- **Nicht in V10.2:** Mandanten-Self-View (`tenant_admin`), Mitarbeiter-Sicht (`employee`) — geparkt fuer spaeter.
+
+### V10.2 In Scope
+- **FEAT-099 Workspace-Shell:** `strategaize_admin`-gated Route + Hybrid-Layout (Berichts-Buttons oben · Frage-Box Text+Sprache mitte · Antwort-Fenster unten). Keine klassischen Widget-Karten (KI-Workspace-Muster).
+- **FEAT-100 Standard-Berichte cross-Mandant** (je *visuelle Aggregation + 2-3-Satz-KI-Kurzfazit* via Haiku 4.5 eu-central-1):
+  1. **Mandanten-Uebersicht** — pro Mandant: Capture-Fortschritt (`block_checkpoint` submitted/total), Diagnose-Ampel-Rollup (`block_diagnosis`), Modul-Reife-Ampel (V10.1), letzte Aktivitaet. Basis: `load-cross-tenant.ts`.
+  2. **Meine Review-Queue** — offene `knowledge_unit` (status `proposed`) + Walkthrough-Reviews pro Mandant.
+  3. **Wo stockt es** — Mandanten mit langer Inaktivitaet / roter Diagnose-Ampel / `failed` ai_jobs.
+  4. **System-/Generierungs-Status** — `ai_jobs` (running/failed) + `error_log` (24h).
+  5. **Activity-Timeline cross-Mandant** — "seit gestern / seit Login" aus `capture_events`/`diagnose_event`/`modul_output`/`validation_layer`.
+- **FEAT-101 RAG-Frage-Antwort:** Frage-Box Text + **Whisper-Sprache (V5 `walkthrough_transcribe`-Reuse)** -> Titan-V2-Embedding (Bedrock EU) -> `knowledge_chunks`-Similarity-Search (Mandanten-Auswahl-Scoping) -> Bedrock-Antwort mit Quellenangaben.
+
+### V10.2 Out of Scope
+- Mandanten-Self-View / Mitarbeiter-Sicht (spaeterer Slot).
+- "Meine Berichte"-Custom-Report-Dropdown (BS-V7.6-Muster, parked).
+- Reife-/Score-Trendlinien (braucht neue Snapshot-Historie — heute nur Punkt-in-Zeit).
+- Dashboard-Editor-UI, Email-/Workflow-Trigger, narrative Voll-Reports.
+- cross-tenant-RAG ohne Mandanten-Auswahl (security — V1-Default ist Mandanten-Auswahl-Pflicht).
+- Kein Customer-Outreach/Pilot/Anwalt (`module-lifecycle-discipline`).
+
+### Core Features (V10.2)
+FEAT-099 (Shell) · FEAT-100 (Berichte) · FEAT-101 (RAG). Echter Neubau = die Workspace-Shell + Bericht-Aggregations-/Kurzfazit-Schicht + RAG-Frage-Antwort-UI. Infra (Cross-Tenant-Query `load-cross-tenant.ts`, `knowledge_chunks`+`rpc_search_knowledge_chunks`, Bedrock-Client, Whisper-V5, Cost-Ledger) ist Reuse.
+
+### Constraints (V10.2)
+- **0 neue Kern-Tabellen** — Reuse `capture_session`/`block_checkpoint`/`block_diagnosis`/`modul_output`/`knowledge_unit`/`validation_layer`/`ai_jobs`/`error_log`/`knowledge_chunks`. Erlaubt: 1-2 Aggregations-Views/RPCs (Wo-stockt-es + Activity-Timeline sind Multi-Join).
+- **EU-Data-Residency:** KI-Kurzfazit + RAG-Antwort ueber Bedrock Frankfurt eu-central-1; Embedding Titan V2 EU (`data-residency.md` + `rag-embedding-pattern.md`). Kein US-Endpoint.
+- **Security:** service-role cross-tenant-Reads NUR nach `strategaize_admin`-Rollen-Check (`security-audit-fable5-standard`); RAG-Mandanten-Scoping fail-closed.
+- **Cost-Tracking:** `ai_cost_ledger`-Eintraege fuer KI-Kurzfazit + RAG-Antwort (Ledger-Rollen); synthetic `ai_jobs`-Row-Pattern bei synchronen Provider-Calls (`backend.md`).
+- **Whisper-Reuse** aus V5 (`walkthrough_transcribe`) — kein neuer Speech-Adapter.
+- **Internal-Test-Mode** (`module-lifecycle-discipline`).
+
+### Risks / Assumptions (V10.2)
+- **knowledge_chunks-Coverage:** heute nur aus `knowledge_unit` befuellt — RAG-Antwortqualitaet haengt an Chunk-Abdeckung. Annahme: reicht fuer Berater-Fragen; sonst Backfill-Slice (Q-V10.2-E).
+- **KI-Kurzfazit-Latenz/Kosten** pro Button-Klick -> on-demand vs. gecacht pro Bericht-Snapshot (Q-V10.2-C).
+- **RAG-cross-Mandant-Scoping** = Architektur-Entscheid; Mandanten-Auswahl-Pflicht als sicherer V1-Default (Q-V10.2-B).
+- **Aggregations-Last:** Wo-stockt-es + Activity-Timeline sind Multi-Join ueber alle Mandanten — ggf. View/RPC statt Query-Layer (Q-V10.2-D).
+
+### Success Criteria (V10.2)
+- Der Berater oeffnet EINE Seite und sieht cross-Mandant "wer braucht was / was wartet auf Review / wo stockt es" — ohne Seiten-Hopping.
+- Jeder der 5 Berichte laedt die visuelle Aggregation + zeigt ein korrektes 2-3-Satz-KI-Kurzfazit.
+- Eine freie Frage (getippt ODER gesprochen) liefert eine belegte Antwort aus dem Wissensbestand des gewaehlten Mandanten.
+- 0 neue Kern-Tabellen; alle Berichte aus Bestandsdaten.
+
+### Open Questions (V10.2) — /architecture V10.2
+- Q-V10.2-A: Route/Nav-Verortung — `/admin/mein-tag` vs. `/admin/workspace`; ersetzt/ergaenzt es `/admin/tenants` als Landing?
+- Q-V10.2-B: RAG-Scoping — Mandanten-Auswahl-Pflicht (V1-Default) vs. optionale cross-tenant-Suche (service-role, security-audit-relevant).
+- Q-V10.2-C: KI-Kurzfazit — Provider (Haiku 4.5) + Caching (on-demand vs. gecacht pro Bericht-Snapshot) + `ai_cost_ledger`-Rolle.
+- Q-V10.2-D: Aggregations-Schicht — Views/RPCs noetig (Wo-stockt-es + Activity-Timeline Multi-Join) oder reicht der Query-Layer?
+- Q-V10.2-E: knowledge_chunks-Coverage — reicht der Bestand fuer sinnvolle RAG-Antworten oder Backfill-Slice noetig?
+
+### Delivery mode
+SaaS Product (Internal-Test-Mode, kein Customer-Outreach — `module-lifecycle-discipline`). V10.2 = operative Querschnitts-Schicht auf der StB-Phase-1-Linie (Berater-Cockpit), baut auf V10/V10.1-Datenbestand; `v11`/`v12` bleiben fuer StB Stufe-2/3 reserviert (DEC-240).
+
+### Detail-Spec
+V10.2-Requirements-Baseline 2026-07-04 als RPT-562, basierend auf /discovery (dieselbe Session) + OP-Datenbestand-Kartierung (Explore-Sweep 2026-07-04). Grounding: Memory [[feedback-ki-workspace-pattern]] (BS-P-010-Hybrid-Muster), `load-cross-tenant.ts`/`load-metrics.ts`/`workspace-read.ts` (Cross-/Single-Tenant-Aggregation), Migration 036 `knowledge_chunks`+`rpc_search_knowledge_chunks` (pgvector-RAG-Infra), `block_diagnosis`+`modul_output`-Ampeln. **Status: READY fuer /architecture V10.2.** Keine BLOCKING-OQs; Forks Q-V10.2-A..E = /architecture-Aufgabe. Feature-Specs pointen auf PRD §V10.2 (wie V10.1). Naechster Schritt: `/architecture V10.2`.
