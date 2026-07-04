@@ -1,13 +1,13 @@
 # Known Issues
 
-### ISSUE-111 — V10.1 BEDROCK_V9_HAIKU_MODEL_ID zeigt auf Sonnet-4 → Live-Scoring liefe auf Sonnet statt Haiku 4.5 (pre-Feature-Enable-Config-Fix)
-- Status: open
+### ISSUE-111 — V10.1 BEDROCK_V9_HAIKU_MODEL_ID zeigt auf Sonnet-4 → Live-Scoring liefe auf Sonnet statt Haiku 4.5 (RESOLVED via Code-Override, wirksam ab naechstem Redeploy)
+- Status: resolved
 - Severity: Medium
 - Area: Coolify-ENV / Bedrock-Adapter (V10.1 module-delivery Live-Scoring)
 - Summary: `invokeHaiku` liest die Modell-ID aus `process.env.BEDROCK_V9_HAIKU_MODEL_ID || DEFAULT_HAIKU_MODEL_ID` (bedrock-haiku/index.ts:45-49). Im /deploy V10.1 (2026-07-04) live entdeckt: die Coolify-ENV `BEDROCK_V9_HAIKU_MODEL_ID` (UND `BEDROCK_V9_SONNET_MODEL_ID`) ist auf `eu.anthropic.claude-sonnet-4-20250514-v1:0` gesetzt — der „HAIKU"-Slot enthaelt eine Sonnet-4-ID (V9-Alt-Config-Carry-Over, V9 nutzte real kein Haiku). → `assessModulAnswer` wuerde **Sonnet-4** aufrufen, nicht Haiku 4.5.
 - Impact: Funktional OK (Sonnet-4 ist verfuegbar + faehiger), aber gegen Founder F-B (Haiku 4.5 fuer geringe Latenz per Frage) + hoehere Kosten (~$3/$15 vs $1/$5). Feature INERT/Flag-OFF → heute 0 Impact.
 - Workaround: keiner noetig solange Flag OFF.
-- Next Action: VOR Feature-Enable in Coolify `BEDROCK_V9_HAIKU_MODEL_ID` auf die echte Haiku-4.5-ID `eu.anthropic.claude-haiku-4-5-20251001-v1:0` setzen (Live-Smoke bestaetigt: in eu-central-1 verfuegbar, ISSUE-110). Optional sauberer: dedizierte ENV `BEDROCK_HAIKU_MODEL_ID` einfuehren statt V9-Slot zu ueberladen. Quelle: /deploy V10.1 RPT-561.
+- Next Action: RESOLVED 2026-07-04 via **Code-Override** (nicht ENV-Fix). Grund: der geteilte ENV `BEDROCK_V9_HAIKU_MODEL_ID` wird AUCH vom live V9-bulk-email-Pre-Filter (`src/workers/bulk-email/handle-pre-filter-job.ts`) gelesen — ENV auf Haiku zu flippen wuerde V9-Verhalten aendern (Risiko). Stattdessen pinnt `assess-answer.ts` Haiku 4.5 explizit via `invokeHaiku(..., { modelId: MODULE_DELIVERY_MODEL_ID })` (`resolveModelId(override)` hat Override-Vorrang vor ENV) + Audit-Label = tatsaechliches Modell. V9-bulk-email unberuehrt. tsc0/eslint0/module-delivery 38 Tests GREEN. **Wirksam ab naechstem Redeploy** (Feature OFF → nicht dringend, kann mit Feature-Enable-Deploy bundeln, um Burn-In nicht zu resetten). Offen als separate Frage (NICHT V10.1): ob der V9-bulk-email-Pre-Filter absichtlich auf Sonnet-4 laeuft oder selbst ein Haiku-Miss ist — separat pruefen. Quelle: /deploy V10.1 RPT-561 + Fix RPT-561.
 
 ### ISSUE-110 — V10.1 Haiku 4.5 eu-central-1 Inference-Profile-Verfuegbarkeit (RESOLVED — im /deploy live bestaetigt verfuegbar)
 - Status: resolved

@@ -35,10 +35,19 @@ import {
 /** error_log-Source der Audit-Eintraege (data-residency.md Nachweispflicht). */
 const ASSESS_AUDIT_SOURCE = "modul_delivery_live_scoring" as const;
 
-/** Modell-Label fuer den Audit-Trail (Adapter default, wenn ENV ungesetzt). */
-const HAIKU_MODEL_LABEL =
-  process.env.BEDROCK_V9_HAIKU_MODEL_ID ??
-  "eu.anthropic.claude-haiku-4-5-20251001-v1:0";
+/**
+ * V10.1 pinnt Haiku 4.5 EXPLIZIT (ISSUE-111): der geteilte ENV
+ * `BEDROCK_V9_HAIKU_MODEL_ID` ist in Prod auf eine Sonnet-4-ID gesetzt (V9-Alt-Config)
+ * und wird auch vom V9-bulk-email-Pre-Filter gelesen — daher NICHT den ENV aendern,
+ * sondern die Modell-ID hier per invokeHaiku-Override durchreichen (F-B: Haiku 4.5
+ * fuer geringe Latenz). Region bleibt hardcoded eu-central-1 (data-residency.md).
+ * Live-Smoke /deploy V10.1 (RPT-561): in eu-central-1 verfuegbar.
+ */
+const MODULE_DELIVERY_MODEL_ID =
+  "eu.anthropic.claude-haiku-4-5-20251001-v1:0" as const;
+
+/** Modell-Label fuer den Audit-Trail = tatsaechlich aufgerufenes Modell (ISSUE-111). */
+const HAIKU_MODEL_LABEL = MODULE_DELIVERY_MODEL_ID;
 
 /** Kleines Token-Budget: Status + eine knappe Rueckfrage (F-B Latenz). */
 const ASSESS_MAX_TOKENS = 200;
@@ -117,7 +126,7 @@ export async function assessModulAnswer(
     const result = await invokeHaiku(
       { system, user: userPrompt },
       ModulAnswerAssessmentSchema,
-      { temperature: 0, maxTokens: ASSESS_MAX_TOKENS },
+      { temperature: 0, maxTokens: ASSESS_MAX_TOKENS, modelId: MODULE_DELIVERY_MODEL_ID },
     );
     assessment = result.data;
     await admin.from("error_log").insert({
