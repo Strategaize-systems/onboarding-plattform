@@ -1292,7 +1292,7 @@ Der uebernommene Blueprint-Stand ist noch nicht auf einer Onboarding-Plattform-I
 - Risk: Minimal — Drop+Add eines CHECK mit Superset der Live-Werte; kein Bestands-Row verletzt den neuen CHECK.
 - Rollback Notes: CHECK ohne `'email_bulk_critic'` neu anlegen (20-Werte-Liste aus MIG-111). Reversibel solange keine Ledger-Rows mit role `email_bulk_critic` existieren (sonst vorher Rows loeschen oder role nullen).
 
-### MIG-130 — V10.1 SLC-181 SOP-Brücke Provenance (DATEI ERSTELLT, nicht live; /backend 2026-07-04, DEC-256)
+### MIG-130 — V10.1 SLC-181 SOP-Brücke Provenance (LIVE-applied 2026-07-04 /deploy — postgres-User base64+ssh+psql; sop.source_modul_output_id + uq_sop_source_modul_output verifiziert)
 - Date: 2026-07-04
 - Scope: SQL-Datei `130_v101_sop_bridge_provenance.sql`. Additiv, **kein Touch an bestehenden sop-Rows/Funktionen**: `ALTER TABLE sop ADD COLUMN source_modul_output_id uuid` (nullable FK → `modul_output`, `ON DELETE SET NULL`) + non-partieller `CREATE UNIQUE INDEX uq_sop_source_modul_output ON sop(source_modul_output_id)` + `NOTIFY pgrst`. Idempotent (ADD COLUMN/CREATE INDEX IF NOT EXISTS).
 - Reason: SLC-181 SOP-Brücke braucht Provenance + Idempotenz. NULLs sind per Default DISTINCT → beliebig viele Legacy-SOP-Rows (`source NULL`, vom `sop_generation`-Worker) bleiben erlaubt + unberührt; bridge-Rows (`source != NULL`) sind je Quell-Output eindeutig → idempotenter Re-Run via `INSERT ... ON CONFLICT (source_modul_output_id) DO NOTHING`. Non-partiell, damit `ON CONFLICT (col)` den Index inferieren kann. Founder-Entscheid gegen reine Reuse (DEC-256).

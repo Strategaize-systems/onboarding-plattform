@@ -1,13 +1,22 @@
 # Known Issues
 
-### ISSUE-110 — V10.1 Haiku 4.5 eu-central-1 Inference-Profile-Verfuegbarkeit unverifiziert (Live-Scoring latent no-op)
+### ISSUE-111 — V10.1 BEDROCK_V9_HAIKU_MODEL_ID zeigt auf Sonnet-4 → Live-Scoring liefe auf Sonnet statt Haiku 4.5 (pre-Feature-Enable-Config-Fix)
 - Status: open
+- Severity: Medium
+- Area: Coolify-ENV / Bedrock-Adapter (V10.1 module-delivery Live-Scoring)
+- Summary: `invokeHaiku` liest die Modell-ID aus `process.env.BEDROCK_V9_HAIKU_MODEL_ID || DEFAULT_HAIKU_MODEL_ID` (bedrock-haiku/index.ts:45-49). Im /deploy V10.1 (2026-07-04) live entdeckt: die Coolify-ENV `BEDROCK_V9_HAIKU_MODEL_ID` (UND `BEDROCK_V9_SONNET_MODEL_ID`) ist auf `eu.anthropic.claude-sonnet-4-20250514-v1:0` gesetzt — der „HAIKU"-Slot enthaelt eine Sonnet-4-ID (V9-Alt-Config-Carry-Over, V9 nutzte real kein Haiku). → `assessModulAnswer` wuerde **Sonnet-4** aufrufen, nicht Haiku 4.5.
+- Impact: Funktional OK (Sonnet-4 ist verfuegbar + faehiger), aber gegen Founder F-B (Haiku 4.5 fuer geringe Latenz per Frage) + hoehere Kosten (~$3/$15 vs $1/$5). Feature INERT/Flag-OFF → heute 0 Impact.
+- Workaround: keiner noetig solange Flag OFF.
+- Next Action: VOR Feature-Enable in Coolify `BEDROCK_V9_HAIKU_MODEL_ID` auf die echte Haiku-4.5-ID `eu.anthropic.claude-haiku-4-5-20251001-v1:0` setzen (Live-Smoke bestaetigt: in eu-central-1 verfuegbar, ISSUE-110). Optional sauberer: dedizierte ENV `BEDROCK_HAIKU_MODEL_ID` einfuehren statt V9-Slot zu ueberladen. Quelle: /deploy V10.1 RPT-561.
+
+### ISSUE-110 — V10.1 Haiku 4.5 eu-central-1 Inference-Profile-Verfuegbarkeit (RESOLVED — im /deploy live bestaetigt verfuegbar)
+- Status: resolved
 - Severity: Medium
 - Area: Data-Residency / Bedrock-Adapter (V10.1 module-delivery Live-Scoring)
 - Summary: `assessModulAnswer` (SLC-179) ruft `invokeHaiku` mit Modell `eu.anthropic.claude-haiku-4-5-20251001-v1:0` in `eu-central-1` (BEDROCK_HAIKU_REGION hardcoded, DSGVO-konform). Ob genau dieses Inference-Profile in eu-central-1 GA/aktiviert ist, wurde noch NICHT live verifiziert (analog ISSUE-099 eu-Praefix / ISSUE-093 Haiku-3-Deprecation). `src/lib/ai/bedrock-haiku/index.ts:21` markiert die Live-Verify explizit fuer /deploy.
 - Impact: Ist das Modell in eu-central-1 nicht verfuegbar, schlaegt jeder Haiku-Call fehl → `assessModulAnswer` **fail-open** → `{ok:true, rueckfrage:null}`, kein Crash, aber V10.1-Live-Scoring liefert 0 Rueckfragen + Ampel bleibt green-Baseline. Feature ist INERT (Flag OFF), daher kein User-Impact heute, aber der Kern-Value von V10.1 waere zur Laufzeit ein No-op.
 - Workaround: fail-open verhindert Ausfall; Ampel/SOP-Bruecke funktionieren deterministisch weiter (kein LLM).
-- Next Action: Im /deploy vor Feature-Enable: Live-Smoke `invokeHaiku` gegen eu-central-1 (1 echter assess-Call, Response + region im error_log pruefen). Bei Nicht-Verfuegbarkeit: Inference-Profile-ID/Region gegen Bedrock-Konsole abgleichen. Quelle: /final-check V10.1 RPT-559.
+- Next Action: RESOLVED 2026-07-04 im /deploy V10.1 (RPT-561): node:22-Sidecar-Live-Smoke gegen Bedrock eu-central-1 mit den Prod-App-AWS-Creds (ENV-Bootstrap, Creds danach geloescht) → `eu.anthropic.claude-haiku-4-5-20251001-v1:0` antwortet „OK". Haiku 4.5 ist in Frankfurt verfuegbar. Folge-Finding: die ENV zeigt aktuell auf Sonnet-4 → ISSUE-111 (pre-Enable-Config-Fix).
 
 ### ISSUE-109 — 2 pre-existing eslint-Verstoesse blockieren repo-weites `eslint 0` (fuer /final-check V10.1)
 - Status: open
