@@ -3000,3 +3000,61 @@ SaaS Product (Internal-Test-Mode, kein Customer-Outreach — `module-lifecycle-d
 
 ### Detail-Spec
 V10.2-Requirements-Baseline 2026-07-04 als RPT-562, basierend auf /discovery (dieselbe Session) + OP-Datenbestand-Kartierung (Explore-Sweep 2026-07-04). Grounding: Memory [[feedback-ki-workspace-pattern]] (BS-P-010-Hybrid-Muster), `load-cross-tenant.ts`/`load-metrics.ts`/`workspace-read.ts` (Cross-/Single-Tenant-Aggregation), Migration 036 `knowledge_chunks`+`rpc_search_knowledge_chunks` (pgvector-RAG-Infra), `block_diagnosis`+`modul_output`-Ampeln. **Status: READY fuer /architecture V10.2.** Keine BLOCKING-OQs; Forks Q-V10.2-A..E = /architecture-Aufgabe. Feature-Specs pointen auf PRD §V10.2 (wie V10.1). Naechster Schritt: `/architecture V10.2`.
+
+## V10.2.1 — Embedding-Reliability-Härtung (ISSUE-112)
+
+### Problem Statement (V10.2.1)
+`knowledge_chunks` (RAG-Index) wird ausschliesslich fire-and-forget via `embedKnowledgeUnits()` befuellt (`handle-job.ts:208` + `handle-recondense.ts:207`, je `.catch(log)`). Scheitert ein Titan/Bedrock-Batch (Throttle, Fehler), bleibt der Index fuer den Mandanten still (teil-)leer — kein Retry, kein Status, kein Monitoring. Die V10.2-RAG-Frage-Box liefert dann leere/duenne Antworten (der V10.2-Coverage-Guard verhindert nur Halluzination, heilt aber nicht). Loest das in V10.2 offen gebliebene Q-V10.2-E.
+
+### Goal (V10.2.1)
+Kein Mandant hat je einen still unvollstaendigen RAG-Index. Coverage-Luecken werden automatisch, selbstheilend und beobachtbar geschlossen — Altlasten wie kuenftige, unabhaengig von der Ursache.
+
+### Primary user(s) (V10.2.1)
+Berater/Founder (strategaize_admin) — profitiert indirekt (vollstaendige RAG-Antworten). **Kein neues UI**; der V10.2-Re-Embed-Knopf bleibt als Sofort-Trigger.
+
+### V10.2.1 In Scope
+- Neuer Cron `GET /api/cron/knowledge-embed-reconcile` (x-cron-secret-Auth: 503 ohne Secret, 401/403 bei Mismatch — 1:1-Pattern aus `pending-signup-cleanup`).
+- Mandanten-Enumeration; pro Mandant Count-Gap-Check (`count(knowledge_unit)` vs `count(knowledge_chunks WHERE source_type='knowledge_unit' AND status='active')` — identische Query wie `rag.ts` `DEFAULT_RAG_DEPS`).
+- Bei Luecke (`chunkCount < kuCount`): `reembedTenantKnowledge(admin, tenantId)` (Reuse V10.2, idempotenter Upsert, ledger-frei, fail-open).
+- Altlasten-Heilung im ersten Lauf (u.a. Founder-Mandant "5 von 35").
+- Beobachtbarkeit: `captureInfo` pro Lauf (`category='knowledge_embed_reconcile'`, metadata `{tenantsChecked, tenantsWithGap, chunksReembedded, failures}`); `captureException` pro fehlgeschlagenem Mandant.
+- Idempotent + Safe-No-Op bei vollstaendigem Index (0 Re-Embed).
+- Coolify-Scheduled-Task `knowledge-embed-reconcile` (`*/10 * * * *`) via node-fetch-Pattern.
+- Route-Tests (Auth 503/401/200 + Gap→Re-Embed + No-Gap→No-Op) hermetisch mit injizierten Deps.
+
+### V10.2.1 Out of Scope
+- Echter `ai_jobs`-Job-Typ `knowledge_embed` / Per-Job-Status (spaeterer Scale-Schritt bei echtem Kundenvolumen).
+- Only-missing-Optimierung — V1 re-embedded ALLE KUs eines Gap-Mandanten (idempotent, akzeptierte Simplifikation; Optimierung geparkt).
+- Andere RAG-Quellen (`email_synthesized_unit`, Transkripte), Modell-/Chunking-Aenderungen, Health-Dashboard, Alerting ueber `error_log` hinaus.
+- Umbau/Entfernen des Fire-and-forget-Hot-Path-Calls — bleibt als Best-Effort-First-Pass, der Cron ist das Netz (Hot-Path-Stabilitaet, R-minimal).
+
+### Constraints (V10.2.1)
+- 0 neue Kern-Tabellen, **wahrscheinlich 0 Migration** (Reuse bestehender Primitiven).
+- EU-Data-Residency (Titan V2 Frankfurt via `getEmbeddingProvider`, unveraendert).
+- `CRON_SECRET` in Coolify (existiert bereits fuer andere Crons).
+- Pattern-Reuse Pflicht: Cron-Route (`pending-signup-cleanup`) + `reembedTenantKnowledge` + Count-Gap-Query.
+- Internal-Test-Mode (`module-lifecycle-discipline`).
+
+### Risks / Assumptions (V10.2.1)
+- R1: Re-embed-all-on-gap statt only-missing → leicht mehr Titan-Tokens; akzeptiert (idempotent, kleine Skala, Titan ~$0.02/MTok).
+- R2: Permanent fehlschlagende KU → Cron retryt jeden Tick; gewuenscht (transient heilt), permanent = groesseres Alarm-Signal (geloggt), kein Endlos-Schaden (idempotent, fail-open).
+- R3: Tenant-Enumeration → N×2 Counts/Tick; bei Internal-Scale vernachlaessigbar.
+- Annahme: `tenants`-Tabelle existiert + hat `id` (via V10.2 rag-action Tenant-Validierung bestaetigt) — im /architecture verifizieren.
+
+### Success Criteria (V10.2.1)
+- SC1: Cron mit gueltigem Secret schliesst eine kuenstlich erzeugte Luecke (chunkCount < kuCount) im naechsten Lauf (danach chunkCount == kuCount).
+- SC2: Cron ohne/falschem Secret → 503/401, kein DB-Touch.
+- SC3: Vollstaendiger Index → 0 Re-Embed (Safe-No-Op).
+- SC4: Beobachtbarkeits-Log in `error_log` mit korrekter category + Counts.
+- SC5: tsc 0 / eslint 0 / vitest gruen / next build.
+- SC6 (Live): erster Prod-Lauf schliesst die Founder-Mandant-Luecke ("5 von 35" → vollstaendig), verifiziert via Count-Query.
+
+### Open Questions (V10.2.1) — /architecture V10.2.1
+- Q-V10.2.1-A: Tenant-Enumeration + Gap-Erkennung — `tenants`-Tabelle bzw. `DISTINCT knowledge_unit.tenant_id` mit per-Tenant-Counts (0 Migration) vs. ein Aggregat-RPC (1 Migration, effizienter bei vielen Mandanten).
+- Q-V10.2.1-B: Cron-Frequenz `*/10` bestaetigen; Batch-Cap/Timeout bei vielen Gap-Mandanten pro Tick.
+
+### Delivery mode
+SaaS Product (Internal-Test-Mode, kein Customer-Outreach — `module-lifecycle-discipline`). V10.2.1 = Reliability-Patch auf V10.2-RAG.
+
+### Detail-Spec
+V10.2.1-Requirements-Baseline 2026-07-05 (RPT-576), aus /discovery (dieselbe Session, Option 1/4 Self-Healing-Cron Founder-bestaetigt). Grounding (file:line): `src/lib/workspace/rag.ts` (Count-Gap-Query `DEFAULT_RAG_DEPS.countKnowledgeUnits/countIndexedChunks` + `reembedTenantKnowledge` idempotent/ledger-frei), `src/workers/condensation/embed-knowledge-units.ts` (Embed+Upsert-Shape + Fire-and-forget-Ursprung), `handle-job.ts:208` + `handle-recondense.ts:207` (Call-Sites), `src/app/api/cron/pending-signup-cleanup/route.ts` (Cron-Pattern x-cron-secret + error_log-Audit + Coolify-Scheduled-Task). **Status: READY fuer /architecture V10.2.1.** Keine BLOCKING-OQs; Q-V10.2.1-A/B = /architecture-Aufgabe. Naechster Schritt: `/architecture V10.2.1`.

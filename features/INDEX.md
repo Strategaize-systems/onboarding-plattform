@@ -291,3 +291,11 @@ V10.2-Scope (Requirements 2026-07-04 via RPT-562). Cross-Mandanten-Tageseinstieg
 | FEAT-099 | Berater-KI-Workspace-Shell (Route + strategaize_admin-Gate + Hybrid-Layout Berichts-Buttons/Frage-Box/Antwort-Fenster) | deployed | PRD §V10.2 | 2026-07-04 |
 | FEAT-100 | 5 Standard-Berichte cross-Mandant (visuell + 2-3-Satz-KI-Kurzfazit Haiku 4.5 EU): Mandanten-Uebersicht, Review-Queue, Wo-stockt-es, System-/Gen-Status, Activity-Timeline | deployed | PRD §V10.2 | 2026-07-04 |
 | FEAT-101 | RAG-Frage-Antwort (Text+Whisper-Sprache → Titan-V2-Embedding → knowledge_chunks mit Mandanten-Scoping → Bedrock-Antwort + Quellen) | deployed | PRD §V10.2 | 2026-07-04 |
+
+## V10.2.1 — Embedding-Reliability-Härtung (ISSUE-112) Features
+
+V10.2.1-Scope (Requirements 2026-07-05 via RPT-576). Patch-Slice: Self-Healing Reconciliation-Cron schliesst RAG-Coverage-Luecken (knowledge_chunks fire-and-forget → still leer, ISSUE-112) automatisch. Reuse der V10.2 Count-Gap-Query (rag.ts Coverage-Guard) + reembedTenantKnowledge (idempotent, ledger-frei) + OP-Cron-Pattern (pending-signup-cleanup). Heilt Altlasten + kuenftige Luecken. Loest V10.2 Q-V10.2-E. 0 Migration erwartet. EU-Data-Residency (Titan Frankfurt) unberuehrt. Internal-Test-Mode. Spec-Detail in PRD §V10.2.1.
+
+| ID | Feature | Status | Spec | Created |
+|----|---------|--------|------|---------|
+| FEAT-102 | Embedding-Reliability Reconciliation-Cron (Self-Healing knowledge_chunks-Coverage: Gap-Erkennung + idempotenter Re-Embed + error_log-Beobachtbarkeit) | in_progress | PRD §V10.2.1 | 2026-07-05 |
