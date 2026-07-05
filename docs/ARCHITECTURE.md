@@ -9863,3 +9863,44 @@ Slice-Schnitt: **SLC-A Shell + Gate + Nav** (FEAT-099) → **SLC-B 5 Berichte (v
 
 ### 10. Empfohlener naechster Schritt
 `/slice-planning V10.2` — 3 Slices schneiden (SLC-A/B/C wie §9), je mit Acceptance-Kriterien; die fire-and-forget-Coverage-Guard-Anforderung als AC in SLC-C verankern.
+
+## V10.2.1 Architecture Addendum — Embedding-Reliability-Härtung (ISSUE-112) (RPT-577, 2026-07-05)
+
+### 1. Architektur-Zusammenfassung
+Ein **Self-Healing Reconciliation-Cron** schließt RAG-Coverage-Lücken in `knowledge_chunks`, die durch den fire-and-forget-Embedding-Pfad (DEC-261/ISSUE-112) still entstehen können. Kein neues UI, **0 Migration, 0 neue Tabellen** — ein dünner Cron-Orchestrator über bestehende V10.2-Primitiven (`reembedTenantKnowledge` + Count-Gap-Query) im OP-Cron-Pattern. Entscheidungen in DEC-262.
+
+### 2. Hauptkomponenten
+- **Cron-Route** `src/app/api/cron/knowledge-embed-reconcile/route.ts` — GET, `runtime='nodejs'`, `dynamic='force-dynamic'`; x-cron-secret-Auth (503 ohne `CRON_SECRET`, 403 bei Mismatch, 200 Pass, 500 Throw). Dünn: Auth → Orchestrator → JSON-Summary.
+- **Reconcile-Orchestrator** `src/lib/workspace/reconcile-embeddings.ts` — `reconcileEmbeddings(admin, deps?)`: listet Mandanten, prüft pro Mandant Coverage, ruft bei Lücke `reembedTenantKnowledge`, aggregiert Counts. Injizierbare Deps (hermetische Tests).
+- **rag.ts de-drift-Refactor** — Count-Gap-Logik als exportierter Helper `getTenantCoverage(admin, tenantId): {kuCount, chunkCount}` (heute privat in `DEFAULT_RAG_DEPS`); Cron + RAG-Coverage-Guard teilen dieselbe Query.
+- **Coolify-Scheduled-Task** `knowledge-embed-reconcile` (`*/10 * * * *`, node-fetch mit `x-cron-secret`) — Ops-Config, kein Code.
+
+### 3. Verantwortlichkeiten
+- Route = Auth-Gate + Aufruf + Response (keine Business-Logik).
+- Orchestrator = Enumeration (`tenants.select("id")`) + per-Tenant `getTenantCoverage` + sequentieller Re-Embed bei Gap (Cap `MAX_TENANTS_PER_RUN=25`) + Summary.
+- `reembedTenantKnowledge` (unverändert, V10.2) = idempotenter Titan-Batch + Upsert pro Mandant.
+- `getTenantCoverage` (neu, aus rag.ts) = die eine Wahrheit der Gap-Definition.
+
+### 4. Datenmodell / Storage
+**0 Migration.** `knowledge_chunks` unverändert; Idempotenz über bestehenden Unique-Constraint (`source_type, source_id, chunk_index`). Enumeration über `tenants(id)`. Keine neue Tabelle/Spalte/RPC/View.
+
+### 5. Datenfluss
+Coolify-Tick (`*/10`) → `GET /api/cron/knowledge-embed-reconcile` (x-cron-secret) → Auth-Guard → `reconcileEmbeddings(admin)`: `tenants.select("id")` → **sequentiell** je Mandant `getTenantCoverage` → wenn `chunkCount < kuCount`: `reembedTenantKnowledge` (Titan-Batch → Upsert) → akkumuliere `{tenantsChecked, tenantsWithGap, chunksReembedded, failures, capped}` → `captureInfo`-Summary → `200` JSON. Fehler pro Mandant: `captureException`, fail-open (blockt andere nicht).
+
+### 6. Externe Abhängigkeiten
+Amazon Titan V2 Embeddings via `getEmbeddingProvider()` (Bedrock **eu-central-1**, unverändert). Keine neue Integration.
+
+### 7. Security / Privacy
+`createAdminClient` (service-role/BYPASSRLS) — zulässig: trusted server-side Reconciliation ohne User-Kontext, hinter x-cron-secret-Gate (security-audit-standard: Admin-Client nach vertrauenswürdigem Gate). Alle Writes tenant-scoped (`reembedTenantKnowledge` filtert `.eq('tenant_id', tenantId)`, Chunks tragen `tenant_id`) → kein Cross-Tenant-Leak. Logs enthalten nur Counts + `tenant_id`, keine PII. EU-Data-Residency: Titan Frankfurt unverändert.
+
+### 8. Constraints & Tradeoffs
+- **Reembed-all-on-gap** statt only-missing (R1) — akzeptiert, idempotent, kleine Skala.
+- **Sequentiell** statt parallel — Throttle-freundlich, minimal langsamer (bei kleiner N irrelevant).
+- **Per-Tenant-Counts** statt Aggregat-RPC (DEC-262) — 0 Migration; Skalierungs-Promotion geparkt.
+- **`MAX_TENANTS_PER_RUN=25`** — Safety-Cap; Rest heilt nächster Tick; Cap-Hit wird geloggt.
+
+### 9. Offene technische Fragen
+Keine blockierenden. Backend-Detail: exakter Cap-Wert (Default 25) + ob `getTenantCoverage` `status='active'` mitfiltert (ja — identisch zum V10.2-Guard).
+
+### 10. Empfohlener nächster Schritt
+`/slice-planning V10.2.1` — 1 Slice **SLC-185** (Cron-Route + Reconcile-Orchestrator + rag.ts-Helper-Extraktion + Route-Tests + Coolify-Task), Acceptance = SC1–SC6 aus PRD §V10.2.1. Kein Migrations-Slice.
