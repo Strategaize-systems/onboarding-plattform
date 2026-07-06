@@ -10,7 +10,7 @@ import { PartnerShell } from "./partner-shell";
  * wird zur Cross-Tenant-Sicht `/admin/partners` weitergeleitet (V7+ kommt
  * Impersonate-Switch mit Tenant-Picker, das ist V6 nicht).
  *
- * Andere Rollen (`tenant_admin`, `tenant_member`, `employee`) werden auf ihre
+ * Andere Rollen (`tenant_admin`, `employee`) werden auf ihre
  * eigene Landing-Page umgeleitet — die Middleware deckt das fuer den ersten
  * Request bereits ab, dieser Inline-Check ist Defense-in-Depth.
  *
@@ -41,7 +41,6 @@ export default async function PartnerLayout({
 
   if (profile.role === "strategaize_admin") redirect("/admin/partners");
   if (profile.role === "tenant_admin") redirect("/dashboard");
-  if (profile.role === "tenant_member") redirect("/dashboard");
   if (profile.role === "employee") redirect("/employee");
   if (profile.role !== "partner_admin") redirect("/login");
   if (!profile.tenant_id) redirect("/login");

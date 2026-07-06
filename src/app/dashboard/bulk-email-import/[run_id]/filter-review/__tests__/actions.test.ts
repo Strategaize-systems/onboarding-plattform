@@ -210,18 +210,6 @@ describe("updateEmailClassifications", () => {
       if (!result.ok) expect(result.error).toMatch(/Tenant-Admins/);
     });
 
-    it("rejects tenant_member role", async () => {
-      mocks.userClientMock.mockImplementation(() =>
-        buildUserClient({
-          profile: { id: USER, tenant_id: TENANT, role: "tenant_member" },
-        }),
-      );
-      const result = await updateEmailClassifications(RUN_ID, [
-        { message_id: MSG_ID_1, new_label: "content" },
-      ]);
-      expect(result.ok).toBe(false);
-      if (!result.ok) expect(result.error).toMatch(/Tenant-Admins/);
-    });
 
     it("rejects tenant_admin without tenant_id", async () => {
       mocks.userClientMock.mockImplementation(() =>

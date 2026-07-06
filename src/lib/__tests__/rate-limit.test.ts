@@ -1,6 +1,12 @@
 import { describe, it, expect, vi } from "vitest";
 
-import { signupLimiter, createRateLimiter, extractClientIp } from "../rate-limit";
+import {
+  signupLimiter,
+  createRateLimiter,
+  extractClientIp,
+  passwordResetIpLimiter,
+  passwordResetAccountLimiter,
+} from "../rate-limit";
 
 describe("signupLimiter (V7 SLC-132)", () => {
   // Use a unique identifier per test so concurrent tests do not collide
@@ -44,6 +50,90 @@ describe("signupLimiter (V7 SLC-132)", () => {
       spy.mockReturnValue(baseTime + 60 * 60 * 1000 + 1);
 
       // First request in the new window must be allowed again
+      const afterSlide = limiter.check(id);
+      expect(afterSlide.allowed).toBe(true);
+      expect(afterSlide.remaining).toBe(2);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+});
+
+describe("passwordResetIpLimiter (V10.3 SLC-186 MT-3)", () => {
+  it("allows the first 5 requests per identifier and rejects the 6th", () => {
+    const id = `ip-${Math.random()}::pwreset-ip`;
+    expect(passwordResetIpLimiter.check(id).allowed).toBe(true);
+    expect(passwordResetIpLimiter.check(id).allowed).toBe(true);
+    expect(passwordResetIpLimiter.check(id).allowed).toBe(true);
+    expect(passwordResetIpLimiter.check(id).allowed).toBe(true);
+    expect(passwordResetIpLimiter.check(id).allowed).toBe(true);
+
+    const sixth = passwordResetIpLimiter.check(id);
+    expect(sixth.allowed).toBe(false);
+    expect(sixth.retryAfterSeconds).toBeGreaterThan(0);
+    expect(sixth.retryAfterSeconds).toBeLessThanOrEqual(15 * 60);
+    expect(sixth.error).toMatch(/Sekunden/);
+  });
+
+  it("resets the window after windowMs elapses (fresh limiter + Date.now mock)", () => {
+    const limiter = createRateLimiter({
+      maxAttempts: 5,
+      windowMs: 15 * 60 * 1000,
+    });
+
+    const id = "test-pwreset-ip-window";
+    const baseTime = 1_700_000_000_000;
+    const spy = vi.spyOn(Date, "now").mockReturnValue(baseTime);
+
+    try {
+      for (let i = 0; i < 5; i++) {
+        expect(limiter.check(id).allowed).toBe(true);
+      }
+      expect(limiter.check(id).allowed).toBe(false);
+
+      spy.mockReturnValue(baseTime + 15 * 60 * 1000 + 1);
+
+      const afterSlide = limiter.check(id);
+      expect(afterSlide.allowed).toBe(true);
+      expect(afterSlide.remaining).toBe(4);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+});
+
+describe("passwordResetAccountLimiter (V10.3 SLC-186 MT-3)", () => {
+  it("allows the first 3 requests per account and rejects the 4th", () => {
+    const id = `email-${Math.random()}@example.com`;
+    expect(passwordResetAccountLimiter.check(id).allowed).toBe(true);
+    expect(passwordResetAccountLimiter.check(id).allowed).toBe(true);
+    expect(passwordResetAccountLimiter.check(id).allowed).toBe(true);
+
+    const fourth = passwordResetAccountLimiter.check(id);
+    expect(fourth.allowed).toBe(false);
+    expect(fourth.retryAfterSeconds).toBeGreaterThan(0);
+    expect(fourth.retryAfterSeconds).toBeLessThanOrEqual(60 * 60);
+    expect(fourth.error).toMatch(/Sekunden/);
+  });
+
+  it("resets the window after windowMs elapses (fresh limiter + Date.now mock)", () => {
+    const limiter = createRateLimiter({
+      maxAttempts: 3,
+      windowMs: 60 * 60 * 1000,
+    });
+
+    const id = "test-pwreset-account-window";
+    const baseTime = 1_700_000_000_000;
+    const spy = vi.spyOn(Date, "now").mockReturnValue(baseTime);
+
+    try {
+      expect(limiter.check(id).allowed).toBe(true);
+      expect(limiter.check(id).allowed).toBe(true);
+      expect(limiter.check(id).allowed).toBe(true);
+      expect(limiter.check(id).allowed).toBe(false);
+
+      spy.mockReturnValue(baseTime + 60 * 60 * 1000 + 1);
+
       const afterSlide = limiter.check(id);
       expect(afterSlide.allowed).toBe(true);
       expect(afterSlide.remaining).toBe(2);

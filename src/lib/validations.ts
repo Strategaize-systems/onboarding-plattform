@@ -12,10 +12,8 @@ export const createTenantSchema = z.object({
 
 export const inviteTenantUserSchema = z.object({
   email: z.string().email("Ungültige E-Mail-Adresse"),
-  role: z.enum(["tenant_admin", "tenant_member", "mirror_respondent"]).optional().default("tenant_member"),
+  role: z.enum(["tenant_admin", "employee", "partner_admin"]).optional().default("employee"),
   allowedBlocks: z.array(z.enum(["A", "B", "C", "D", "E", "F", "G", "H", "I"])).optional(),
-  respondentLayer: z.enum(["owner", "leadership_1", "leadership_2", "key_staff"]).optional(),
-  surveyType: z.enum(["management", "mirror"]).optional().default("management"),
 });
 
 // === Tenant: Mirror Nominations ===

@@ -5,7 +5,7 @@
 //   - Role-Gate: tenant_admin -> redirect /dashboard (Spec-AC-SLC-168-10:
 //     "strategaize_admin kann Audit-Log Cross-Tenant einsehen, tenant_admin
 //     nur eigenen")
-//   - Role-Gate: tenant_member / employee -> redirect /dashboard
+//   - Role-Gate: employee -> redirect /dashboard
 //   - strategaize_admin: kein Redirect (Render-Pfad wird angesteuert)
 //
 // Vollstaendiger Render-Smoke ist E2E-Pfad (Playwright). Hier nur die
@@ -208,17 +208,6 @@ describe("AdminBulkEmailAuditPage — Auth-Gate", () => {
     mocks.userClientMock.mockImplementation(() =>
       buildUserClient({
         profile: { email: "ta@y", role: "tenant_admin" },
-      }),
-    );
-    await expect(AdminBulkEmailAuditPage()).rejects.toThrow(
-      "__REDIRECT__:/dashboard",
-    );
-  });
-
-  it("redirects tenant_member to /dashboard", async () => {
-    mocks.userClientMock.mockImplementation(() =>
-      buildUserClient({
-        profile: { email: "tm@y", role: "tenant_member" },
       }),
     );
     await expect(AdminBulkEmailAuditPage()).rejects.toThrow(

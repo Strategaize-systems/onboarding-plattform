@@ -4,7 +4,6 @@
 //   - kein User                                         → shouldShow=false
 //   - kein Profil                                       → shouldShow=false
 //   - strategaize_admin (role-Filter, AC-9)            → shouldShow=false
-//   - tenant_member                                     → shouldShow=false
 //   - tenant_admin + state='completed'                  → shouldShow=false
 //   - tenant_admin + state='skipped'                    → shouldShow=false
 //   - tenant_admin + state='started'                    → shouldShow=true (Resume)
@@ -93,14 +92,6 @@ describe("getWizardStateForCurrentUser — Rolle-Filter (AC-9, DEC-051)", () => 
   it("returnt shouldShow=false fuer strategaize_admin (auch wenn tenant.state='pending')", async () => {
     profileSingleMock.mockResolvedValue({
       data: { tenant_id: null, role: "strategaize_admin" },
-    });
-    const result = await getWizardStateForCurrentUser();
-    expect(result.shouldShow).toBe(false);
-  });
-
-  it("returnt shouldShow=false fuer tenant_member", async () => {
-    profileSingleMock.mockResolvedValue({
-      data: { tenant_id: TENANT_ID, role: "tenant_member" },
     });
     const result = await getWizardStateForCurrentUser();
     expect(result.shouldShow).toBe(false);

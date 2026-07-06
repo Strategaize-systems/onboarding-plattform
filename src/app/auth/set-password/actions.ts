@@ -4,13 +4,19 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { setPasswordLimiter } from "@/lib/rate-limit";
+import { validatePasswordStrength } from "@/lib/auth/password-policy";
 
 export async function setPassword(formData: FormData) {
   const password = formData.get("password") as string;
   const confirmPassword = formData.get("confirmPassword") as string;
 
-  if (!password || password.length < 8) {
-    return { error: "Passwort muss mindestens 8 Zeichen lang sein" };
+  const strength = await validatePasswordStrength(password ?? "");
+  if (!strength.ok) {
+    return {
+      error: strength.reasons.includes("min_length")
+        ? "Passwort muss mindestens 12 Zeichen lang sein"
+        : "Passwort ist zu schwach — bitte länger oder mit mehr Variation",
+    };
   }
 
   if (password !== confirmPassword) {

@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { createRateLimiter } from "@/lib/rate-limit";
+import { validatePasswordStrength } from "@/lib/auth/password-policy";
 
 /**
  * SLC-034 MT-3 — acceptEmployeeInvitation Server-Action.
@@ -53,8 +54,13 @@ export async function acceptEmployeeInvitation(
   if (!token || !/^[0-9a-f]{64}$/i.test(token)) {
     return { error: "Ungültiger Einladungslink." };
   }
-  if (!password || password.length < 8) {
-    return { error: "Passwort muss mindestens 8 Zeichen lang sein." };
+  const strength = await validatePasswordStrength(password ?? "");
+  if (!strength.ok) {
+    return {
+      error: strength.reasons.includes("min_length")
+        ? "Passwort muss mindestens 12 Zeichen lang sein"
+        : "Passwort ist zu schwach — bitte länger oder mit mehr Variation",
+    };
   }
   if (password !== confirmPassword) {
     return { error: "Passwörter stimmen nicht überein." };

@@ -176,9 +176,9 @@ describe("saveTextOverride auth", () => {
     expect(result).toEqual({ ok: false, error: "unauthenticated" });
   });
 
-  it("rejects role tenant_member as forbidden", async () => {
+  it("rejects role employee as forbidden", async () => {
     setUser("u-1");
-    setupFromMock({ profiles: profileFound("tenant_member") });
+    setupFromMock({ profiles: profileFound("employee") });
     const result = await saveTextOverride({
       scope: "global",
       scopeId: null,

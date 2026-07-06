@@ -1,20 +1,19 @@
 // V9 SLC-165 MT-6 — RLS-Pen-Test-Matrix fuer die 4 V9-Bulk-Email-Tabellen.
 //
-// Pflicht-Gate aus AC-SLC-165-10: 16+ Pen-Test-Cases (4 Rollen × 4 Tabellen).
-// Diese Suite liefert 24 Matrix-Tests (6 pro Tabelle) + 1 Cross-Cut-Defense.
+// Pflicht-Gate aus AC-SLC-165-10: Pen-Test-Cases (3 Rollen × 4 Tabellen).
+// Diese Suite liefert Matrix-Tests (5 pro Tabelle) + 1 Cross-Cut-Defense.
 //
-// Rollen-Matrix V9.0 (Migration 106 Zeile 18-24):
+// Rollen-Matrix (Migration 106, aktualisiert MIG-131):
 //   - strategaize_admin: SELECT Cross-Tenant — alle 4 Tabellen. KEIN INSERT.
 //   - tenant_admin (GF): SELECT + INSERT + UPDATE auf own-Tenant; KEIN Cross-Tenant.
-//   - tenant_member + employee: Default-Deny (keine Policy → 0 Rows SELECT, INSERT-Reject).
+//   - employee: Default-Deny (keine Policy → 0 Rows SELECT, INSERT-Reject).
 //
-// Test-Struktur pro Tabelle (6 Tests):
+// Test-Struktur pro Tabelle (5 Tests):
 //   1. strategaize_admin SELECT cross-tenant → sieht beide Rows
 //   2. tenant_admin SELECT own + cross-tenant DENY (kombiniert)
 //   3. tenant_admin INSERT own ALLOW
 //   4. tenant_admin UPDATE own ALLOW
-//   5. tenant_member SELECT DENY + INSERT DENY (kombiniert, default-deny)
-//   6. employee SELECT DENY + INSERT DENY (kombiniert, default-deny)
+//   5. employee SELECT DENY + INSERT DENY (kombiniert, default-deny)
 //
 // + Cross-Cut-Defense (1 describe, 3 Tests):
 //   - tenant_admin INSERT mit Cross-Tenant tenant_id → RLS-WITH-CHECK Reject
@@ -131,32 +130,6 @@ describe("V9 RLS email_bulk_run — 4 Rollen", () => {
     });
   });
 
-  it("tenant_member: SELECT 0 + INSERT DENY (default-deny)", async () => {
-    await withTestDb(async (client) => {
-      const f = await seedV9BulkEmailFixtures(client);
-      await withJwtContext(client, f.tenantMemberAUserId, async () => {
-        const sel = await client.query<{ c: string }>(
-          `SELECT count(*)::text AS c FROM public.email_bulk_run
-            WHERE id IN ($1, $2)`,
-          [f.bulkRunA, f.bulkRunB],
-        );
-        expect(sel.rows[0].c).toBe("0");
-
-        const errMsg = await expectRlsReject(
-          client,
-          `INSERT INTO public.email_bulk_run
-             (tenant_id, uploader_user_id, source_file_name, file_hash,
-              storage_path, status)
-           VALUES ($1, $2, 'member-insert.mbox',
-                   'hash-member-insert-' || substr(gen_random_uuid()::text, 1, 8),
-                   'storage/member-insert', 'uploaded')`,
-          [f.tenantA, f.tenantMemberAUserId],
-        );
-        expect(errMsg).toMatch(/row-level security|permission denied|violates/i);
-      });
-    });
-  });
-
   it("employee: SELECT 0 + INSERT DENY (default-deny)", async () => {
     await withTestDb(async (client) => {
       const f = await seedV9BulkEmailFixtures(client);
@@ -257,31 +230,6 @@ describe("V9 RLS email_message — 4 Rollen", () => {
     });
   });
 
-  it("tenant_member: SELECT 0 + INSERT DENY (default-deny)", async () => {
-    await withTestDb(async (client) => {
-      const f = await seedV9BulkEmailFixtures(client);
-      await withJwtContext(client, f.tenantMemberAUserId, async () => {
-        const sel = await client.query<{ c: string }>(
-          `SELECT count(*)::text AS c FROM public.email_message
-            WHERE id IN ($1, $2)`,
-          [f.messageA, f.messageB],
-        );
-        expect(sel.rows[0].c).toBe("0");
-
-        const errMsg = await expectRlsReject(
-          client,
-          `INSERT INTO public.email_message
-             (tenant_id, bulk_run_id, thread_id, message_id, subject, body_text)
-           VALUES ($1, $2, $3,
-                   '<member-insert-' || substr(gen_random_uuid()::text, 1, 8) || '@v9.test>',
-                   'Member Insert', 'body')`,
-          [f.tenantA, f.bulkRunA, f.threadA],
-        );
-        expect(errMsg).toMatch(/row-level security|permission denied|violates/i);
-      });
-    });
-  });
-
   it("employee: SELECT 0 + INSERT DENY (default-deny)", async () => {
     await withTestDb(async (client) => {
       const f = await seedV9BulkEmailFixtures(client);
@@ -378,32 +326,6 @@ describe("V9 RLS email_thread — 4 Rollen", () => {
         );
         expect(res.rowCount).toBe(1);
         expect(res.rows[0].thread_status).toBe("redacted");
-      });
-    });
-  });
-
-  it("tenant_member: SELECT 0 + INSERT DENY (default-deny)", async () => {
-    await withTestDb(async (client) => {
-      const f = await seedV9BulkEmailFixtures(client);
-      await withJwtContext(client, f.tenantMemberAUserId, async () => {
-        const sel = await client.query<{ c: string }>(
-          `SELECT count(*)::text AS c FROM public.email_thread
-            WHERE id IN ($1, $2)`,
-          [f.threadA, f.threadB],
-        );
-        expect(sel.rows[0].c).toBe("0");
-
-        const errMsg = await expectRlsReject(
-          client,
-          `INSERT INTO public.email_thread
-             (tenant_id, bulk_run_id, root_message_id, subject, email_count,
-              thread_status)
-           VALUES ($1, $2,
-                   '<member-insert-' || substr(gen_random_uuid()::text, 1, 8) || '@v9.test>',
-                   'Member Insert Thread', 1, 'aggregated')`,
-          [f.tenantA, f.bulkRunA],
-        );
-        expect(errMsg).toMatch(/row-level security|permission denied|violates/i);
       });
     });
   });
@@ -621,11 +543,11 @@ describe("V9 RLS email_thread MT-6 — Sensitive-Spalten + Status-Maschine (+8 C
 
   // --- Cluster C: Default-Deny auf MT-6-Spalten (2 Cases) ---
 
-  it("tenant_member: SELECT redacted_body + participant_pseudonyms → 0 Rows", async () => {
+  it("employee: SELECT redacted_body + participant_pseudonyms → 0 Rows", async () => {
     await withTestDb(async (client) => {
       const f = await seedV9BulkEmailFixtures(client);
       await applyRedactedFixturesToAllThreads(client, f.threadA, f.threadB);
-      await withJwtContext(client, f.tenantMemberAUserId, async () => {
+      await withJwtContext(client, f.employeeAUserId, async () => {
         const res = await client.query<{ redacted_body: string | null }>(
           `SELECT redacted_body, participant_pseudonyms
              FROM public.email_thread
@@ -728,31 +650,6 @@ describe("V9 RLS email_pattern — 4 Rollen", () => {
         );
         expect(res.rowCount).toBe(1);
         expect(res.rows[0].curation_status).toBe("accepted");
-      });
-    });
-  });
-
-  it("tenant_member: SELECT 0 + INSERT DENY (default-deny)", async () => {
-    await withTestDb(async (client) => {
-      const f = await seedV9BulkEmailFixtures(client);
-      await withJwtContext(client, f.tenantMemberAUserId, async () => {
-        const sel = await client.query<{ c: string }>(
-          `SELECT count(*)::text AS c FROM public.email_pattern
-            WHERE id IN ($1, $2)`,
-          [f.patternA, f.patternB],
-        );
-        expect(sel.rows[0].c).toBe("0");
-
-        const errMsg = await expectRlsReject(
-          client,
-          `INSERT INTO public.email_pattern
-             (tenant_id, bulk_run_id, thread_id, title, description, confidence,
-              curation_status)
-           VALUES ($1, $2, $3, 'Member Pattern', 'desc', 0.5,
-                   'pending_curation')`,
-          [f.tenantA, f.bulkRunA, f.threadA],
-        );
-        expect(errMsg).toMatch(/row-level security|permission denied|violates/i);
       });
     });
   });

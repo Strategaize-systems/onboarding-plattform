@@ -110,7 +110,7 @@ describe("addRosterEntry", () => {
   });
 
   it("lehnt Rolle ausserhalb (tenant_admin/strategaize_admin) ab", async () => {
-    tableQueues.profiles = [profile("tenant_member")];
+    tableQueues.profiles = [profile("employee")];
     const r = await addRosterEntry({ sessionId: SESSION, name: "Anna" });
     expect(r).toEqual({ ok: false, error: "forbidden" });
   });

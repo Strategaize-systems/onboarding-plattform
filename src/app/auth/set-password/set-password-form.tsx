@@ -60,7 +60,7 @@ export function SetPasswordForm() {
                 type="password"
                 placeholder={t("setPassword.newPasswordPlaceholder")}
                 required
-                minLength={8}
+                minLength={12}
               />
             </div>
             <div className="space-y-2">

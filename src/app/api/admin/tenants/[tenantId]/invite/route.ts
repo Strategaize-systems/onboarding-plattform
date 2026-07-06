@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdmin, errorResponse, validationError } from "@/lib/api-utils";
 import { inviteTenantUserSchema } from "@/lib/validations";
-import { sendInviteEmail, sendMirrorInviteEmail } from "@/lib/email";
+import { sendInviteEmail } from "@/lib/email";
 
 // POST /api/admin/tenants/[tenantId]/invite — Invite a user to a tenant
 export async function POST(
@@ -35,7 +35,7 @@ export async function POST(
   const parsed = inviteTenantUserSchema.safeParse(body);
   if (!parsed.success) return validationError(parsed.error);
 
-  const { email, role: inviteRole, allowedBlocks, respondentLayer, surveyType } = parsed.data;
+  const { email, role: inviteRole, allowedBlocks } = parsed.data;
   const emailLower = email.toLowerCase();
   let isReinvite = false;
 
@@ -74,7 +74,7 @@ export async function POST(
       .eq("tenant_id", tenantId)
       .eq("role", "tenant_admin")
       .single();
-    role = existingAdmin ? "tenant_member" : "tenant_admin";
+    role = existingAdmin ? "employee" : "tenant_admin";
   }
 
   // Create user via GoTrue Admin API and get the invite token.
@@ -92,8 +92,6 @@ export async function POST(
           tenant_id: tenantId,
           role,
           ...(allowedBlocks && allowedBlocks.length > 0 ? { allowed_blocks: allowedBlocks } : {}),
-          ...(respondentLayer ? { respondent_layer: respondentLayer } : {}),
-          ...(surveyType ? { survey_type: surveyType } : {}),
         },
         redirectTo,
       },
@@ -117,23 +115,13 @@ export async function POST(
   const verifyUrl = `${appUrl}/auth/callback?token_hash=${hashedToken}&type=invite&locale=${tenantLocale}`;
 
   // Send invite email via our own SMTP (bypasses GoTrue's broken URL generation)
-  // Mirror respondents get a separate, context-rich email template
   try {
-    if (role === "mirror_respondent") {
-      await sendMirrorInviteEmail({
-        to: email,
-        tenantName: tenant.name,
-        verifyUrl,
-        locale: tenant.language ?? "de",
-      });
-    } else {
-      await sendInviteEmail({
-        to: email,
-        tenantName: tenant.name,
-        verifyUrl,
-        locale: tenant.language ?? "de",
-      });
-    }
+    await sendInviteEmail({
+      to: email,
+      tenantName: tenant.name,
+      verifyUrl,
+      locale: tenant.language ?? "de",
+    });
   } catch (emailError) {
     return errorResponse(
       "INTERNAL_ERROR",

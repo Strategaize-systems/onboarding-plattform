@@ -17,7 +17,7 @@ import { withJwtContext } from "@/test/auth-context";
  *
  * 3 Slice-Spec-Faelle:
  *   1. Happy — partner_admin updated eigene Row (rowCount=1, Werte korrekt).
- *   2. Auth-Reject — tenant_member ohne partner_admin-Rolle wird durch RLS
+ *   2. Auth-Reject — employee ohne partner_admin-Rolle wird durch RLS
  *      USING-Clause geblockt (rowCount=0, kein Permission-Denial dank
  *      table-level-GRANT).
  *   3. Cross-Tenant-Reject — partner_admin-A versucht UPDATE auf Partner-B-Row,

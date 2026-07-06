@@ -15,8 +15,8 @@ import { withJwtContext } from "@/test/auth-context";
 //   - partner_admin Happy-Path (2 Faelle: own-partner INSERT + UPDATE)
 //   - partner_admin Cross-Partner-Write-Block (2 Faelle: other-partner INSERT + UPDATE)
 //   - partner_admin Global+Template-Write-Block (2 Faelle)
-//   - tenant_member Write-Block (2 Faelle: global+partner)
-//   - tenant_member Read-Visibility (1 Fall: global+template+own-partner sichtbar)
+//   - employee Write-Block (2 Faelle: global+partner)
+//   - employee Read-Visibility (1 Fall: global+template+own-partner sichtbar)
 //   - History Audit + Cross-Partner-History-Block (2 Faelle)
 //
 // Total: 17 Pen-Test-Cases (8+ aus Slice-Spec).
@@ -35,7 +35,7 @@ interface PenFixture {
   strategaizeAdmin: string;
   partnerAAdmin: string;
   partnerBAdmin: string;
-  tenantMemberA: string;          // tenant_member von clientA (Partner A's client)
+  tenantMemberA: string;          // employee von clientA (Partner A's client)
 }
 
 async function seedPenFixture(client: Client): Promise<PenFixture> {
@@ -91,7 +91,7 @@ async function seedPenFixture(client: Client): Promise<PenFixture> {
   // --- Users (handle_new_user-Trigger erzeugt profiles) ---
   async function mkUser(
     label: string,
-    role: "strategaize_admin" | "tenant_admin" | "tenant_member" | "partner_admin",
+    role: "strategaize_admin" | "tenant_admin" | "employee" | "partner_admin",
     tenantId: string | null,
   ): Promise<string> {
     const metadata =
@@ -124,7 +124,7 @@ async function seedPenFixture(client: Client): Promise<PenFixture> {
 
   const partnerAAdmin = await mkUser("slc136-pa-a", "partner_admin", partnerATenantId);
   const partnerBAdmin = await mkUser("slc136-pa-b", "partner_admin", partnerBTenantId);
-  const tenantMemberA = await mkUser("slc136-tm-a", "tenant_member", clientATenantId);
+  const tenantMemberA = await mkUser("slc136-tm-a", "employee", clientATenantId);
 
   return {
     partnerOrgA,
@@ -446,11 +446,11 @@ describe("V7.1 SLC-136 — partner_admin Global+Template Write-Block", () => {
 });
 
 // ============================================================
-// tenant_member Write-Block (2 Faelle)
+// employee Write-Block (2 Faelle)
 // ============================================================
 
-describe("V7.1 SLC-136 — tenant_member Write-Block", () => {
-  it("tenant_member INSERT scope='global' → RLS-Reject", async () => {
+describe("V7.1 SLC-136 — employee Write-Block", () => {
+  it("employee INSERT scope='global' → RLS-Reject", async () => {
     await withTestDb(async (client) => {
       const f = await seedPenFixture(client);
       await withJwtContext(client, f.tenantMemberA, async () => {
@@ -466,7 +466,7 @@ describe("V7.1 SLC-136 — tenant_member Write-Block", () => {
     });
   });
 
-  it("tenant_member INSERT scope='partner' (own-partner) → RLS-Reject (read-only)", async () => {
+  it("employee INSERT scope='partner' (own-partner) → RLS-Reject (read-only)", async () => {
     await withTestDb(async (client) => {
       const f = await seedPenFixture(client);
       await withJwtContext(client, f.tenantMemberA, async () => {
@@ -484,11 +484,11 @@ describe("V7.1 SLC-136 — tenant_member Write-Block", () => {
 });
 
 // ============================================================
-// tenant_member Read-Visibility (1 Fall, Matrix-Sicht)
+// employee Read-Visibility (1 Fall, Matrix-Sicht)
 // ============================================================
 
-describe("V7.1 SLC-136 — tenant_member Read-Visibility", () => {
-  it("tenant_member sieht global + template + own-partner, NICHT other-partner", async () => {
+describe("V7.1 SLC-136 — employee Read-Visibility", () => {
+  it("employee sieht global + template + own-partner, NICHT other-partner", async () => {
     await withTestDb(async (client) => {
       const f = await seedPenFixture(client);
       const tplId = (
@@ -519,7 +519,7 @@ describe("V7.1 SLC-136 — tenant_member Read-Visibility", () => {
             ORDER BY text_key`,
         );
         const keys = r.rows.map((x) => x.text_key);
-        // tenant_member von clientA (parent_partner=partnerA) sieht:
+        // employee von clientA (parent_partner=partnerA) sieht:
         // - global + template (immer)
         // - partner=partnerOrgA (own-partner via tenant_to_partner_view)
         // NICHT vis.b (partnerOrgB → kein Match in tenant_to_partner_view)

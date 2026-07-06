@@ -14,8 +14,8 @@ import { seedTestTenants } from "@/test/fixtures/tenants";
 //
 // RLS-Matrix (Zwei-Teil-USING tenant_id + Rolle):
 //   - strategaize_admin: SELECT/ALL cross-tenant
-//   - tenant_admin/owner/member: SELECT own-tenant
-//   - tenant_admin/owner: UPDATE own-tenant (Edit/Status)
+//   - tenant_admin: SELECT own-tenant
+//   - tenant_admin: UPDATE own-tenant (Edit/Status)
 //   - INSERT (ai_draft): kein authenticated-GRANT/Policy -> service_role-only
 //
 // Pattern-Reuse: migration-123-knowledge-unit-themes.test.ts (self-apply),
@@ -65,7 +65,7 @@ interface ModulFixture {
   userA: string; // tenant_admin A
   userB: string; // tenant_admin B
   adminUser: string; // strategaize_admin
-  memberUser: string; // tenant_member von A
+  memberUser: string; // zweiter tenant_admin von A
   outputA: string;
   outputB: string;
 }
@@ -74,7 +74,7 @@ async function seedModulFixture(client: Client): Promise<ModulFixture> {
   const { tenantA, tenantB, userA, userB, templateId, templateVersion } =
     await seedTestTenants(client);
   const adminUser = await makeUser(client, tenantA, "strategaize_admin");
-  const memberUser = await makeUser(client, tenantA, "tenant_member");
+  const memberUser = await makeUser(client, tenantA, "tenant_admin");
 
   const sessions = await client.query<{ id: string; tenant_id: string }>(
     `INSERT INTO public.capture_session
@@ -206,7 +206,7 @@ describe("MIG-124: modul_output RLS isolation (V10 SLC-169 AC-169-2)", () => {
     });
   });
 
-  it("tenant_member of A sees own-tenant rows (read policy includes member)", async () => {
+  it("second tenant_admin of A sees own-tenant rows (tenant-scoped read policy)", async () => {
     await withTestDb(async (client) => {
       await applyMig124(client);
       const f = await seedModulFixture(client);

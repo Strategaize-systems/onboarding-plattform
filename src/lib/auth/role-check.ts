@@ -72,10 +72,10 @@ export function isPathAllowedForRole(
     case "dashboard":
       // /dashboard/* gehoert Mandanten. Employee + partner_admin werden in
       // Middleware umgeleitet.
-      return role === "tenant_admin" || role === "tenant_member" || role === "strategaize_admin";
+      return role === "tenant_admin" || role === "strategaize_admin";
     case "capture":
-      // /capture/* ist Wizard-Flow fuer Mandanten + tenant_admin.
-      return role === "tenant_admin" || role === "tenant_member";
+      // /capture/* ist Wizard-Flow fuer Mandanten (tenant_admin).
+      return role === "tenant_admin";
     case "employee":
       // /employee/* gehoert Mitarbeitern.
       return role === "employee";
@@ -99,7 +99,6 @@ export function defaultLandingForRole(role: UserRole | null): string {
     case "strategaize_admin":
       return "/admin/tenants";
     case "tenant_admin":
-    case "tenant_member":
       return "/dashboard";
     default:
       return "/login";

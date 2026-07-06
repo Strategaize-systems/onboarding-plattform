@@ -34,7 +34,7 @@ type SimpleResult = { ok: true } | ActionErr;
 
 /**
  * Liefert den authentifizierten tenant_admin + dessen tenant_id.
- * DEC-051 Cross-Role-Check: strategaize_admin / tenant_member / employee werden hier abgelehnt.
+ * DEC-051 Cross-Role-Check: strategaize_admin / employee werden hier abgelehnt.
  */
 async function requireTenantAdmin(): Promise<
   | { user: { id: string }; tenantId: string; supabase: Awaited<ReturnType<typeof createClient>> }

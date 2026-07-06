@@ -9,6 +9,15 @@ import {
 import type { UserRole } from "@/types/db";
 
 /**
+ * V10.3 SLC-187 MT-3 — Die Rolle "tenant_member" wurde ersatzlos entfernt
+ * (4-Rollen-Modell, DEC-263). Sie darf nur noch als *unbekannte* Rolle
+ * auftreten und muss dann ueberall fail-closed behandelt werden
+ * (keine Pfad-Freigabe, Login-Fallback bei Landing). Cast auf UserRole,
+ * um den entfernten Enum-Wert im Test simulieren zu koennen.
+ */
+const REMOVED_TENANT_MEMBER = "tenant_member" as unknown as UserRole;
+
+/**
  * V6 SLC-102 MT-2 — Vitest fuer Auth-Routing-Matrix.
  *
  * Diese Tests pruefen die deklarative Erlaubt-Matrix (Pfad-Klasse × Rolle) aus
@@ -58,8 +67,8 @@ describe("isPathAllowedForRole — Matrix Rolle × Pfad-Klasse", () => {
     it("blockt partner_admin", () => {
       expect(isPathAllowedForRole("admin", "partner_admin")).toBe(false);
     });
-    it("blockt tenant_member", () => {
-      expect(isPathAllowedForRole("admin", "tenant_member")).toBe(false);
+    it("blockt entfernte Rolle tenant_member (fail-closed, wie unbekannte Rolle)", () => {
+      expect(isPathAllowedForRole("admin", REMOVED_TENANT_MEMBER)).toBe(false);
     });
     it("blockt employee", () => {
       expect(isPathAllowedForRole("admin", "employee")).toBe(false);
@@ -79,8 +88,8 @@ describe("isPathAllowedForRole — Matrix Rolle × Pfad-Klasse", () => {
     it("blockt tenant_admin", () => {
       expect(isPathAllowedForRole("partner", "tenant_admin")).toBe(false);
     });
-    it("blockt tenant_member", () => {
-      expect(isPathAllowedForRole("partner", "tenant_member")).toBe(false);
+    it("blockt entfernte Rolle tenant_member (fail-closed, wie unbekannte Rolle)", () => {
+      expect(isPathAllowedForRole("partner", REMOVED_TENANT_MEMBER)).toBe(false);
     });
     it("blockt employee", () => {
       expect(isPathAllowedForRole("partner", "employee")).toBe(false);
@@ -91,9 +100,11 @@ describe("isPathAllowedForRole — Matrix Rolle × Pfad-Klasse", () => {
   });
 
   describe("/dashboard/* (dashboard)", () => {
-    it("erlaubt tenant_admin + tenant_member", () => {
+    it("erlaubt tenant_admin", () => {
       expect(isPathAllowedForRole("dashboard", "tenant_admin")).toBe(true);
-      expect(isPathAllowedForRole("dashboard", "tenant_member")).toBe(true);
+    });
+    it("blockt entfernte Rolle tenant_member (fail-closed, wie unbekannte Rolle)", () => {
+      expect(isPathAllowedForRole("dashboard", REMOVED_TENANT_MEMBER)).toBe(false);
     });
     it("blockt partner_admin", () => {
       expect(isPathAllowedForRole("dashboard", "partner_admin")).toBe(false);
@@ -109,9 +120,11 @@ describe("isPathAllowedForRole — Matrix Rolle × Pfad-Klasse", () => {
     });
     it("blockt alle anderen Rollen", () => {
       expect(isPathAllowedForRole("employee", "tenant_admin")).toBe(false);
-      expect(isPathAllowedForRole("employee", "tenant_member")).toBe(false);
       expect(isPathAllowedForRole("employee", "strategaize_admin")).toBe(false);
       expect(isPathAllowedForRole("employee", "partner_admin")).toBe(false);
+    });
+    it("blockt entfernte Rolle tenant_member (fail-closed, wie unbekannte Rolle)", () => {
+      expect(isPathAllowedForRole("employee", REMOVED_TENANT_MEMBER)).toBe(false);
     });
   });
 
@@ -119,13 +132,15 @@ describe("isPathAllowedForRole — Matrix Rolle × Pfad-Klasse", () => {
     const roles: ReadonlyArray<UserRole | null> = [
       "strategaize_admin",
       "tenant_admin",
-      "tenant_member",
       "employee",
       "partner_admin",
       null,
     ];
     it.each(roles)("erlaubt %s auf public-Pfade", (role) => {
       expect(isPathAllowedForRole("public", role)).toBe(true);
+    });
+    it("erlaubt auch die entfernte Rolle tenant_member auf public-Pfade", () => {
+      expect(isPathAllowedForRole("public", REMOVED_TENANT_MEMBER)).toBe(true);
     });
   });
 });
@@ -137,9 +152,11 @@ describe("defaultLandingForRole", () => {
   it("partner_admin landet auf /partner/dashboard (SLC-102 MT-2)", () => {
     expect(defaultLandingForRole("partner_admin")).toBe("/partner/dashboard");
   });
-  it("tenant_admin + tenant_member landen auf /dashboard", () => {
+  it("tenant_admin landet auf /dashboard", () => {
     expect(defaultLandingForRole("tenant_admin")).toBe("/dashboard");
-    expect(defaultLandingForRole("tenant_member")).toBe("/dashboard");
+  });
+  it("entfernte Rolle tenant_member faellt auf /login zurueck (fail-closed, wie unbekannte Rolle)", () => {
+    expect(defaultLandingForRole(REMOVED_TENANT_MEMBER)).toBe("/login");
   });
   it("employee landet auf /employee", () => {
     expect(defaultLandingForRole("employee")).toBe("/employee");

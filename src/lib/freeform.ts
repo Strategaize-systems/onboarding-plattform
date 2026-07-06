@@ -196,13 +196,12 @@ export async function saveMappingResult(
 // ============================================================
 
 /**
- * Load questions for a user, respecting block access for mirror respondents.
- * - mirror_respondent: only questions from assigned blocks
- * - tenant_admin / tenant_member: all questions for the run
+ * Load questions for a user.
+ * - tenant_admin: all questions for the run
  */
 export async function loadQuestionsForUser(
   runId: string,
-  profile: ProfileInfo
+  _profile: ProfileInfo
 ): Promise<CatalogQuestion[]> {
   const adminClient = createAdminClient();
 
@@ -223,22 +222,6 @@ export async function loadQuestionsForUser(
     .order("position", { ascending: true });
 
   if (error || !questions) throw new Error("Failed to load questions");
-
-  // For mirror respondents: filter by assigned blocks
-  if (profile.role === "mirror_respondent") {
-    const { data: blockAccess } = await adminClient
-      .from("member_block_access")
-      .select("block")
-      .eq("profile_id", profile.id)
-      .eq("run_id", runId);
-
-    if (blockAccess && blockAccess.length > 0) {
-      const allowedBlocks = new Set(blockAccess.map((ba) => ba.block));
-      return (questions as CatalogQuestion[]).filter((q) => allowedBlocks.has(q.block));
-    }
-    // No block access entries → return empty (no questions assigned)
-    return [];
-  }
 
   return questions as CatalogQuestion[];
 }

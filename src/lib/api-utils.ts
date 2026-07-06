@@ -120,7 +120,7 @@ export async function requireTenant() {
     };
   }
 
-  if (!["tenant_admin", "tenant_member", "mirror_respondent"].includes(profile.role)) {
+  if (!["tenant_admin"].includes(profile.role)) {
     return {
       user,
       profile,

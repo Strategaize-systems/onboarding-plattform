@@ -126,7 +126,7 @@ export default async function BulkEmailImportPage() {
 
   // Auth-Gate: tenant_admin only. strategaize_admin sieht eigenen Cockpit
   // (Cross-Tenant-Read funktioniert ueber RLS — separater Admin-View kaeme in
-  // V9.1+). employee/tenant_member werden bewusst auf /dashboard zurueck-redirected.
+  // V9.1+). employee werden bewusst auf /dashboard zurueck-redirected.
   if (profile.role !== "tenant_admin") {
     redirect("/dashboard");
   }

@@ -8,7 +8,7 @@
 //     Isolation, strategaize_admin sieht alle).
 //   - updateEmailClassifications(bulkRunId, updates): Pro-Email oder Bulk-
 //     Reclassify. UPDATE email_message.pre_filter_label + pre_filter_corrected
-//     = true. RLS via user-context Client; tenant_member kann nicht updaten
+//     = true. RLS via user-context Client; employee kann nicht updaten
 //     (Policy email_message_tenant_update erlaubt nur tenant_admin per
 //     auth.user_role()-Helper).
 //   - approvePreFilterAndStartThreadRedact(bulkRunId): GF-Gate-1 per DEC-178.
@@ -167,7 +167,7 @@ export async function getFilterReviewData(
  *   2. Input-Validation (UUID, Array, max-Length, jedes Element valider Label).
  *   3. Pro-Update: UPDATE email_message.pre_filter_label + pre_filter_corrected
  *      = true. User-Context-Client → RLS-Policy email_message_tenant_update
- *      blockiert Cross-Tenant + tenant_member.
+ *      blockiert Cross-Tenant + employee.
  *   4. Return ok + updatedCount, oder erste UPDATE-Failure als Error.
  *
  * Idempotenz: ein erneutes Set des gleichen Labels ist No-Op fuer den naechs-

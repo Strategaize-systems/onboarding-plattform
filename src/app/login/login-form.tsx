@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { login } from "./actions";
@@ -83,6 +84,14 @@ export function LoginForm() {
                 required
                 autoComplete="current-password"
               />
+              <div className="text-right">
+                <Link
+                  href="/auth/passwort-vergessen"
+                  className="text-xs text-slate-500 hover:text-slate-700 hover:underline"
+                >
+                  {t("login.forgotPassword")}
+                </Link>
+              </div>
             </div>
             {error && !callbackError && (
               <p className="text-sm text-red-600">{error}</p>

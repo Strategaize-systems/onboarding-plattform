@@ -172,13 +172,25 @@
     "button": "Anmelden",
     "buttonLoading": "Anmelden...",
     "inviteOnly": "Kein Account? Der Zugang erfolgt ausschließlich per Einladung.",
+    "unexpectedError": "Ein unerwarteter Fehler ist aufgetreten",
+    "forgotPassword": "Passwort vergessen?"
+  },
+  "passwordReset": {
+    "title": "Passwort vergessen",
+    "description": "Geben Sie Ihre E-Mail-Adresse ein. Wir senden Ihnen einen Link zum Zurücksetzen Ihres Passworts.",
+    "email": "E-Mail",
+    "emailPlaceholder": "name@unternehmen.de",
+    "button": "Link anfordern",
+    "buttonLoading": "Wird gesendet...",
+    "success": "Falls ein Konto mit dieser Adresse existiert, haben wir eine E-Mail zum Zurücksetzen gesendet.",
+    "backToLogin": "Zurück zur Anmeldung",
     "unexpectedError": "Ein unerwarteter Fehler ist aufgetreten"
   },
   "setPassword": {
     "title": "Passwort setzen",
     "description": "Willkommen bei StrategAIze. Bitte setzen Sie Ihr Passwort.",
     "newPassword": "Neues Passwort",
-    "newPasswordPlaceholder": "Mindestens 8 Zeichen",
+    "newPasswordPlaceholder": "Mindestens 12 Zeichen",
     "confirmPassword": "Passwort bestätigen",
     "confirmPlaceholder": "Passwort wiederholen",
     "button": "Passwort setzen",

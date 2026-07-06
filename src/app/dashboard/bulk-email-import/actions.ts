@@ -9,7 +9,7 @@
 //   - getBulkRunById(): Detail-Lookup (fuer SLC-165 MT-6 Detail-View).
 //
 // Auth-Gate: tenant_admin (GF). strategaize_admin nicht erlaubt zu uploaden —
-// nur SELECT Cross-Tenant per RLS-Policy. employee/tenant_member kein Zugriff.
+// nur SELECT Cross-Tenant per RLS-Policy. employee kein Zugriff.
 //
 // Pattern-Reuse (per .claude/rules/strategaize-pattern-reuse.md):
 //   - capture_session-Hook + service_role bypass: walkthrough-Pattern

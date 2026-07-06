@@ -26,7 +26,7 @@ export default async function TenantReviewsPage() {
     .eq("id", user.id)
     .single();
 
-  // Nur tenant_admin (lesender Zugriff via RLS). tenant_member/employee bekommt
+  // Nur tenant_admin (lesender Zugriff via RLS). employee bekommt
   // RLS-Default-Deny + redirect.
   if (!profile || profile.role !== "tenant_admin" || !profile.tenant_id) {
     redirect("/dashboard");

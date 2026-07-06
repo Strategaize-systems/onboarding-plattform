@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
   //
   // KEIN .select("id") — sonst triggert PostgREST RETURNING, das die
   // SELECT-Phase fuer den eingefuegten Row eroeffnet. Migration 100 hat
-  // bewusst KEINE SELECT-Policy fuer tenant_admin/tenant_member (Diagnose
+  // bewusst KEINE SELECT-Policy fuer tenant_admin/employee (Diagnose
   // wird vom Mandanten gefuettert, aber er soll seine eigenen Events nicht
   // zurueck lesen — Read-Pfad ist strategaize_admin + partner_admin).
   // Live-Smoke 2026-05-22 (RPT-329): RETURNING-Path fuehrte zu 500

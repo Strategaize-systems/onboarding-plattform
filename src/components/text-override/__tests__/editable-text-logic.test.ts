@@ -28,10 +28,6 @@ describe("canEditText", () => {
     expect(canEditText("tenant_admin")).toBe(false);
   });
 
-  it("denies tenant_member", () => {
-    expect(canEditText("tenant_member")).toBe(false);
-  });
-
   it("denies employee", () => {
     expect(canEditText("employee")).toBe(false);
   });

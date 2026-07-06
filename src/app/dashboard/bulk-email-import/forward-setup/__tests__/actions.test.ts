@@ -105,7 +105,7 @@ describe("authorization gate", () => {
   });
 
   it("rejects non-tenant_admin roles", async () => {
-    mockProfile = { tenant_id: "tenant-1", role: "tenant_member" };
+    mockProfile = { tenant_id: "tenant-1", role: "employee" };
     const r = await createInboundEndpoint({ localPart: "bulk-acme" });
     expect(r).toEqual({ ok: false, error: "Nur fuer Mandanten-Admin verfuegbar" });
   });

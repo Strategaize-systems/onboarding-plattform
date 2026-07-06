@@ -172,13 +172,25 @@
     "button": "Sign in",
     "buttonLoading": "Signing in...",
     "inviteOnly": "No account? Access is by invitation only.",
+    "unexpectedError": "An unexpected error occurred",
+    "forgotPassword": "Forgot password?"
+  },
+  "passwordReset": {
+    "title": "Forgot password",
+    "description": "Enter your email address. We will send you a link to reset your password.",
+    "email": "Email",
+    "emailPlaceholder": "name@company.com",
+    "button": "Request link",
+    "buttonLoading": "Sending...",
+    "success": "If an account with this address exists, we have sent a password reset email.",
+    "backToLogin": "Back to sign in",
     "unexpectedError": "An unexpected error occurred"
   },
   "setPassword": {
     "title": "Set Password",
     "description": "Welcome to StrategAIze. Please set your password.",
     "newPassword": "New Password",
-    "newPasswordPlaceholder": "At least 8 characters",
+    "newPasswordPlaceholder": "At least 12 characters",
     "confirmPassword": "Confirm Password",
     "confirmPlaceholder": "Repeat password",
     "button": "Set Password",

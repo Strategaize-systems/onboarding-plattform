@@ -68,7 +68,7 @@ function rewriteSignedUrlForBrowser(url: string): string {
 
 // Roles allowed to record a walkthrough. strategaize_admin is bewusst NICHT
 // dabei — der dokumentiert nicht, er reviewed.
-const RECORDER_ROLES = new Set(["employee", "tenant_member", "tenant_admin"]);
+const RECORDER_ROLES = new Set(["employee", "tenant_admin"]);
 
 // =============================================================================
 // startWalkthroughSession — SLC-075 MT-1 Self-Spawn-Action (DEC-080)
@@ -82,8 +82,8 @@ export interface StartWalkthroughSessionResult {
 /**
  * Spawns a fresh capture_session (capture_mode='walkthrough') and the matching
  * walkthrough_session (status='recording') for the calling user. Service-role
- * is required because RLS on capture_session blocks INSERT for employee /
- * tenant_member roles (Migration 022 capture_session_tenant_admin_write).
+ * is required because RLS on capture_session blocks INSERT for employee
+ * roles (Migration 022 capture_session_tenant_admin_write).
  *
  * Returns the new walkthrough_session id which the caller passes to
  * requestWalkthroughUpload + confirmWalkthroughUploaded later.
