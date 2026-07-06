@@ -139,6 +139,20 @@ export const DEFAULT_RAG_DEPS: AskRagDeps = {
     ),
 };
 
+// V10.2.1 SLC-185 MT-1 (DEC-262 de-drift): die eine Wahrheit der Gap-Definition.
+// Cron-Reconciliation (reconcile-embeddings.ts) und RAG-Coverage-Guard (askRag)
+// teilen dieselbe Count-Gap-Query — Delegation auf DEFAULT_RAG_DEPS statt Kopie.
+export async function getTenantCoverage(
+  admin: SupabaseClient,
+  tenantId: string,
+): Promise<{ kuCount: number; chunkCount: number }> {
+  const [kuCount, chunkCount] = await Promise.all([
+    DEFAULT_RAG_DEPS.countKnowledgeUnits(admin, tenantId),
+    DEFAULT_RAG_DEPS.countIndexedChunks(admin, tenantId),
+  ]);
+  return { kuCount, chunkCount };
+}
+
 // ─── Coverage-Guard ───
 
 function buildCoverage(kuCount: number, chunkCount: number): RagCoverage {
