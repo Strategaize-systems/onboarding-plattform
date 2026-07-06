@@ -863,3 +863,12 @@
 - Workaround: keiner (harter Crash).
 - Next Action: Resolved im V10.2-Deploy-Hotfix — `export` von `REPORT_LABELS` entfernt (modul-intern, nur von `generateReportFazitAction` genutzt; `ReportButtons.tsx` haelt ohnehin seine eigene Label-Liste). Aufgedeckt im /deploy Live-Browser-Smoke 2026-07-04 (RPT-573). Prozess-Lehre → IMP im Dev-System (Build-gruen ≠ Runtime-gruen bei "use server"-Exports; Live-Browser-Smoke Pflicht-Gate).
 
+
+### ISSUE-114 — Keine .env.local in lokalen OP-Checkouts auffindbar → next-build-Gate in Worktrees nicht fahrbar
+- Status: open
+- Severity: Medium
+- Area: Dev-Umgebung / Worktree-Setup / Build-Verification
+- Summary: Beim SLC-185-MT-1-Worktree-Setup (2026-07-06, RPT-580) war in KEINEM lokalen OP-Checkout (Haupt-Checkout, slc178, neue Worktrees) eine `.env.local` auffindbar. Das worktree-setup-Playbook sieht Kopieren/Linken der `.env.local` in den Worktree vor — ohne Quelle laeuft `next build` dort nicht (Turbopack braucht die ENV). tsc/eslint/hermetische Vitest sind nicht betroffen.
+- Impact: Das `next build`-Done-Gate (AC-185-5 / SC5 und kuenftige Slices) kann lokal in Worktrees nicht ausgefuehrt werden; Build-Verifikation verschiebt sich auf einen Standort mit echter ENV.
+- Workaround: Fuer reine lib-MTs (wie MT-1) reichen tsc + targeted/Full-Vitest mit Stash-Baseline-Delta; Build-Gate spaetestens im Slice-/qa nachholen.
+- Next Action: Founder klaert, wo die lokale OP-ENV liegt (oder legt `.env.local` neu an, Werte aus Coolify-Resource-ENV); alternativ Festlegung, dass der Build nach Merge im Main-Repo bzw. via Coolify-Deploy-Build verifiziert wird. Vor /qa SLC-185 entscheiden.

@@ -3,7 +3,7 @@
 - Feature: FEAT-102 (V10.2.1, ISSUE-112)
 - Status: planned
 - Priority: High
-- Created: 2026-07-05
+- Created: 2026-07-06
 - Backlog: BL-528
 - Migration: **keine** (DEC-262 — 0 Migration, 0 neue Tabellen)
 - Worktree-Branch: `v10-2-1-embed-reconcile` (SaaS-Pflicht; Setup per Dev-System-Playbook `docs/playbooks/worktree-setup.md` — echtes `npm install` + `.env.local` für `next build`)
@@ -25,7 +25,7 @@ Ein Self-Healing Reconciliation-Cron schließt RAG-Coverage-Lücken in `knowledg
 
 Echter `ai_jobs`-Job-Typ / Per-Job-Status · Only-missing-Optimierung (V1 re-embedded ALLE KUs eines Gap-Mandanten) · andere RAG-Quellen · Umbau des Fire-and-forget-Hot-Path (`handle-job.ts:208` / `handle-recondense.ts:207` bleiben unverändert) · Health-Dashboard/Alerting über error_log hinaus. Coolify-Task-ANLAGE + SC6-Live-Verifikation = `/deploy`-Phase, nicht dieser Slice.
 
-## Verified-Against-Code-Reality (2026-07-05, Worktree slc178 @ `4624e8f`)
+## Verified-Against-Code-Reality (2026-07-06, Worktree slc178 @ `4624e8f`)
 
 | Pfad | Klasse | Verifikation |
 |---|---|---|
