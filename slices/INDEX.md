@@ -1215,7 +1215,7 @@ Einzelner Slice (Group A), **0 Migration** (DEC-262). 4 MTs backend-lastig: MT-1
 
 | ID | Slice | Feature | Status | Priority | Created |
 |----|-------|---------|--------|----------|---------|
-| SLC-186 | [Passwort-Vergessen-Flow + P-088-Policy-Port](SLC-186-passwort-vergessen-p088.md) | FEAT-103 | planned | High | 2026-07-06 |
+| SLC-186 | [Passwort-Vergessen-Flow + P-088-Policy-Port](SLC-186-passwort-vergessen-p088.md) | FEAT-103 | done | High | 2026-07-06 |
 | SLC-187 | [Zwischenebene-Cleanup tenant_member/mirror/tenant_owner (MIG-131)](SLC-187-zwischenebene-cleanup.md) | FEAT-104 | planned | High | 2026-07-06 |
 
 ### V10.3 Parallel-Readiness + Pflicht-Gates
