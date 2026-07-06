@@ -16,7 +16,6 @@
 export type UserRole =
   | "strategaize_admin"
   | "tenant_admin"
-  | "tenant_member"
   | "employee"
   | "partner_admin";
 

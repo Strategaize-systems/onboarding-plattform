@@ -139,14 +139,14 @@ export async function updateSession(request: NextRequest) {
     }
 
     // SLC-102 MT-2 — /partner/* ist nur partner_admin (+ strategaize_admin via Read-only Impersonate V7+).
-    // V6 sperrt /partner/* fuer tenant_admin, tenant_member, employee.
+    // V6 sperrt /partner/* fuer tenant_admin, employee.
     // strategaize_admin darf rein, weil Cross-Tenant-Admin-Sicht generell erlaubt ist.
     if (pathname.startsWith("/partner")) {
       const allowedRoles = ["partner_admin", "strategaize_admin"];
       const userRole = profile?.role ?? null;
       if (!userRole || !allowedRoles.includes(userRole)) {
         const url = request.nextUrl.clone();
-        url.pathname = userRole === "tenant_admin" || userRole === "tenant_member" ? "/dashboard" : "/login";
+        url.pathname = userRole === "tenant_admin" ? "/dashboard" : "/login";
         url.search = "";
         return NextResponse.redirect(url);
       }
