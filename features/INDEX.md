@@ -307,4 +307,4 @@ V10.3-Scope (Requirements 2026-07-06, RPT-588): Fundament-Paket vor P2-P5 des fr
 | ID | Feature | Status | Spec | Created |
 |----|---------|--------|------|---------|
 | FEAT-103 | Passwort-Vergessen-Flow (/login-Link → enumeration-sichere Anforderung + Rate-Limit → GoTrue recovery-Link via SMTP → /auth/callback → /auth/set-password) | done | PRD §V10.3 | 2026-07-06 |
-| FEAT-104 | Rollen-Cleanup Zwischenebene (tenant_member Code+RLS+CHECK+Bestands-Konvertierung; mirror_respondent-Pfad; tenant_owner-Policy-Reste) | planned | PRD §V10.3 | 2026-07-06 |
+| FEAT-104 | Rollen-Cleanup Zwischenebene (tenant_member Code+RLS+CHECK+Bestands-Konvertierung; mirror_respondent-Pfad; tenant_owner-Policy-Reste) | done | PRD §V10.3 | 2026-07-06 |
