@@ -846,13 +846,13 @@
 - Next Action: Optional MT-2/Polish — sanfter Retry-Backoff in `assessAnswerAmpel` bei `ServiceUnavailableException` (statt sofortigem fail-open), oder Batch-Parallelitaet drosseln. Quelle: SLC-172 MT-1 /qa Runtime-Smoke, RPT-532.
 
 ### ISSUE-112 — Fire-and-forget knowledge_chunks-Embedding kann still fehlschlagen → RAG-Coverage-Lücke (V10.2 FEAT-101)
-- Status: open
+- Status: resolved
 - Severity: Medium
 - Area: RAG / knowledge_chunks / Embedding-Worker
 - Summary: `knowledge_chunks` (RAG-Index, MIG-036) wird ausschliesslich via `embedKnowledgeUnits()` (`src/workers/condensation/embed-knowledge-units.ts`) befüllt, aufgerufen fire-and-forget aus `src/workers/condensation/handle-job.ts:208` (`.catch(log)`). Scheitert der Embedding-Batch (Bedrock-Throttle, Titan-Fehler), bleibt `knowledge_chunks` für den betroffenen Mandanten still leer — es gibt kein Retry, kein Monitoring, keinen sichtbaren Fehlerstatus. `rpc_search_knowledge_chunks` liefert dann 0 Treffer.
 - Impact: Die V10.2-RAG-Frage-Box (FEAT-101) liefert für einen Mandanten mit unvollständigem Index leere/wertlose Antworten. Ohne Guard bestünde Halluzinationsrisiko. Betrifft nur die RAG-Antwortqualität, keine Daten-/Tenant-Sicherheit.
 - Workaround: V10.2 FEAT-101 baut einen Coverage-Guard ein (DEC-261): count(knowledge_unit) vs count(knowledge_chunks, source_type='knowledge_unit') pro Mandant; bei Lücke ehrlicher UI-Hinweis + optionaler Re-Embed-Trigger (Reuse `embedKnowledgeUnits`) statt erfundener Antwort.
-- Next Action: Eigener Folge-Slice — Embedding-Reliability härten: Status-Persistenz statt fire-and-forget (z.B. echter ai_jobs-Job-Typ `knowledge_embed` mit Retry/Claim), Coverage-Monitoring pro Mandant. Aufgedeckt in /architecture V10.2 (RPT-563).
+- Next Action: RESOLVED 2026-07-06 via V10.2.1 SLC-185 (REL-039, RPT-585): Self-Healing Reconcile-Cron `GET /api/cron/knowledge-embed-reconcile` (Coolify-Task `*/10`) prüft pro Mandant den Count-Gap und re-embedded bei Lücke (idempotent, fail-open, error_log-Summary category='knowledge_embed_reconcile'). Erster Prod-Lauf heilte die Founder-Mandant-Altlast (Demo 5→35 valide Chunks) + Privat (0→6); Live-Verify chunk>=ku für alle 4 Mandanten. Fire-and-forget-Hot-Path bleibt bewusst (Cron ist das Netz, DEC-262). Status-Persistenz/echter Job-Typ = Out-of-Scope-V1 (nur bei Bedarf).
 
 ### ISSUE-113 — "use server"-File exportierte ein Objekt (REPORT_LABELS) → Server-Action-Module-Crash zur Laufzeit (V10.2 FEAT-100)
 - Status: resolved
@@ -872,3 +872,12 @@
 - Impact: Das `next build`-Done-Gate (AC-185-5 / SC5 und kuenftige Slices) kann lokal in Worktrees nicht ausgefuehrt werden; Build-Verifikation verschiebt sich auf einen Standort mit echter ENV.
 - Workaround: Fuer reine lib-MTs (wie MT-1) reichen tsc + targeted/Full-Vitest mit Stash-Baseline-Delta. **Empirisch geloest fuer das Build-Gate im Slice-/qa SLC-185 (2026-07-06, RPT-582):** `cp .env.local.example .env.local` im Worktree (Dummy-Werte, gitignored) laesst `next build` vollstaendig durchlaufen (BUILD_ID erzeugt) — Compile-/Prerender-Level-Verifikation ohne echte Secrets. Ohne die Datei bricht die Page-Data-Collection ab (`supabaseUrl is required`).
 - Next Action: Founder klaert, wo die lokale OP-ENV mit ECHTEN Werten liegt (oder legt `.env.local` neu an, Werte aus Coolify-Resource-ENV) — relevant fuer Dev-Server-/Runtime-Smokes, nicht mehr fuer das reine Build-Gate. Dummy-ENV-Build als Standard-Workaround ins worktree-setup-Playbook uebernehmen (IMP im Dev-System).
+
+### ISSUE-115 — 5 Orphan-knowledge_chunks im Demo-Tenant referenzieren gelöschte knowledge_unit-IDs (stale RAG-Quellen)
+- Status: open
+- Severity: Low
+- Area: RAG / knowledge_chunks / Daten-Hygiene
+- Summary: Beim SC6-Live-Verify des V10.2.1-Deploys (2026-07-06, RPT-585) zeigte der Demo-Tenant nach dem Reconcile-Lauf 40 aktive knowledge_unit-Chunks bei 35 KUs. Verifiziert: 5 Chunks haben source_ids, die in knowledge_unit nicht mehr existieren (Alt-Bestand aus früherer Kondensation vor Re-Condense; pre-existing, NICHT durch V10.2.1 erzeugt — es waren genau die 5 Chunks der "5 von 35"-Lücke). Der Upsert-Conflict-Key (source_type, source_id, chunk_index) greift bei geänderten source_ids nicht.
+- Impact: rpc_search_knowledge_chunks kann die 5 veralteten Chunks als RAG-Quellen liefern (Antwort ggf. auf überholten Erkenntnissen geerdet). Nur Demo-Tenant, nur Antwortqualität, keine Sicherheit. Gap-Definition (chunk < ku) bleibt korrekt geschlossen — Cron läuft als Safe-No-Op weiter.
+- Workaround: Manuelles Cleanup per SQL: DELETE FROM knowledge_chunks kc WHERE kc.source_type='knowledge_unit' AND NOT EXISTS (SELECT 1 FROM knowledge_unit ku WHERE ku.id::text = kc.source_id::text);
+- Next Action: Orphan-Cleanup als kleiner Zusatz-Schritt im Reconcile-Orchestrator (V2: delete-orphans vor Gap-Check) ODER einmaliges manuelles SQL-Cleanup; Entscheidung bei nächstem RAG-Slice.

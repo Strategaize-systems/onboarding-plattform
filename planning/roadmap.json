@@ -374,9 +374,9 @@
     {
       "id": "v10-2-1",
       "name": "V10.2.1",
-      "status": "active",
+      "status": "released",
       "order": 20.07,
-      "summary": "**V10.2.1 Embedding-Reliability-Härtung (ISSUE-112) — /requirements DONE 2026-07-05 (RPT-576, DEC-262), active.** Patch-Slice: Self-Healing Reconciliation-Cron schliesst RAG-Coverage-Luecken automatisch. Neuer Cron `GET /api/cron/knowledge-embed-reconcile` (x-cron-secret, Pattern-Reuse pending-signup-cleanup) enumeriert Mandanten, prueft pro Mandant count(knowledge_unit) vs count(knowledge_chunks source_type='knowledge_unit',status='active') (identische Count-Gap-Query wie V10.2 rag.ts Coverage-Guard) und ruft bei Luecke reembedTenantKnowledge(admin,tenantId) (Reuse V10.2, idempotenter Upsert, ledger-frei, fail-open). Heilt Altlasten (erster Lauf, u.a. Founder-Mandant '5 von 35') + jede kuenftige Luecke, egal Ursache (Bedrock-Throttle/Bug/Deploy-Timing). Beobachtbarkeit via captureInfo pro Lauf (category='knowledge_embed_reconcile', {tenantsChecked, tenantsWithGap, chunksReembedded, failures}). Coolify-Scheduled-Task ~*/10. 1 Feature FEAT-102, 1 Slice SLC-185, BL-528. **Wahrscheinlich 0 Migration** (Reuse bestehender Primitiven). Fire-and-forget-Hot-Path bleibt (Best-Effort-First-Pass), Cron ist das Netz. Loest V10.2 Q-V10.2-E / ISSUE-112. EU-Data-Residency (Titan Frankfurt) unberuehrt. Internal-Test-Mode. Out of Scope: ai_jobs knowledge_embed-Job-Typ, only-missing-Optimierung (V1 reembedded alle KUs eines Gap-Tenants, idempotent), andere RAG-Quellen, Dashboard. Naechster Schritt: /architecture V10.2.1."
+      "summary": "V10.2.1 Embedding-Reliability-Haertung (ISSUE-112) — RELEASED 2026-07-06 (REL-039, RPT-585). Self-Healing Reconcile-Cron GET /api/cron/knowledge-embed-reconcile (Coolify-Task */10, x-cron-secret): pro Mandant Count-Gap (getTenantCoverage, identische Query wie V10.2-Coverage-Guard) -> bei Luecke reembedTenantKnowledge (idempotent, ledger-frei, fail-open, Cap 25/Lauf). 0 Migration (DEC-262). 1 Feature FEAT-102, 1 Slice SLC-185, BL-528 — alle deployed/done. Erster Prod-Lauf heilte Founder-Mandant-Altlast ('5 von 35' -> alle 35 KUs indexiert) + Privat (6/6); Summary in error_log (category=knowledge_embed_reconcile). ISSUE-112 resolved; Folge-Finding ISSUE-115 (5 pre-existing Orphan-Chunks Demo-Tenant, Low)."
     }
   ]
 }
