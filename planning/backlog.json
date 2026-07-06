@@ -1859,6 +1859,56 @@
       "version": "V10.2.1",
       "description": "FEAT-102: Self-Healing Cron /api/cron/knowledge-embed-reconcile findet pro Mandant count(knowledge_unit) > count(knowledge_chunks source_type=knowledge_unit,status=active) und re-embedded via reembedTenantKnowledge (Reuse V10.2, idempotent, ledger-frei). Schliesst Altlasten + kuenftige RAG-Coverage-Luecken. Beobachtbarkeit via error_log (captureInfo). Pattern-Reuse pending-signup-cleanup-Cron. 0 Migration erwartet. Loest ISSUE-112 / V10.2 Q-V10.2-E.",
       "createdAt": "2026-07-05"
+    },
+    {
+      "id": "BL-529",
+      "title": "Rollenmodell V2 P1: Cleanup tenant_member/mirror/tenant_owner + Passwort-Reset-Flow",
+      "type": "improvement",
+      "priority": "high",
+      "status": "open",
+      "version": null,
+      "description": "Zwischenebene entfernen (DEC-263), Legacy-Policy-Reste bereinigen, Passwort-Vergessen-Flow (Delta D7) vor externem StB-Testlauf.",
+      "createdAt": "2026-07-06"
+    },
+    {
+      "id": "BL-530",
+      "title": "Rollenmodell V2 P2: Rolle strategaize_berater (BS-Port, Tenant-Zuweisung + can_see_tenant-RLS + Mein-Tag-Scope)",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": null,
+      "description": "Ausfuehrende Strategaize-Berater-Ebene, sieht nur zugewiesene Kanzleien/Kunden; Pattern-Reuse BS MIG-033/034/035 (DEC-263).",
+      "createdAt": "2026-07-06"
+    },
+    {
+      "id": "BL-531",
+      "title": "Rollenmodell V2 P3: Partner-Funktions-Flags (cap_own_company/cap_referral/cap_advisory) + F1 'Meine Kanzlei'",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": null,
+      "description": "3 schaltbare StB-Funktionen an partner_organization; F1 = Kanzlei-Erfassung im Partner-Tenant inkl. StB-Vertikale-Flag-Enable (DEC-263).",
+      "createdAt": "2026-07-06"
+    },
+    {
+      "id": "BL-532",
+      "title": "Rollenmodell V2 P4: F3 Advisory-Workspace (Mandanten-Drilldown + Mein Tag Partner-Scope + Mitarbeiter-Invites)",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": null,
+      "description": "StB betreut Workspace-Mandanten selbst: Drilldown 'wer hat was gemacht', partner-gescoptes Mein Tag, Organigramm-basierte employee-Invites in Mandanten-Tenants (DEC-263).",
+      "createdAt": "2026-07-06"
+    },
+    {
+      "id": "BL-533",
+      "title": "Rollenmodell V2 P5: Bereichs-Entmischung — GF-Funktionen von /admin-URLs nach /dashboard",
+      "type": "improvement",
+      "priority": "medium",
+      "status": "open",
+      "version": null,
+      "description": "Delta D1: Team/Bridge/Walkthroughs/Handbuch-Trigger aus TenantAdminShell unter /admin heraus; klare URL-Namespaces pro Rolle.",
+      "createdAt": "2026-07-06"
     }
   ]
 }
