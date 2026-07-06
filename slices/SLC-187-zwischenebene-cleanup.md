@@ -60,3 +60,10 @@ Die Kunden-Zwischenebene verschwindet vollständig aus Code und Datenbank: `tena
 - Blockiert-von: SLC-186 (kumulativer Branch; Reihenfolge-Rationale Addendum U.7).
 - MIG-131-Live-Apply + AC-187-5 = /deploy-Phase (MT-Xa/Xb-Split per Planungs-Heuristik).
 - Nachgelagert: P2 (SLC-18x strategaize_berater) setzt auf dem bereinigten 4-Rollen-CHECK auf — MIG-131 muss VOR der P2-Rollen-Migration live sein.
+
+## MT-1-Audit (2026-07-06, Grep-Baseline im Worktree @ 129e498)
+
+- **tenant_member:** 48 src-Dateien — 18 Quell-Dateien (role-check.ts, middleware.ts, api-utils.ts, invite-route, walkthrough.ts, diagnose-event/route.ts, wizard-actions.ts, freeform.ts, validations.ts, types/db.ts, employee/partner-layout, tenants-client.tsx, AdminDemoBanner.tsx, bulk-email-import actions/page/filter-review, reviews/page.tsx) + 30 Test-/Fixture-Dateien. **Kritisch: 10 DB-RLS-Test-Fixtures (src/__tests__/rls/*, src/lib/db/__tests__/*) legen tenant_member-User an — MUESSEN mit umgestellt werden, sonst bricht die Server-DB-Suite nach MIG-131-Apply (CHECK-Violation).**
+- **mirror:** 9 Dateien (invite-route, mirror-respondents-Route, api-utils, email.ts, tenants-client, help-button, learning-center-panel, freeform, validations).
+- **tenant_owner:** 0 in src/ — nur SQL (MIG-131-Scope bestätigt).
+- Aufteilung: MT-3 = Kern (role-check+test, middleware, api-utils, invite-route, email, mirror-DELETE, types/db, validations, freeform) · MT-4 = Rest (UI + alle Tests/Fixtures) bis Grep-Count 0.
