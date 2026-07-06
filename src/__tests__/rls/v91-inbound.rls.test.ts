@@ -5,7 +5,7 @@
 //   - strategaize_admin: FOR ALL Cross-Tenant (admin_all) — sieht beide Tenants.
 //   - tenant_admin (GF): SELECT own Tenant (read-only). KEIN INSERT/UPDATE/DELETE
 //     (kein write-Policy → Writes nur via service_role/Cron).
-//   - tenant_member + employee: KEIN ACCESS (kein POLICY-Eintrag → Default-Deny).
+//   - employee: KEIN ACCESS (kein POLICY-Eintrag → Default-Deny).
 //   - service_role: FOR ALL (Cron schreibt last_uid/status) — BYPASSRLS + Policy
 //     als Defense-in-Depth. Nicht ueber withJwtContext testbar; Policy-Existenz
 //     ist in src/__tests__/migrations/116-v91-email-inbound-sync-state.test.ts
@@ -16,10 +16,9 @@
 //   2. tenant_admin SELECT own + cross-tenant DENY (kombiniert)
 //   3. tenant_admin INSERT → RLS-WITH-CHECK Reject (write = service_role only)
 //   4. tenant_admin UPDATE own → 0 Rows (kein UPDATE-Policy, USING filtert)
-//   5. tenant_member SELECT DENY + INSERT DENY (kombiniert, default-deny)
-//   6. employee SELECT DENY + INSERT DENY (kombiniert, default-deny)
-//   7. tenant_admin DELETE own → 0 Rows (kein DELETE-Policy, USING filtert)
-//   8. strategaize_admin INSERT own-Tenant ALLOW (admin_all FOR ALL WITH CHECK)
+//   5. employee SELECT DENY + INSERT DENY (kombiniert, default-deny)
+//   6. tenant_admin DELETE own → 0 Rows (kein DELETE-Policy, USING filtert)
+//   7. strategaize_admin INSERT own-Tenant ALLOW (admin_all FOR ALL WITH CHECK)
 //
 // SAVEPOINT-Pattern fuer expected RLS-Rejections per .claude/rules/coolify-test-setup.md
 // (IMP-044). Pattern-Reuse: src/__tests__/rls/v9-bulk-email.rls.test.ts (SLC-165 MT-6).
@@ -123,29 +122,6 @@ describe("V9.1 RLS email_inbound_sync_state — 4 Rollen", () => {
           [f.endpointA],
         );
         expect(res.rowCount).toBe(0);
-      });
-    });
-  });
-
-  it("tenant_member: SELECT 0 + INSERT DENY (default-deny)", async () => {
-    await withTestDb(async (client) => {
-      const f = await seedV91InboundFixtures(client);
-      await withJwtContext(client, f.tenantMemberAUserId, async () => {
-        const sel = await client.query<{ c: string }>(
-          `SELECT count(*)::text AS c FROM public.email_inbound_sync_state
-            WHERE endpoint_id IN ($1, $2)`,
-          [f.endpointA, f.endpointB],
-        );
-        expect(sel.rows[0].c).toBe("0");
-
-        const errMsg = await expectRlsReject(
-          client,
-          `INSERT INTO public.email_inbound_sync_state
-             (endpoint_id, tenant_id, folder, last_uid, status)
-           VALUES ($1, $2, 'INBOX', 5, 'idle')`,
-          [f.endpointA2, f.tenantA],
-        );
-        expect(errMsg).toMatch(/row-level security|new row violates|permission denied/i);
       });
     });
   });

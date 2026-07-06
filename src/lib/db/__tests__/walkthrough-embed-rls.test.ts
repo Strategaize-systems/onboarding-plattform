@@ -25,8 +25,6 @@ interface EmbedFixture {
   adminA: string;
   /** tenant_admin von Tenant B. */
   adminB: string;
-  /** tenant_member in Tenant A. */
-  memberA: string;
   /** employee in Tenant A. */
   employeeA: string;
   /** strategaize_admin (kein tenant_id). */
@@ -70,7 +68,7 @@ async function seedEmbedFixture(client: Client): Promise<EmbedFixture> {
 
   async function makeMember(
     tenant: string,
-    role: "tenant_member" | "employee",
+    role: "employee",
   ): Promise<string> {
     const r = await client.query<{ id: string }>(
       `INSERT INTO auth.users (
@@ -90,7 +88,6 @@ async function seedEmbedFixture(client: Client): Promise<EmbedFixture> {
     return r.rows[0].id;
   }
 
-  const memberA = await makeMember(tenantA, "tenant_member");
   const employeeA = await makeMember(tenantA, "employee");
 
   // capture_session FKs
@@ -151,7 +148,7 @@ async function seedEmbedFixture(client: Client): Promise<EmbedFixture> {
 
   return {
     tenantA, tenantB,
-    adminA, adminB, memberA, employeeA, saAdmin,
+    adminA, adminB, employeeA, saAdmin,
     approvedA, pendingA, rejectedA, approvedB,
     storagePathA,
   };
@@ -262,46 +259,7 @@ describe("RLS Matrix — rpc_get_walkthrough_video_path / tenant_admin", () => {
 });
 
 // ============================================================================
-// tenant_member (3 cases)
-// ============================================================================
-
-describe("RLS Matrix — rpc_get_walkthrough_video_path / tenant_member", () => {
-  it("Case 7: tenant_member own-tenant approved → error=forbidden (Reader-Rolle nur tenant_admin/sa_admin)", async () => {
-    await withTestDb(async (client) => {
-      const f = await seedEmbedFixture(client);
-      let r: RpcResult["result"] = null;
-      await withJwtContext(client, f.memberA, async () => {
-        r = await callRpc(client, f.approvedA);
-      });
-      expect(r!.error).toBe("forbidden");
-    });
-  });
-
-  it("Case 8: tenant_member own-tenant pending_review → error=forbidden", async () => {
-    await withTestDb(async (client) => {
-      const f = await seedEmbedFixture(client);
-      let r: RpcResult["result"] = null;
-      await withJwtContext(client, f.memberA, async () => {
-        r = await callRpc(client, f.pendingA);
-      });
-      expect(r!.error).toBe("forbidden");
-    });
-  });
-
-  it("Case 9: tenant_member cross-tenant approved → error=forbidden (Rollen-Check vor Tenant-Check)", async () => {
-    await withTestDb(async (client) => {
-      const f = await seedEmbedFixture(client);
-      let r: RpcResult["result"] = null;
-      await withJwtContext(client, f.memberA, async () => {
-        r = await callRpc(client, f.approvedB);
-      });
-      expect(r!.error).toBe("forbidden");
-    });
-  });
-});
-
-// ============================================================================
-// employee (3 cases)
+// employee (4 cases)
 // ============================================================================
 
 describe("RLS Matrix — rpc_get_walkthrough_video_path / employee", () => {
@@ -333,6 +291,17 @@ describe("RLS Matrix — rpc_get_walkthrough_video_path / employee", () => {
       let r: RpcResult["result"] = null;
       await withJwtContext(client, f.employeeA, async () => {
         r = await callRpc(client, f.rejectedA);
+      });
+      expect(r!.error).toBe("forbidden");
+    });
+  });
+
+  it("Case 12b: employee cross-tenant approved → error=forbidden (Rollen-Check vor Tenant-Check)", async () => {
+    await withTestDb(async (client) => {
+      const f = await seedEmbedFixture(client);
+      let r: RpcResult["result"] = null;
+      await withJwtContext(client, f.employeeA, async () => {
+        r = await callRpc(client, f.approvedB);
       });
       expect(r!.error).toBe("forbidden");
     });

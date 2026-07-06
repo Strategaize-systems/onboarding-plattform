@@ -129,14 +129,6 @@ describe("setWizardStarted — Cross-Role-Check (DEC-051, AC-8)", () => {
     expect(result).toEqual({ ok: false, error: "forbidden" });
   });
 
-  it("lehnt tenant_member ab", async () => {
-    profileSingleMock.mockResolvedValue({
-      data: { tenant_id: TENANT_ID, role: "tenant_member" },
-    });
-    const result = await setWizardStarted();
-    expect(result).toEqual({ ok: false, error: "forbidden" });
-  });
-
   it("lehnt employee ab", async () => {
     profileSingleMock.mockResolvedValue({
       data: { tenant_id: TENANT_ID, role: "employee" },
@@ -230,9 +222,9 @@ describe("setWizardSkipped — aus pending oder started", () => {
     expect(result).toEqual({ ok: false, error: "wrong_state" });
   });
 
-  it("lehnt tenant_member ab", async () => {
+  it("lehnt employee ab", async () => {
     profileSingleMock.mockResolvedValue({
-      data: { tenant_id: TENANT_ID, role: "tenant_member" },
+      data: { tenant_id: TENANT_ID, role: "employee" },
     });
     const result = await setWizardSkipped();
     expect(result).toEqual({ ok: false, error: "forbidden" });

@@ -147,7 +147,7 @@ async function seedV6Fixture(client: Client): Promise<V6Fixture> {
   // --- Users (auth.users + handle_new_user-Trigger erzeugt profiles) ---
   async function mkUser(
     label: string,
-    role: "strategaize_admin" | "tenant_admin" | "tenant_member" | "employee" | "partner_admin",
+    role: "strategaize_admin" | "tenant_admin" | "employee" | "partner_admin",
     tenantId: string | null
   ): Promise<string> {
     const metadata =

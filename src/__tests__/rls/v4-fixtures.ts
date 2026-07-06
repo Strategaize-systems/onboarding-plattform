@@ -8,10 +8,8 @@ export interface V4Fixtures {
   // Per-Tenant: je ein User pro Rolle (strategaize_admin ist tenant-unabhaengig).
   strategaizeAdminUserId: string;
   tenantAdminAUserId: string;
-  tenantMemberAUserId: string;
   employeeAUserId: string;
   tenantAdminBUserId: string;
-  tenantMemberBUserId: string;
   employeeBUserId: string;
   // Eigene capture_session pro employee + je eine tenant_admin-Session pro Tenant.
   sessionAdminA: string;
@@ -46,7 +44,7 @@ export interface V4Fixtures {
  * Erzeugt:
  *   - 2 Tenants (A, B)
  *   - 1 Template
- *   - 7 User (1 strategaize_admin + 3 pro Tenant: admin, member, employee)
+ *   - 5 User (1 strategaize_admin + 2 pro Tenant: admin, employee)
  *   - 4 capture_sessions (1 admin-owned + 1 employee-owned pro Tenant)
  *   - SLC-037 MT-7: je 1 Row pro Tenant in:
  *     block_checkpoint, knowledge_unit, validation_layer, block_diagnosis, sop,
@@ -79,7 +77,7 @@ export async function seedV4Fixtures(client: Client): Promise<V4Fixtures> {
   // strategaize_admin: tenant_id leer.
   const mkUser = async (
     label: string,
-    role: "strategaize_admin" | "tenant_admin" | "tenant_member" | "employee",
+    role: "strategaize_admin" | "tenant_admin" | "employee",
     tenantId: string | null
   ): Promise<string> => {
     const metadata =
@@ -113,11 +111,9 @@ export async function seedV4Fixtures(client: Client): Promise<V4Fixtures> {
   );
 
   const tenantAdminAUserId = await mkUser("v4-ta-a", "tenant_admin", tenantA);
-  const tenantMemberAUserId = await mkUser("v4-tm-a", "tenant_member", tenantA);
   const employeeAUserId = await mkUser("v4-emp-a", "employee", tenantA);
 
   const tenantAdminBUserId = await mkUser("v4-ta-b", "tenant_admin", tenantB);
-  const tenantMemberBUserId = await mkUser("v4-tm-b", "tenant_member", tenantB);
   const employeeBUserId = await mkUser("v4-emp-b", "employee", tenantB);
 
   // capture_sessions
@@ -335,10 +331,8 @@ export async function seedV4Fixtures(client: Client): Promise<V4Fixtures> {
     templateVersion,
     strategaizeAdminUserId,
     tenantAdminAUserId,
-    tenantMemberAUserId,
     employeeAUserId,
     tenantAdminBUserId,
-    tenantMemberBUserId,
     employeeBUserId,
     sessionAdminA,
     sessionAdminB,

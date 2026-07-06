@@ -40,7 +40,6 @@ export default async function EmployeeLayout({
 
   if (profile.role === "tenant_admin") redirect("/dashboard");
   if (profile.role === "strategaize_admin") redirect("/admin/tenants");
-  if (profile.role === "tenant_member") redirect("/dashboard");
   if (profile.role !== "employee") redirect("/login");
 
   return <EmployeeShell email={profile.email}>{children}</EmployeeShell>;

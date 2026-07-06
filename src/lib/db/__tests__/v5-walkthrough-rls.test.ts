@@ -11,7 +11,7 @@ import { seedTestTenants } from "@/test/fixtures/tenants";
 //   2) walkthrough_step            16 Faelle
 //   3) walkthrough_review_mapping  16 Faelle
 //
-// Rollen: strategaize_admin, tenant_admin, tenant_member, employee.
+// Rollen: strategaize_admin, tenant_admin, employee.
 //
 // Pattern (per coolify-test-setup.md):
 //   - SELECT/UPDATE: rowCount-Pruefung (RLS filtert die WHERE-Clause).
@@ -28,9 +28,9 @@ interface Fixture {
   adminA: string;
   /** tenant_admin von Tenant B. */
   adminB: string;
-  /** tenant_member in Tenant A (zweiter User mit member-Rolle). */
+  /** employee in Tenant A (zweiter User mit employee-Rolle). */
   memberA: string;
-  /** Zweiter tenant_member in Tenant A (fuer "fremder User im selben Tenant"). */
+  /** Zweiter employee in Tenant A (fuer "fremder User im selben Tenant"). */
   memberA2: string;
   /** employee in Tenant A. */
   employeeA: string;
@@ -87,7 +87,7 @@ async function seedV5WalkthroughFixture(client: Client): Promise<Fixture> {
     [saAdmin]
   );
 
-  async function makeMember(tenant: string, role: "tenant_member" | "employee"): Promise<string> {
+  async function makeMember(tenant: string, role: "employee"): Promise<string> {
     const r = await client.query<{ id: string }>(
       `INSERT INTO auth.users (
          instance_id, id, aud, role, email, encrypted_password,
@@ -106,8 +106,8 @@ async function seedV5WalkthroughFixture(client: Client): Promise<Fixture> {
     return r.rows[0].id;
   }
 
-  const memberA = await makeMember(tenantA, "tenant_member");
-  const memberA2 = await makeMember(tenantA, "tenant_member");
+  const memberA = await makeMember(tenantA, "employee");
+  const memberA2 = await makeMember(tenantA, "employee");
   const employeeA = await makeMember(tenantA, "employee");
 
   // capture_session FKs
@@ -329,7 +329,7 @@ describe("RLS Matrix — walkthrough_session (16 cases)", () => {
     });
   });
 
-  it("Case 9: tenant_member SELECT eigene aufgenommene Session → ALLOW", async () => {
+  it("Case 9: employee SELECT eigene aufgenommene Session → ALLOW", async () => {
     await withTestDb(async (client) => {
       const f = await seedV5WalkthroughFixture(client);
       await withJwtContext(client, f.memberA, async () => {
@@ -342,7 +342,7 @@ describe("RLS Matrix — walkthrough_session (16 cases)", () => {
     });
   });
 
-  it("Case 10: tenant_member SELECT fremde Session im selben Tenant → DENY (0 rows)", async () => {
+  it("Case 10: employee SELECT fremde Session im selben Tenant → DENY (0 rows)", async () => {
     await withTestDb(async (client) => {
       const f = await seedV5WalkthroughFixture(client);
       // memberA2 sieht nicht die Session von memberA
@@ -356,7 +356,7 @@ describe("RLS Matrix — walkthrough_session (16 cases)", () => {
     });
   });
 
-  it("Case 11: tenant_member INSERT als eigener User → ALLOW", async () => {
+  it("Case 11: employee INSERT als eigener User → ALLOW", async () => {
     await withTestDb(async (client) => {
       const f = await seedV5WalkthroughFixture(client);
       await withJwtContext(client, f.memberA, async () => {
@@ -372,7 +372,7 @@ describe("RLS Matrix — walkthrough_session (16 cases)", () => {
     });
   });
 
-  it("Case 12: tenant_member UPDATE eigene Session (approve) → DENY (rowCount=0)", async () => {
+  it("Case 12: employee UPDATE eigene Session (approve) → DENY (rowCount=0)", async () => {
     await withTestDb(async (client) => {
       const f = await seedV5WalkthroughFixture(client);
       await withJwtContext(client, f.memberA, async () => {
@@ -571,7 +571,7 @@ describe("RLS Matrix — walkthrough_step (16 cases)", () => {
     });
   });
 
-  it("Case 25: tenant_member SELECT eigener Session-Schritt → ALLOW", async () => {
+  it("Case 25: employee SELECT eigener Session-Schritt → ALLOW", async () => {
     await withTestDb(async (client) => {
       const f = await seedV5WalkthroughFixture(client);
       await withJwtContext(client, f.memberA, async () => {
@@ -584,7 +584,7 @@ describe("RLS Matrix — walkthrough_step (16 cases)", () => {
     });
   });
 
-  it("Case 26: tenant_member SELECT fremder Session-Schritt → DENY (0 rows)", async () => {
+  it("Case 26: employee SELECT fremder Session-Schritt → DENY (0 rows)", async () => {
     await withTestDb(async (client) => {
       const f = await seedV5WalkthroughFixture(client);
       // memberA2 sieht nicht den Step von memberA
@@ -598,7 +598,7 @@ describe("RLS Matrix — walkthrough_step (16 cases)", () => {
     });
   });
 
-  it("Case 27: tenant_member UPDATE eigener Schritt → DENY (rowCount=0)", async () => {
+  it("Case 27: employee UPDATE eigener Schritt → DENY (rowCount=0)", async () => {
     await withTestDb(async (client) => {
       const f = await seedV5WalkthroughFixture(client);
       await withJwtContext(client, f.memberA, async () => {
@@ -611,7 +611,7 @@ describe("RLS Matrix — walkthrough_step (16 cases)", () => {
     });
   });
 
-  it("Case 28: tenant_member UPDATE fremder Schritt → DENY (rowCount=0)", async () => {
+  it("Case 28: employee UPDATE fremder Schritt → DENY (rowCount=0)", async () => {
     await withTestDb(async (client) => {
       const f = await seedV5WalkthroughFixture(client);
       await withJwtContext(client, f.memberA, async () => {
@@ -819,7 +819,7 @@ describe("RLS Matrix — walkthrough_review_mapping (16 cases)", () => {
     });
   });
 
-  it("Case 41: tenant_member SELECT eigener Session-mapping → ALLOW (ueber recorded_by_user_id-Pfad)", async () => {
+  it("Case 41: employee SELECT eigener Session-mapping → ALLOW (ueber recorded_by_user_id-Pfad)", async () => {
     await withTestDb(async (client) => {
       const f = await seedV5WalkthroughFixture(client);
       await withJwtContext(client, f.memberA, async () => {
@@ -832,7 +832,7 @@ describe("RLS Matrix — walkthrough_review_mapping (16 cases)", () => {
     });
   });
 
-  it("Case 42: tenant_member SELECT fremder Session-mapping → DENY (0 rows)", async () => {
+  it("Case 42: employee SELECT fremder Session-mapping → DENY (0 rows)", async () => {
     await withTestDb(async (client) => {
       const f = await seedV5WalkthroughFixture(client);
       await withJwtContext(client, f.memberA2, async () => {
@@ -845,7 +845,7 @@ describe("RLS Matrix — walkthrough_review_mapping (16 cases)", () => {
     });
   });
 
-  it("Case 43: tenant_member UPDATE eigener Session-mapping → DENY (rowCount=0, nur admin-Rollen duerfen reviewen)", async () => {
+  it("Case 43: employee UPDATE eigener Session-mapping → DENY (rowCount=0, nur admin-Rollen duerfen reviewen)", async () => {
     await withTestDb(async (client) => {
       const f = await seedV5WalkthroughFixture(client);
       await withJwtContext(client, f.memberA, async () => {
@@ -858,7 +858,7 @@ describe("RLS Matrix — walkthrough_review_mapping (16 cases)", () => {
     });
   });
 
-  it("Case 44: tenant_member UPDATE fremder Session-mapping → DENY (rowCount=0)", async () => {
+  it("Case 44: employee UPDATE fremder Session-mapping → DENY (rowCount=0)", async () => {
     await withTestDb(async (client) => {
       const f = await seedV5WalkthroughFixture(client);
       await withJwtContext(client, f.memberA, async () => {

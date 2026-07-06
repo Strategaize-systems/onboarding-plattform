@@ -8,7 +8,7 @@
 // (user-context fuer status + threads, admin-context fuer cost-cap-store + ai_jobs).
 //
 // Coverage:
-//   1. Auth-Gate (4 Faelle: unauth, no-profile, employee/tenant_member, no-tenant_id)
+//   1. Auth-Gate (4 Faelle: unauth, no-profile, employee, no-tenant_id)
 //   2. Input-Validation: invalid UUID
 //   3. Status-Pre-Check: not-found, wrong status ('parsed', 'pre_filtered', 'pattern_extracting')
 //   4. No-Threads-Edge-Case: 0 redacted threads

@@ -23,7 +23,7 @@ interface FromMocks {
 function buildSupabaseMock(opts: { userId?: string | null; from: FromMocks }) {
   // route.ts ruft `.insert(...)` direkt (KEIN .select().single() Chain) —
   // siehe Kommentar in route.ts: PostgREST-RETURNING wuerde SELECT-RLS
-  // anstossen und der tenant_admin/tenant_member-Insert-Pfad scheitert.
+  // anstossen und der tenant_admin/employee-Insert-Pfad scheitert.
   // Insert-Fn ist daher direkt awaitable und resolved zu PostgrestResponse.
   const insertFn = vi
     .fn()

@@ -4,7 +4,7 @@
 // sich gerade in der Mandanten-Funnel-Sicht befindet (Demo-Mode via tenant_id-
 // Verortung) und bietet schnellen Weg zurueck ins Admin-Cockpit.
 //
-// Wird NICHT fuer echte tenant_admin / tenant_member / employee gerendert —
+// Wird NICHT fuer echte tenant_admin / employee gerendert —
 // dort ist die Sicht der Normalzustand, kein Banner noetig.
 
 import Link from "next/link";

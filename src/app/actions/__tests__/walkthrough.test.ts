@@ -183,7 +183,7 @@ describe("startWalkthroughSession", () => {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
       single: vi.fn().mockResolvedValue({
-        data: { tenant_id: TENANT_A, role: "tenant_member" },
+        data: { tenant_id: TENANT_A, role: "employee" },
         error: null,
       }),
     };

@@ -108,18 +108,6 @@ describe("RLS block_review — SELECT-Matrix", () => {
     });
   });
 
-  it("tenant_member sieht KEINE block_reviews (default-deny)", async () => {
-    await withTestDb(async (client) => {
-      const { fixtures } = await seedBlockReviews(client);
-      await withJwtContext(client, fixtures.tenantMemberAUserId, async () => {
-        const res = await client.query<{ c: string }>(
-          `SELECT count(*)::text AS c FROM public.block_review`,
-        );
-        expect(res.rows[0].c).toBe("0");
-      });
-    });
-  });
-
   it("employee sieht KEINE block_reviews (default-deny)", async () => {
     await withTestDb(async (client) => {
       const { fixtures } = await seedBlockReviews(client);
@@ -185,10 +173,10 @@ describe("RLS block_review — Write-Matrix (Approval-Hoheit strategaize_admin)"
     });
   });
 
-  it("tenant_member darf weder lesen noch schreiben (default-deny)", async () => {
+  it("employee darf weder lesen noch schreiben (default-deny)", async () => {
     await withTestDb(async (client) => {
       const { fixtures } = await seedBlockReviews(client);
-      await withJwtContext(client, fixtures.tenantMemberAUserId, async () => {
+      await withJwtContext(client, fixtures.employeeAUserId, async () => {
         const errMsg = await expectRlsReject(
           client,
           `INSERT INTO public.block_review (tenant_id, capture_session_id, block_key, status)
@@ -216,7 +204,7 @@ describe("RLS block_review — Trigger ON INSERT capture_events (AC-4, AC-5)", (
     await withTestDb(async (client) => {
       const fixtures = await seedV4Fixtures(client);
 
-      // capture_events INSERT als tenant_member (alle authentifizierten haben INSERT-Recht)
+      // capture_events INSERT als employee (alle authentifizierten haben INSERT-Recht)
       await withJwtContext(client, fixtures.employeeAUserId, async () => {
         await client.query(
           `INSERT INTO public.capture_events

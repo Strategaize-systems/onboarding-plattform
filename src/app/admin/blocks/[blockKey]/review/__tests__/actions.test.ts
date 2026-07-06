@@ -109,8 +109,8 @@ describe("approveBlockReview — Auth Guard (AC-9)", () => {
     expect(result).toEqual({ ok: false, error: "forbidden" });
   });
 
-  it("lehnt tenant_member ab", async () => {
-    profileEqMock.mockResolvedValue({ data: { role: "tenant_member" } });
+  it("lehnt employee ab", async () => {
+    profileEqMock.mockResolvedValue({ data: { role: "employee" } });
     const result = await approveBlockReview({
       tenantId: VALID_TENANT,
       sessionId: VALID_SESSION,

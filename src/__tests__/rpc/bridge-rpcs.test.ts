@@ -131,21 +131,6 @@ describe("rpc_trigger_bridge_run", () => {
     });
   });
 
-  it("tenant_member wird abgelehnt (forbidden)", async () => {
-    await withTestDb(async (client) => {
-      const f = await seedV4Fixtures(client);
-
-      const res = await queryAs<{ result: Record<string, unknown> }>(
-        client,
-        f.tenantMemberAUserId,
-        `SELECT public.rpc_trigger_bridge_run($1) AS result`,
-        [f.sessionAdminA]
-      );
-
-      expect(res.rows[0].result).toEqual({ error: "forbidden" });
-    });
-  });
-
   it("employee wird abgelehnt (forbidden)", async () => {
     await withTestDb(async (client) => {
       const f = await seedV4Fixtures(client);

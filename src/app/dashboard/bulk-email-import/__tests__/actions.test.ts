@@ -284,18 +284,6 @@ describe("uploadBulkEmailRun — Auth-Gate", () => {
     }
   });
 
-  it("lehnt role=tenant_member ab", async () => {
-    userClientMock.mockImplementation(() =>
-      buildUserClient({
-        profile: { id: USER, tenant_id: TENANT, role: "tenant_member" },
-      }),
-    );
-    adminClientMock.mockImplementation(() => buildAdminClient({}).client);
-
-    const result = await uploadBulkEmailRun(makeFormDataWithFile(makeMboxFile()));
-    expect(result.ok).toBe(false);
-  });
-
   it("lehnt role=strategaize_admin ab (kein Cross-Tenant-Upload)", async () => {
     userClientMock.mockImplementation(() =>
       buildUserClient({

@@ -1,19 +1,17 @@
 // SLC-046 MT-4 — V4.2 Foundation RLS-Test-Matrix
 //
-// Pflicht-Gate AC-12: 4-Rollen-Matrix (strategaize_admin, tenant_admin, tenant_member, employee)
+// Pflicht-Gate AC-12: Rollen-Matrix (strategaize_admin, tenant_admin, employee — Mitglieder-Zwischenrolle entfiel mit MIG-131/V10.3)
 // fuer reminder_log + user_settings. 8 Tests pro Tabelle = 16 total. Gegen Live-DB.
 //
 // reminder_log (alle authenticated-Rollen): GRANT SELECT only — INSERT/UPDATE/DELETE
 // nur via service_role (Cron). Daher INSERT fuer alle 4 authenticated-Rollen DENY.
 //   strategaize_admin: SELECT cross-tenant ALLOW (RLS-Policy), INSERT DENY (kein GRANT)
 //   tenant_admin:      SELECT eigener Tenant ALLOW + cross-tenant DENY, INSERT DENY
-//   tenant_member:     SELECT DENY (Default-Deny), INSERT DENY
 //   employee:          SELECT DENY (Default-Deny), INSERT DENY
 //
 // user_settings:
 //   strategaize_admin: SELECT cross-user ALLOW, INSERT ALLOW
 //   tenant_admin:      SELECT eigener Eintrag ALLOW + fremder Eintrag DENY, UPDATE DENY auf fremden
-//   tenant_member:     SELECT eigener Eintrag ALLOW, UPDATE eigener Eintrag ALLOW
 //   employee:          SELECT eigener Eintrag ALLOW, UPDATE eigener Eintrag ALLOW
 //
 // SAVEPOINT-Pattern fuer expected RLS-Rejections (rules/coolify-test-setup.md).
@@ -111,46 +109,6 @@ describe("V4.2 reminder_log RLS-Matrix (8 Faelle)", () => {
       const f = await seedV4Fixtures(client);
 
       await withJwtContext(client, f.tenantAdminAUserId, async () => {
-        await client.query(`SAVEPOINT try_insert`);
-        let errorMessage: string | null = null;
-        try {
-          await client.query(
-            `INSERT INTO public.reminder_log
-               (tenant_id, employee_user_id, reminder_stage, sent_date, email_to, status)
-             VALUES ($1, $2, 'stage1', current_date, 'try@example.com', 'sent')`,
-            [f.tenantA, f.employeeAUserId]
-          );
-        } catch (e) {
-          errorMessage = (e as Error).message;
-        }
-        await client.query(`ROLLBACK TO SAVEPOINT try_insert`);
-        expect(errorMessage).not.toBeNull();
-        expect(errorMessage!).toMatch(/row-level security|violates|permission/i);
-      });
-    });
-  });
-
-  it("tenant_member: SELECT DENY (RLS Default-Deny)", async () => {
-    await withTestDb(async (client) => {
-      const f = await seedV4Fixtures(client);
-      await seedReminderLog(client, f.tenantA, f.employeeAUserId);
-
-      await withJwtContext(client, f.tenantMemberAUserId, async () => {
-        const r = await client.query(
-          `SELECT id FROM public.reminder_log WHERE tenant_id = $1`,
-          [f.tenantA]
-        );
-        // Default-Deny: keine Policy fuer tenant_member → 0 Rows sichtbar
-        expect(r.rowCount).toBe(0);
-      });
-    });
-  });
-
-  it("tenant_member: INSERT DENY", async () => {
-    await withTestDb(async (client) => {
-      const f = await seedV4Fixtures(client);
-
-      await withJwtContext(client, f.tenantMemberAUserId, async () => {
         await client.query(`SAVEPOINT try_insert`);
         let errorMessage: string | null = null;
         try {
@@ -284,39 +242,6 @@ describe("V4.2 user_settings RLS-Matrix (8 Faelle)", () => {
         );
         // RLS-Filter macht WHERE-Match unmoeglich → rowCount = 0 (kein Error, aber kein Update)
         expect(r.rowCount).toBe(0);
-      });
-    });
-  });
-
-  it("tenant_member: SELECT eigener Eintrag ALLOW", async () => {
-    await withTestDb(async (client) => {
-      const f = await seedV4Fixtures(client);
-
-      await withJwtContext(client, f.tenantMemberAUserId, async () => {
-        const r = await client.query(
-          `SELECT user_id, reminders_opt_out
-             FROM public.user_settings
-            WHERE user_id = $1`,
-          [f.tenantMemberAUserId]
-        );
-        expect(r.rowCount).toBe(1);
-      });
-    });
-  });
-
-  it("tenant_member: UPDATE eigener Eintrag ALLOW", async () => {
-    await withTestDb(async (client) => {
-      const f = await seedV4Fixtures(client);
-
-      await withJwtContext(client, f.tenantMemberAUserId, async () => {
-        const r = await client.query<{ user_id: string }>(
-          `UPDATE public.user_settings
-              SET reminders_opt_out = true
-            WHERE user_id = $1
-            RETURNING user_id, reminders_opt_out`,
-          [f.tenantMemberAUserId]
-        );
-        expect(r.rowCount).toBe(1);
       });
     });
   });

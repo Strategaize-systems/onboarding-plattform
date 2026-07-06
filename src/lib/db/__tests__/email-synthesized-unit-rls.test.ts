@@ -9,7 +9,7 @@ import { seedTestTenants } from "@/test/fixtures/tenants";
 // (MIG-111). Matrix analog MIG-106 email_pattern:
 //   - strategaize_admin: SELECT cross-tenant
 //   - tenant_admin: SELECT/INSERT/UPDATE own-tenant, KEIN cross-tenant
-//   - tenant_member: KEIN Zugriff (kein Policy-Eintrag → Default-Deny)
+//   - employee: KEIN Zugriff (kein Policy-Eintrag → Default-Deny)
 //
 // Pattern-Reuse: rls-isolation.test.ts / v6-partner-rls.test.ts
 //   (withTestDb BEGIN/ROLLBACK, withJwtContext Role+Tenant, SAVEPOINT fuer
@@ -23,7 +23,7 @@ interface SynthFixture {
   userA: string; // tenant_admin A
   userB: string; // tenant_admin B
   adminUser: string; // strategaize_admin
-  memberUser: string; // tenant_member von A
+  memberUser: string; // employee von A
   runA: string;
   runB: string;
   patternA: string;
@@ -56,7 +56,7 @@ async function makeUser(
 async function seedSynthFixture(client: Client): Promise<SynthFixture> {
   const { tenantA, tenantB, userA, userB } = await seedTestTenants(client);
   const adminUser = await makeUser(client, tenantA, "strategaize_admin");
-  const memberUser = await makeUser(client, tenantA, "tenant_member");
+  const memberUser = await makeUser(client, tenantA, "employee");
 
   const runs = await client.query<{ id: string; tenant_id: string }>(
     `INSERT INTO public.email_bulk_run
@@ -144,7 +144,7 @@ describe("RLS: email_synthesized_unit (V9.5 MIG-111)", () => {
     });
   });
 
-  it("tenant_member of A sees NO synthesized units (default-deny)", async () => {
+  it("employee of A sees NO synthesized units (default-deny)", async () => {
     await withTestDb(async (client) => {
       const f = await seedSynthFixture(client);
       await withJwtContext(client, f.memberUser, async () => {

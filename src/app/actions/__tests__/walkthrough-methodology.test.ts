@@ -11,7 +11,7 @@ const TENANT_ADMIN_USER_ID = "44444444-4444-4444-4444-444444444444";
 const STEP_ID = "55555555-5555-5555-5555-555555555555";
 const SESSION_ID = "66666666-6666-6666-6666-666666666666";
 
-type Role = "strategaize_admin" | "tenant_admin" | "tenant_member" | "employee";
+type Role = "strategaize_admin" | "tenant_admin" | "employee";
 
 interface MockUser {
   id: string;
@@ -293,8 +293,8 @@ describe("softDeleteWalkthroughStep", () => {
     if (!result.ok) expect(result.error).toBe("already_deleted");
   });
 
-  it("auth-reject: tenant_member darf nicht", async () => {
-    state.profile = { role: "tenant_member", tenant_id: ADMIN_TENANT_ID };
+  it("auth-reject: employee darf nicht", async () => {
+    state.profile = { role: "employee", tenant_id: ADMIN_TENANT_ID };
     const result = await softDeleteWalkthroughStep({ walkthroughStepId: STEP_ID });
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error).toBe("forbidden");
