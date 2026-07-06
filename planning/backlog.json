@@ -1865,7 +1865,7 @@
       "title": "Rollenmodell V2 P1: Cleanup tenant_member/mirror/tenant_owner + Passwort-Reset-Flow",
       "type": "improvement",
       "priority": "high",
-      "status": "in_progress",
+      "status": "done",
       "version": "V10.3",
       "description": "Zwischenebene entfernen (DEC-263), Legacy-Policy-Reste bereinigen, Passwort-Vergessen-Flow (Delta D7) vor externem StB-Testlauf.",
       "createdAt": "2026-07-06"

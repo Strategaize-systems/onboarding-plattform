@@ -1352,10 +1352,11 @@ Der uebernommene Blueprint-Stand ist noch nicht auf einer Onboarding-Plattform-I
 - Rollback Notes: `DROP FUNCTION rpc_enqueue_module_output; DROP TABLE modul_output;` + CHECK-Constraints (`ai_jobs.job_type`, `ai_cost_ledger.role`) auf Pre-V10-Stand zuruecksetzen + `fn_min_tier_for_job` ohne `module_output_synthesis` neu. Reversibel solange keine `modul_output`-Rows / `module_output_synthesis`-Jobs existieren.
 
 
-### MIG-131 — V10.3 Rollen-Cleanup: tenant_member/tenant_owner aus CHECK, Trigger und Policies (geplant)
+### MIG-131 — V10.3 Rollen-Cleanup: tenant_member/tenant_owner aus CHECK, Trigger und Policies (applied 2026-07-06)
 - Date: 2026-07-06
 - Scope: profiles_role_check auf 4 Werte (ohne tenant_member); handle_new_user()-Neufassung; 18 Policies (Liste ARCHITECTURE Addendum U.2) DROP/CREATE ohne tenant_member/tenant_owner-Literale; defensives UPDATE profiles tenant_member→employee (live 0 Rows).
 - Reason: Rollenmodell V2 P1 (DEC-263/264) — Zwischenebene entfällt, tote Rollen-Literale raus.
 - Affected Areas: profiles (CHECK + Trigger), RLS-Policies auf ai_cost_ledger, ai_jobs, block_checkpoint, capture_session, dialogue_session, evidence_chunk, evidence_file, gap_question, knowledge_chunks, knowledge_unit, modul_output, partner_client_mapping, validation_layer.
 - Risk: Policy-Rebuild von veralteter Quelle statt Live-Stand (Hotfix-Drift) — mitigiert durch Pre-Apply-Live-Audit (Playbook sql-migration-hetzner); semantisches Verhalten für aktive Rollen muss identisch bleiben (RLS-Tests + Live-Inspektion).
-- Rollback Notes: Policies/CHECK/Trigger sind aus dem Pre-Apply-pg_dump-Schema-Snapshot wiederherstellbar; UPDATE ist einseitig, aber live 0 Rows betroffen.
+- Rollback Notes: Policies/CHECK/Trigger sind aus dem Pre-Apply-pg_dump-Schema-Snapshot wiederherstellbar; UPDATE ist einseitig, aber live 0 Rows betroffen. Rollback-Artefakte gesichert auf Server `/root/mig131_rollback/` (Voll-Schema-Dump + 18-Policies-CSV + CHECK-Def + handle_new_user-prosrc, Stand vor Apply 2026-07-06).
+- Apply-Verify (2026-07-06, RPT-599): 18 DROP + 18 CREATE POLICY, 2 ALTER TABLE, CREATE FUNCTION, UPDATE 0 (No-Op wie erwartet), 0 Errors. Verifikation: 0 Rest-Policies mit member/owner-Literalen, CHECK exakt 4 Werte, handle_new_user ohne tenant_member, Re-Apply idempotent (0 Errors). Live-Funktions-Beweis: echter strategaize_admin sieht po 1/1 + pcm 2/2 + capture_session 6/6; neuer Trigger legte Smoke-Test-User-Profile (employee+tenant) korrekt an.

@@ -881,3 +881,12 @@
 - Impact: rpc_search_knowledge_chunks kann die 5 veralteten Chunks als RAG-Quellen liefern (Antwort ggf. auf überholten Erkenntnissen geerdet). Nur Demo-Tenant, nur Antwortqualität, keine Sicherheit. Gap-Definition (chunk < ku) bleibt korrekt geschlossen — Cron läuft als Safe-No-Op weiter.
 - Workaround: Manuelles Cleanup per SQL: DELETE FROM knowledge_chunks kc WHERE kc.source_type='knowledge_unit' AND NOT EXISTS (SELECT 1 FROM knowledge_unit ku WHERE ku.id::text = kc.source_id::text);
 - Next Action: Orphan-Cleanup als kleiner Zusatz-Schritt im Reconcile-Orchestrator (V2: delete-orphans vor Gap-Check) ODER einmaliges manuelles SQL-Cleanup; Entscheidung bei nächstem RAG-Slice.
+
+### ISSUE-116 — 4 brittle Admin-Sanity-RLS-Tests failen gegen die Live-DB (absolute Counts + Snapshot-Gate-Fixtures)
+- Status: open
+- Severity: Low
+- Area: Test-Hygiene / Server-DB-Suite
+- Summary: Beim V10.3-Deploy-Suite-Lauf (2026-07-06, RPT-599) failen 4 strategaize_admin-Sanity-Cases reproduzierbar auch im seriellen Lauf: (a) 2x `v4-perimeter-matrix` "admin sieht alle 4 capture_sessions" — Fixture-Sessions haben `released_for_strategaize_review` nicht gesetzt, die RESTRICTIVE Policy `capture_session_strategaize_admin_snapshot_gated` (V8 SLC-148) blockt Admin daher korrekt (expected 4, got 0); (b) 2x `v6-partner-rls` Admin-Override — Tests asserten ABSOLUTE Row-Counts (`toBe(2)`/`toBe(3)`), die Live-DB enthaelt inzwischen echte Produktions-Partner-Rows (got 3 bzw. 5). KEIN Funktionsfehler: Live-Probe mit echtem strategaize_admin sieht po 1/1, pcm 2/2, capture_session 6/6.
+- Impact: Suite-Läufe gegen die Live-DB zeigen 4 Dauer-Fails, die echte Regressionen verrauschen koennen. Kein Produktions-Impact.
+- Workaround: Fails als klassifizierte Baseline behandeln (RPT-599-Klassifikation referenzieren).
+- Next Action: Test-Fix-Mini-Slice: v4-Fixtures mit `released_for_strategaize_review=true` seeden (oder Erwartung an Snapshot-Gate anpassen) + v6-Admin-Asserts auf fixture-scoped IDs statt absoluter Counts umstellen.

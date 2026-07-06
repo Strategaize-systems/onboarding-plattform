@@ -381,8 +381,8 @@
     {
       "id": "v10-3",
       "name": "V10.3",
-      "status": "active",
-      "summary": "V10.3 Rollenmodell V2 Paket P1 (DEC-263): FEAT-103 Passwort-Vergessen-Flow (D7, Reuse Invite-/Magic-Link-Mechanik) + FEAT-104 Zwischenebene-Cleanup (tenant_member + mirror_respondent-Pfad + tenant_owner-Policy-Reste raus, Bestands-Konvertierung -> employee). Fundament fuer P2-P5 (BL-530..533). /requirements DONE 2026-07-06 (RPT-588).",
+      "status": "released",
+      "summary": "V10.3 Rollenmodell V2 Paket P1 (DEC-263) DEPLOYED 2026-07-06 (REL-040): FEAT-103 Passwort-Vergessen-Flow live (enumeration-safe + P-081-Doppel-Limiter + P-088-Policy 12+/zxcvbn) + FEAT-104 Zwischenebene-Cleanup live (MIG-131: 4-Rollen-Modell, tenant_member/mirror/tenant_owner raus, 18 Policies rebuilt). Fundament fuer P2-P5 (BL-530..533).",
       "order": 20.08
     }
   ]

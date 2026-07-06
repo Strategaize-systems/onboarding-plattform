@@ -1215,8 +1215,8 @@ Einzelner Slice (Group A), **0 Migration** (DEC-262). 4 MTs backend-lastig: MT-1
 
 | ID | Slice | Feature | Status | Priority | Created |
 |----|-------|---------|--------|----------|---------|
-| SLC-186 | [Passwort-Vergessen-Flow + P-088-Policy-Port](SLC-186-passwort-vergessen-p088.md) | FEAT-103 | done | High | 2026-07-06 |
-| SLC-187 | [Zwischenebene-Cleanup tenant_member/mirror/tenant_owner (MIG-131)](SLC-187-zwischenebene-cleanup.md) | FEAT-104 | done | High | 2026-07-06 |
+| SLC-186 | [Passwort-Vergessen-Flow + P-088-Policy-Port](SLC-186-passwort-vergessen-p088.md) | FEAT-103 | deployed | High | 2026-07-06 |
+| SLC-187 | [Zwischenebene-Cleanup tenant_member/mirror/tenant_owner (MIG-131)](SLC-187-zwischenebene-cleanup.md) | FEAT-104 | deployed | High | 2026-07-06 |
 
 ### V10.3 Parallel-Readiness + Pflicht-Gates
 SEQUENZIELL auf kumulativem Branch `v10-3-rollenmodell-p1` (Worktree `<repo>.worktrees/v10-3`, SaaS-Pflicht): Group A = SLC-186 → Group B = SLC-187 (Reihenfolge-Rationale Addendum U.7; geteilte Datei accept-invitation/actions.ts). MIG-Reservierung: SLC-186 = 0 Migration, SLC-187 = MIG-131. SLC-186 MT-1 = GoTrue-recovery-Spike (R-ARCH-2, Live, Test-User only); SLC-187 MT-1 = Pflicht-Grep-Audit (Sweep-Slice), Done-Gates als Grep-Count 0. Alle Tests Pure-Mock-Vitest (node-env, keine Component-Render-Tests); Browser-E2E + MIG-131-Live-Apply + Pre-Apply-Live-Audit = /deploy-Phase. Pre-Merge-Re-Check vor Merge (Rebase+Tests minimum, single-flight).
