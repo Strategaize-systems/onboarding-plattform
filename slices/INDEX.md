@@ -1206,7 +1206,7 @@ Strikt sequentiell: **SLC-182 (Group 1) → SLC-183 (Group 2) → SLC-184 (Group
 
 | ID | Slice | Feature | Status | Priority | Created |
 |----|-------|---------|--------|----------|---------|
-| SLC-185 | [Embedding-Reconcile-Cron (Self-Healing knowledge_chunks-Coverage)](SLC-185-embedding-reconcile-cron.md) | FEAT-102 | planned | High | 2026-07-05 |
+| SLC-185 | [Embedding-Reconcile-Cron (Self-Healing knowledge_chunks-Coverage)](SLC-185-embedding-reconcile-cron.md) | FEAT-102 | in_progress (isolated) | High | 2026-07-05 |
 
 ### V10.2.1 Parallel-Readiness + Pflicht-Gates
 Einzelner Slice (Group A), **0 Migration** (DEC-262). 4 MTs backend-lastig: MT-1 rag.ts `getTenantCoverage`-Extraktion → MT-2 Orchestrator `reconcile-embeddings.ts` → MT-3 Cron-Route (1:1 `pending-signup-cleanup`) → MT-4 RUNBOOK+Records. Alle Tests Pure-Mock-Vitest (hermetisch, injizierte Deps). Worktree `v10-2-1-embed-reconcile` (SaaS-Pflicht) + Pre-Merge-Re-Check (Rebase+Tests minimum). AC-185-6 (SC6 Founder-Mandant-Lücke "5 von 35" live geschlossen) + Coolify-Task-Anlage = /deploy-Phase. Auth-Codes 503/403 (DEC-262 schlägt PRD-Wortlaut "401").
