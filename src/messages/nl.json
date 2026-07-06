@@ -172,6 +172,18 @@
     "button": "Inloggen",
     "buttonLoading": "Inloggen...",
     "inviteOnly": "Geen account? Toegang is uitsluitend op uitnodiging.",
+    "unexpectedError": "Er is een onverwachte fout opgetreden",
+    "forgotPassword": "Wachtwoord vergeten?"
+  },
+  "passwordReset": {
+    "title": "Wachtwoord vergeten",
+    "description": "Voer uw e-mailadres in. We sturen u een link om uw wachtwoord opnieuw in te stellen.",
+    "email": "E-mail",
+    "emailPlaceholder": "naam@bedrijf.nl",
+    "button": "Link aanvragen",
+    "buttonLoading": "Verzenden...",
+    "success": "Als er een account met dit adres bestaat, hebben we een e-mail gestuurd om uw wachtwoord opnieuw in te stellen.",
+    "backToLogin": "Terug naar inloggen",
     "unexpectedError": "Er is een onverwachte fout opgetreden"
   },
   "setPassword": {

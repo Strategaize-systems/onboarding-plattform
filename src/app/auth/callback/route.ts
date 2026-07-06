@@ -1,8 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
-// GET /auth/callback — Handle invite token verification
-// GoTrue redirect: /auth/callback?token_hash=...&type=invite&locale=de
+// GET /auth/callback — Handle invite / recovery token verification
+// GoTrue redirect: /auth/callback?token_hash=...&type=invite|recovery&locale=de
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const token_hash = searchParams.get("token_hash");
@@ -13,8 +13,8 @@ export async function GET(request: NextRequest) {
   const redirectBase = process.env.NEXT_PUBLIC_APP_URL || "";
 
   // Determine redirect target
-  const isInvite = type === "invite";
-  const successUrl = isInvite
+  const needsPassword = type === "invite" || type === "recovery";
+  const successUrl = needsPassword
     ? `${redirectBase}/auth/set-password`
     : `${redirectBase}/dashboard`;
 
@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
   // identisch (token_hash + type -> User-Session-Cookie).
   const { error } = await supabase.auth.verifyOtp({
     token_hash: hashToVerify,
-    type: type as "invite" | "email" | "magiclink",
+    type: type as "invite" | "email" | "magiclink" | "recovery",
   });
 
   if (error) {
