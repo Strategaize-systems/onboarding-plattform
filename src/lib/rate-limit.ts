@@ -120,6 +120,21 @@ export const diagnoseReportEmailLimiter = createRateLimiter({
   windowMs: 60 * 60 * 1000, // 1 hour
 });
 
+// V10.3 SLC-186 MT-3 — Passwort-Reset-Anforderung. Zwei Buckets nach
+// P-081-Muster: IP-scoped (Brute-Force/Flood-Schutz) + account-scoped
+// (Key = email lowercase), damit ein Angreifer nicht durch IP-Rotation
+// unbegrenzt Reset-Mails an eine fremde Adresse ausloesen kann.
+export const passwordResetIpLimiter = createRateLimiter({
+  maxAttempts: 5,
+  windowMs: 15 * 60 * 1000, // 15 minutes
+});
+
+// account-scoped Bucket per P-081-Muster (Key = email lowercase).
+export const passwordResetAccountLimiter = createRateLimiter({
+  maxAttempts: 3,
+  windowMs: 60 * 60 * 1000, // 60 minutes
+});
+
 /**
  * Extrahiert die Client-IP fuer Rate-Limit-Identification aus dem
  * `x-forwarded-for`-Header. Coolify+Traefik schreibt den Header bei

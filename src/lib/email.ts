@@ -390,6 +390,50 @@ export async function sendMail(params: SendMailParams): Promise<void> {
   });
 }
 
+// ─── Passwort-Reset-Mail (V10.3 SLC-186 MT-3) ───────────────────────────────
+
+interface SendPasswordResetEmailParams {
+  to: string;
+  /** Vollstaendige Verify-URL auf /auth/callback (NEXT_PUBLIC_APP_URL-basiert,
+   *  type=recovery). NIEMALS aus request.origin — Proxy-Falle P-040. */
+  verifyUrl: string;
+}
+
+/**
+ * Sendet die Passwort-zuruecksetzen-Mail. Wird ausschliesslich aus der
+ * Enumeration-sicheren Server-Action `requestPasswordReset` aufgerufen —
+ * daher schlichtes deutsches Template im Stil der bestehenden Invite-Mails.
+ */
+export async function sendPasswordResetEmail({
+  to,
+  verifyUrl,
+}: SendPasswordResetEmailParams): Promise<void> {
+  const from = `StrategAIze <${process.env.SMTP_FROM || process.env.SMTP_USER}>`;
+
+  await sendMail({
+    from,
+    to,
+    subject: "Passwort zurücksetzen",
+    html: `
+      <h2>Passwort zurücksetzen</h2>
+      <p>Sie haben angefordert, Ihr Passwort für Ihren StrategAIze-Zugang zurückzusetzen.</p>
+      <p>Klicken Sie auf den folgenden Button, um ein neues Passwort zu setzen:</p>
+      <p><a href="${verifyUrl}" style="display:inline-block;padding:12px 24px;background:#120774;color:#ffffff;text-decoration:none;border-radius:6px;">Passwort zurücksetzen</a></p>
+      <p style="margin-top:16px;font-size:13px;color:#666;">Falls der Button nicht funktioniert, kopieren Sie diesen Link in Ihren Browser:</p>
+      <p style="font-size:13px;word-break:break-all;">${verifyUrl}</p>
+      <br>
+      <p style="font-size:13px;color:#666;">Falls Sie das nicht angefordert haben, ignorieren Sie diese E-Mail.</p>
+      <p>Mit freundlichen Grüßen,<br>Ihr StrategAIze-Team</p>
+    `,
+    text:
+      `Passwort zurücksetzen\n\n` +
+      `Sie haben angefordert, Ihr Passwort für Ihren StrategAIze-Zugang zurückzusetzen.\n\n` +
+      `Öffnen Sie den folgenden Link, um ein neues Passwort zu setzen:\n${verifyUrl}\n\n` +
+      `Falls Sie das nicht angefordert haben, ignorieren Sie diese E-Mail.\n\n` +
+      `Mit freundlichen Grüßen,\nIhr StrategAIze-Team`,
+  });
+}
+
 // ─── Public-Signup-Verify template (V7 SLC-132, FEAT-053) ───────────────────
 
 interface RenderSignupVerifyTemplateInput {
