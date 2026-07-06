@@ -298,4 +298,4 @@ V10.2.1-Scope (Requirements 2026-07-05 via RPT-576). Patch-Slice: Self-Healing R
 
 | ID | Feature | Status | Spec | Created |
 |----|---------|--------|------|---------|
-| FEAT-102 | Embedding-Reliability Reconciliation-Cron (Self-Healing knowledge_chunks-Coverage: Gap-Erkennung + idempotenter Re-Embed + error_log-Beobachtbarkeit) | in_progress | PRD §V10.2.1 | 2026-07-05 |
+| FEAT-102 | Embedding-Reliability Reconciliation-Cron (Self-Healing knowledge_chunks-Coverage: Gap-Erkennung + idempotenter Re-Embed + error_log-Beobachtbarkeit) | done | PRD §V10.2.1 | 2026-07-05 |

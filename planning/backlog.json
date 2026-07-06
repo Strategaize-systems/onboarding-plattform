@@ -1855,7 +1855,7 @@
       "title": "Embedding-Reliability Reconciliation-Cron (ISSUE-112)",
       "type": "improvement",
       "priority": "medium",
-      "status": "in_progress",
+      "status": "done",
       "version": "V10.2.1",
       "description": "FEAT-102: Self-Healing Cron /api/cron/knowledge-embed-reconcile findet pro Mandant count(knowledge_unit) > count(knowledge_chunks source_type=knowledge_unit,status=active) und re-embedded via reembedTenantKnowledge (Reuse V10.2, idempotent, ledger-frei). Schliesst Altlasten + kuenftige RAG-Coverage-Luecken. Beobachtbarkeit via error_log (captureInfo). Pattern-Reuse pending-signup-cleanup-Cron. 0 Migration erwartet. Loest ISSUE-112 / V10.2 Q-V10.2-E.",
       "createdAt": "2026-07-05"
