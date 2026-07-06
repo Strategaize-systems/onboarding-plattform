@@ -17,6 +17,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { captureException } from "@/lib/logger";
 import {
   askRag,
+  getTenantCoverage,
   reembedTenantKnowledge,
   type AskRagDeps,
 } from "../rag";
@@ -220,5 +221,84 @@ describe("reembedTenantKnowledge", () => {
     const res = await reembedTenantKnowledge(fakeAdmin([]), "t1", reembedDeps);
     expect(res).toEqual({ ok: true, embedded: 0 });
     expect(reembedDeps.embedBatch).not.toHaveBeenCalled();
+  });
+});
+
+// ─── V10.2.1 SLC-185 MT-1 — getTenantCoverage (de-drift-Export, DEC-262) ───
+
+interface CountCall {
+  table: string;
+  selectArgs: unknown[];
+  filters: Array<[string, string]>;
+}
+
+/**
+ * Table-aware Count-Admin-Mock: bildet die defaultCount-Chain
+ * .from(table).select("id", {count,head}).eq(...)... als thenable Builder ab
+ * und protokolliert Tabelle, select-Args und alle eq-Filter pro Query.
+ */
+function makeCountAdmin(counts: Record<string, number>): {
+  admin: SupabaseClient;
+  calls: CountCall[];
+} {
+  const calls: CountCall[] = [];
+  const admin = {
+    from(table: string) {
+      const call: CountCall = { table, selectArgs: [], filters: [] };
+      calls.push(call);
+      const builder = {
+        select(...args: unknown[]) {
+          call.selectArgs = args;
+          return builder;
+        },
+        eq(col: string, val: string) {
+          call.filters.push([col, val]);
+          return builder;
+        },
+        then(resolve: (v: { count: number | null }) => void) {
+          resolve({ count: counts[table] ?? null });
+        },
+      };
+      return builder;
+    },
+  } as unknown as SupabaseClient;
+  return { admin, calls };
+}
+
+describe("getTenantCoverage", () => {
+  it("liefert kuCount und chunkCount aus knowledge_unit / knowledge_chunks", async () => {
+    const { admin: countAdmin } = makeCountAdmin({
+      knowledge_unit: 35,
+      knowledge_chunks: 5,
+    });
+    const coverage = await getTenantCoverage(countAdmin, "t1");
+    expect(coverage).toEqual({ kuCount: 35, chunkCount: 5 });
+  });
+
+  it("nutzt die Guard-identische Gap-Query (tenant-scoped, count-only, chunk-Filter source_type+status)", async () => {
+    const { admin: countAdmin, calls } = makeCountAdmin({
+      knowledge_unit: 3,
+      knowledge_chunks: 3,
+    });
+    await getTenantCoverage(countAdmin, "t1");
+
+    const kuCall = calls.find((c) => c.table === "knowledge_unit");
+    const chunkCall = calls.find((c) => c.table === "knowledge_chunks");
+    expect(kuCall).toBeDefined();
+    expect(chunkCall).toBeDefined();
+
+    // Beide count-only (kein Row-Read) + tenant-scoped.
+    for (const call of [kuCall!, chunkCall!]) {
+      expect(call.selectArgs).toEqual([
+        "id",
+        expect.objectContaining({ count: "exact", head: true }),
+      ]);
+      expect(call.filters).toContainEqual(["tenant_id", "t1"]);
+    }
+
+    // Nur die Chunk-Query filtert source_type + status (Gap-Definition DEC-262).
+    expect(chunkCall!.filters).toContainEqual(["source_type", "knowledge_unit"]);
+    expect(chunkCall!.filters).toContainEqual(["status", "active"]);
+    expect(kuCall!.filters).toHaveLength(1);
   });
 });
