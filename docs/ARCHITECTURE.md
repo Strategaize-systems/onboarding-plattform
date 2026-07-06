@@ -9904,3 +9904,66 @@ Keine blockierenden. Backend-Detail: exakter Cap-Wert (Default 25) + ob `getTena
 
 ### 10. Empfohlener nächster Schritt
 `/slice-planning V10.2.1` — 1 Slice **SLC-185** (Cron-Route + Reconcile-Orchestrator + rag.ts-Helper-Extraktion + Route-Tests + Coolify-Task), Acceptance = SC1–SC6 aus PRD §V10.2.1. Kein Migrations-Slice.
+
+
+---
+
+# Addendum U — V10.3 Rollenmodell V2 Paket P1 (FEAT-103 Passwort-Vergessen + FEAT-104 Zwischenebene-Cleanup)
+
+Stand 2026-07-06 · Grundlage PRD §V10.3 (RPT-588) + DEC-263. Alle Aussagen in dieser Session live- bzw. code-verifiziert (Grounding-Referenzen inline).
+
+## U.1 Architektur-Summary
+
+Zwei unabhängige, kleine Bausteine: (1) FEAT-103 komponiert den Passwort-Vergessen-Flow zu 100% aus bestehenden OP-Bausteinen (generateLink + sendMail + /auth/callback + /auth/set-password + rate-limit.ts) — **0 Migration**; (2) FEAT-104 entfernt die tote Zwischenebene per **einer Migration (MIG-131)** + mechanischem Code-Fanout. Dazu Q-V10.3-B: zentrale Passwort-Policy als 1:1-Port aus BS (P-088).
+
+## U.2 Live-/Code-Grounding (Session-verifiziert)
+
+- **Live-Bestand (Prod-DB, Container `supabase-db-…-102821243736`):** `profiles.role` = 3× tenant_admin, 1× strategaize_admin, 1× employee — **0× tenant_member** → Q-V10.3-A: KEINE echte Bestands-Konvertierung nötig.
+- **Live-CHECK:** `profiles_role_check` enthält 5 Werte inkl. tenant_member (pg_get_constraintdef).
+- **Live-Policies:** 16 Policies referenzieren tenant_member, 6 tenant_owner (pg_policies-Abfrage; Überschneidung → **18 distinkte Policies**: ai_cost_ledger_tenant_read, ai_jobs_tenant_read, ai_jobs_tenant_admin_insert, block_checkpoint_tenant_read, capture_session_tenant_read, dialogue_session_tenant_read, evidence_chunk_tenant_read/_update, evidence_file_tenant_read/_insert, gap_question_tenant_read/_write, knowledge_chunks_tenant_read, knowledge_unit_tenant_read, modul_output_tenant_read/_admin_update, partner_client_mapping pcm_select_own_mandant, validation_layer_tenant_read).
+- **Live `handle_new_user()`:** validiert 5 Rollen inkl. tenant_member (pg_proc.prosrc gezogen — Basis für Neufassung, inkl. ERRCODE-Zeilen P0400/P0422/P0404).
+- **Code:** set-password min 8 (`src/app/auth/set-password/actions.ts:12`) + `setPasswordLimiter` (IP); accept-invitation min 8 (actions.ts:56 + Form:28); Callback special-cased NUR `type=invite` → set-password, alles andere → /dashboard (`src/app/auth/callback/route.ts:17-19`) — **muss für recovery erweitert werden**; Mailer generisch `sendMail()` (`src/lib/email.ts:380`); Invite-Link-Konstruktion über `NEXT_PUBLIC_APP_URL` (nie nextUrl.origin, P-040) in `api/admin/tenants/[tenantId]/invite/route.ts:117`.
+- **P-088-Quelle:** BS `cockpit/src/lib/auth/password-policy.ts` (12+ Hard-Floor, zxcvbn-Score ≥3, dynamic import; zxcvbn ^4.4.2 + @types) — OP hat KEIN zxcvbn.
+
+## U.3 FEAT-103 Passwort-Vergessen — Komponenten & Flow
+
+1. **`/login`:** Link "Passwort vergessen?" (LoginForm) → neue Page **`/auth/passwort-vergessen`** (kleines Formular, E-Mail).
+2. **Server-Action `requestPasswordReset(email)`** (neue Datei `src/app/auth/passwort-vergessen/actions.ts`):
+   - Doppel-Rate-Limit per P-081-Muster: neuer `passwordResetLimiter` (IP) in `src/lib/rate-limit.ts` + account-scoped Bucket (email lowercase) — peek-before-send.
+   - **Enumeration-safe:** IMMER identische Erfolgsantwort ("Falls ein Konto existiert, wurde eine E-Mail versandt"); interner `admin.auth.admin.generateLink({type:'recovery', email})` via createAdminClient; "user not found"-Fehler wird geschluckt (captureInfo, kein Response-Unterschied).
+   - Versand über bestehenden `sendMail()` mit schlankem Template (Stil renderSignupVerifyTemplate); Link = `${NEXT_PUBLIC_APP_URL}/auth/callback?token_hash={hashed_token}&type=recovery&locale=de` (1:1 Invite-Muster).
+3. **Callback-Erweiterung** (`/auth/callback/route.ts`): `needsPassword = type === "invite" || type === "recovery"` → successUrl `/auth/set-password`; `verifyOtp({token_hash, type})` unverändert (GoTrue-Typ 'recovery').
+4. **`/auth/set-password`:** unverändertes Ziel; Policy-Upgrade per U.5.
+5. **TTL/Mehrfach-Anforderung (Q-V10.3-C):** Gültigkeit steuert GoTrue (`GOTRUE_MAILER_OTP_EXP`) — Wert `UNVERIFIED — im /deploy-Live-Smoke prüfen`; Verhalten bei Mehrfach-Anforderung (neuester Link gilt) ebenfalls Live-Smoke-Item. Kein eigenes Token-Handling (keine pending_reset-Tabelle) — GoTrue ist die Quelle.
+
+**0 Migration. Keine neue Tabelle.** Sicherheits-Eigenschaften: enumeration-safe, doppelt rate-limited, Token nie geloggt, Link-Konstruktion proxy-sicher.
+
+## U.4 FEAT-104 Cleanup — MIG-131 + Code-Fanout
+
+**MIG-131 (`sql/migrations/131_v103_role_cleanup.sql`, idempotent, eine Migration):**
+1. Defensives `UPDATE profiles SET role='employee' WHERE role='tenant_member'` (live 0 Rows — reines Sicherheitsnetz).
+2. `profiles_role_check` DROP+ADD mit 4 Werten (strategaize_admin, tenant_admin, employee, partner_admin) — **Rebuild vom Live-Constraint** (Playbook-Regel: nie vom Base-File).
+3. `handle_new_user()` Neufassung ohne tenant_member (Basis = live prosrc).
+4. Die 18 Policies (U.2-Liste) DROP+CREATE **vom Live-`pg_policies`-Stand**, semantisch identisch für verbleibende Rollen (nur tote Rollen-Literale entfernt). Kein Verhaltens-Delta für aktive Rollen.
+
+**Code-Fanout (mechanisch, testlastig — 48 Dateien):**
+- `src/lib/auth/role-check.ts`: PathClasses dashboard/capture ohne tenant_member + Test-Matrix (`role-check.test.ts`).
+- `src/lib/api-utils.ts` `requireTenant`: Whitelist ohne tenant_member UND ohne mirror_respondent.
+- Invite-API (`api/admin/tenants/[tenantId]/invite/route.ts`): Fallback "sonst tenant_member" → **Default employee** (Zielmodell: weitere Nutzer ohne explizite Rolle sind Wissenslieferanten); mirror-Zweig + `sendMirrorInviteEmail` entfernen.
+- Route `/api/admin/tenants/[tenantId]/mirror-respondents` + Roster-/Tenants-UI-Reste (tenants-client.tsx, roster-actions) entfernen.
+- Layout-Redirect-Zeilen (employee/partner layout) + restliche Vorkommen (Tests) bereinigen.
+
+## U.5 Q-V10.3-B — Passwort-Policy: P-088-Port (DEC-266)
+
+1:1-Port BS → OP: neue `src/lib/auth/password-policy.ts` (Quell-Pfad-Header-Kommentar Pflicht), zxcvbn + @types als neue Dependencies (dynamic import — Bundle-Falle P-088). Anwendung an ALLEN Neu-Passwort-Stellen: set-password (Action) + accept-invitation (Action + Form-Hint). Pattern-Reuse-Regel überschreibt hier "Surgical changes" — ein zentraler Policy-Ort statt drei divergierender min-8-Checks.
+
+## U.6 Risiken & Tradeoffs
+
+- **R-ARCH-1:** Policy-Rebuild muss vom Live-Stand erfolgen (Hotfix-Drift möglich) — Pre-Apply-Live-Audit per Playbook ist Pflichtschritt im /deploy.
+- **R-ARCH-2:** `generateLink(type:'recovery')` + `verifyOtp(type:'recovery')`-Kette gegen self-hosted GoTrue ist `UNVERIFIED` — früher Verifikations-Schritt im Slice (gegen Live mit Test-Account) VOR UI-Feinbau.
+- **R-ARCH-3:** zxcvbn ~800KB — mitigiert per dynamic import (P-088-Bestandteil).
+- **Tradeoff:** Eine Migration statt drei Mini-Migrationen — ein Konzern (Rollen-Cleanup), idempotent, ein Rollback-Punkt.
+
+## U.7 Empfohlener nächster Schritt
+
+`/slice-planning V10.3` — Vorschlag 2 Slices, sequenziell auf einem Branch `v10-3-rollenmodell-p1`: **SLC-186** FEAT-103 Reset-Flow + P-088-Port (inkl. R-ARCH-2-Spike als MT-1) → **SLC-187** FEAT-104 Cleanup (MIG-131 + Code-Fanout). Beide klein genug für klare Reviews; Cleanup zuletzt, damit der Reset-Flow nicht auf sich bewegendem Rollen-Code aufsetzt.

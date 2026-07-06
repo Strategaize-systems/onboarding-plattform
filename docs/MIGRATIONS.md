@@ -1350,3 +1350,12 @@ Der uebernommene Blueprint-Stand ist noch nicht auf einer Onboarding-Plattform-I
 - R-169-1 (Live-Stand 2026-06-21, pg_get_constraintdef gegen Coolify-DB, IMP-1228): `ai_jobs_job_type_check` LIVE 22 Werte (live 3 mehr als MIG-111: `email_bulk_pipeline_trigger`/`email_bulk_retention_sweep`/`email_bulk_synthesis`) → +`module_output_synthesis` = 23. `ai_cost_ledger_role_check` LIVE 21 Werte → +`module_output_synthesis`+`module_output_critic` = 23. CHECK = Superset der Live-Werte. **DEVIATION (Rule 1/3, DEC-241):** Slice-AC-169-3 schrieb literal `status='queued'`; LIVE `ai_jobs_status_check` kennt 'queued' NICHT + claim-Loop claimt `'pending'` → daher `status='pending'` (konsistent mit Dispatch-RPCs 032/047/074).
 - Status: /backend SLC-169 2026-06-21 geschrieben + tsc 0 / eslint 0 / next build PASS. DB-Sidecar-Tests (`migration-124-modul-output.test.ts` + `migration-124-enqueue-rpc.test.ts`) im /qa gegen Coolify-DB. LIVE-Apply im /deploy VOR Worker-Code-Redeploy (R-169-2).
 - Rollback Notes: `DROP FUNCTION rpc_enqueue_module_output; DROP TABLE modul_output;` + CHECK-Constraints (`ai_jobs.job_type`, `ai_cost_ledger.role`) auf Pre-V10-Stand zuruecksetzen + `fn_min_tier_for_job` ohne `module_output_synthesis` neu. Reversibel solange keine `modul_output`-Rows / `module_output_synthesis`-Jobs existieren.
+
+
+### MIG-131 — V10.3 Rollen-Cleanup: tenant_member/tenant_owner aus CHECK, Trigger und Policies (geplant)
+- Date: 2026-07-06
+- Scope: profiles_role_check auf 4 Werte (ohne tenant_member); handle_new_user()-Neufassung; 18 Policies (Liste ARCHITECTURE Addendum U.2) DROP/CREATE ohne tenant_member/tenant_owner-Literale; defensives UPDATE profiles tenant_member→employee (live 0 Rows).
+- Reason: Rollenmodell V2 P1 (DEC-263/264) — Zwischenebene entfällt, tote Rollen-Literale raus.
+- Affected Areas: profiles (CHECK + Trigger), RLS-Policies auf ai_cost_ledger, ai_jobs, block_checkpoint, capture_session, dialogue_session, evidence_chunk, evidence_file, gap_question, knowledge_chunks, knowledge_unit, modul_output, partner_client_mapping, validation_layer.
+- Risk: Policy-Rebuild von veralteter Quelle statt Live-Stand (Hotfix-Drift) — mitigiert durch Pre-Apply-Live-Audit (Playbook sql-migration-hetzner); semantisches Verhalten für aktive Rollen muss identisch bleiben (RLS-Tests + Live-Inspektion).
+- Rollback Notes: Policies/CHECK/Trigger sind aus dem Pre-Apply-pg_dump-Schema-Snapshot wiederherstellbar; UPDATE ist einseitig, aber live 0 Rows betroffen.
