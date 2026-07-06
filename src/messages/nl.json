@@ -178,7 +178,7 @@
     "title": "Wachtwoord instellen",
     "description": "Welkom bij StrategAIze. Stel uw wachtwoord in.",
     "newPassword": "Nieuw wachtwoord",
-    "newPasswordPlaceholder": "Minimaal 8 tekens",
+    "newPasswordPlaceholder": "Minimaal 12 tekens",
     "confirmPassword": "Wachtwoord bevestigen",
     "confirmPlaceholder": "Wachtwoord herhalen",
     "button": "Wachtwoord instellen",

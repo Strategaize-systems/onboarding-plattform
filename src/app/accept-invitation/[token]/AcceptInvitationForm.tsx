@@ -25,8 +25,8 @@ export function AcceptInvitationForm({ token }: Props) {
       const password = formData.get("password") as string;
       const confirmPassword = formData.get("confirmPassword") as string;
 
-      if (!password || password.length < 8) {
-        setError("Passwort muss mindestens 8 Zeichen lang sein.");
+      if (!password || password.length < 12) {
+        setError("Passwort muss mindestens 12 Zeichen lang sein.");
         setLoading(false);
         return;
       }
@@ -56,9 +56,9 @@ export function AcceptInvitationForm({ token }: Props) {
           id="password"
           name="password"
           type="password"
-          placeholder="Mindestens 8 Zeichen"
+          placeholder="Mindestens 12 Zeichen"
           required
-          minLength={8}
+          minLength={12}
           autoComplete="new-password"
         />
       </div>
@@ -69,7 +69,7 @@ export function AcceptInvitationForm({ token }: Props) {
           name="confirmPassword"
           type="password"
           required
-          minLength={8}
+          minLength={12}
           autoComplete="new-password"
         />
       </div>

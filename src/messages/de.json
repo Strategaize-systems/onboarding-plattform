@@ -178,7 +178,7 @@
     "title": "Passwort setzen",
     "description": "Willkommen bei StrategAIze. Bitte setzen Sie Ihr Passwort.",
     "newPassword": "Neues Passwort",
-    "newPasswordPlaceholder": "Mindestens 8 Zeichen",
+    "newPasswordPlaceholder": "Mindestens 12 Zeichen",
     "confirmPassword": "Passwort bestätigen",
     "confirmPlaceholder": "Passwort wiederholen",
     "button": "Passwort setzen",

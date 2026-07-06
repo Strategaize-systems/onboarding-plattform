@@ -178,7 +178,7 @@
     "title": "Set Password",
     "description": "Welcome to StrategAIze. Please set your password.",
     "newPassword": "New Password",
-    "newPasswordPlaceholder": "At least 8 characters",
+    "newPasswordPlaceholder": "At least 12 characters",
     "confirmPassword": "Confirm Password",
     "confirmPlaceholder": "Repeat password",
     "button": "Set Password",
