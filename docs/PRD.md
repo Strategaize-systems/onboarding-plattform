@@ -3058,3 +3058,35 @@ SaaS Product (Internal-Test-Mode, kein Customer-Outreach — `module-lifecycle-d
 
 ### Detail-Spec
 V10.2.1-Requirements-Baseline 2026-07-05 (RPT-576), aus /discovery (dieselbe Session, Option 1/4 Self-Healing-Cron Founder-bestaetigt). Grounding (file:line): `src/lib/workspace/rag.ts` (Count-Gap-Query `DEFAULT_RAG_DEPS.countKnowledgeUnits/countIndexedChunks` + `reembedTenantKnowledge` idempotent/ledger-frei), `src/workers/condensation/embed-knowledge-units.ts` (Embed+Upsert-Shape + Fire-and-forget-Ursprung), `handle-job.ts:208` + `handle-recondense.ts:207` (Call-Sites), `src/app/api/cron/pending-signup-cleanup/route.ts` (Cron-Pattern x-cron-secret + error_log-Audit + Coolify-Scheduled-Task). **Status: READY fuer /architecture V10.2.1.** Keine BLOCKING-OQs; Q-V10.2.1-A/B = /architecture-Aufgabe. Naechster Schritt: `/architecture V10.2.1`.
+
+
+## V10.3 — Rollenmodell V2 Paket P1: Zwischenebene-Cleanup + Passwort-Vergessen (DEC-263)
+
+### V10.3 Problem & Ziel
+Founder-Freigabe des Ziel-Rollenmodells V2 (DEC-263, `docs/OP_ROLLEN_SOLL_MODELL_V2_2026-07-06.md`). Bevor neue Rollen (P2 strategaize_berater) und Partner-Funktions-Flags (P3/P4) aufgebaut werden, wird Altlast entfernt und die groesste Login-UX-Luecke geschlossen: (a) die Kunden-Zwischenebene (`tenant_member`, `mirror_respondent`-Pfad, `tenant_owner`-Policy-Reste) widerspricht dem Zielmodell und stiftet Verwirrung; (b) es existiert kein Passwort-Vergessen-Flow (Delta D7) — die Verify-Signup-Fehlerseite verweist bereits auf einen NICHT existierenden "Passwort vergessen?"-Link (`src/app/auth/verify-signup/_components/ErrorPage.tsx:67`).
+
+### V10.3 In Scope (2 Features)
+- **FEAT-103 Passwort-Vergessen-Flow:** "Passwort vergessen?"-Link auf `/login` → E-Mail-Eingabe → enumeration-sichere Server-Action (immer identische Erfolgsmeldung), Rate-Limit (IP- + Account-Bucket, P-081-Muster), GoTrue `admin.generateLink({type:'recovery'})` + Versand ueber bestehenden SMTP-Adapter → bestehender `/auth/callback` (type=recovery) → bestehende `/auth/set-password`. Reuse der Invite-/Magic-Link-Mechanik 1:1 — kein neuer Auth-Baustein.
+- **FEAT-104 Rollen-Cleanup Zwischenebene:** (1) `tenant_member` vollstaendig raus — Code (48 Dateien inkl. Tests: role-check-Matrix, api-utils, Invite-API-Fallback "zweiter User = tenant_member", UI-Reste) + RLS-Policies + profiles-CHECK-Constraint per Migration + Bestandsdaten-Konvertierung; (2) `mirror_respondent`-Legacy-Pfad raus — requireTenant-Whitelist, Invite-API-mirror-Zweig, `/api/admin/tenants/[tenantId]/mirror-respondents`, Roster-/Tenants-UI-Reste; (3) `tenant_owner`-Reste aus aktiven Policies (MIG-022/031/035/036/124-Linie) per Policy-Neufassung.
+
+### V10.3 Out of Scope
+P2 strategaize_berater, P3 Partner-Funktions-Flags + F1 "Meine Kanzlei", P4 F3-Advisory-Workspace, P5 /admin-URL-Entmischung (BL-530..533). Keine neuen Rollen, kein UI-Redesign, keine Aenderung am employee-Perimeter (MIG-075 bleibt unberuehrt).
+
+### V10.3 Constraints
+0 neue Tabellen (Migrationen nur CHECK-Constraint/Policy-Neufassung/Daten-Konvertierung) · Enumeration-Safety + Rate-Limit Pflicht (privacy-security) · EU-Residency unberuehrt · Internal-Test-Mode (kein Customer-Outreach).
+
+### V10.3 Risiken / Annahmen
+- R-V10.3-1: Bestands-User mit `role='tenant_member'` in Prod — Anzahl unbekannt, Live-Check in /architecture. Konvertierungsziel per Zielmodell: `employee` (Fuehrungskraefte = employee); bei aktiver Dashboard-Nutzung Founder-Ruecksprache.
+- R-V10.3-2: 48-Datei-Fanout ist mechanisch, aber testlastig — Full-Suite-Baseline-Delta als Gate.
+- R-V10.3-3: Policy-Neufassung braucht Live-DB-Verifikation (pg_policies-Inspektion, Playbook sql-migration-hetzner).
+
+### V10.3 Success Criteria
+- SC-V10.3-1: `grep tenant_member|mirror_respondent` ueber `src/` = 0 Treffer in aktivem Code (Migrations-Historie ausgenommen); role-check-Test-Matrix aktualisiert.
+- SC-V10.3-2: profiles-CHECK live ohne tenant_member; keine aktive Policy referenziert tenant_member/tenant_owner (Live-Inspektion).
+- SC-V10.3-3: Passwort-Reset E2E live (Anforderung → Mail → Link → neues Passwort → Login, Founder-Smoke) + enumeration-sicheres Antwortverhalten + greifendes Rate-Limit.
+- SC-V10.3-4: Full-Vitest Baseline-Delta 0 Regression; next build PASS.
+
+### V10.3 Offene Fragen (→ /architecture)
+- Q-V10.3-A: Konvertierung Bestands-tenant_member → employee vs. tenant_admin (Live-Bestand pruefen; Default employee).
+- Q-V10.3-B: Passwort-Policy im Reset-Pfad: OP-Bestand (min 8) vs. P-088 (12+ zxcvbn) fuer den gesamten set-password-Pfad.
+- Q-V10.3-C: Recovery-Link-TTL + Verhalten bei Mehrfach-Anforderung (GoTrue-Default vs. eigenes Handling).

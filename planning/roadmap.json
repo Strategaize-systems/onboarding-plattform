@@ -377,6 +377,13 @@
       "status": "released",
       "order": 20.07,
       "summary": "V10.2.1 Embedding-Reliability-Haertung (ISSUE-112) — RELEASED 2026-07-06 (REL-039, RPT-585). Self-Healing Reconcile-Cron GET /api/cron/knowledge-embed-reconcile (Coolify-Task */10, x-cron-secret): pro Mandant Count-Gap (getTenantCoverage, identische Query wie V10.2-Coverage-Guard) -> bei Luecke reembedTenantKnowledge (idempotent, ledger-frei, fail-open, Cap 25/Lauf). 0 Migration (DEC-262). 1 Feature FEAT-102, 1 Slice SLC-185, BL-528 — alle deployed/done. Erster Prod-Lauf heilte Founder-Mandant-Altlast ('5 von 35' -> alle 35 KUs indexiert) + Privat (6/6); Summary in error_log (category=knowledge_embed_reconcile). ISSUE-112 resolved; Folge-Finding ISSUE-115 (5 pre-existing Orphan-Chunks Demo-Tenant, Low)."
+    },
+    {
+      "id": "v10-3",
+      "name": "V10.3",
+      "status": "active",
+      "summary": "V10.3 Rollenmodell V2 Paket P1 (DEC-263): FEAT-103 Passwort-Vergessen-Flow (D7, Reuse Invite-/Magic-Link-Mechanik) + FEAT-104 Zwischenebene-Cleanup (tenant_member + mirror_respondent-Pfad + tenant_owner-Policy-Reste raus, Bestands-Konvertierung -> employee). Fundament fuer P2-P5 (BL-530..533). /requirements DONE 2026-07-06 (RPT-588).",
+      "order": 20.08
     }
   ]
 }

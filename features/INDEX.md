@@ -299,3 +299,12 @@ V10.2.1-Scope (Requirements 2026-07-05 via RPT-576). Patch-Slice: Self-Healing R
 | ID | Feature | Status | Spec | Created |
 |----|---------|--------|------|---------|
 | FEAT-102 | Embedding-Reliability Reconciliation-Cron (Self-Healing knowledge_chunks-Coverage: Gap-Erkennung + idempotenter Re-Embed + error_log-Beobachtbarkeit) | deployed | PRD §V10.2.1 | 2026-07-05 |
+
+## V10.3 — Rollenmodell V2 Paket P1 (DEC-263) Features
+
+V10.3-Scope (Requirements 2026-07-06, RPT-588): Fundament-Paket vor P2-P5 des freigegebenen Rollenmodells V2. Passwort-Vergessen-Flow (Delta D7, Reuse Invite-/Magic-Link-Bausteine) + vollstaendiger Cleanup der Kunden-Zwischenebene (tenant_member, mirror_respondent-Pfad, tenant_owner-Policy-Reste). Spec-Detail in PRD §V10.3.
+
+| ID | Feature | Status | Spec | Created |
+|----|---------|--------|------|---------|
+| FEAT-103 | Passwort-Vergessen-Flow (/login-Link → enumeration-sichere Anforderung + Rate-Limit → GoTrue recovery-Link via SMTP → /auth/callback → /auth/set-password) | planned | PRD §V10.3 | 2026-07-06 |
+| FEAT-104 | Rollen-Cleanup Zwischenebene (tenant_member Code+RLS+CHECK+Bestands-Konvertierung; mirror_respondent-Pfad; tenant_owner-Policy-Reste) | planned | PRD §V10.3 | 2026-07-06 |
