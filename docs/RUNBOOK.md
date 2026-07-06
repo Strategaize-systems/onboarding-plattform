@@ -262,3 +262,48 @@ SELECT message FROM public.error_log WHERE message='email_inbound_received' ORDE
 -- Rejects (Spam/Allowlist) sichtbar?
 SELECT reject_layer, count(*) FROM public.email_validation_reject_log GROUP BY 1;
 ```
+
+## V10.2.1 Embedding-Reconcile-Cron (Self-Healing RAG-Coverage, SLC-185 / DEC-262)
+
+Quelle: FEAT-102 (ISSUE-112), DEC-262 (Per-Tenant-Loop, geteilte Gap-Definition, Cap 25), DEC-259 (ledger-frei).
+
+Der Reconcile-Cron `GET /api/cron/knowledge-embed-reconcile` schliesst RAG-Coverage-Luecken in `knowledge_chunks` selbstheilend: pro Mandant Count-Gap-Check (identische Query wie der Workspace-Coverage-Guard), bei Luecke Re-Embed aller knowledge_units des Mandanten (idempotent via Unique-Constraint, max. 25 Re-Embed-Mandanten pro Lauf — Rest heilt der naechste Tick, `capped:true` in der Summary). Fehler pro Mandant sind fail-open (Lauf geht weiter, `failures`-Count).
+
+### Coolify-Scheduled-Task (einmaliges Setup — Anlage = /deploy V10.2.1)
+
+In Coolify unter der `app`-Resource → Scheduled-Tasks:
+
+```
+Schedule: */10 * * * *
+Command/HTTP: GET https://onboarding.strategaizetransition.com/api/cron/knowledge-embed-reconcile
+Header: x-cron-secret: $CRON_SECRET
+```
+
+Der `CRON_SECRET` existiert bereits in der Coolify-ENV (V7). **Der erste Prod-Lauf heilt die Founder-Mandant-Altlast** ("5 von 35 indexiert", ISSUE-112) — Verifikation via Count-Query (SC6, /deploy-Phase).
+
+### Beobachtbarkeit + manueller Smoke-Test
+
+Jeder Lauf schreibt eine `error_log`-Summary (`level='info'`, `source='cron:knowledge-embed-reconcile'`, `metadata.category='knowledge_embed_reconcile'`):
+
+```sql
+SELECT created_at, metadata FROM public.error_log
+WHERE metadata->>'category'='knowledge_embed_reconcile'
+ORDER BY created_at DESC LIMIT 5;
+-- metadata: { tenantsChecked, tenantsWithGap, chunksReembedded, failures, capped }
+```
+
+```bash
+curl https://onboarding.strategaizetransition.com/api/cron/knowledge-embed-reconcile \
+  -H "x-cron-secret: <CRON_SECRET>"
+# Antwort: { ok, tenantsChecked, tenantsWithGap, chunksReembedded, failures, capped }
+```
+
+Coverage-Gegenprobe pro Mandant (Gap = `chunk_count < ku_count`):
+
+```sql
+SELECT t.id, t.name,
+  (SELECT count(*) FROM knowledge_unit ku WHERE ku.tenant_id = t.id) AS ku_count,
+  (SELECT count(*) FROM knowledge_chunks kc WHERE kc.tenant_id = t.id
+     AND kc.source_type='knowledge_unit' AND kc.status='active') AS chunk_count
+FROM tenants t ORDER BY t.name;
+```
