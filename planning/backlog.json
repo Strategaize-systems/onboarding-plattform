@@ -1875,8 +1875,8 @@
       "title": "Rollenmodell V2 P2: Rolle strategaize_berater (BS-Port, Tenant-Zuweisung + can_see_tenant-RLS + Mein-Tag-Scope)",
       "type": "feature",
       "priority": "high",
-      "status": "open",
-      "version": null,
+      "status": "in_progress",
+      "version": "V10.4",
       "description": "Ausfuehrende Strategaize-Berater-Ebene, sieht nur zugewiesene Kanzleien/Kunden; Pattern-Reuse BS MIG-033/034/035 (DEC-263).",
       "createdAt": "2026-07-06"
     },

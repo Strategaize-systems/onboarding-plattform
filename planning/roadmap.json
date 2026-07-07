@@ -384,6 +384,13 @@
       "status": "released",
       "summary": "V10.3 Rollenmodell V2 Paket P1 (DEC-263) DEPLOYED 2026-07-06 (REL-040): FEAT-103 Passwort-Vergessen-Flow live (enumeration-safe + P-081-Doppel-Limiter + P-088-Policy 12+/zxcvbn) + FEAT-104 Zwischenebene-Cleanup live (MIG-131: 4-Rollen-Modell, tenant_member/mirror/tenant_owner raus, 18 Policies rebuilt). Fundament fuer P2-P5 (BL-530..533).",
       "order": 20.08
+    },
+    {
+      "id": "v10-4",
+      "name": "V10.4",
+      "status": "active",
+      "summary": "V10.4 Rollenmodell V2 Paket P2 (DEC-263, BL-530): neue Rolle strategaize_berater (ausfuehrende Berater-Ebene, sieht nur zugewiesene Kanzleien/Kunden). BS-Port MIG-033/034/035 (owner_user_id + can_see_owner + inviteUserAndCreateProfile) → OP-Variante can_see_tenant (tenant-scoped statt owner-per-row, Cascade Kanzlei→Mandant via parent_partner_tenant_id). Zuweisung betreuer_user_id auf tenants + Admin-Invite/Zuweisung + Sidebar-Gating + Mein-Tag-Berater-Scope. /discovery DONE 2026-07-07 (RPT-601, READY fuer /requirements).",
+      "order": 20.09
     }
   ]
 }
