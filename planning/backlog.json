@@ -1872,12 +1872,12 @@
     },
     {
       "id": "BL-530",
-      "title": "Rollenmodell V2 P2: Rolle strategaize_berater (BS-Port, Tenant-Zuweisung + can_see_tenant-RLS + Mein-Tag-Scope)",
+      "title": "FEAT-105 strategaize_berater Rolle + Tenant-Zuweisung + can_see_tenant-RLS (Foundation)",
       "type": "feature",
       "priority": "high",
-      "status": "in_progress",
+      "status": "open",
       "version": "V10.4",
-      "description": "Ausfuehrende Strategaize-Berater-Ebene, sieht nur zugewiesene Kanzleien/Kunden; Pattern-Reuse BS MIG-033/034/035 (DEC-263).",
+      "description": "MIG-132 role-CHECK 4→5, handle_new_user cross-tenant-Zweig, Zuweisungs-Persistenz (Q-V10.4-A), can_see_tenant-Helper (BS-Port MIG-033/034/035), additive Berater-RLS-Zweige gegen Live-pg_policies; TS UserRole+role-check+assertStrategaizeBerater. DEC-263 P2.",
       "createdAt": "2026-07-06"
     },
     {
@@ -1909,6 +1909,26 @@
       "version": null,
       "description": "Delta D1: Team/Bridge/Walkthroughs/Handbuch-Trigger aus TenantAdminShell unter /admin heraus; klare URL-Namespaces pro Rolle.",
       "createdAt": "2026-07-06"
+    },
+    {
+      "id": "BL-534",
+      "title": "FEAT-106 Admin: Berater anlegen + Tenants zuweisen",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V10.4",
+      "description": "Admin legt strategaize_berater an (Invite-Port ohne tenant_id) + Zuweisungs-UI/RPC (Berater ↔ Kanzleien/Kunden setzen/entfernen); nur strategaize_admin. DEC-263 P2.",
+      "createdAt": "2026-07-07"
+    },
+    {
+      "id": "BL-535",
+      "title": "FEAT-107 Berater-Sicht: /admin gescopt + Mein-Tag can_see_tenant-Scope",
+      "type": "feature",
+      "priority": "high",
+      "status": "open",
+      "version": "V10.4",
+      "description": "Admin-Layout-Gate um strategaize_berater erweitern + BeraterSidebar (gefiltert) + Cross-Tenant-Loader auf zugewiesene Tenants gescopt (Query-Layer, service_role) + Mein Tag mit can_see_tenant-Scope. DEC-263 P2.",
+      "createdAt": "2026-07-07"
     }
   ]
 }

@@ -3090,3 +3090,44 @@ P2 strategaize_berater, P3 Partner-Funktions-Flags + F1 "Meine Kanzlei", P4 F3-A
 - Q-V10.3-A: Konvertierung Bestands-tenant_member → employee vs. tenant_admin (Live-Bestand pruefen; Default employee).
 - Q-V10.3-B: Passwort-Policy im Reset-Pfad: OP-Bestand (min 8) vs. P-088 (12+ zxcvbn) fuer den gesamten set-password-Pfad.
 - Q-V10.3-C: Recovery-Link-TTL + Verhalten bei Mehrfach-Anforderung (GoTrue-Default vs. eigenes Handling).
+
+## V10.4 — Rollenmodell V2 Paket P2: Rolle strategaize_berater (BS-Port, Tenant-Zuweisung) (DEC-263)
+
+### V10.4 Problem & Ziel
+Zweites Paket des freigegebenen Ziel-Rollenmodells V2 (DEC-263, `docs/OP_ROLLEN_SOLL_MODELL_V2_2026-07-06.md`, §4). Strategaize hat heute nur `strategaize_admin` (sieht ALLES cross-tenant) — es fehlt eine **ausführende Berater-Ebene**, die nur **zugewiesene** Kanzleien/Kunden betreut. Ziel: neue Rolle `strategaize_berater` (5. Rolle) mit zuweisungs-gescopter Sichtbarkeit über Kanzleien + deren Mandanten (inkl. Capture-/Diagnose-/Wissens-/Modul-Daten) und ein auf diesen Ausschnitt begrenztes „Mein Tag". Gebaut per **Pattern-Reuse aus dem Business System** (MIG-033/034/035: `owner_user_id`/`can_see_owner`/`inviteUserAndCreateProfile`), auf OPs tenant-scoptes Modell übersetzt.
+
+### V10.4 Ist-Stand & Reuse-Inventar (Pflicht-Gate 1)
+- **BS-Quelle (bestätigt, file:line):** `can_see_owner(target_owner)` = admin OR self OR (teamlead AND same team) in BS `sql/migrations/035_v7_rls_switch.sql:54-72`; Helper is_admin/is_teamlead/get_my_team_id (SECURITY DEFINER + search_path-Lock); `inviteUserAndCreateProfile` BS `cockpit/src/lib/auth/invite.ts:32-101`; `inviteMember`/`changeRole` BS `cockpit/src/lib/team/actions.ts` (assertRole-Gate, DEC-230-Restriktion); `visibleFor`-UI-Gating BS `settings/sections.ts`.
+- **OP-Reuse (bestätigt, file:line):** RLS-Helper `auth.user_role()` + `auth.user_tenant_id()` (`sql/functions.sql:10-28`, **1:1 reusable**) · tenant-scoped Policy-Muster `auth.user_role() IN (...) AND tenant_id = auth.user_tenant_id()` (**erweitern** um Berater-Zweig; Enumeration gegen **Live-pg_policies post-MIG-131**, nicht Source-Files) · Rollen-Gate `src/lib/auth/role-check.ts:52-86` + `UserRole` `src/types/db.ts:16-20` + `assertStrategaizeAdmin()` `src/lib/workspace/admin-gate.ts:20-36` + `requireAdmin()` `src/lib/api-utils.ts:87` (**erweitern**) · Admin-Gate `src/app/admin/layout.tsx:6-29` + Sidebar `src/components/admin-sidebar.tsx:9-20` (**re-skin**) · Cross-Tenant-Loader `src/lib/cockpit/load-cross-tenant.ts:15-141` via createAdminClient (**erweitern**: auf zugewiesene Tenants filtern) · Invite `src/app/api/admin/tenants/[tenantId]/invite/route.ts` + accept-invitation + `handle_new_user()` `sql/functions.sql:39-76` (**erweitern**) · Hierarchie `tenants.tenant_kind` + `parent_partner_tenant_id` (`090_v6:84-122`) + `partner_client_mapping` (**1:1 reusable** als Cascade-Basis).
+- **Delta-Klassifikation:** Re-Skin (Auth-Routing, Admin-Layout-Gate, RLS-Muster) + Neubau (Zuweisungs-Persistenz + `can_see_tenant`-Helper + additive Berater-Policy-Zweige + BeraterSidebar + gescopter Loader).
+
+### V10.4 In Scope (3 Features)
+- **FEAT-105 Rolle + Zuweisung + can_see_tenant-RLS (Foundation):** MIG-132 — `profiles.role`-CHECK 4→5 (add `strategaize_berater`); `handle_new_user()` erweitern (berater = cross-tenant OHNE tenant_id, wie strategaize_admin → in den „tenant_id NICHT erforderlich"-Zweig); Zuweisungs-Persistenz (Q-V10.4-A: Tabelle `berater_tenant_assignments` vs. Spalte `betreuer_user_id`); Helper `can_see_tenant(tenant_id)` (SECURITY DEFINER + search_path-Lock, BS-Muster: admin OR zugewiesener Berater OR Mandant-mit-zugewiesener-Kanzlei via `parent_partner_tenant_id`); additive Erweiterung der tenant-scoped SELECT-Policies um den Berater-Zweig (gegen Live-pg_policies). TS: `UserRole` + `role-check.ts` (neue PathClass/Landing) + `assertStrategaizeBerater()`.
+- **FEAT-106 Admin: Berater anlegen + Tenants zuweisen:** Admin legt `strategaize_berater`-Account an (Invite-Port: generateLink + `handle_new_user`-role, ohne tenant_id) + Admin-UI „Berater ↔ Kanzleien/Kunden zuweisen" (Zuweisung setzen/entfernen, RPC nach BS-`inviteUserAndCreateProfile`-Muster). Nur `strategaize_admin` darf Berater anlegen/zuweisen.
+- **FEAT-107 Berater-Sicht: /admin gescopt + Mein-Tag can_see_tenant-Scope:** Admin-Layout-Gate um `strategaize_berater` erweitern → BeraterSidebar (gefilterte Nav: Mein Tag + zugewiesene Tenants; keine Partner-Verwaltung/Funnel-Analytics/Text-Overrides) + Cross-Tenant-Loader auf zugewiesene Tenants gefiltert (Query-Layer, da service_role RLS bypassed) + „Mein Tag" mit can_see_tenant-Scope (Reuse-Mechanik für P4).
+
+### V10.4 Out of Scope
+P3 Partner-Funktions-Flags + F1 (BL-531) · P4 F3-Advisory-Workspace + Berater-delegierte Employee-Invites in Mandanten (BL-532) · P5 komplette /admin-URL-Entmischung (BL-533) · Multi-Berater-Teams/Teamlead-Ebene (BS hat sie, hier nicht) · Berater-Performance-/Auslastungs-Cockpit · Direkt-Kunden-Self-Signup. Kein Customer-Outreach ([[module-lifecycle-discipline]]).
+
+### V10.4 Constraints
+Maximal 1 neue Tabelle (Zuweisung) — sonst additive Migration (CHECK/Function/Policy) · RLS-Policy-Neufassung gegen **Live-pg_policies** (Playbook sql-migration-hetzner Check 4, MIG-131-Muster) · Pattern-Reuse BS 1:1 mit Quell-Pfad-Header (strategaize-pattern-reuse) · service_role cross-tenant NUR nach Rollen-Check · SaaS-Delivery-Mode → TDD Pflicht für RLS/Auth/Zuweisungs-Logik · EU-Residency unberührt (keine neuen Provider-Calls, Mein-Tag reuse-t Haiku/Sonnet EU) · Internal-Test-Mode.
+
+### V10.4 Risiken / Annahmen
+- R-V10.4-1: Berater ist cross-tenant OHNE tenant_id — `handle_new_user()` verlangt heute tenant_id für alle außer strategaize_admin; Ausnahme-Zweig ist Pflicht, sonst bricht die User-Anlage (P0422).
+- R-V10.4-2: Zwei Sichtbarkeits-Pfade — authenticated-Reads brauchen den RLS-Berater-Zweig; der Mein-Tag-Loader (service_role/createAdminClient) bypassed RLS → Filterung MUSS zusätzlich im Query-Layer erfolgen. Beide Pfade konsistent halten.
+- R-V10.4-3: RLS-Policy-Umfang = alle tenant-scoped SELECT-Policies (capture_session, block_checkpoint, block_diagnosis, modul_output, knowledge_unit/-chunks, validation_layer, ai_jobs, …) — exakte Liste per Live-pg_policies-Inspektion in /architecture, nicht aus Source-Files (Hotfix-Drift nach MIG-131).
+- R-V10.4-4: Cascade-Semantik (Berater der Kanzlei sieht deren Mandanten) hängt an `parent_partner_tenant_id`-Integrität — Live-Datenprüfung.
+- A-V10.4-1: Annahme „1 Berater pro Kanzlei genügt für V1" (soll-modell) — falls Multi-Berater schon jetzt gewünscht, entscheidet Q-V10.4-A die Tabelle.
+
+### V10.4 Success Criteria
+- SC-V10.4-1: `profiles.role`-CHECK live mit 5 Werten inkl. `strategaize_berater`; `handle_new_user` legt Berater ohne tenant_id an (Live-Verify).
+- SC-V10.4-2: Ein zugewiesener Berater sieht per authenticated-Read NUR zugewiesene Kanzleien + deren Mandanten (RLS-Sidecar-Test: zugewiesen sichtbar, nicht-zugewiesen 0 Zeilen); kein nicht-zugewiesener Tenant.
+- SC-V10.4-3: „Mein Tag" für den Berater zeigt nur den zugewiesenen Ausschnitt (Loader-Filter greift trotz service_role); Admin unverändert alle Tenants.
+- SC-V10.4-4: Admin kann Berater anlegen + Zuweisung setzen/entfernen; Nicht-Admin 403.
+- SC-V10.4-5: Keine bestehende Rolle (tenant_admin/employee/partner_admin) verliert oder gewinnt Sichtbarkeit (Regressions-RLS-Sidecar); Full-Vitest Baseline-Delta 0 Regression; next build PASS.
+
+### V10.4 Offene Fragen (→ /architecture, Reuse-vs-Neu-DEC-Kandidaten)
+- Q-V10.4-A (DEC-Kandidat): Zuweisungs-Persistenz — **Tabelle `berater_tenant_assignments(berater_user_id, tenant_id)`** (Multi-Berater zukunftssicher, Empfehlung des OP-Reuse-Audits) **vs.** Einzelspalte `betreuer_user_id` auf `tenants` (soll-modell §4, simpler, 1 Berater/Tenant). Empfehlung: Tabelle (kein späterer Umbau für Multi-Berater/Teams). Founder-/Architektur-Entscheid.
+- Q-V10.4-B: Zuweisungs-Granularität — nur auf Kanzlei-/Direkt-Kunden-Tenant (Mandanten via Cascade `parent_partner_tenant_id`) ODER auch direkt einzelne Mandanten zuweisbar? Empfehlung: Kanzlei-Ebene + Cascade.
+- Q-V10.4-C: Exaktes /admin-Routen-Set für den Berater in P2 (nur Mein Tag + Tenants-Drilldown, oder auch Reviews/Debrief seiner Kunden?) — Voll-Entmischung ist P5; P2 baut das Minimum.
+- Q-V10.4-D: `can_see_tenant`-Helper als SQL-Function (RLS-nutzbar) vs. reine Query-Layer-Filterung — Helper bevorzugt (in RLS UND Loader nutzbar).

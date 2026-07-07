@@ -308,3 +308,13 @@ V10.3-Scope (Requirements 2026-07-06, RPT-588): Fundament-Paket vor P2-P5 des fr
 |----|---------|--------|------|---------|
 | FEAT-103 | Passwort-Vergessen-Flow (/login-Link → enumeration-sichere Anforderung + Rate-Limit → GoTrue recovery-Link via SMTP → /auth/callback → /auth/set-password) | deployed | PRD §V10.3 | 2026-07-06 |
 | FEAT-104 | Rollen-Cleanup Zwischenebene (tenant_member Code+RLS+CHECK+Bestands-Konvertierung; mirror_respondent-Pfad; tenant_owner-Policy-Reste) | deployed | PRD §V10.3 | 2026-07-06 |
+
+## V10.4 — Rollenmodell V2 Paket P2: strategaize_berater (DEC-263) Features
+
+V10.4-Scope (Requirements 2026-07-07, RPT-602): Rollenmodell V2 Paket P2 — neue ausfuehrende Rolle strategaize_berater mit zuweisungs-gescopter Sichtbarkeit (BS-Port MIG-033/034/035 → OP can_see_tenant, tenant-scoped statt owner-per-row, Cascade Kanzlei→Mandant via parent_partner_tenant_id). Spec-Detail PRD §V10.4. Reuse-vs-Neu = Re-Skin (Auth/Layout/RLS-Muster) + Neubau (Zuweisungs-Persistenz + can_see_tenant-Helper + BeraterSidebar + gescopter Loader).
+
+| ID | Feature | Status | Spec | Created |
+|----|---------|--------|------|---------|
+| FEAT-105 | strategaize_berater Rolle + Tenant-Zuweisung + can_see_tenant-RLS (Foundation): MIG-132 role-CHECK 4→5, handle_new_user cross-tenant-Zweig, Zuweisungs-Persistenz, can_see_tenant-Helper, additive Berater-RLS-Zweige, UserRole+role-check+assertStrategaizeBerater | planned | PRD §V10.4 | 2026-07-07 |
+| FEAT-106 | Admin: Berater anlegen + Tenants zuweisen (Invite-Port ohne tenant_id + Zuweisungs-UI/RPC, nur strategaize_admin) | planned | PRD §V10.4 | 2026-07-07 |
+| FEAT-107 | Berater-Sicht: /admin-Layout-Gate + BeraterSidebar (gefiltert) + Cross-Tenant-Loader auf zugewiesene Tenants gescopt + Mein-Tag can_see_tenant-Scope | planned | PRD §V10.4 | 2026-07-07 |
