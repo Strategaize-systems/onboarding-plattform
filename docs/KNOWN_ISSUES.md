@@ -890,3 +890,12 @@
 - Impact: Suite-Läufe gegen die Live-DB zeigen 4 Dauer-Fails, die echte Regressionen verrauschen koennen. Kein Produktions-Impact.
 - Workaround: Fails als klassifizierte Baseline behandeln (RPT-599-Klassifikation referenzieren).
 - Next Action: Test-Fix-Mini-Slice: v4-Fixtures mit `released_for_strategaize_review=true` seeden (oder Erwartung an Snapshot-Gate anpassen) + v6-Admin-Asserts auf fixture-scoped IDs statt absoluter Counts umstellen.
+
+### ISSUE-117 — Coolify-Tasks 5+6 (email-bulk-pipeline-trigger, retention-sweep) hatten seit Anlage leeres container-Feld → V9.1-Bulk-Pipeline lief nie automatisch
+- Status: resolved
+- Severity: Medium
+- Area: Coolify / Scheduled-Tasks / email-bulk-Pipeline (V9.1)
+- Summary: Die 2026-06-12 (V9.1) via UI angelegten Coolify-Scheduled-Tasks 5 (email-bulk-pipeline-trigger, stuendlich) und 6 (bulk-email-retention-sweep, taeglich 02:00) hatten ein leeres `container`-Feld. Bei Multi-Container-Compose-Stacks failt der Scheduler dann jeden Tick mit "More than one container exists but no container name was provided" — 600+ Fails bei Task 5, nie ein Success. Sichtbar nur in `scheduled_task_executions`, nie in App-Logs/error_log/ai_jobs; deshalb 3,5 Wochen unentdeckt. Gefunden im /post-launch V10.2.1 (2026-07-07, RPT-600-Session) beim Full-Task-Sweep. Pre-existing, NICHT V10.2.1-attributierbar (Fails schon vor T+0 belegt, nie ein Success seit Anlage).
+- Impact: Die V9.1-Forward-Bucket-Bulk-Pipeline (FEAT-077) wurde nie automatisch getriggert — 1 Run (angelegt 2026-06-12) hing 3,5 Wochen in `pre_filtered`; der DSGVO-Retention-Sweep lief nie. Kein Mail-Versand betroffen (Capture-/Analyse-Pipeline, kein Outbound).
+- Workaround: keiner noetig — Fix applied.
+- Next Action: DONE 2026-07-07: `UPDATE scheduled_tasks SET container='app' WHERE id IN (5,6);` (Deviation Rule 3, Config-only, kein Redeploy, Burn-In-Container unberuehrt). Verifiziert: Task 5 Ticks 09:00 + 10:00 UTC success; der haengende Run 3ea6e9b3 durchlief die Pipeline end-to-end (thread_redact → pattern_extract → synthesis, alle ai_jobs completed, Status `synthesized`). Rest-Check: Task 6 erster Tick 2026-07-08 02:00 UTC gegenpruefen. Prozess-Lehre → Dev-System IMP-1421 (Post-Launch-Sweep ueber ALLE Tasks).
