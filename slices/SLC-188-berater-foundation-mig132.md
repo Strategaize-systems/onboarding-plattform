@@ -71,7 +71,8 @@ PRD §V10.4 · ARCHITECTURE Addendum V (V.3/V.4/V.5) · DEC-267 (Tabelle) · DEC
 ### MT-4: TS-Types + Gate + role-check
 - Goal: Rolle client-/server-seitig bekannt machen; Server-Gate für Berater-Entry-Points.
 - Files: `src/types/db.ts` (MODIFY: `UserRole` += `"strategaize_berater"`), `src/lib/auth/role-check.ts` (MODIFY: admin-PathClass erlaubt zusätzlich `strategaize_berater`; `defaultLandingForRole` += `case "strategaize_berater": return "/admin/mein-tag"`), `src/lib/workspace/berater-gate.ts` (NEU: `assertStrategaizeBerater(): Promise<User|null>` analog admin-gate.ts, prüft `role === "strategaize_berater"`), `src/lib/auth/role-check.test.ts` (MODIFY/NEU: berater-Cases).
-- Expected behavior: Berater darf `/admin/*` (PathClass admin) betreten; Landing = `/admin/mein-tag`; `assertStrategaizeBerater` liefert User nur bei exakter Rolle, sonst null.
+- **Hinweis (Wiring):** `role-check.ts` ist der GETESTETE SPIEGEL — die reale Laufzeit-Enforcement liegt in `src/lib/supabase/middleware.ts` (nicht importiert role-check.ts). Die Middleware-Änderung (Login-Redirect Berater) ist SLC-190 MT-2. Docstring-Regel: beide Schichten konsistent halten.
+- Expected behavior: `assertStrategaizeBerater` liefert User nur bei exakter Rolle, sonst null; role-check-Mirror kennt Berater (PathClass admin + Landing `/admin/mein-tag`) für Test-Parität.
 - Verification: `npx tsc --noEmit` 0, `npm run lint` 0, Pure-Mock-Vitest role-check + Gate grün.
 - Test-AC-Klasse: **Pure-Mock-Vitest** (lokal, gemockter supabase-Client).
 - Dependencies: keine harte (kann parallel zu MT-2/3 laufen, aber selber Branch → nach MT-3 committen).

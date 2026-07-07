@@ -48,12 +48,13 @@ PRD §V10.4 FEAT-107 · Addendum V.3/V.6 · DEC-269 (Query-Layer-Durchsetzung vi
 - Test-AC-Klasse: **Pure-Mock-Vitest** (Query-Builder-Assert) + bestehende Loader-Tests als Regression.
 - Dependencies: SLC-188 (rpc-Function existiert), keine harte auf 189.
 
-### MT-2: Layout-Gate + BeraterSidebar
-- Goal: Berater bekommt gefiltertes /admin-Layout.
-- Files: `src/app/admin/layout.tsx` (MODIFY: role=strategaize_berater → render `<BeraterSidebar>`-Shell statt Full-Admin/TenantAdminShell), `src/components/berater-sidebar.tsx` (NEU: NAV = Mein Tag + zugewiesene Tenants [Read-Liste], KEINE Partner/Funnel/Text-Overrides/Templates).
-- Expected behavior: Berater `/admin/*` erlaubt (role-check SLC-188), sieht nur BeraterSidebar-Items; Nicht-erlaubte /admin-Unterseiten (partners/text-overrides/…) → 403/redirect (Page-Re-Gates greifen, da diese `assertStrategaizeAdmin`). Landing `/admin/mein-tag`.
-- Verification: `next build` PASS; Pure-Mock/Component-Logik-Test (welche NAV-Items bei Rolle). Browser-Smoke = /deploy.
-- Dependencies: SLC-188 (UserRole + role-check + Gate).
+### MT-2: Runtime-Routing + Layout-Gate + BeraterSidebar
+- Goal: Berater bekommt gefiltertes /admin-Layout UND korrektes Login-Landing — an der REALEN Enforcement-Schicht.
+- Files: `src/lib/supabase/middleware.ts` (**MODIFY — Runtime-Enforcement, Pflicht**: Login-Redirect `updateSession` Zeile 85-94 um `else if (role==="strategaize_berater") url.pathname="/admin/mein-tag"` erweitern; verifizieren dass KEIN /admin-Block für Berater nötig ist — heute nur employee/partner_admin explizit geblockt, Berater passiert → Layout-Gate greift), `src/app/admin/layout.tsx` (MODIFY: role=strategaize_berater → render `<BeraterSidebar>`-Shell statt Full-Admin/TenantAdminShell), `src/components/berater-sidebar.tsx` (NEU: NAV = Mein Tag + zugewiesene Tenants [Read-Liste], KEINE Partner/Funnel/Text-Overrides/Templates), `src/lib/supabase/middleware.test.ts` (MODIFY/NEU falls vorhanden: Berater-Login-Redirect-Case).
+- **WICHTIG:** `src/lib/auth/role-check.ts` (in SLC-188 MT-4 erweitert) ist NUR der getestete Spiegel der Middleware-Logik — er wird zur Laufzeit NICHT importiert. Ohne diese middleware.ts-Änderung landet ein Berater nach Login auf `/dashboard` (else-Zweig). Beide Schichten konsistent halten (role-check.ts-Docstring verlangt das).
+- Expected behavior: Berater loggt ein → `/admin/mein-tag`; `/admin/*` erreichbar (middleware blockt nicht) → BeraterSidebar-Shell; nicht-erlaubte /admin-Unterseiten (partners/text-overrides/…) → 403/redirect via Page-Re-Gate (`assertStrategaizeAdmin`).
+- Verification: `next build` PASS; Pure-Mock-Vitest: middleware Berater-Login→/admin/mein-tag; BeraterSidebar NAV-Items bei Rolle. Browser-Smoke = /deploy.
+- Dependencies: SLC-188 (UserRole + Gate; role-check.ts-Mirror).
 
 ### MT-3: Mein-Tag Berater-Pfad (Page + Actions + RAG scoped)
 - Goal: „Mein Tag" für Berater end-to-end gescopt.
