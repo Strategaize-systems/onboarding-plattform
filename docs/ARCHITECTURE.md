@@ -9967,3 +9967,73 @@ Zwei unabhängige, kleine Bausteine: (1) FEAT-103 komponiert den Passwort-Verges
 ## U.7 Empfohlener nächster Schritt
 
 `/slice-planning V10.3` — Vorschlag 2 Slices, sequenziell auf einem Branch `v10-3-rollenmodell-p1`: **SLC-186** FEAT-103 Reset-Flow + P-088-Port (inkl. R-ARCH-2-Spike als MT-1) → **SLC-187** FEAT-104 Cleanup (MIG-131 + Code-Fanout). Beide klein genug für klare Reviews; Cleanup zuletzt, damit der Reset-Flow nicht auf sich bewegendem Rollen-Code aufsetzt.
+
+# Addendum V — V10.4 Rollenmodell V2 Paket P2 (strategaize_berater, RPT-603, 2026-07-07)
+
+> Requirements: PRD §V10.4, FEAT-105/106/107, RPT-602. Q-V10.4-A/B/C/D aufgelöst → DEC-267/268/269. Alle Schema-/Code-Aussagen in DIESER Session gegen Live-DB (`supabase-db-…-162242937585`, post-MIG-131) und Repo gegroundet (Realitäts-Grounding-Gate).
+
+## V.1 Architektur-Summary
+Neue 5. Rolle `strategaize_berater` = ausführende, zuweisungs-gescopte Betreuer-Ebene. Kern-Mechanik: **Zuordnungs-Tabelle** `berater_tenant_assignments` (DEC-267) + **SECURITY-DEFINER-Helper** `berater_assigned_tenant_ids()` / `can_see_tenant()` (DEC-269), die die Zuweisung auf zugewiesene Kanzleien + deren Mandanten (Cascade über die bestehende `partner_client_mapping`, DEC-268) auflöst. **Primäre Sichtbarkeits-Durchsetzung in P2 = Query-Layer über service_role** (assertStrategaizeBerater + createAdminClient + Pflicht-Filter), exakt das bestehende `strategaize_admin`-Mein-Tag-Muster (`load-cross-tenant.ts`) — kein Berater-Zweig auf den 40 tenant-scoped RLS-Policies in P2 (DEC-269, fail-closed sicher; deep Drilldown-RLS = P4). BS-Port-Analogie: BS `can_see_owner` (owner-per-row) → OP `can_see_tenant` (tenant-scoped).
+
+## V.2 Grounding-Befunde (Live, diese Session)
+- **`profiles.role`-CHECK live** = `('strategaize_admin','tenant_admin','employee','partner_admin')` (4 Werte; `pg_get_constraintdef`). MIG-132 → 5 Werte.
+- **`handle_new_user()` live prosrc** (`pg_proc`): valid-role-Liste = die 4 Werte; tenant_id-Pflicht-Zweig = `('tenant_admin','employee','partner_admin')` (strategaize_admin ausgenommen). Basis für MIG-132-Neufassung.
+- **`berater_tenant_assignments`** = `to_regclass` NULL (existiert nicht) → Neuanlage.
+- **`partner_client_mapping`** existiert (Spalten `partner_tenant_id, client_tenant_id, invitation_status, …`); `partner_organization` existiert.
+- **54 `strategaize_admin`-RLS-Policies** live (`*_admin_full` ALL + `*_admin_select`) — Admin ist RLS-backed UND service_role-fähig (Mein-Tag-Loader = service_role).
+- **Reuse-Template `cs_select_partner_admin_via_mapping`** (Live-Qual): `auth.user_role()='partner_admin' AND EXISTS(SELECT 1 FROM partner_client_mapping pcm WHERE pcm.partner_tenant_id=auth.user_tenant_id() AND pcm.client_tenant_id=capture_session.tenant_id AND pcm.invitation_status='accepted')` — exakte Vorlage für die Cascade + spätere Berater-RLS (P4).
+- **~40 tenant-scoped SELECT-Policies** enumeriert (qual ~ `user_tenant_id`), Basis für die P4-RLS-Umfang-Liste (in P2 unberührt).
+- **OP-Reuse (Grep/Read):** `sql/functions.sql:10-28` (`auth.user_role`/`auth.user_tenant_id`), `:39-76` (handle_new_user); `src/lib/auth/role-check.ts:52-86` (`isPathAllowedForRole`), `src/types/db.ts:16-20` (`UserRole`-Union); `src/lib/workspace/admin-gate.ts:20-36` (`assertStrategaizeAdmin`); `src/lib/api-utils.ts:87` (`requireAdmin`); `src/app/admin/layout.tsx:6-29`; `src/components/admin-sidebar.tsx:9-20`; `src/lib/cockpit/load-cross-tenant.ts:15-141`; Invite `src/app/api/admin/tenants/[tenantId]/invite/route.ts`.
+
+## V.3 Hauptkomponenten & Verantwortlichkeiten
+| Komponente | Datei / Objekt | Delta | Verantwortung |
+|---|---|---|---|
+| MIG-132 Schema | `sql/migrations/132_*.sql` (NEU) | Neubau | `berater_tenant_assignments` + RLS + role-CHECK 4→5 + handle_new_user-Neufassung + 2 Helper-Functions |
+| `berater_tenant_assignments` | Tabelle | Neubau | `(berater_user_id, tenant_id)` PK + `assigned_by`, `assigned_at`; FKs → profiles/tenants ON DELETE CASCADE |
+| `berater_assigned_tenant_ids(uuid)` | SQL SECURITY DEFINER | Neubau | zugewiesene tenant_ids ∪ deren Mandanten (via `partner_client_mapping` accepted) |
+| `can_see_tenant(uuid)` | SQL SECURITY DEFINER | Neubau | `user_role='strategaize_admin' OR tenant = ANY(berater_assigned_tenant_ids(auth.uid()))` — nutzbar im Loader (rpc) + P4-RLS |
+| `handle_new_user()` | `sql/functions.sql:39` | erweitern | +`strategaize_berater` valid; berater in den tenant_id-NICHT-Pflicht-Zweig (cross-tenant wie admin) |
+| `UserRole` + role-check | `src/types/db.ts:16`, `role-check.ts:52` | erweitern | +`"strategaize_berater"`; PathClass-Zugang + `defaultLandingForRole` |
+| `assertStrategaizeBerater()` | `src/lib/workspace/*` (NEU, analog admin-gate) | Neubau | Server-Gate für Berater-Actions/Pages |
+| Berater-Anlage + Zuweisung | `src/app/admin/berater/*` (NEU) actions+UI | Neubau | Admin legt Berater an (Invite ohne tenant_id) + set/unset Zuweisung; admin-gated |
+| Berater-Loader | `load-cross-tenant.ts` erweitern / Wrapper | erweitern | `.in("id", beraterAssignedTenantIds)` statt aller Tenants |
+| Layout-Gate + Sidebar | `admin/layout.tsx`, `admin-sidebar.tsx` | re-skin | Berater rein + `BeraterSidebar` (Mein Tag + zugewiesene Tenants; keine Partner-/Funnel-/Override-Items) |
+
+## V.4 Datenmodell (DEC-267)
+```
+berater_tenant_assignments
+  berater_user_id uuid  NOT NULL REFERENCES profiles(id) ON DELETE CASCADE
+  tenant_id       uuid  NOT NULL REFERENCES tenants(id)  ON DELETE CASCADE
+  assigned_by     uuid  REFERENCES profiles(id)
+  assigned_at     timestamptz NOT NULL DEFAULT now()
+  PRIMARY KEY (berater_user_id, tenant_id)
+  INDEX (tenant_id)  -- Reverse-Lookup
+RLS: strategaize_admin ALL (verwalten) · strategaize_berater SELECT WHERE berater_user_id = auth.uid()
+GRANT: REVOKE anon; authenticated per RLS
+```
+Zuweisung erfolgt auf Kanzlei-/Direkt-Kunden-Tenant; Mandanten-Sicht per Cascade (DEC-268), keine Einzel-Mandant-Zeilen nötig.
+
+## V.5 Datenfluss
+1. **Anlage:** Admin (`/admin/berater`) → `createBerater(email)` → `admin.auth.admin.generateLink({type:'invite', user_metadata:{role:'strategaize_berater'}})` (kein tenant_id) → `handle_new_user` legt Profile ohne tenant_id an → SMTP-Adapter-Mail (Reuse) → Berater setzt Passwort (`/auth/set-password`).
+2. **Zuweisung:** Admin → `assignBerater(beraterUserId, tenantId)` / `unassign` (admin-gated) → INSERT/DELETE `berater_tenant_assignments`.
+3. **Login/Sicht:** Berater → Layout-Gate lässt `strategaize_berater` in → `BeraterSidebar` → „Mein Tag" ruft Loader mit service_role + `berater_assigned_tenant_ids(uid)`-Filter → nur zugewiesene Kanzleien + Mandanten. Nicht-zugewiesen = 0.
+
+## V.6 Security / Privacy
+- **Fail-closed:** Berater ohne Zuweisung sieht nichts; Query-Filter ist Pflicht (nicht optional) auf JEDEM Berater-Loader-Pfad. Ohne Berater-RLS-Policy liefert ein etwaiger authenticated-Read 0 Zeilen (sicher).
+- **Assignment nur Admin:** set/unset ausschließlich `strategaize_admin` (Server-Gate + RLS).
+- **service_role-Disziplin:** createAdminClient NUR nach `assertStrategaizeBerater()` + immer mit Assignment-Filter (security-audit-Standard, wie admin Mein-Tag).
+- **EU-Residency** unberührt (keine neuen Provider-Calls).
+- Helper `SECURITY DEFINER` + `SET search_path=public` (P-085-Muster).
+
+## V.7 Constraints & Tradeoffs
+- **1 Migration** (MIG-132), additiv (CREATE TABLE/FUNCTION, ALTER CHECK, CREATE OR REPLACE function) — idempotent, ein Rollback-Punkt. Pre-Apply-Live-Audit Pflicht (Playbook sql-migration-hetzner, MIG-131-Muster).
+- **Tradeoff (DEC-269):** P2 durchsetzt Sicht im Query-Layer (kein 40-Policy-Churn) — simpler, konsistent mit Admin-Architektur; Preis: Berater-Daten müssen server-side via service_role geladen werden (kein authenticated-Client-Read in P2). Deep-Drilldown-RLS (via-assignment-Policies mit `can_see_tenant`) kommt in P4, wenn F3 die Drilldown-Seiten baut.
+- TDD Pflicht (SaaS): `berater_assigned_tenant_ids`/`can_see_tenant` (DB-Sidecar), Gate, Loader-Filter, Assignment-Actions.
+
+## V.8 Offene technische Fragen (Rest)
+- Q-V10.4-C (P2-Routen-Set): **entschieden** — P2 = `/admin/mein-tag` (scoped) + `/admin/berater` (Admin-Verwaltung) + Berater-Landing = Mein Tag; `/admin/tenants` für Berater = gefilterte Read-Liste optional (Slice-Entscheid). Reviews/Debrief/Drilldown = P4.
+- R-ARCH-V-1 (UNVERIFIED): exakte Cascade-Quelle — `partner_client_mapping` (accepted) vs. zusätzlich `parent_partner_tenant_id`; Slice-MT-1 verifiziert gegen Live-Daten, welche die vollständige Mandanten-Menge liefert (mapping ist der aktive partner_admin-Pfad → Default).
+- R-ARCH-V-2: `on_auth_user_created`-Trigger-Existenz für invite-Pfad als Live-Check im Slice bestätigen (functions.sql definiert die Function; Trigger-Bindung verifizieren).
+
+## V.9 Empfohlener nächster Schritt
+`/slice-planning V10.4` — Vorschlag 3 Slices sequenziell auf `v10-4-rollenmodell-p2`: **SLC-188** FEAT-105 Foundation (MIG-132 + Helper + Gate + UserRole/role-check; MT-1 = DB-Sidecar-Spike `berater_assigned_tenant_ids` gegen Live-Cascade) → **SLC-189** FEAT-106 Admin Berater-Anlage+Zuweisung → **SLC-190** FEAT-107 Berater-Sicht (Layout-Gate + BeraterSidebar + gescopter Loader + Mein-Tag-Scope). Foundation zuerst (Rolle/RLS/Helper), UI zuletzt.
