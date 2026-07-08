@@ -1875,7 +1875,7 @@
       "title": "FEAT-105 strategaize_berater Rolle + Tenant-Zuweisung + can_see_tenant-RLS (Foundation)",
       "type": "feature",
       "priority": "high",
-      "status": "in_progress",
+      "status": "done",
       "version": "V10.4",
       "description": "MIG-132 role-CHECK 4→5, handle_new_user cross-tenant-Zweig, Zuweisungs-Persistenz (Q-V10.4-A), can_see_tenant-Helper (BS-Port MIG-033/034/035), additive Berater-RLS-Zweige gegen Live-pg_policies; TS UserRole+role-check+assertStrategaizeBerater. DEC-263 P2.",
       "createdAt": "2026-07-06"
