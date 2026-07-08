@@ -64,7 +64,13 @@ export function isPathAllowedForRole(
       // Layout-Logik (admin/layout.tsx) erlaubt zusaetzlich tenant_admin im
       // TenantAdminShell. Der harte Routing-Layer akzeptiert sowohl
       // strategaize_admin als auch tenant_admin auf /admin/*.
-      return role === "strategaize_admin" || role === "tenant_admin";
+      // V10.4 SLC-188 — strategaize_berater darf /admin/* (gefiltertes Layout +
+      // gescopte Mein-Tag-Sicht, SLC-190). Reale Enforcement in middleware.ts.
+      return (
+        role === "strategaize_admin" ||
+        role === "tenant_admin" ||
+        role === "strategaize_berater"
+      );
     case "partner":
       // V6: /partner/* ist exklusiv partner_admin + strategaize_admin
       // (Cross-Tenant-Read). Impersonate-Mode fuer strategaize_admin ist V7+.
@@ -98,6 +104,9 @@ export function defaultLandingForRole(role: UserRole | null): string {
       return "/partner/dashboard";
     case "strategaize_admin":
       return "/admin/tenants";
+    case "strategaize_berater":
+      // V10.4 SLC-188 — Berater landet auf dem gescopten "Mein Tag".
+      return "/admin/mein-tag";
     case "tenant_admin":
       return "/dashboard";
     default:

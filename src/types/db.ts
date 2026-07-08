@@ -17,7 +17,9 @@ export type UserRole =
   | "strategaize_admin"
   | "tenant_admin"
   | "employee"
-  | "partner_admin";
+  | "partner_admin"
+  // V10.4 SLC-188 (FEAT-105) — ausfuehrende Berater-Ebene, zuweisungs-gescopt.
+  | "strategaize_berater";
 
 // ============================================================
 // Tenant + tenant_kind

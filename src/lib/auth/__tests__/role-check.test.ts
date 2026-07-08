@@ -64,6 +64,9 @@ describe("isPathAllowedForRole — Matrix Rolle × Pfad-Klasse", () => {
     it("erlaubt tenant_admin (TenantAdminShell-Pfad)", () => {
       expect(isPathAllowedForRole("admin", "tenant_admin")).toBe(true);
     });
+    it("erlaubt strategaize_berater (V10.4 SLC-188, gescopte Sicht)", () => {
+      expect(isPathAllowedForRole("admin", "strategaize_berater")).toBe(true);
+    });
     it("blockt partner_admin", () => {
       expect(isPathAllowedForRole("admin", "partner_admin")).toBe(false);
     });
@@ -88,6 +91,9 @@ describe("isPathAllowedForRole — Matrix Rolle × Pfad-Klasse", () => {
     it("blockt tenant_admin", () => {
       expect(isPathAllowedForRole("partner", "tenant_admin")).toBe(false);
     });
+    it("blockt strategaize_berater (V10.4, Partner-Verwaltung ist P3)", () => {
+      expect(isPathAllowedForRole("partner", "strategaize_berater")).toBe(false);
+    });
     it("blockt entfernte Rolle tenant_member (fail-closed, wie unbekannte Rolle)", () => {
       expect(isPathAllowedForRole("partner", REMOVED_TENANT_MEMBER)).toBe(false);
     });
@@ -108,6 +114,9 @@ describe("isPathAllowedForRole — Matrix Rolle × Pfad-Klasse", () => {
     });
     it("blockt partner_admin", () => {
       expect(isPathAllowedForRole("dashboard", "partner_admin")).toBe(false);
+    });
+    it("blockt strategaize_berater (V10.4, Mandanten-Dashboard nicht Berater-Pfad)", () => {
+      expect(isPathAllowedForRole("dashboard", "strategaize_berater")).toBe(false);
     });
     it("blockt employee", () => {
       expect(isPathAllowedForRole("dashboard", "employee")).toBe(false);
@@ -151,6 +160,9 @@ describe("defaultLandingForRole", () => {
   });
   it("partner_admin landet auf /partner/dashboard (SLC-102 MT-2)", () => {
     expect(defaultLandingForRole("partner_admin")).toBe("/partner/dashboard");
+  });
+  it("strategaize_berater landet auf /admin/mein-tag (V10.4 SLC-188)", () => {
+    expect(defaultLandingForRole("strategaize_berater")).toBe("/admin/mein-tag");
   });
   it("tenant_admin landet auf /dashboard", () => {
     expect(defaultLandingForRole("tenant_admin")).toBe("/dashboard");
