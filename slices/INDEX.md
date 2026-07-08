@@ -1226,7 +1226,7 @@ SEQUENZIELL auf kumulativem Branch `v10-3-rollenmodell-p1` (Worktree `<repo>.wor
 | ID | Slice | Feature | Status | Priority | Created |
 |----|-------|---------|--------|----------|---------|
 | SLC-188 | [strategaize_berater Foundation (MIG-132 + Helper + Gate + Types)](SLC-188-berater-foundation-mig132.md) | FEAT-105 | planned | Blocker | 2026-07-07 |
-| SLC-189 | [Admin: Berater anlegen + Tenants zuweisen](SLC-189-admin-berater-anlage-zuweisung.md) | FEAT-106 | in_progress | High | 2026-07-07 |
+| SLC-189 | [Admin: Berater anlegen + Tenants zuweisen](SLC-189-admin-berater-anlage-zuweisung.md) | FEAT-106 | done | High | 2026-07-07 |
 | SLC-190 | [Berater-Sicht: /admin gescopt + Mein-Tag can_see_tenant-Scope](SLC-190-berater-sicht-scoped-loader.md) | FEAT-107 | planned | High | 2026-07-07 |
 
 ### V10.4 Parallel-Readiness + Pflicht-Gates

@@ -1915,7 +1915,7 @@
       "title": "FEAT-106 Admin: Berater anlegen + Tenants zuweisen",
       "type": "feature",
       "priority": "high",
-      "status": "in_progress",
+      "status": "done",
       "version": "V10.4",
       "description": "Admin legt strategaize_berater an (Invite-Port ohne tenant_id) + Zuweisungs-UI/RPC (Berater ↔ Kanzleien/Kunden setzen/entfernen); nur strategaize_admin. DEC-263 P2.",
       "createdAt": "2026-07-07"

@@ -316,5 +316,5 @@ V10.4-Scope (Requirements 2026-07-07, RPT-602): Rollenmodell V2 Paket P2 — neu
 | ID | Feature | Status | Spec | Created |
 |----|---------|--------|------|---------|
 | FEAT-105 | strategaize_berater Rolle + Tenant-Zuweisung + can_see_tenant-RLS (Foundation): MIG-132 role-CHECK 4→5, handle_new_user cross-tenant-Zweig, Zuweisungs-Persistenz, can_see_tenant-Helper, additive Berater-RLS-Zweige, UserRole+role-check+assertStrategaizeBerater | planned | PRD §V10.4 | 2026-07-07 |
-| FEAT-106 | Admin: Berater anlegen + Tenants zuweisen (Invite-Port ohne tenant_id + Zuweisungs-UI/RPC, nur strategaize_admin) | in_progress | PRD §V10.4 | 2026-07-07 |
+| FEAT-106 | Admin: Berater anlegen + Tenants zuweisen (Invite-Port ohne tenant_id + Zuweisungs-UI/RPC, nur strategaize_admin) | done | PRD §V10.4 | 2026-07-07 |
 | FEAT-107 | Berater-Sicht: /admin-Layout-Gate + BeraterSidebar (gefiltert) + Cross-Tenant-Loader auf zugewiesene Tenants gescopt + Mein-Tag can_see_tenant-Scope | planned | PRD §V10.4 | 2026-07-07 |
