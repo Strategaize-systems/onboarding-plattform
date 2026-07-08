@@ -388,7 +388,7 @@
     {
       "id": "v10-4",
       "name": "V10.4",
-      "status": "active",
+      "status": "released",
       "summary": "V10.4 Rollenmodell V2 Paket P2 (DEC-263): neue Rolle strategaize_berater (ausfuehrende Berater-Ebene, sieht nur zugewiesene Kanzleien/Kunden). BS-Port MIG-033/034/035 → OP can_see_tenant (tenant-scoped statt owner-per-row, Cascade Kanzlei→Mandant via parent_partner_tenant_id). 3 Features: FEAT-105 Rolle+Zuweisung+can_see_tenant-RLS-Foundation (MIG-132, BL-530) + FEAT-106 Admin Berater-Anlage+Zuweisung (BL-534) + FEAT-107 Berater-Sicht /admin gescopt + Mein-Tag-Scope (BL-535). /discovery DONE (RPT-601) + /requirements DONE 2026-07-07 (RPT-602). Offen an /architecture: Q-V10.4-A Zuweisungs-Tabelle vs Spalte (DEC-Kandidat).",
       "order": 20.09
     }
