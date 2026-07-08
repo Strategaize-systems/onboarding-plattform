@@ -88,6 +88,13 @@ export async function updateSession(request: NextRequest) {
       url.pathname = "/partner/dashboard";
     } else if (loginProfile?.role === "strategaize_admin") {
       url.pathname = "/admin/tenants";
+    } else if (loginProfile?.role === "strategaize_berater") {
+      // V10.4 SLC-190 — reale Enforcement des Berater-Login-Landings. role-check.ts
+      // (defaultLandingForRole) ist nur der getestete Spiegel und wird zur Laufzeit
+      // NICHT importiert; ohne diesen Zweig landet der Berater im /dashboard-else.
+      // Berater ist auf /admin/* NICHT geblockt (nur employee/partner_admin unten) ->
+      // das gefilterte /admin/layout (BeraterSidebar) greift.
+      url.pathname = "/admin/mein-tag";
     } else {
       url.pathname = "/dashboard";
     }

@@ -9,7 +9,7 @@
 "use server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import { assertStrategaizeAdmin } from "@/lib/workspace/admin-gate";
+import { resolveWorkspaceScope } from "@/lib/workspace/workspace-scope";
 import {
   askRag,
   reembedTenantKnowledge,
@@ -29,12 +29,20 @@ export type AskRagActionResult =
 /**
  * Validiert, dass der uebergebene tenantId ein echter Mandant ist. Fail-closed:
  * leerer/unbekannter tenantId → null (DEC-258; nie ungeprueft aus dem Client).
+ *
+ * V10.4 SLC-190: Bei gesetztem `allowedTenantIds` (Berater) muss der Tenant
+ * zusaetzlich in der Zuweisungs-Menge liegen — sonst null (fail-closed, DEC-270).
+ * undefined (Admin) => keine zusaetzliche Einschraenkung.
  */
 async function bindTenant(
   admin: ReturnType<typeof createAdminClient>,
   tenantId: unknown,
+  allowedTenantIds: string[] | undefined,
 ): Promise<string | null> {
   if (typeof tenantId !== "string" || tenantId.trim().length === 0) return null;
+  if (allowedTenantIds !== undefined && !allowedTenantIds.includes(tenantId)) {
+    return null;
+  }
   const { data } = await admin
     .from("tenants")
     .select("id")
@@ -47,14 +55,14 @@ export async function askRagAction(
   tenantId: string,
   question: string,
 ): Promise<AskRagActionResult> {
-  const user = await assertStrategaizeAdmin();
-  if (!user) return { ok: false, error: "unauthorized" };
+  const scope = await resolveWorkspaceScope();
+  if (!scope) return { ok: false, error: "unauthorized" };
 
   const trimmed = typeof question === "string" ? question.trim() : "";
   if (trimmed.length === 0) return { ok: false, error: "empty_question" };
 
   const admin = createAdminClient();
-  const boundTenant = await bindTenant(admin, tenantId);
+  const boundTenant = await bindTenant(admin, tenantId, scope.allowedTenantIds);
   if (!boundTenant) return { ok: false, error: "no_tenant" };
 
   const outcome = await askRag(admin, boundTenant, trimmed);
@@ -75,11 +83,11 @@ export type ReembedActionResult =
 export async function reembedTenantAction(
   tenantId: string,
 ): Promise<ReembedActionResult> {
-  const user = await assertStrategaizeAdmin();
-  if (!user) return { ok: false, error: "unauthorized" };
+  const scope = await resolveWorkspaceScope();
+  if (!scope) return { ok: false, error: "unauthorized" };
 
   const admin = createAdminClient();
-  const boundTenant = await bindTenant(admin, tenantId);
+  const boundTenant = await bindTenant(admin, tenantId, scope.allowedTenantIds);
   if (!boundTenant) return { ok: false, error: "no_tenant" };
 
   const res = await reembedTenantKnowledge(admin, boundTenant);

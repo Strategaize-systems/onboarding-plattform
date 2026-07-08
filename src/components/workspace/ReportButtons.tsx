@@ -16,6 +16,12 @@ import type { ReportKey } from "@/lib/workspace/reports";
 
 interface ReportButtonsProps {
   onSelect: (reportKey: ReportKey) => void;
+  /**
+   * Optionale Whitelist der anzuzeigenden Report-Keys. undefined => alle (Admin).
+   * V10.4 SLC-190: der Berater bekommt nur sein Report-Set (kein System-Status),
+   * damit kein garantiert fehlschlagender Button gerendert wird (DEC-270).
+   */
+  reportKeys?: ReportKey[];
 }
 
 const REPORTS: { key: ReportKey; label: string; icon: LucideIcon }[] = [
@@ -26,10 +32,15 @@ const REPORTS: { key: ReportKey; label: string; icon: LucideIcon }[] = [
   { key: "activity_timeline", label: "Activity-Timeline", icon: History },
 ];
 
-export function ReportButtons({ onSelect }: ReportButtonsProps) {
+export function ReportButtons({ onSelect, reportKeys }: ReportButtonsProps) {
+  const visibleReports =
+    reportKeys === undefined
+      ? REPORTS
+      : REPORTS.filter((r) => reportKeys.includes(r.key));
+
   return (
     <div className="flex flex-wrap gap-2">
-      {REPORTS.map(({ key, label, icon: Icon }) => (
+      {visibleReports.map(({ key, label, icon: Icon }) => (
         <button
           key={key}
           type="button"

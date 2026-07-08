@@ -27,9 +27,14 @@ type ReportStatus = "idle" | "loading" | "error";
 
 interface WorkspaceShellProps {
   tenants: TenantOption[];
+  /**
+   * V10.4 SLC-190: optionale Whitelist der Report-Buttons. undefined => alle
+   * (Admin); fuer den Berater das Report-Set ohne System-Status (DEC-270).
+   */
+  reportKeys?: ReportKey[];
 }
 
-export function WorkspaceShell({ tenants }: WorkspaceShellProps) {
+export function WorkspaceShell({ tenants, reportKeys }: WorkspaceShellProps) {
   const [, startTransition] = useTransition();
 
   // Mandanten-Auswahl (nur fuer den Frage-Pfad; Berichte sind cross-Mandant).
@@ -120,7 +125,7 @@ export function WorkspaceShell({ tenants }: WorkspaceShellProps) {
           value={selectedTenant}
           onChange={setSelectedTenant}
         />
-        <ReportButtons onSelect={handleSelectReport} />
+        <ReportButtons onSelect={handleSelectReport} reportKeys={reportKeys} />
       </div>
 
       {/* Middle-Zone: Frage-Box */}

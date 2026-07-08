@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { CrossTenantRow } from "@/app/admin/tenants/CrossTenantCockpit";
+import { scopeTenants } from "@/lib/workspace/tenant-scope";
 
 /**
  * SLC-040 MT-6 — Aggregiert Cross-Tenant-Metriken fuer den strategaize_admin-View.
@@ -11,9 +12,16 @@ import type { CrossTenantRow } from "@/app/admin/tenants/CrossTenantCockpit";
  *
  * Die Funktion erwartet einen Client mit service_role oder strategaize_admin-
  * Rechten (Cross-Tenant-RLS). Aufrufer ist der /admin/tenants Server-Component.
+ *
+ * V10.4 SLC-190 (DEC-270): optionaler `allowedTenantIds`-Filter fuer den
+ * strategaize_berater-Pfad. undefined => Admin (alle Tenants, unveraendert);
+ * gesetzt => nur diese Tenants (leer => 0 Zeilen). Die Ausgabe wird ueber die
+ * gefilterte `tenants`-Query getrieben (`.map`), die Sub-Queries werden zusaetzlich
+ * gefiltert (Pflicht-Filter auf jedem Pfad, R-190-1).
  */
 export async function loadCrossTenantCockpit(
-  supabase: SupabaseClient
+  supabase: SupabaseClient,
+  allowedTenantIds?: string[]
 ): Promise<CrossTenantRow[]> {
   const [
     tenantsRes,
@@ -24,23 +32,48 @@ export async function loadCrossTenantCockpit(
     checkpointsRes,
     templatesRes,
   ] = await Promise.all([
-    supabase.from("tenants").select("id, name").order("name", { ascending: true }),
-    supabase.from("profiles").select("tenant_id, role"),
-    supabase
-      .from("bridge_run")
-      .select("tenant_id, status, proposal_count, created_at, capture_session_id")
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("handbook_snapshot")
-      .select("tenant_id, status, created_at, capture_session_id")
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("capture_session")
-      .select("id, tenant_id, owner_user_id, capture_mode, template_id, started_at")
-      .order("started_at", { ascending: false }),
-    supabase
-      .from("block_checkpoint")
-      .select("tenant_id, capture_session_id, block_key, checkpoint_type"),
+    scopeTenants(
+      supabase.from("tenants").select("id, name").order("name", { ascending: true }),
+      "id",
+      allowedTenantIds
+    ),
+    scopeTenants(
+      supabase.from("profiles").select("tenant_id, role"),
+      "tenant_id",
+      allowedTenantIds
+    ),
+    scopeTenants(
+      supabase
+        .from("bridge_run")
+        .select("tenant_id, status, proposal_count, created_at, capture_session_id")
+        .order("created_at", { ascending: false }),
+      "tenant_id",
+      allowedTenantIds
+    ),
+    scopeTenants(
+      supabase
+        .from("handbook_snapshot")
+        .select("tenant_id, status, created_at, capture_session_id")
+        .order("created_at", { ascending: false }),
+      "tenant_id",
+      allowedTenantIds
+    ),
+    scopeTenants(
+      supabase
+        .from("capture_session")
+        .select("id, tenant_id, owner_user_id, capture_mode, template_id, started_at")
+        .order("started_at", { ascending: false }),
+      "tenant_id",
+      allowedTenantIds
+    ),
+    scopeTenants(
+      supabase
+        .from("block_checkpoint")
+        .select("tenant_id, capture_session_id, block_key, checkpoint_type"),
+      "tenant_id",
+      allowedTenantIds
+    ),
+    // template hat keine tenant-Spalte -> kein Scope (wird via gf-Session gejoint).
     supabase.from("template").select("id, blocks"),
   ]);
 

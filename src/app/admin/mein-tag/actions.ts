@@ -10,11 +10,12 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   loadReport,
+  BERATER_REPORT_KEYS,
   type ReportKey,
   type WorkspaceReport,
 } from "@/lib/workspace/reports";
 import { summarizeReport } from "@/lib/workspace/fazit";
-import { assertStrategaizeAdmin } from "@/lib/workspace/admin-gate";
+import { resolveWorkspaceScope } from "@/lib/workspace/workspace-scope";
 
 // Kanonische Report-Labels (deutsch) fuer den KI-Kurzfazit-Titel. Modul-intern:
 // ein "use server"-File darf ausschliesslich async Functions exportieren (Next.js
@@ -35,6 +36,17 @@ function isValidKey(key: unknown): key is ReportKey {
   return typeof key === "string" && (VALID_KEYS as string[]).includes(key);
 }
 
+/**
+ * Whitelist-Check gegen den Report-Key. Fuer Berater zusaetzlich auf das
+ * Berater-Report-Set (ohne system_status) eingeschraenkt — system-weite Reports
+ * sind fuer den Berater nicht tenant-scopebar und bleiben admin-only (DEC-270).
+ */
+function isKeyAllowedForScope(key: unknown, isBerater: boolean): key is ReportKey {
+  if (!isValidKey(key)) return false;
+  if (isBerater) return BERATER_REPORT_KEYS.includes(key);
+  return true;
+}
+
 export type LoadReportResult =
   | { ok: true; report: WorkspaceReport }
   | { ok: false; error: string };
@@ -42,13 +54,21 @@ export type LoadReportResult =
 export async function loadWorkspaceReportAction(
   key: ReportKey,
 ): Promise<LoadReportResult> {
-  const user = await assertStrategaizeAdmin();
-  if (!user) return { ok: false, error: "unauthorized" };
+  const scope = await resolveWorkspaceScope();
+  if (!scope) return { ok: false, error: "unauthorized" };
 
-  if (!isValidKey(key)) return { ok: false, error: "invalid_key" };
+  const isBerater = scope.role === "strategaize_berater";
+  if (!isKeyAllowedForScope(key, isBerater)) {
+    return { ok: false, error: "invalid_key" };
+  }
 
   try {
-    const report = await loadReport(createAdminClient(), key);
+    // allowedTenantIds: undefined (Admin) => alle Tenants; string[] (Berater) => nur diese.
+    const report = await loadReport(
+      createAdminClient(),
+      key,
+      scope.allowedTenantIds,
+    );
     return { ok: true, report };
   } catch {
     return { ok: false, error: "load_failed" };
@@ -62,14 +82,23 @@ export type FazitResult =
 export async function generateReportFazitAction(
   key: ReportKey,
 ): Promise<FazitResult> {
-  const user = await assertStrategaizeAdmin();
-  if (!user) return { ok: false, error: "unauthorized" };
+  const scope = await resolveWorkspaceScope();
+  if (!scope) return { ok: false, error: "unauthorized" };
 
-  if (!isValidKey(key)) return { ok: false, error: "invalid_key" };
+  const isBerater = scope.role === "strategaize_berater";
+  if (!isKeyAllowedForScope(key, isBerater)) {
+    return { ok: false, error: "invalid_key" };
+  }
 
   try {
     // Report server-seitig neu laden — dem Client uebergebene Daten NICHT vertrauen.
-    const report = await loadReport(createAdminClient(), key);
+    // Fuer Berater gescopt (allowedTenantIds), damit auch das KI-Fazit nur
+    // zugewiesene Mandanten sieht.
+    const report = await loadReport(
+      createAdminClient(),
+      key,
+      scope.allowedTenantIds,
+    );
     const { fazit } = await summarizeReport({
       reportKey: key,
       reportTitle: REPORT_LABELS[key],

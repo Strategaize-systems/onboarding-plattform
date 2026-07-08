@@ -9,6 +9,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { MODUL_DELIVERY_AMPEL_META_KEY } from "@/lib/stb-vertikale/module-delivery/reife-ampel";
+import { scopeTenants } from "@/lib/workspace/tenant-scope";
 
 const INACTIVITY_DAYS = 14;
 
@@ -41,21 +42,37 @@ function hasRedAmpel(metadata: unknown): boolean {
 
 export async function loadWoStocktEs(
   admin: SupabaseClient,
+  allowedTenantIds?: string[],
 ): Promise<WoStocktEsReport> {
+  // V10.4 SLC-190: Berater-Scope-Filter (undefined => Admin, kein Filter).
+  // tenants treibt die Ausgabe (nameByTenant-Iteration) -> Pflicht-Filter; die
+  // Signal-Queries werden konsistent mitgefiltert (R-190-1).
   const [tenantsRes, checkpointsRes, sessionsRes, failedJobsRes] =
     await Promise.all([
-      admin.from("tenants").select("id, name").limit(500),
-      admin
-        .from("block_checkpoint")
-        .select("tenant_id, created_at")
-        .order("created_at", { ascending: false })
-        .limit(2000),
-      admin.from("capture_session").select("tenant_id, metadata").limit(2000),
-      admin
-        .from("ai_jobs")
-        .select("tenant_id")
-        .eq("status", "failed")
-        .limit(2000),
+      scopeTenants(
+        admin.from("tenants").select("id, name").limit(500),
+        "id",
+        allowedTenantIds,
+      ),
+      scopeTenants(
+        admin
+          .from("block_checkpoint")
+          .select("tenant_id, created_at")
+          .order("created_at", { ascending: false })
+          .limit(2000),
+        "tenant_id",
+        allowedTenantIds,
+      ),
+      scopeTenants(
+        admin.from("capture_session").select("tenant_id, metadata").limit(2000),
+        "tenant_id",
+        allowedTenantIds,
+      ),
+      scopeTenants(
+        admin.from("ai_jobs").select("tenant_id").eq("status", "failed").limit(2000),
+        "tenant_id",
+        allowedTenantIds,
+      ),
     ]);
 
   const nameByTenant = new Map<string, string>();

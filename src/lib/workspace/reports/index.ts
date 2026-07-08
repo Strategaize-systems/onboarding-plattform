@@ -65,24 +65,46 @@ export type WorkspaceReport =
   | ActivityTimelineReport;
 
 /**
+ * V10.4 SLC-190 (DEC-270) — Report-Set fuer strategaize_berater.
+ *
+ * Die vier tenant-scopebaren Reports. `system_status` ist bewusst NICHT dabei:
+ * er liest system-weite ai_jobs/error_log OHNE tenant-Spalte und ist damit nicht
+ * pro Tenant filterbar -> bleibt admin-only (fail-closed, sonst cross-tenant-Ops-Leak).
+ * Single Source of Truth fuer die Server-Whitelist (actions.ts) und die
+ * Report-Button-Filterung (WorkspaceShell/page).
+ */
+export const BERATER_REPORT_KEYS: ReportKey[] = [
+  "mandanten_uebersicht",
+  "review_queue",
+  "wo_stockt_es",
+  "activity_timeline",
+];
+
+/**
  * Dispatcher: laedt den angeforderten Report ueber den bereits-authentifizierten
  * Admin-Client. Wirft bei unbekanntem Key (exhaustive switch).
+ *
+ * V10.4 SLC-190: optionaler `allowedTenantIds`-Filter (DEC-270). undefined =>
+ * Admin (alle Tenants, unveraendert); gesetzt => nur diese Tenants. `system_status`
+ * ist nicht tenant-scopebar und ignoriert den Filter (nur ueber die Berater-
+ * Whitelist in actions.ts vom Berater-Pfad ausgeschlossen).
  */
 export async function loadReport(
   admin: SupabaseClient,
   key: ReportKey,
+  allowedTenantIds?: string[],
 ): Promise<WorkspaceReport> {
   switch (key) {
     case "mandanten_uebersicht":
-      return loadMandantenUebersicht(admin);
+      return loadMandantenUebersicht(admin, allowedTenantIds);
     case "review_queue":
-      return loadReviewQueue(admin);
+      return loadReviewQueue(admin, allowedTenantIds);
     case "wo_stockt_es":
-      return loadWoStocktEs(admin);
+      return loadWoStocktEs(admin, allowedTenantIds);
     case "system_status":
       return loadSystemStatus(admin);
     case "activity_timeline":
-      return loadActivityTimeline(admin);
+      return loadActivityTimeline(admin, undefined, allowedTenantIds);
     default: {
       const _exhaustive: never = key;
       throw new Error(`Unbekannter Report-Key: ${String(_exhaustive)}`);

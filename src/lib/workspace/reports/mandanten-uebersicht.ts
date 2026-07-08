@@ -12,6 +12,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { loadCrossTenantCockpit } from "@/lib/cockpit/load-cross-tenant";
 import type { CrossTenantRow } from "@/app/admin/tenants/CrossTenantCockpit";
 import { MODUL_DELIVERY_AMPEL_META_KEY } from "@/lib/stb-vertikale/module-delivery/reife-ampel";
+import { scopeTenants } from "@/lib/workspace/tenant-scope";
 
 /** Ampel-Vokabular (green|yellow|red), konsistent zu blueprint/reife-ampel. */
 export type ReportAmpel = "green" | "yellow" | "red";
@@ -61,20 +62,27 @@ function worstAmpelFromMetadata(metadata: unknown): ReportAmpel | null {
 
 export async function loadMandantenUebersicht(
   admin: SupabaseClient,
+  allowedTenantIds?: string[],
 ): Promise<MandantenUebersichtReport> {
-  const base = await loadCrossTenantCockpit(admin);
+  const base = await loadCrossTenantCockpit(admin, allowedTenantIds);
 
   // metadata (Ampel-Rollup) + last_activity je Tenant in je einer bounded Query.
+  // V10.4 SLC-190: Berater-Scope-Filter (undefined => Admin, kein Filter).
   const [sessionsRes, checkpointsRes] = await Promise.all([
-    admin
-      .from("capture_session")
-      .select("tenant_id, metadata")
-      .limit(2000),
-    admin
-      .from("block_checkpoint")
-      .select("tenant_id, created_at")
-      .order("created_at", { ascending: false })
-      .limit(2000),
+    scopeTenants(
+      admin.from("capture_session").select("tenant_id, metadata").limit(2000),
+      "tenant_id",
+      allowedTenantIds,
+    ),
+    scopeTenants(
+      admin
+        .from("block_checkpoint")
+        .select("tenant_id, created_at")
+        .order("created_at", { ascending: false })
+        .limit(2000),
+      "tenant_id",
+      allowedTenantIds,
+    ),
   ]);
 
   // Worst-Ampel je Tenant aus allen Sessions.

@@ -13,6 +13,8 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { scopeTenants } from "@/lib/workspace/tenant-scope";
+
 const DEFAULT_LOOKBACK_MS = 48 * 60 * 60 * 1000;
 const PER_SOURCE_LIMIT = 100;
 const MERGED_CAP = 100;
@@ -45,10 +47,13 @@ function asString(v: unknown): string | null {
 export async function loadActivityTimeline(
   admin: SupabaseClient,
   sinceIso?: string,
+  allowedTenantIds?: string[],
 ): Promise<ActivityTimelineReport> {
   const cutoff =
     sinceIso ?? new Date(Date.now() - DEFAULT_LOOKBACK_MS).toISOString();
 
+  // V10.4 SLC-190: Berater-Scope-Filter (undefined => Admin, kein Filter). Alle
+  // fuenf Event-Quellen treiben die Ausgabe -> Pflicht-Filter auf jede (R-190-1).
   const [
     captureRes,
     diagnoseRes,
@@ -57,37 +62,61 @@ export async function loadActivityTimeline(
     validationRes,
     tenantsRes,
   ] = await Promise.all([
-    admin
-      .from("capture_events")
-      .select("tenant_id, block_key, event_type, created_at")
-      .gte("created_at", cutoff)
-      .order("created_at", { ascending: false })
-      .limit(PER_SOURCE_LIMIT),
-    admin
-      .from("diagnose_event")
-      .select("tenant_id, event_type, created_at")
-      .gte("created_at", cutoff)
-      .order("created_at", { ascending: false })
-      .limit(PER_SOURCE_LIMIT),
-    admin
-      .from("modul_output")
-      .select("tenant_id, modul_key, output_kind, created_at")
-      .gte("created_at", cutoff)
-      .order("created_at", { ascending: false })
-      .limit(PER_SOURCE_LIMIT),
-    admin
-      .from("block_checkpoint")
-      .select("tenant_id, block_key, checkpoint_type, created_at")
-      .gte("created_at", cutoff)
-      .order("created_at", { ascending: false })
-      .limit(PER_SOURCE_LIMIT),
-    admin
-      .from("validation_layer")
-      .select("tenant_id, action, created_at")
-      .gte("created_at", cutoff)
-      .order("created_at", { ascending: false })
-      .limit(PER_SOURCE_LIMIT),
-    admin.from("tenants").select("id, name").limit(500),
+    scopeTenants(
+      admin
+        .from("capture_events")
+        .select("tenant_id, block_key, event_type, created_at")
+        .gte("created_at", cutoff)
+        .order("created_at", { ascending: false })
+        .limit(PER_SOURCE_LIMIT),
+      "tenant_id",
+      allowedTenantIds,
+    ),
+    scopeTenants(
+      admin
+        .from("diagnose_event")
+        .select("tenant_id, event_type, created_at")
+        .gte("created_at", cutoff)
+        .order("created_at", { ascending: false })
+        .limit(PER_SOURCE_LIMIT),
+      "tenant_id",
+      allowedTenantIds,
+    ),
+    scopeTenants(
+      admin
+        .from("modul_output")
+        .select("tenant_id, modul_key, output_kind, created_at")
+        .gte("created_at", cutoff)
+        .order("created_at", { ascending: false })
+        .limit(PER_SOURCE_LIMIT),
+      "tenant_id",
+      allowedTenantIds,
+    ),
+    scopeTenants(
+      admin
+        .from("block_checkpoint")
+        .select("tenant_id, block_key, checkpoint_type, created_at")
+        .gte("created_at", cutoff)
+        .order("created_at", { ascending: false })
+        .limit(PER_SOURCE_LIMIT),
+      "tenant_id",
+      allowedTenantIds,
+    ),
+    scopeTenants(
+      admin
+        .from("validation_layer")
+        .select("tenant_id, action, created_at")
+        .gte("created_at", cutoff)
+        .order("created_at", { ascending: false })
+        .limit(PER_SOURCE_LIMIT),
+      "tenant_id",
+      allowedTenantIds,
+    ),
+    scopeTenants(
+      admin.from("tenants").select("id, name").limit(500),
+      "id",
+      allowedTenantIds,
+    ),
   ]);
 
   const nameByTenant = new Map<string, string>();

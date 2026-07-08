@@ -1925,7 +1925,7 @@
       "title": "FEAT-107 Berater-Sicht: /admin gescopt + Mein-Tag can_see_tenant-Scope",
       "type": "feature",
       "priority": "high",
-      "status": "open",
+      "status": "in_progress",
       "version": "V10.4",
       "description": "Admin-Layout-Gate um strategaize_berater erweitern + BeraterSidebar (gefiltert) + Cross-Tenant-Loader auf zugewiesene Tenants gescopt (Query-Layer, service_role) + Mein Tag mit can_see_tenant-Scope. DEC-263 P2.",
       "createdAt": "2026-07-07"

@@ -6,6 +6,8 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { scopeTenants } from "@/lib/workspace/tenant-scope";
+
 const KU_TITLE_SAMPLE = 3;
 
 export interface ReviewQueueRow {
@@ -26,20 +28,36 @@ export interface ReviewQueueReport {
 
 export async function loadReviewQueue(
   admin: SupabaseClient,
+  allowedTenantIds?: string[],
 ): Promise<ReviewQueueReport> {
+  // V10.4 SLC-190: Berater-Scope-Filter auf jede tenant-tragende Query
+  // (undefined => Admin, kein Filter). knowledge_unit/walkthrough treiben die
+  // Ausgabe -> Pflicht-Filter, tenants nur Namens-Lookup (aber konsistent gefiltert).
   const [unitsRes, walkthroughRes, tenantsRes] = await Promise.all([
-    admin
-      .from("knowledge_unit")
-      .select("tenant_id, title, created_at")
-      .eq("status", "proposed")
-      .order("created_at", { ascending: false })
-      .limit(500),
-    admin
-      .from("walkthrough_session")
-      .select("tenant_id")
-      .eq("status", "pending_review")
-      .limit(500),
-    admin.from("tenants").select("id, name").limit(500),
+    scopeTenants(
+      admin
+        .from("knowledge_unit")
+        .select("tenant_id, title, created_at")
+        .eq("status", "proposed")
+        .order("created_at", { ascending: false })
+        .limit(500),
+      "tenant_id",
+      allowedTenantIds,
+    ),
+    scopeTenants(
+      admin
+        .from("walkthrough_session")
+        .select("tenant_id")
+        .eq("status", "pending_review")
+        .limit(500),
+      "tenant_id",
+      allowedTenantIds,
+    ),
+    scopeTenants(
+      admin.from("tenants").select("id, name").limit(500),
+      "id",
+      allowedTenantIds,
+    ),
   ]);
 
   const nameByTenant = new Map<string, string>();
