@@ -72,4 +72,40 @@ describe("renderExitReportPdf", () => {
     const buf = await renderExitReportPdf(empty);
     expect(buf.subarray(0, 5).toString("latin1")).toBe("%PDF-");
   });
+
+  it("rendert Spur-/Disclaimer- + Coverage-Seiten mit einem missing_subtopic (SLC-192)", async () => {
+    const withMissing: ExitReportInput = {
+      ...fixture,
+      fahrplan: {
+        ...fixture.fahrplan,
+        todos: [
+          ...fixture.fahrplan.todos,
+          {
+            subtopic: "b2",
+            subtopicName: "Nachfolge-Regelung",
+            blockTitle: "Governance",
+            title: "Nicht erfasst: Nachfolge-Regelung",
+            context: "",
+            priority: "required",
+            source: "missing_subtopic",
+            ampel: null,
+            reifegrad: null,
+            risiko: null,
+            hebel: null,
+            relevanz90d: null,
+            empfehlung: null,
+            aufwand: null,
+            owner: null,
+            naechsterSchritt: null,
+          },
+        ],
+        missingSubtopics: ["b2"],
+        counts: { blocks: 1, requiredGaps: 1, niceToHaveGaps: 0, missingSubtopics: 1 },
+      },
+    };
+    const buf = await renderExitReportPdf(withMissing);
+    expect(Buffer.isBuffer(buf)).toBe(true);
+    expect(buf.length).toBeGreaterThan(1000);
+    expect(buf.subarray(0, 5).toString("latin1")).toBe("%PDF-");
+  });
 });

@@ -16,4 +16,12 @@ export {
   type Ampel,
 } from "./owner-dependence";
 export { buildBuyerFindings, type BuyerFinding } from "./framing";
+export { EXIT_SPUR_COPY, MAKLER_DISCLAIMER_COPY, type SpurBlock } from "./positioning";
+export {
+  buildCoverageSection,
+  type CoverageSection,
+  type CoverageItem,
+  type CoverageReason,
+  type CoverageStatus,
+} from "./coverage";
 export { renderExitReportPdf } from "./renderer";

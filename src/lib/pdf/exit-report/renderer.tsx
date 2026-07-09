@@ -26,6 +26,8 @@ import {
   type OwnerDependenceIndex,
 } from "./owner-dependence";
 import { buildBuyerFindings, type BuyerFinding } from "./framing";
+import { EXIT_SPUR_COPY, MAKLER_DISCLAIMER_COPY, type SpurBlock } from "./positioning";
+import { buildCoverageSection, type CoverageSection } from "./coverage";
 
 const styles = StyleSheet.create({
   page: {
@@ -128,6 +130,54 @@ const styles = StyleSheet.create({
     marginBottom: 1,
   },
   colText: { fontSize: TYPOGRAPHY.smallSize, color: COLOR.textDark },
+  // Spur / Positionierung
+  spurBlock: {
+    marginBottom: SPACING.lg,
+    padding: SPACING.md,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: COLOR.neutral200,
+    backgroundColor: COLOR.neutral100,
+  },
+  spurLabel: {
+    fontFamily: "JetBrains Mono",
+    fontSize: TYPOGRAPHY.smallSize,
+    fontWeight: 700,
+    color: COLOR.brandDeep,
+    marginBottom: SPACING.sm,
+    letterSpacing: 0.5,
+  },
+  bulletRow: { flexDirection: "row", marginBottom: 4 },
+  bulletDot: { width: 12, fontSize: TYPOGRAPHY.smallSize, color: COLOR.brandPrimary },
+  bulletText: { flex: 1, fontSize: TYPOGRAPHY.smallSize, color: COLOR.textDark },
+  hinweisBox: {
+    marginTop: SPACING.sm,
+    padding: SPACING.sm,
+    borderLeftWidth: 3,
+    borderLeftColor: COLOR.brandPrimary,
+    backgroundColor: COLOR.neutral100,
+  },
+  hinweisText: { fontSize: TYPOGRAPHY.smallSize, color: COLOR.textMuted },
+  disclaimerText: { fontSize: TYPOGRAPHY.bodySize, color: COLOR.textDark, marginTop: SPACING.xs },
+  // Coverage / Ehrlichkeit
+  covRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    paddingVertical: SPACING.xs,
+    borderBottomWidth: 1,
+    borderBottomColor: COLOR.neutral200,
+  },
+  covTag: {
+    fontFamily: "JetBrains Mono",
+    fontSize: TYPOGRAPHY.monoSize,
+    color: COLOR.bgWhite,
+    paddingVertical: 2,
+    paddingHorizontal: 6,
+    borderRadius: 3,
+    marginRight: SPACING.sm,
+  },
+  covLabel: { flex: 1, fontSize: TYPOGRAPHY.smallSize, color: COLOR.textDark },
+  covMeta: { fontFamily: "JetBrains Mono", fontSize: TYPOGRAPHY.smallSize, color: COLOR.textMuted },
 });
 
 function ampelColor(ampel: Ampel | null): string {
@@ -165,7 +215,72 @@ function blockDiagnosisAmpel(input: ExitReportInput, blockKey: string): Ampel | 
   return worst;
 }
 
-// ── Seite 1: Owner-Dependence-Index-Hero ────────────────────────────────────
+// ── Rahmen-Seite: Spur-Definition + Makler-Disclaimer (SLC-192) ─────────────
+function SpurList({ block }: { block: SpurBlock }) {
+  return (
+    <View style={styles.spurBlock}>
+      <Text style={styles.spurLabel}>{block.label}</Text>
+      {block.items.map((item, i) => (
+        <View key={`b-${i}`} style={styles.bulletRow}>
+          <Text style={styles.bulletDot}>•</Text>
+          <Text style={styles.bulletText}>{item}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function ScopePage() {
+  return (
+    <Page size="A4" style={styles.page}>
+      <Text style={styles.eyebrow}>{EXIT_SPUR_COPY.eyebrow}</Text>
+      <Text style={styles.pageTitle}>{EXIT_SPUR_COPY.title}</Text>
+      <Text style={styles.intro}>{EXIT_SPUR_COPY.intro}</Text>
+      <SpurList block={EXIT_SPUR_COPY.wasWirBewerten} />
+      <SpurList block={EXIT_SPUR_COPY.wasWirNichtBewerten} />
+      <View style={styles.hinweisBox}>
+        <Text style={styles.hinweisText}>{EXIT_SPUR_COPY.hinweis}</Text>
+      </View>
+
+      <View style={{ marginTop: SPACING.xl }}>
+        <Text style={styles.eyebrow}>{MAKLER_DISCLAIMER_COPY.eyebrow}</Text>
+        <Text style={styles.pageTitle}>{MAKLER_DISCLAIMER_COPY.title}</Text>
+        <Text style={styles.disclaimerText}>{MAKLER_DISCLAIMER_COPY.text}</Text>
+      </View>
+    </Page>
+  );
+}
+
+// ── Ehrlichkeits-/Coverage-Seite (SLC-192, nach den Findings) ───────────────
+function CoveragePage({ coverage }: { coverage: CoverageSection }) {
+  return (
+    <Page size="A4" style={styles.page}>
+      <Text style={styles.eyebrow}>EHRLICHKEIT</Text>
+      <Text style={styles.pageTitle}>Was wir nicht bewerten konnten</Text>
+      <Text style={styles.intro}>{coverage.headline}</Text>
+      {coverage.items.length === 0 ? null : (
+        <View>
+          {coverage.items.map((it, i) => (
+            <View key={`c-${i}`} style={styles.covRow} wrap={false}>
+              <View
+                style={{
+                  ...styles.covTag,
+                  backgroundColor: it.reason === "missing_subtopic" ? COLOR.danger : COLOR.warning,
+                }}
+              >
+                <Text>{it.reason === "missing_subtopic" ? "NICHT ERFASST" : "UNVOLLSTÄNDIG"}</Text>
+              </View>
+              <Text style={styles.covLabel}>{it.label}</Text>
+              {it.blockTitle ? <Text style={styles.covMeta}>{it.blockTitle}</Text> : null}
+            </View>
+          ))}
+        </View>
+      )}
+    </Page>
+  );
+}
+
+// ── Seite: Owner-Dependence-Index-Hero ──────────────────────────────────────
 function HeroPage({ index }: { index: OwnerDependenceIndex }) {
   return (
     <Page size="A4" style={styles.page}>
@@ -281,6 +396,7 @@ function FindingsPage({ findings }: { findings: BuyerFinding[] }) {
 function ExitReportDocument({ input }: { input: ExitReportInput }) {
   const index = computeOwnerDependenceIndex(input);
   const findings = buildBuyerFindings(input.fahrplan.todos);
+  const coverage = buildCoverageSection(input);
   return (
     <Document
       title="Exit-/Käufer-Report"
@@ -288,9 +404,11 @@ function ExitReportDocument({ input }: { input: ExitReportInput }) {
       creator="StrategAIze Onboarding-Plattform"
       producer="@react-pdf/renderer"
     >
+      <ScopePage />
       <HeroPage index={index} />
       <ScorecardPage input={input} index={index} />
       <FindingsPage findings={findings} />
+      <CoveragePage coverage={coverage} />
     </Document>
   );
 }
