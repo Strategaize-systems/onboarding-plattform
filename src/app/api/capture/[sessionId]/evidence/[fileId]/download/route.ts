@@ -25,10 +25,26 @@ export async function GET(
     );
   }
 
-  // Verify session access via RLS
-  const { data: session } = await supabase
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("tenant_id, role")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile) {
+    return NextResponse.json(
+      { error: { code: "UNAUTHORIZED", message: "Profil nicht gefunden" } },
+      { status: 401 }
+    );
+  }
+
+  const adminClient = createAdminClient();
+
+  // --- Session ownership check (gespiegelt aus upload/route.ts; DEC-280) — expliziter
+  //     tenant-Match statt implizitem RLS-Load, konsistent mit list + upload. ---
+  const { data: session } = await adminClient
     .from("capture_session")
-    .select("id")
+    .select("id, tenant_id")
     .eq("id", sessionId)
     .single();
 
@@ -39,8 +55,18 @@ export async function GET(
     );
   }
 
+  // strategaize_admin hat Cross-Tenant-Zugriff; andere muessen den Tenant matchen.
+  if (
+    profile.role !== "strategaize_admin" &&
+    session.tenant_id !== profile.tenant_id
+  ) {
+    return NextResponse.json(
+      { error: { code: "FORBIDDEN", message: "Kein Zugriff auf diese Session" } },
+      { status: 403 }
+    );
+  }
+
   // Load evidence file
-  const adminClient = createAdminClient();
   const { data: file } = await adminClient
     .from("evidence_file")
     .select("id, storage_path, original_filename, capture_session_id")

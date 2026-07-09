@@ -23,7 +23,40 @@ export async function GET(
     return NextResponse.json({ error: "Nicht authentifiziert" }, { status: 401 });
   }
 
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("tenant_id, role")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile) {
+    return NextResponse.json({ error: "Profil nicht gefunden" }, { status: 401 });
+  }
+
   const adminClient = createAdminClient();
+
+  // --- Session ownership check (gespiegelt aus upload/route.ts; DEC-280 / ISSUE-124
+  //     Cross-Tenant-IDOR) — VOR dem admin-Read der evidence-Daten. ---
+  const { data: session } = await adminClient
+    .from("capture_session")
+    .select("id, tenant_id")
+    .eq("id", sessionId)
+    .single();
+
+  if (!session) {
+    return NextResponse.json({ error: "Session nicht gefunden" }, { status: 404 });
+  }
+
+  // strategaize_admin hat Cross-Tenant-Zugriff; andere muessen den Tenant matchen.
+  if (
+    profile.role !== "strategaize_admin" &&
+    session.tenant_id !== profile.tenant_id
+  ) {
+    return NextResponse.json(
+      { error: "Kein Zugriff auf diese Session" },
+      { status: 403 }
+    );
+  }
 
   // Load evidence files
   let fileQuery = adminClient
