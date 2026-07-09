@@ -3188,3 +3188,61 @@ Produkt 1 (Exit-Ready) hat eine deployte Diagnose-Engine, aber ihr Output ist **
 - **Q-V10.5-D:** Output-Format V1 — PDF-only (wie Fahrplan-GET-Route) vs. Web-View + PDF (wie mandanten-report-v2). Empfehlung: PDF-first (kleinster Weg, Reuse), Web-View später.
 - **Q-V10.5-E:** Dimensions-Definition für die Scorecard (Diagnose-Block-Ebene vs. Subtopic-Rollup) — gegen echte block_diagnosis-Struktur entscheiden (R-V10.5-3).
 - **Q-V10.5-F:** Zugriffs-/Rollen-Scope der neuen Route (nur strategaize_admin/berater wie Debrief, oder auch tenant_admin für die eigene Firma?) — Fahrplan-Route liegt unter /admin/debrief; Exit-Report-Zielnutzer klären.
+
+## V20 — Security-Hardening (konsolidiert, DEC-219 End-of-Build-Security-Block)
+
+**Konsolidierung 2026-07-09 (Founder-Entscheid):** Diese Version fuehrt die vier zurueckgestellten Roadmap-Eintraege `v-sec-op-fix-port` + `V20` + `V21` + `V22` zu EINER aktiven Security-Version zusammen. Trigger-Bedingung aus DEC-219 ("vor 2. Nutzer / pre-customer-live") ist erfuellt; der Fable-5-Adversarial-Audit (RPT-633) hat den von V20 geforderten Diff-Re-Audit geliefert und ist die verbindliche Scope-Quelle.
+
+### Problem Statement
+OP naehert sich dem Multi-User-/Customer-Live-Gate. Der /security-audit V10.5 (Fable-5, deployter Stand `8589b20`, RPT-633) hat 14 bestaetigte Findings ergeben (3 High / 4 Medium / 5 Low), die vor dem ersten zweiten Nutzer / ersten Kundendaten geschlossen sein muessen. Ein Teil davon re-bestaetigt die seit Mai 2026 geparkten Findings (SEC-002/003/004/005 + DEC-219-BS-Port-Liste); ein Teil ist neu (tier-INSERT-Bypass, evidence/list-IDOR, berater-RPC-Exposure, branding-render); ein Teil (SEC-001 search_path) wurde vom Audit NICHT geprueft und braucht einen eigenen Sweep. Heute Blast-Radius meist 0 (Single-Founder-Internal-Test), scharf ab Multi-User.
+
+### Goal / Intended Outcome
+Alle High- + Medium-Findings gefixt, Lows dokumentiert/gefixt nach Founder-Toleranz, alles gegen den deployten Stand re-verifizierbar. Danach einmal `/code-review ultra` (Founder-Closure-Kriterium). Ergebnis: OP ist auth-/tenant-/output-seitig multi-user-tauglich gehaertet — bleibt aber Internal-Test-Mode (kein Customer-Outreach, module-lifecycle-discipline).
+
+### Primary Users
+Kein Endnutzer-Feature. Betroffene: die spaeteren Tenant-/Partner-/Berater-Rollen (deren Isolation/Session geschuetzt wird) + der Founder als Betreiber (Kosten-/Betriebs-Sicherheit). Interne Hardening-Version.
+
+### V1 Scope (in scope)
+Aufbau in 3 Layer-Slices (verbindliche Slice-Nummern erst /slice-planning):
+- **FEAT-110 DB/Authz-Hardening:** ISSUE-125 tier-Guard-Migration (BEFORE INSERT OR UPDATE, NEW.tier fuer non-service_role erzwingen, Column-DEFAULT senken) · ISSUE-124 evidence/list Cross-Tenant-Ownership-Check · ISSUE-129 berater_assigned_tenant_ids uid-Guard/REVOKE · SEC-001 SECURITY-DEFINER-`search_path`-Sweep (idempotente Patch-Migration) · profiles.role-Trigger-Port (Defense-in-Depth fuer den admin-client/service_role-Pfad).
+- **FEAT-111 XSS/Output/Headers-Hardening:** ISSUE-121 Handbook rehype-sanitize + sections.ts-Escape · ISSUE-122 SVG-MIME-Block + Logo-Route-Haertung (Content-Disposition/route-CSP/Magic-Byte) · ISSUE-127 globale CSP/COOP (Report-Only→enforcing) · ISSUE-130 branding-Farben Render-Pfad-Re-Validierung · Legal/Datenschutz-Page-XSS-Check.
+- **FEAT-112 Auth/Secrets-Cleanup:** ISSUE-126 account-scoped Login-Lockout (P-081-Reuse) · ISSUE-123 recording-ready Path-Traversal + timingSafeEqual-Haertung (VOR jeder Re-Aktivierung) · ISSUE-131 verifyCronSecret timingSafeEqual-Sweep (7 Routes) · ISSUE-132 Logger-Redaction (P-092-Port) · ISSUE-128 partner-slug `.eq`/Charset-Guard.
+
+### Out of Scope
+- **Bereits erledigt (nicht bauen):** Passwort-Policy 12+/zxcvbn (`src/lib/auth/password-policy.ts`, P-088; = V22 BL-139 + Fix-Port-Item) · fail-closed Auth-Helper (`src/lib/auth/role-check.ts:60`; = Fix-Port-Item). Als done abgehakt.
+- **Deferred (eigener Slot):** LLM-Cost-Cap ueber alle Bedrock-Pfade (bulk-email hat `cost-cap.ts` schon; kein Audit-Finding) — bleibt V22-Rest / `v-sec-op-cost-cap`, low, nicht Teil dieser Version.
+- **Nicht jetzt:** Customer-Live, Pilot, Anwalts-/DSGVO-Pre-Live-Review (module-lifecycle-discipline) — Legal-Gate ist Folge-Gate nach Modul-Vollstaendigkeit, nicht hier.
+
+### Constraints
+SaaS-Delivery-Mode → strengste QA + TDD (Migrationen/RLS/Auth/Server-Actions Pflicht-Tests). Eigener Worktree (SaaS-Mode-Pflicht, Parallel-Slice-Isolation). Internal-Test-Mode bleibt. Live-DB-Verifikation von RLS/Trigger-Findings via node:20-Sidecar + SAVEPOINT (coolify-test-setup.md). Migration Live-Apply erst im /deploy (sql-migration-hetzner.md). recording-ready-Fix ist Pre-Condition JEDER kuenftigen Endpoint-Re-Aktivierung.
+
+### Risks / Assumptions
+- **R-1:** SEC-001 search_path-Count (80 DEFINER vs 50 SET) ist Heuristik — der genaue Umfang muss im Slice per Funktions-Sweep bestimmt werden; DSGVO-relevant.
+- **R-2:** ISSUE-125 Tier-Guard-Migration darf App-seitige Session-Creation (service_role) nicht brechen — Reuse BS-`profiles.role`-Pattern (current_user-aware), In-Tx-Probe Pflicht.
+- **R-3:** CSP enforcing kann bestehende Inline-`<style>`/Scripts brechen (layout.tsx:35) → Report-Only-Rollout zuerst, funktionaler Browser-Smoke (P-089 / security-headers-live-smoke.md), erst dann enforcing.
+- **R-4:** Audit war statisch — High-Findings (121/122/124) im Slice-/qa live gegen-verifizieren (nicht nur Code).
+- **Annahme:** OP bleibt bis Abschluss strikt Single-Founder + keine Kundendaten.
+
+### Success Criteria
+- **SC-V20-1:** Alle High (ISSUE-121/122/124) + Medium (123/125/126/127) gefixt und im Slice-/qa live-verifiziert (nicht nur Code-Side).
+- **SC-V20-2:** ISSUE-125 Tier-Guard feuert auf INSERT UND UPDATE (In-Tx-Probe: tenant_admin-INSERT mit tier='handbook' wird geblockt/coerced), App-Session-Creation unveraendert gruen.
+- **SC-V20-3:** SEC-001 — jede SECURITY-DEFINER-Funktion hat `SET search_path`; Rest-Count 0 (Live-DB-Verify).
+- **SC-V20-4:** CSP enforcing aktiv, funktionaler Browser-Smoke der Kernflows PASS (kein Regressions-Break durch CSP).
+- **SC-V20-5:** Lows (128/129/130/131/132 + profiles.role-Port) gefixt oder mit Founder-Toleranz dokumentiert.
+- **SC-V20-6:** tsc 0 / eslint 0 / next build PASS / Full-Vitest 0 Regression + neue Auth/RLS/Migration-Tests gruen.
+- **SC-V20-7:** Gesamt-/qa + /final-check + `/code-review ultra` gelaufen; kaum neue High/Medium (Konvergenz-Kriterium DEC-219).
+
+### Open Questions (→ /architecture, Reuse-vs-Neu-DEC-Kandidaten)
+- **Q-V20-A (Reuse):** ISSUE-125 Fix-Weg — Guard-Trigger BEFORE INSERT OR UPDATE (NEW.tier coerce/reject) VS Session-Creation ueber SECURITY-DEFINER-RPC/service_role routen. Empfehlung: Trigger erweitern (kleinster Eingriff, Reuse BS-Pattern) + Column-DEFAULT senken. IMP-1717.
+- **Q-V20-B (Reuse):** ISSUE-124 — RLS-scoped createClient statt admin VS upload-Route-Ownership-Check spiegeln. Empfehlung: RLS-scoped Client (entfernt die BYPASSRLS-Klasse ganz), falls Query es zulaesst.
+- **Q-V20-C (Neubau/Reuse):** ISSUE-121 — rehype-sanitize-Schema (welche Tags/Attrs der Reader real braucht) VS rehypeRaw droppen + Anchors/Video via kontrolliertes Plugin. Plus P-082-Reuse (DOMPurify-Funnel) fuer Legal-Pages.
+- **Q-V20-D:** ISSUE-127 CSP — Nonce-basiert (script-src 'self' + per-request-nonce) VS hash-basiert; COEP jetzt oder deferred (kein cross-origin-isolation-Bedarf)? Rollout Report-Only→enforcing-Schnitt.
+- **Q-V20-E:** SEC-001 — eine idempotente Patch-Migration ueber alle betroffenen Funktionen VS pro-Migration-Fix; genauer Funktions-Umfang (Sweep-Ergebnis).
+- **Q-V20-F:** ISSUE-122 — image/svg+xml ganz aus ALLOWED_MIMES (rasterize) VS DOMPurify-SVG-Sanitize + route-scoped CSP. Empfehlung: ganz raus (voll geschlossen, kein SVG-Bedarf fuers Logo).
+- **Q-V20-G:** Slice-Reihenfolge/Parallelitaet — A (DB, 1 Migration) → B (Output) → C (Cleanup) sequenziell im kumulativen Branch VS parallel? Migrationsnummer(n) reservieren.
+
+### Delivery Mode
+SaaS.
+
+### Reuse-vs-Neu-DEC-Kandidaten (Pflicht-Gate-1-Handoff an /architecture)
+Fast alles = Pattern-Reuse (kein Neubau): P-080 (profiles.role/authz-Column-Guard, + IMP-1717 INSERT-Coverage) · P-081 (Login-Lockout, `passwordResetAccountLimiter` schon im Repo) · P-082 (Markdown-XSS-DOMPurify-Funnel) · P-083 (Branding-Upload assertRole + SVG-MIME-Block) · P-085 (View/Grant-Haertung) · P-089 + security-headers-live-smoke.md (CSP-Funktional-Smoke) · P-092 (Logger-Redaction) · service-key.ts timingSafeEqual (Cron/Webhook) · BS V8.12/V8.14 als Cross-Repo-Quelle. Einziger echter Neubau-Anteil: SEC-001-Sweep-Migration (idempotent) + die konkrete tier-INSERT-Guard-Erweiterung.

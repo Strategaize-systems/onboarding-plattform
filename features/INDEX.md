@@ -327,3 +327,13 @@ V10.5-Scope (Requirements 2026-07-09, RPT-621-Discovery): dünne deterministisch
 |----|---------|--------|------|---------|
 | FEAT-108 | Exit-/Devil's-Advocate-Report (Käufer-Report): Übergabe-Ampel-Scorecard pro Dimension + Owner-Dependence-Index prominent + pro Finding Käufer-Sicht/Buy-Side-DD/Abmilderung (deterministisch, react-pdf, GET-Route, 0 LLM) | deployed | PRD §V10.5 | 2026-07-09 |
 | FEAT-109 | Devil's-Advocate-Positionierung im Report: Spur-Definition (operative Substanz, NICHT Finanz-/Recht-DD) + Makler-Disclaimer + Ehrlichkeits-/Coverage-Sektion (aus quality_report) | deployed | PRD §V10.5 | 2026-07-09 |
+
+## V20 — Security-Hardening (konsolidiert) Features
+
+V20-Scope (Requirements 2026-07-09, RPT-634): konsolidiert die 4 zurueckgestellten Security-Eintraege (v-sec-op-fix-port + V20 + V21 + V22) zu EINER aktiven Version gegen die /security-audit-V10.5-Findings (RPT-633, ISSUE-121..132) + SEC-001-Sweep. Passwort-Policy (P-088) + fail-closed-Auth (role-check.ts) bereits done → aus Scope. Reuse-first (P-080..092, BS V8.12/V8.14). Spec-Detail PRD §V20. Internal-Test-Mode, eigener Worktree, danach /code-review ultra.
+
+| ID | Feature | Status | Spec | Created |
+|----|---------|--------|------|---------|
+| FEAT-110 | DB/Authz-Hardening: tier-INSERT-Guard-Migration (ISSUE-125) + evidence/list Cross-Tenant-Ownership-Check (ISSUE-124) + berater-RPC uid-Guard (ISSUE-129) + SECURITY-DEFINER search_path-Sweep (SEC-001) + profiles.role-Trigger-Port | planned | PRD §V20 | 2026-07-09 |
+| FEAT-111 | XSS/Output/Headers-Hardening: Handbook rehype-sanitize (ISSUE-121) + SVG-MIME-Block/Logo-Route-Haertung (ISSUE-122) + globale CSP/COOP Report-Only→enforcing (ISSUE-127) + branding-Render-Re-Validierung (ISSUE-130) + Legal-Page-XSS-Check | planned | PRD §V20 | 2026-07-09 |
+| FEAT-112 | Auth/Secrets-Cleanup: account-scoped Login-Lockout (ISSUE-126) + recording-ready Path-Traversal-Haertung (ISSUE-123) + verifyCronSecret timingSafeEqual-Sweep (ISSUE-131) + Logger-Redaction P-092 (ISSUE-132) + partner-slug .eq/Charset (ISSUE-128) | planned | PRD §V20 | 2026-07-09 |
