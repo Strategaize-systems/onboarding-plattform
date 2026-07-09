@@ -31,7 +31,8 @@ Der deterministische Käufer-/Devil's-Advocate-Report als PDF: Übergabe-Ampel-S
 - `fn_tier_rank(p_tier)` RPC (Fahrplan-Route:56) — blueprint=Rang 1.
 
 ## Symbol-Verifikation
-- Reuse: `loadFahrplanInput`, `buildFahrplanInput`, `parseBlock`/`parseQualityReport` (data.ts), `exitCoupling`/`prioritize`/`ownerOrFallback`/`scopeEstimate`/`SCOPE_SENTENCE` (framing.ts), `renderFahrplanReportPdf`/`renderToBuffer` (renderer.tsx), `getTemplateById`, `createClient`/`createAdminClient` (`@/lib/supabase/{server,admin}`). Barrel-Muster: `fahrplan-report/index.ts` exportiert types + build/load + render.
+- Reuse: `loadFahrplanInput` (data.ts:240), `buildFahrplanInput` (data.ts:120), `exitCoupling`/`prioritize`/`ownerOrFallback`/`scopeEstimate`/`SCOPE_SENTENCE` (framing.ts, alle exportiert), `renderFahrplanReportPdf` (renderer.tsx:328)/`renderToBuffer` (import renderer.tsx:15), `getTemplateById` (template-queries.ts:73), `createClient`/`createAdminClient` (`@/lib/supabase/{server,admin}`). Barrel-Muster: `fahrplan-report/index.ts` exportiert types + build/load + render.
+- **QA-Nuance (Plan-QA RPT-625):** `parseBlock` (data.ts:49) und `parseQualityReport` (data.ts:85) sind **intern/nicht exportiert** → NUR transitiv via `loadFahrplanInput` nutzbar bzw. das Muster nachbauen (so bereits in SLC-192 MT-2 „parseQualityReport-Muster"). **KEIN Direktimport** — sonst Build-Fehler.
 - Neu (in dieser Spec definiert, konsistent über alle MTs): `loadExitReportInput`, `buildExitReportInput`, `computeOwnerDependenceIndex`, `buildBuyerFindings`, `renderExitReportPdf`.
 
 ## Test-Infra
@@ -77,7 +78,8 @@ Der deterministische Käufer-/Devil's-Advocate-Report als PDF: Übergabe-Ampel-S
 #### MT-5: GET-Route
 - Goal: Report per HTTP ausliefern, tenant-gescopt + tier-gated.
 - Files: `src/app/admin/debrief/[sessionId]/exit-report/route.ts` (NEU).
-- Expected behavior: **Spiegel der Fahrplan-Route** (`fahrplan-report/route.ts`): `createClient`→getUser+profiles(role,tenant_id); `createAdminClient`→capture_session(tenant_id,tier); Tenant-Scope (strategaize_admin cross-tenant ODER session.tenant_id===profile.tenant_id — **plus** berater-can_see_tenant-Zweig, V10.4-Konsistenz); Tier-Gate `fn_tier_rank`≥blueprint; dann `loadExitReportInput(admin,sessionId)`→`computeOwnerDependenceIndex`→`buildBuyerFindings`→`renderExitReportPdf`→`NextResponse` application/pdf `inline; filename="exit-report-${sessionId}.pdf"`, `Cache-Control: private, no-store`.
+- Expected behavior: **Spiegel der Fahrplan-Route** (`fahrplan-report/route.ts`): `createClient`→getUser+profiles(role,tenant_id); `createAdminClient`→capture_session(tenant_id,tier); Tenant-Scope (strategaize_admin cross-tenant ODER session.tenant_id===profile.tenant_id — **plus** berater-Zweig, V10.4-Konsistenz); Tier-Gate `fn_tier_rank`≥blueprint; dann `loadExitReportInput(admin,sessionId)`→`computeOwnerDependenceIndex`→`buildBuyerFindings`→`renderExitReportPdf`→`NextResponse` application/pdf `inline; filename="exit-report-${sessionId}.pdf"`, `Cache-Control: private, no-store`.
+- **QA-Grounding (Plan-QA RPT-625):** Die Fahrplan-Route selbst hat **KEINEN** berater-Zweig (nur admin+same-tenant, route.ts:51) — der berater-Zweig ist eine bewusste Erweiterung. Kanonische V10.4-Quelle (SLC-190/DEC-270), die MT-5 spiegelt: `resolveWorkspaceScope()` (`src/lib/workspace/workspace-scope.ts:30`) liefert `{ role: "strategaize_admin"|"strategaize_berater", allowedTenantIds }` (berater = `string[]`, aus `berater_tenant_assignments`), + `scopeTenants()` (`src/lib/workspace/tenant-scope.ts:32`). **Rollen-Literal ist `strategaize_berater`** (nicht `"berater"`). Berater-Zugang nur, wenn `session.tenant_id ∈ allowedTenantIds`.
 - Verification: build PASS; Auth/Tier/PDF-Response = Browser-/Live-Smoke in /qa (401 unauth, 403 fremd-tenant/free-tier, 200 pdf admin).
 - Dependencies: MT-4.
 
