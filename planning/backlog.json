@@ -1905,7 +1905,7 @@
       "title": "V20 FEAT-110 DB/Authz-Hardening (tier-INSERT-Guard, evidence-IDOR, berater-RPC, SEC-001 search_path, profiles.role-Port)",
       "type": "fix",
       "priority": "high",
-      "status": "open",
+      "status": "in_progress",
       "version": "V20",
       "description": "Security-Hardening DB/Authz-Layer aus /security-audit RPT-633. ISSUE-125 capture_session.tier-Guard auf BEFORE INSERT OR UPDATE erweitern (NEW.tier fuer non-service_role coerce/reject, Column-DEFAULT senken; bypasses DEC-219, Prio-1) · ISSUE-124 evidence/list Cross-Tenant-Ownership-Check (RLS-scoped Client oder upload-Route-Guard spiegeln) · ISSUE-129 berater_assigned_tenant_ids uid-Guard/REVOKE authenticated · SEC-001 SECURITY-DEFINER search_path-Sweep (idempotente Patch-Migration, DSGVO, ~30 Funktionen) · profiles.role-Trigger-Port (Defense-in-Depth). 1 Migration. Reuse P-080/IMP-1717/BS V8.14.",
       "createdAt": "2026-07-09"

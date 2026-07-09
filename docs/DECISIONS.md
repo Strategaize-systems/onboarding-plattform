@@ -1,5 +1,10 @@
 # Decisions
 
+## DEC-287 — SLC-193 MT-2: entitled-tier Auto-Grant per Feature via service_role (nach DEFAULT→free)
+- Status: accepted
+- Reason: MIG-133 senkt `capture_session.tier`-DEFAULT auf 'free' + coerced non-service_role-INSERTs → legit Feature-Entry-Flows wuerden auf 'free' stranden. MT-0-Grounding zeigte: 3 von 6 Insert-Sites nutzen den authenticated User-Client (koennen den entitled tier nicht selbst setzen — Coerce). Founder-Entscheid (2026-07-09): Auto-Grant per Feature = jeder legit Einstieg setzt den vom Feature benoetigten Tier explizit via service_role, funktionale Parity zu heute, ISSUE-125 bleibt geschlossen. Tier-Wert je Feature aus der Matrix (mig 121/124) gegroundet, NICHT geraten.
+- Consequence: service_role-INSERTs setzen tier inline (bulk-email + walkthrough = 'handbook' [email_bulk_*/walkthrough_* = handbook]; diagnose partner_diagnostic = 'blueprint' [diagnosis/knowledge_unit_condensation]). Authenticated-Flows (stb/blueprint, stb/modul) elevieren post-create via neuer service_role-Helper `setCaptureSessionEntitledTier` — beide auf **'blueprint'** (stb-modul: `module_output_synthesis` = blueprint, DEC-239 — NICHT 'handbook', least-privilege; korrigiert das illustrative Frage-Label). Generic `capture/actions` bleibt 'free'. UPDATE-Guard erlaubt service_role → Elevation passt vorbei.
+
 ## DEC-232 — V9.8 Q-V9.8-E: Embedding-Normalisierung synonymer Themes deferred
 - Status: accepted
 - Reason: /architecture V9.8. Founder-Steer „nicht ueberdesignen". Titan/pgvector-Stack vorhanden, aber Embedding-Normalisierung ist deutlich schwerer (Embed-Pipeline + Clustering/Threshold + Re-Mapping) als der Prompt-Injektions-Ansatz und ohne erwiesenen Bedarf Overkill. Prompt-Vokabular-Kontrolle (DEC-229/231) reduziert den Wildwuchs erst messbar; Embedding kommt nur, wenn das nicht reicht.
