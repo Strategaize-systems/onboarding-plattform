@@ -1,5 +1,103 @@
 # Known Issues
 
+<!-- ISSUE-121..132: /security-audit V10.5 Fable-5 Adversarial-Audit (RPT-633, 2026-07-09) gegen deployten Stand 8589b20. 14 confirmed / 2 refuted. -->
+
+### ISSUE-121 — Handbook-Reader rehype-raw Stored-XSS (kein rehype-sanitize)
+- Status: open
+- Severity: High
+- Area: XSS / Handbook-Reader
+- Summary: HandbookReader.tsx:250/320 mountet react-markdown mit rehypeRaw OHNE rehype-sanitize; escapeMd (sections.ts:658) escaped nur `|`; email_bulk-KU-Bodies (sections.ts:542-549 ← handbook-import.ts:257) + Subtopic-Namen (`### ${sub.name}`, :449/:516) fliessen roh ein. Verify-Korrektur: img/onerror + svg/onload werden von react-markdown/property-information neutralisiert, ABER `<iframe srcdoc="<script>…">` passiert intakt → same-origin Script-Exec.
+- Impact: Ein Tenant kann via importierte E-Mail/Antwort-Feld ein Payload speichern, das im authentifizierten Handbuch-Reader eines strategaize_berater/strategaize_admin (cross-tenant) ausfuehrt → Session-Hijack/Exfil. 0 Blast-Radius heute (Single-Founder), scharf pre-multi-user.
+- Next Action: rehype-sanitize als LETZTES rehype-Plugin (tight schema) ODER rehypeRaw droppen (Anchors/Video via kontrolliertes Plugin); zusaetzlich user/AI-Felder in sections.ts HTML-escapen. Quelle: /security-audit RPT-633.
+
+### ISSUE-122 — Partner-SVG-Logo Stored-XSS via public logo-route ohne CSP (re-confirm SEC-004)
+- Status: open
+- Severity: High
+- Area: XSS / Branding-Upload
+- Summary: uploadLogo (partner/dashboard/branding/actions.ts:38,118-121) erlaubt image/svg+xml, prueft nur client-file.type (keine Sanitization, kein Magic-Byte), schreibt via service-role nach {tenant}/logo.svg. Public no-auth GET /api/partner-branding/[tenant]/logo (route.ts:116-125) streamt inline als image/svg+xml, kein Content-Disposition, KEINE CSP (next.config.ts). nosniff schuetzt nicht bei explizitem svg-Typ; XFO blockt nur Framing, nicht Top-Level-Navigation.
+- Impact: partner_admin (externe Rolle, pre-customer-live real) planted scripted SVG; Opfer (auch strategaize_admin) oeffnet Logo-URL top-level → same-origin Script-Exec mit Opfer-Session. Re-confirm SEC-004 (SECURITY_AUDIT_2026-05-30) / roadmap V20. Kein Auto-Fire in-app (als img/background konsumiert), braucht Direkt-Navigation/Phishing.
+- Next Action: image/svg+xml aus ALLOWED_MIMES entfernen (rasterize zu PNG) ODER server-side DOMPurify-SVG-Sanitize + route-scoped `Content-Security-Policy: default-src 'none'; sandbox` + Content-Disposition: attachment + Magic-Byte-Content-Type-Check. Quelle: RPT-633.
+
+### ISSUE-123 — recording-ready Webhook: Path-Traversal readFile(file_path) + non-timing-safe Secret (re-confirm SEC-003/V21) — heute middleware-gated
+- Status: open
+- Severity: Medium
+- Area: LFI/SSRF / Dialogue-Webhook
+- Summary: /api/dialogue/recording-ready:74 readFile(body.file_path) ohne Base-Dir-Allowlist/realpath → arbitrary file read (/proc/self/environ, ../../.env), Upload upsert ueberschreibt Recording + poisoned Pipeline. Zusaetzlich Secret-Compare `!==` non-timing-safe (:33), kein Replay-/Nonce-Schutz. Reachability-Caveat (Audit-Ergaenzung, Finder uebersah es): der Endpoint ist NICHT in der proxy.ts-Public-Allowlist → unauth (auch Bearer-only ohne Session) wird von updateSession nach /login 307-redirected → aktuell extern unerreichbar (deckt sich mit ISSUE-028/V21 "defensiv geparkt").
+- Impact: Code-Defekt real (High-when-reachable: arbitrary file read → service-role-Key → Tenant-Collapse), aber heute durch Middleware gegated → Medium. Wird High, sobald die Route allowlisted/re-aktiviert wird (z.B. SLC-110 Network-Refactor). Re-confirm SEC-003/BL-137/roadmap V21.
+- Next Action: Vor jeder Re-Aktivierung Pflicht: path.resolve(JIBRI_RECORDINGS_DIR)+path.sep-Prefix-Check + .mp4-Extension + fs.realpath-Symlink-Recheck (besser: file_path serverseitig aus room_name ableiten); Secret via crypto.timingSafeEqual (service-key.ts-Pattern). Quelle: RPT-633.
+
+### ISSUE-124 — evidence/list Cross-Tenant-IDOR (service-role, kein Tenant-Check)
+- Status: open
+- Severity: High
+- Area: IDOR / Capture-Evidence
+- Summary: GET /api/capture/[sessionId]/evidence/list:18-53 prueft nur `user` existiert, dann evidence_file + capture_events(document_analysis) via createAdminClient (BYPASSRLS) NUR nach URL-sessionId gefiltert — kein profile.tenant_id-Load, kein session-Ownership-Check. Sibling upload/route.ts:40-78 + download/route.ts:29-33 haben den Guard; list ist der Ausreisser.
+- Impact: Jeder authentifizierte Tenant-A-User liest bei Kenntnis einer Tenant-B-sessionId (UUID) fremde original_filename/mime/size/extraction_error + die volle document_analysis-LLM-Payload (extrahierte Dokument-Inhalte). Tenant-Isolation-Bruch → bleibt High auch bei 0 Opfern heute. Nicht-enumerierbare sessionId (UUID) senkt praktischen Blast, fixt aber nicht die Authz-Luecke.
+- Next Action: Upload-Route spiegeln (profile.tenant_id/role + session.tenant_id via admin laden, reject ausser strategaize_admin || match) ODER RLS-scoped createClient statt admin. Quelle: RPT-633.
+
+### ISSUE-125 — capture_session.tier Self-Promotion via direktem INSERT — DEC-219 Tier-Guard deckt nur UPDATE (bypasses recent fix)
+- Status: open
+- Severity: Medium
+- Area: Entitlement / RLS-Trigger (Prioritaet HIGH — bypasses purpose-built fix)
+- Summary: capture_session_tier_change_guard (mig 121:189) ist BEFORE UPDATE only + vergleicht OLD/NEW.tier → feuert NICHT bei INSERT. RLS capture_session_tenant_admin_write (FOR ALL) constrained nur role+tenant_id, nie `tier`. Column-DEFAULT = 'handbook' (hoechste Stufe). authenticated hat INSERT-Grant. → free/blueprint-tenant_admin POSTet direkt /rest/v1/capture_session {tier:'handbook'} (oder tier weglassen, Default), ruft rpc_trigger_handbook_snapshot/bridge_run → gated Jobs laufen.
+- Impact: Self-Upgrade zu Voll-Kunde (ISSUE-097-Klasse auf dem INSERT-Pfad offen) + unbounded Bedrock-Kosten auf Plattform-Rechnung. Kein Tenant-Isolation-/Auth-Bruch (bleibt im eigenen Tenant) → Severity Medium; ABER bypasses den purpose-built DEC-219-Fix → Prioritaet HIGH (zuerst im Hardening-Slice). 0 Impact heute (alle Sessions default handbook, Tiers unverkauft).
+- Next Action: Trigger auf BEFORE INSERT OR UPDATE erweitern + NEW.tier fuer non-service_role-Writer erzwingen (auf INSERT auf entitled tier coercen/rejecten) ODER Session-Creation ueber service_role/SECURITY-DEFINER-RPC routen; Column-DEFAULT unter 'handbook' senken sobald Internal-Test-Mode endet. Quelle: RPT-633.
+
+### ISSUE-126 — Login ohne account-scoped Lockout (nur IP-Bucket; XFF-Spoof refuted)
+- Status: open
+- Severity: Medium
+- Area: Auth / Rate-Limit
+- Summary: login/actions.ts:18 nutzt NUR loginLimiter (IP, 20/15min); kein account-scoped Bucket, waehrend passwort-vergessen den P-081-passwordResetAccountLimiter (key=email) korrekt hat. XFF-Spoof-Vektor REFUTED (P-086 live-verifiziert: Traefik ohne trustedIPs REPLACED die client-XFF → split[0] = echte non-spoofbare Peer-IP, per-IP-Cap greift). Residual = kein IP-unabhaengiger account-scoped Login-Lockout → distributed/botnet-Brute-Force gegen ein Konto ungebremst.
+- Impact: Verteilter Brute-Force gegen ein Zielkonto; per-Single-IP durch 20/15min + P-088-Passwort-Policy gebremst. 0 Blast heute, scharf pre-multi-user. Re-confirm P-081/v-sec-op-fix-port.
+- Next Action: email-keyed loginLimiter (5-10/15min) analog passwordResetAccountLimiter, zusaetzlich zum IP-Bucket, bei Fehlversuch inkrementiert (peek-before-signin, generische Error-Message). Quelle: RPT-633.
+
+### ISSUE-127 — Keine globale CSP/COOP/COEP (Defense-in-Depth-Luecke, re-confirm V22/BL-138)
+- Status: open
+- Severity: Medium
+- Area: Security-Headers
+- Summary: next.config.ts:32-51 setzt nur XFO/nosniff/Referrer-Policy/HSTS/Permissions-Policy; keine Content-Security-Policy (enforcing oder Report-Only), kein COOP/COEP; middleware/proxy.ts setzt keine Header. → jeder Injection-Defekt (ISSUE-121/122) exfiltriert ungebremst.
+- Impact: Kein eigener Abuse-Pfad (Amplifier), aber entfernt die Exfil-Bremse fuer die XSS-Findings. Medium (nicht High — kein Isolation/Auth-Bruch; beide Lenses = overstated→Medium). Re-confirm roadmap V22/BL-138.
+- Next Action: enforcing CSP (default-src 'self'; script-src 'self' + per-request nonce, kein 'unsafe-inline'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; connect-src self+Supabase/Jitsi) + COOP same-origin; inline `<style>` in layout.tsx:35 braucht style-src nonce/hash; erst Report-Only ausrollen, dann enforcing vor Customer-Live. Quelle: RPT-633.
+
+### ISSUE-128 — ILIKE-Wildcard-Injection auf public partner-slug (Enumeration, re-confirm SEC-005)
+- Status: open
+- Severity: Low
+- Area: Injection / Public-Partner
+- Summary: public/partner/[slug]/route.ts:83 `.ilike("slug", slug)` mit rohem Path-Param → `%`/`_` als LIKE-Wildcards; isReservedSlug(%)=false umgeht Reserved-Short-Circuit; `a%` matched jeden Partner mit Prefix a, Multi-Match = 500-Oracle. Gleiches Muster im signup-Lookup (route.ts:197) — dort aber service-key-gated (kein Browser-Angreifer, kein Hijack-Gewinn).
+- Impact: Anonyme Partner-Enumeration + Branding-Harvest (display_name/logo_url/accent_color — semi-oeffentlich, auf public Landing ohnehin sichtbar). Rate-limited 60/h/IP. Low. Re-confirm SEC-005.
+- Next Action: `.eq("slug", slug.toLowerCase())` ODER Charset-Validierung `^[a-z0-9-]{1,60}$` vor Query, auf beide Routen. Quelle: RPT-633.
+
+### ISSUE-129 — berater_assigned_tenant_ids(uuid) exponiert Mapping an jeden authenticated User
+- Status: open
+- Severity: Low
+- Area: RLS / SECURITY-DEFINER
+- Summary: mig 132:129-135 SECURITY DEFINER mit caller-supplied p_uid, kein auth.uid()/role-Guard, EXECUTE an authenticated (:175). → jeder Login-User POSTet /rest/v1/rpc/berater_assigned_tenant_ids {p_uid:<beliebige berater-uid>} und erhaelt dessen Tenant/Mandant-UUID-Array (Relationship-Metadaten, die RLS sonst verdeckt).
+- Impact: Info-Disclosure von Partner→Mandant-Zuordnung (nur UUIDs, keine Inhalte); braucht Kenntnis einer berater-uid; leer fuer non-berater. Low. NEU (MIG-132/V10.4).
+- Next Action: EXECUTE von authenticated REVOKEn (nur service_role fuer den Query-Layer-Loader) + Wrapper der auth.uid() hardcodet, ODER interner Guard `IF p_uid <> auth.uid() AND auth.user_role() <> 'strategaize_admin' THEN RETURN '{}'::uuid[]`. Quelle: RPT-633.
+
+### ISSUE-130 — Branding-Farben via dangerouslySetInnerHTML <style> ohne Re-Validierung auf dem Render-Pfad
+- Status: open
+- Severity: Low
+- Area: XSS / Trust-on-Render
+- Summary: layout.tsx:35 injiziert branding.primaryColor/secondaryColor in ein :root{}-`<style>` via dangerouslySetInnerHTML; resolve.ts:73-75 reicht die Werte ungeprueft durch (nur primaryColorRgb hex-guarded). Heute KEIN erreichbarer Writer (updateBranding erzwingt HEX_REGEX; admin/partners nutzt nur Default) → validate-on-write/trust-on-render-Mismatch, latent.
+- Impact: Kein Live-Vektor heute; ein zukuenftiger/alternativer Writer, DB-Seed oder Direct-DB mit `#000;}</style><script>…` bricht aus dem style-Element auf jeder Seite (inkl. pre-auth cross-tenant). Low.
+- Next Action: In resolve.ts primary_color/secondary_color durch HEX_RE + Default-Fallback (wie hexToRgbTriplet), sodass nur ein #rrggbb-Literal ins <style> gelangen kann. Quelle: RPT-633.
+
+### ISSUE-131 — 7 Cron-Routes + recording-webhook: non-timing-safe Secret-Compare (re-confirm SEC-002/V20)
+- Status: open
+- Severity: Low
+- Area: Secret-Compare
+- Summary: alle 7 Cron-Routes gaten mit `if (secret !== expected)` (erste Statement, gut) — aber non-constant-time; service-key.ts:36 timingSafeEqual existiert ungenutzt. Timing-Oracle praktisch nicht ausnutzbar (High-Entropy-Secret ueber HTTP, Netz-Jitter 4-6 Groessenordnungen, jeder Fehlversuch loggt captureWarning). Reine Defense-in-Depth/Konsistenz. Re-confirm SEC-002/roadmap V20.
+- Impact: Kein realistischer Abuse (beide Lenses overstated→Low), aber billiger Konsistenz-Fix. Low.
+- Next Action: shared verifyCronSecret(req)-Helper (length-Check + crypto.timingSafeEqual), erste Statement in allen 7 Cron-Routes + recording-ready. Quelle: RPT-633.
+
+### ISSUE-132 — Logger ohne Secret-Redaction-Layer (re-confirm V22/BL-140, P-092 nicht portiert)
+- Status: open
+- Severity: Low
+- Area: Logging / Secret-Leak
+- Summary: src/lib/logger.ts:22 schreibt entry.message/stack/metadata verbatim in error_log + console + sendErrorNotification-Email; keinerlei redactSecrets/Key-Scrub/Regex-Scrub (P-092 nicht portiert). error_log-SELECT ist strategaize_admin-RLS-gated + admin/errors-Route requireAdmin → Sinks trust-boundary-intern. Latent: aktuelle Call-Sites uebergeben IDs, imap-sync setzt logger:false.
+- Impact: Ein zukuenftiger Caller/Third-Party-Exception mit interpoliertem Secret (service-role-URL, eyJ-JWT, bearer) landet unredacted in admin-scoped Sinks. DEC-219 logger-redaction-Klasse. Low.
+- Next Action: redact()-Pass in logToDb/captureException + Email-Pfad (logger.ts:60-69): (a) Key-Redaction metadata-Keys /secret|token|key|password|authorization|cookie/i + (b) Regex-Scrub message/stack fuer eyJ-JWTs, bearer-Tokens, URL-embedded-Creds. Quelle: RPT-633.
+
 ### ISSUE-120 — Debrief-Read-Pfad liest Answers per frage_id, Capture-Write schreibt per q.id (pre-existing V9.75-Mismatch)
 - Status: open
 - Severity: Medium
