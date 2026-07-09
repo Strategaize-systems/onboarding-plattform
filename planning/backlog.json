@@ -1929,6 +1929,16 @@
       "version": "V10.4",
       "description": "Admin-Layout-Gate um strategaize_berater erweitern + BeraterSidebar (gefiltert) + Cross-Tenant-Loader auf zugewiesene Tenants gescopt (Query-Layer, service_role) + Mein Tag mit can_see_tenant-Scope. DEC-263 P2.",
       "createdAt": "2026-07-07"
+    },
+    {
+      "id": "BL-536",
+      "title": "OP-Design-System (Tokens + Komponenten + Auswertungsreports + HTML-Output) — Basis fuer Strategaize-Website/Marketing, BS+OP kombiniert",
+      "type": "feature",
+      "priority": "medium",
+      "status": "open",
+      "version": null,
+      "description": "OP-Design-System als eigenes, gepflegtes System (analog zu den Produkt-Design-Systemen, die der Founder in Claude Design anlegt) — auf Basis des BEREITS GEBAUTEN OP-Produkts, nah am Business-System (BS) aber mit eigenen OP-Spezifika. Ziel: ein Design-System aus einem Guss, das spaeter Grundlage fuer die (noch nicht existierende) Strategaize/BS-Website + Marketing wird; das Beste aus BS + OP kombinieren. BESTEHENDE QUELLEN (zusammengetragen 2026-07-09, in Claude Design ueberfuehren): (1) UI-Tokens/Primitives: src/app/globals.css + tailwind.config.ts (Brand-Tokens --brand-primary-dark #120774 / --brand-primary #4454b8 / success/warning, Gradients, Radius, Inter/JetBrains-Mono). (2) HTML-Seiten-Bauvorgaben (bereits verbindlich): Style Guide V2 via .claude/skills/html-export/{template.html,build.py} + Rule user-reading-html-not-md.md [[user_reads_html_not_md]]; kanonisches DESIGN_SYSTEM.html-Muster [[design_system_html_preview_pattern]] (immoscheckheft hat schon eins, OP noch nicht). (3) Report-Look / AUSWERTUNGSREPORTS (muessen mit rein — werden Website/Marketing-Grundlage): Web-Reports Mein-Tag-Workspace (src/components/workspace/reports/*: MandantenUebersicht/ReviewQueue/WoStocktEs/SystemStatus/ActivityTimeline/Ampel/ReportView) + Diagnose-Bericht (src/components/diagnose/BerichtRenderer.tsx, dashboard/diagnose/.../v8-bericht-renderer.tsx); PDF-Reports src/lib/pdf/* (mandanten-report-v2 [cover/cta/hausaufgaben/modul-page/wheel-legend], diagnose-report, fahrplan-report, ScoreVisualPdf/BlockSectionPdf); der neue Rollen-Flow-Report docs/OP_ROLLEN_FLOW_E2E_2026-07-09.html hat bereits den Ziel-Look. (4) Workflow: Aufbau in Claude Design via Playbook docs/playbooks/claude-design-sync.md (Founder legt Design-System an, Claude Code = Bruecke Repo->DesignSync). SCOPE-SKIZZE fuer spaeteres /discovery: Foundation (Tokens/Farben/Typo/Spacing/Radius) -> Komponenten-Inventar (Shells/Sidebar/Cards/Tabellen/Ampeln/Forms/States) -> Report-/Output-Layer (Web-Reports + PDF + HTML-Export vereinheitlicht) -> BS<->OP-Abgleich (gemeinsame Basis, dokumentierte Divergenzen) -> Ausblick Strategaize-Website + Marketing. PRIORITAET/ORDER: Founder-Wunsch 'Schritt zwei' — Reihenfolge zu ISSUE-119-Fix und BL-515..518 (Exit-Ready Produkt 1) offen/egal; auf jeden Fall festhalten. Wird vermutlich eigene Version/Cluster via /discovery. Founder-Direktive 2026-07-09.",
+      "createdAt": "2026-07-09"
     }
   ]
 }
