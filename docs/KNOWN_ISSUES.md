@@ -1,5 +1,14 @@
 # Known Issues
 
+### ISSUE-120 — Debrief-Read-Pfad liest Answers per frage_id, Capture-Write schreibt per q.id (pre-existing V9.75-Mismatch)
+- Status: open
+- Severity: Medium
+- Area: Capture/Debrief Answers-Key (pre-existing, NICHT V10.5)
+- Summary: Beim Answer-Key-Grounding fuer V10.5 SLC-191 aufgefallen: Der Capture-Write-Pfad speichert Answers mit Key `${block.key}.${q.id}` (`capture/[sessionId]/block/[blockKey]/actions.ts:55` + `questionnaire-form.tsx:108/455-458` → `saveAnswer(sessionId, block.key, q.id, value)`; q.id = uuid). Der Debrief-Read-Pfad liest hingegen mit `${blockKey}.${q.frage_id}` (`admin/debrief/[sessionId]/[blockKey]/page.tsx:193`; frage_id = F-BP-xxx ≠ q.id). Bei distinktem id/frage_id findet der Read nichts.
+- Impact: Die Debrief-SourceDataSidebar (`[blockKey]/SourceDataSidebar.tsx`) zeigt vermutlich leere Answers je Frage. Pre-existing (V9.75), NICHT von V10.5 eingefuehrt. V10.5 SLC-191 nutzt die korrekte Write-Konvention (`q.id`).
+- Workaround: keiner; Diagnose/Reports lesen block_diagnosis.content, nicht die Rohantworten je Frage.
+- Next Action: An einer real befuellten Session bestaetigen (die Live-Seed-Session `c1c1…043a` hat keine echten Frage-Answers). Bei Bestaetigung: Debrief-Read auf `q.id` angleichen (page.tsx:193). Quelle: /qa SLC-191 RPT-626.
+
 ### ISSUE-111 — V10.1 BEDROCK_V9_HAIKU_MODEL_ID zeigt auf Sonnet-4 → Live-Scoring liefe auf Sonnet statt Haiku 4.5 (RESOLVED via Code-Override, wirksam ab naechstem Redeploy)
 - Status: resolved
 - Severity: Medium

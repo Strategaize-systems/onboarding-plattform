@@ -2,7 +2,7 @@
 
 - Feature: FEAT-108 (BL-515)
 - Version: V10.5
-- Status: planned
+- Status: code-done (alle 6 MTs; 33/33 Tests, tsc0/eslint0, build PASS — Route-Live-Smoke pending Gesamt-QA/Deploy, RPT-626)
 - Priority: High
 - Delivery-Mode: SaaS → TDD-Pflicht (owner-dependence + framing = Business-Logik)
 - Branch/Worktree: `v10-5-exit-report` (Worktree `<repo>.worktrees/v10-5`, SaaS-Pflicht)

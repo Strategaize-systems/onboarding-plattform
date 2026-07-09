@@ -1236,7 +1236,7 @@ STRIKT SEQUENZIELL auf kumulativem Branch `v10-4-rollenmodell-p2` (Worktree `<re
 
 | ID | Slice | Feature | Status | Priority | Created |
 |----|-------|---------|--------|----------|---------|
-| SLC-191 | [Exit-/Devil's-Advocate-Report Kern](SLC-191-exit-report-kern.md) | FEAT-108 | planned | High | 2026-07-09 |
+| SLC-191 | [Exit-/Devil's-Advocate-Report Kern](SLC-191-exit-report-kern.md) | FEAT-108 | in_progress | High | 2026-07-09 |
 | SLC-192 | [Exit-Report Devil's-Advocate-Positionierung](SLC-192-exit-report-positionierung.md) | FEAT-109 | planned | High | 2026-07-09 |
 
 ### V10.5 Parallel-Readiness + Pflicht-Gates
