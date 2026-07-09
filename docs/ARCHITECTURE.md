@@ -10097,3 +10097,79 @@ Keine. 0 LLM-Calls, keine neuen Provider, keine Cron/Jobs, kein Storage. EU-Data
 
 ### W.9 Recommended implementation direction / next step
 `/slice-planning V10.5` — Vorschlag **2 Slices sequenziell** (deterministisch, ein Report): **SLC-191** FEAT-108 Report-Kern (data.ts-Loader-Erweiterung + `owner-dependence.ts` TDD + framing.ts Käufer-Erweiterung + Scorecard-Renderer + GET-Route; MT-0 = Grounding-Spike Q-V10.5-H/J gegen reale Test-Session) → **SLC-192** FEAT-109 Positionierung (positioning.ts Spur/Disclaimer + coverage.ts Ehrlichkeits-Sektion + Renderer-Einbettung + Tonality-/Wording-Review). Index-/Framing-Logik ist der TDD-Kern (SaaS-Mode). /qa nach jedem Slice.
+
+## X. V20 Architecture — Security-Hardening (konsolidiert) (Addendum 2026-07-09)
+
+> Addendum-Pattern (ARCHITECTURE.md > 10k Zeilen). Baseline: PRD §V20, Requirements RPT-634, /security-audit RPT-633. DECs **DEC-279..286**. Alle Code-/Schema-Aussagen diese Session gegen das reale Repo + Migrations-Quelle gegroundet (3 parallele Explore-Fanouts + 2 eigene Verifikationen, Realitaets-Grounding-Gate); Live-DB-only-Punkte als `UNVERIFIED — Slice-/backend-Gate` markiert.
+
+### X.1 Architecture summary
+V20 ist **kein Feature**, sondern eine Härtungs-Schicht in 3 sequenziellen Layer-Slices auf dem deployten Stand `8589b20`: **FEAT-110 DB/Authz** (eine Migration MIG-133 + eine generierte MIG-134), **FEAT-111 XSS/Output/Headers** (Code + Middleware-CSP), **FEAT-112 Auth/Secrets-Cleanup** (Code). Fast alles Pattern-Reuse (P-080/081/082/083/085/089/092 + `service-key.ts` timingSafeEqual + BS-Cross-Repo); echter Neubau nur die tier-INSERT-Guard-Erweiterung + die idempotente search_path-Sweep-Migration. Bleibt Internal-Test-Mode (module-lifecycle-discipline); danach einmal `/code-review ultra` (DEC-219-Closure).
+
+### X.2 Grounding-Befunde (live, diese Session — Quelle je Aussage)
+| Finding | Grounding (Pfad:Zeile) | Ergebnis |
+|---|---|---|
+| ISSUE-125 tier-Guard | `sql/migrations/121_v975_tier_gating_foundation.sql:172-192` | **BEFORE UPDATE only**, prüft `NEW.tier IS DISTINCT FROM OLD.tier` → INSERT ungeschützt |
+| tier-Column | `121:54-56` | `NOT NULL DEFAULT 'handbook' CHECK (tier IN free/blueprint/handbook)` — **Default IST der Vektor** |
+| tier App-Inserts | `bulk-email-import/actions.ts:130`, `diagnose/actions.ts:164`, `lib/db/capture-session-queries.ts:73`, `actions/walkthrough.ts:136` | kein Prod-Insert setzt elevated tier → alle verlassen sich auf DEFAULT (Client-Typ = Slice-MT-0) |
+| ISSUE-124 evidence/list | `src/app/api/capture/[sessionId]/evidence/list/route.ts` | `createAdminClient()`, **kein** tenant-Check |
+| evidence/upload (Muster) | `.../evidence/upload/route.ts:54-78` | kanonischer Check: capture_session tenant_id + strategaize_admin-Bypass + 404/403 |
+| evidence/download | `.../evidence/[fileId]/download/route.ts` | **ebenfalls unvollständig** (admin-Read ohne expliziten tenant-Match) → mitgehärtet |
+| ISSUE-129 berater-RPC | `132_v104_berater_foundation.sql:129-176` | `p_uid uuid`-Param, SECURITY DEFINER (hat search_path), GRANT authenticated → Caller-Param-Trust |
+| berater-RPC-Consumer | `workspace-scope.ts:53` (user), `:72` (**admin/service_role**), `exit-report/route.ts:57` (admin) | alle übergeben eigene uid; admin-Pfad hat auth.uid()=NULL → COALESCE nötig |
+| profiles.role-Trigger | repo-weiter Grep | **NICHT vorhanden** in OP (nur BS-Referenz) → Defense-in-Depth-Port, nicht exploitable (profiles ohne self-UPDATE-Grant) |
+| SEC-001 | `pg_proc`-Heuristik über Migrations | ~80 DEFINER / ~49 SET search_path → ~31 offen (047/054/062-RPCs); Trigger-Funcs ok |
+| ISSUE-121 handbook | `HandbookReader.tsx:250,320` + `workers/handbook/sections.ts:85-93,234` | rehypeRaw ohne sanitize; **legitime** `<a id>`+`<video>` aus sections.ts → kein Raw-Drop |
+| Legal-Pages | `datenschutz/page.tsx`, `impressum/page.tsx` | **safe** (ReactMarkdown ohne rehypeRaw / JSX) → kein Fix, kein P-082-Funnel |
+| ISSUE-122 SVG | `partner/dashboard/branding/actions.ts:38` + `api/partner-branding/[…]/logo/route.ts` | `image/svg+xml` in ALLOWED_MIMES, inline serviert ohne nosniff/Disposition |
+| ISSUE-127 CSP | `next.config.ts:32-51` + `layout.tsx:35` | keine CSP/COOP/COEP; inline `<style dangerouslySetInnerHTML>` (dyn. Brand-Vars) → Nonce nötig |
+| ISSUE-126 login | `src/app/login/actions.ts:19` + `src/lib/rate-limit.ts:127-136` | Login IP-only; `passwordResetAccountLimiter` (account-scoped, P-081) im Repo → reuse |
+| ISSUE-123 recording-ready | `api/dialogue/recording-ready/route.ts:33,74` | Secret `!==` (nicht timing-safe) + `readFile(body.file_path)` Traversal; **nicht** im middleware-Allowlist |
+| ISSUE-131 cron | 7 Routes `api/cron/*` + `src/lib/auth/service-key.ts:36-62` | kein `verifyCronSecret`; alle 7 `!==`; timingSafeEqual-Muster in service-key.ts |
+| ISSUE-132 logger | `src/lib/logger.ts:20-35` | keine Redaction; `redactSecrets` (P-092) existiert nicht → Port |
+| ISSUE-128 slug | `api/public/partner/[slug]/route.ts:83`, `api/public/signup/route.ts:197` | beide `.ilike(slug)` unescaped → `.eq(lower)` |
+
+### X.3 Hauptkomponenten & Verantwortlichkeiten (nach Slice)
+**SLC-193 / FEAT-110 (DB/Authz — MIG-133 + MIG-134):**
+- `capture_session_tier_change_guard()` → `BEFORE INSERT OR UPDATE`; INSERT-Coerce non-service_role→'free', DEFAULT→'free' (DEC-279). App-Insert-Sites setzen entitled tier explizit via service_role (MT-0 Pre-Condition).
+- `evidence/list` + `evidence/download` → expliziter capture_session-Ownership-Check gespiegelt aus `upload` (DEC-280, createAdminClient bleibt).
+- `berater_assigned_tenant_ids` → `COALESCE(auth.uid(), p_uid)` (DEC-286).
+- `profiles.role`-Guard-Trigger-Port (Defense-in-Depth, BEFORE INSERT OR UPDATE, current_user-aware; Low).
+- `search_path`-Sweep: generierte `ALTER FUNCTION … SET search_path`-Statements (DEC-283, MIG-134).
+
+**SLC-194 / FEAT-111 (XSS/Output/Headers — Code + Middleware):**
+- `HandbookReader.tsx` Plugin-Kette: `rehype-sanitize` nach rehypeRaw mit Custom-Schema (a[id]+video erlaubt) (DEC-281); `sections.ts` Tenant-Content-Escape.
+- Branding-Upload/Logo-Route: SVG raus + Magic-Byte + nosniff (DEC-284).
+- Middleware (`src/proxy.ts`): per-Request-Nonce → CSP (Report-Only→enforcing) + COOP same-origin-allow-popups (DEC-282); `layout.tsx` inline `<style>` erhält Nonce.
+- branding-Farben Render-Pfad-Re-Validierung (`resolve.ts`, ISSUE-130, Low).
+
+**SLC-195 / FEAT-112 (Auth/Secrets-Cleanup — Code):**
+- Login: account-scoped Lockout via `passwordResetAccountLimiter`-Muster (P-081) neben IP-Limiter.
+- `recording-ready`: timingSafeEqual + `file_path`-Allowlist/`path.resolve`-Guard (VOR jeder Re-Aktivierung; heute middleware-unerreichbar).
+- Neuer `verifyCronSecret`-Helper (timingSafeEqual, Muster `service-key.ts`) in alle 7 cron-Routes.
+- `logger.ts`: `redactSecrets`-Layer (P-092-Port).
+- Partner-slug: `.ilike`→`.eq(lower)` in beiden Routes.
+
+### X.4 Datenmodell / Migrationen
+- **MIG-133** `133_v20_authz_hardening.sql` — tier-Guard (INSERT+UPDATE) + Column-DEFAULT + berater-RPC-Rewrite + profiles.role-Port. Idempotent (CREATE OR REPLACE FUNCTION + DROP/CREATE TRIGGER guarded). In-Tx-Probe Pflicht (tenant_admin-INSERT tier='handbook' → 'free' coerced; service_role-Path grün).
+- **MIG-134** `134_v20_search_path_sweep.sql` — generierte `ALTER FUNCTION … SET search_path = public, pg_catalog;` über ~31 DEFINER-Funcs; Body unberührt, natürlich idempotent. Funktionsliste live erzeugt (node:20-Sidecar). Done-Gate Rest-Count 0.
+- FEAT-111/112: **0 Migrationen** (reiner Code). Live-Apply beider Migrationen erst im /deploy (sql-migration-hetzner.md).
+
+### X.5 Datenfluss (die 2 nicht-trivialen Pfade)
+- **tier-Guard:** INSERT capture_session → Trigger: `current_user='service_role'` ? (App mit explizit gesetztem tier) durch : coerce NEW.tier='free'. UPDATE tier → deny wenn non-service_role. → Privilege nur über service_role (entitlement-getrieben).
+- **CSP-Nonce:** Request → Middleware generiert Nonce, setzt `Content-Security-Policy(-Report-Only)`-Header + reicht Nonce via Request-Header weiter → `layout.tsx` liest Nonce → auf inline `<style>` + auf Next-Script-Tags. Report-Only-Phase sammelt Violations → Browser-Smoke → enforcing.
+
+### X.6 Security / Privacy
+Kern der Version. Kein neuer PII-Pfad, kein neuer externer Call (EU-Data-Residency unberührt). RLS/Authz wird **verschärft** (tier, evidence-tenant, berater-RPC, search_path). Logger-Redaction reduziert Secret-Exposure in `error_log`. CSP/COOP reduzieren XSS-Exfil + Cross-Origin-Leak. Alle High/Medium live im Slice-/qa gegen-verifizieren (Audit war statisch, R-4).
+
+### X.7 Constraints & Tradeoffs
+- **DEFAULT-Senken vs Non-Breaking:** der INSERT-Coerce schließt ISSUE-125 allein; das zusätzliche DEFAULT-Senken (requirements-mandatiert, least-privilege) macht legit Session-Creation abhängig davon, dass die App den entitled tier explizit via service_role setzt → **BLOCKING MT-0** (sonst stranden Sessions auf 'free', R-2/SC-V20-2).
+- **Mirror-Upload statt RLS-scoped-Client (DEC-280):** Cross-Route-Konsistenz > minimaler Code (P-085); überschreibt die tentative PRD-Empfehlung — dokumentiert.
+- **rehypeRaw bleibt (DEC-281):** Sanitize-Schema statt Raw-Drop, weil sections.ts legitimes HTML emittiert — Tradeoff: Schema muss gepflegt werden, wenn neue legitime Tags dazukommen.
+- **CSP Report-Only zuerst:** verzögert den enforcing-Schutz um einen Smoke-Zyklus, verhindert aber Kernflow-Breaks (R-3, `curl -I`-only-PASS verboten P-089).
+- **COEP deferred:** kein cross-origin-isolation-Bedarf; COOP `allow-popups` statt `same-origin` wegen Jitsi window.open.
+
+### X.8 Offene technische Fragen — entschieden (Q-V20-A..G → DEC-279..286)
+Alle 7 PRD-Fragen entschieden: A→DEC-279, B→DEC-280, C→DEC-281, D→DEC-282, E→DEC-283, F→DEC-284, G→DEC-285; ISSUE-129→DEC-286. **Rest-Offen (→ Slice, `UNVERIFIED — /backend-Gate`):** (1) Client-Typ der 4 tier-Insert-Sites + Ort des entitled-tier-Set (MT-0). (2) exakte SEC-001-Funktionsliste (Live-Sweep). (3) live-Bestätigung tier-Default/Guard-Timing gegen die Coolify-DB (Migrations-Quelle 121 gegroundet, Live-Confirm = In-Tx-Probe). (4) rehype-sanitize Schema-Feintuning gegen den realen Handbook-Output.
+
+### X.9 Empfohlener nächster Schritt
+`/slice-planning V20` — 3 Slices sequenziell im **kumulativen Worktree-Branch** (SaaS-Mode): **SLC-193** FEAT-110 (MT-0 tier-Insert-Grounding zuerst; MIG-133 + MIG-134) → **SLC-194** FEAT-111 (CSP Report-Only→Smoke→enforcing) → **SLC-195** FEAT-112. MIG-133/134 in slice-planning reservieren. Prio-1-MTs: ISSUE-125/124/121/122. /qa nach jedem Slice; Gesamt-/qa → /final-check → `/code-review ultra` (DEC-219-Closure) → /deploy (Live-Apply MIG-133/134).
