@@ -1236,8 +1236,8 @@ STRIKT SEQUENZIELL auf kumulativem Branch `v10-4-rollenmodell-p2` (Worktree `<re
 
 | ID | Slice | Feature | Status | Priority | Created |
 |----|-------|---------|--------|----------|---------|
-| SLC-191 | [Exit-/Devil's-Advocate-Report Kern](SLC-191-exit-report-kern.md) | FEAT-108 | in_progress | High | 2026-07-09 |
-| SLC-192 | [Exit-Report Devil's-Advocate-Positionierung](SLC-192-exit-report-positionierung.md) | FEAT-109 | planned | High | 2026-07-09 |
+| SLC-191 | [Exit-/Devil's-Advocate-Report Kern](SLC-191-exit-report-kern.md) | FEAT-108 | done | High | 2026-07-09 |
+| SLC-192 | [Exit-Report Devil's-Advocate-Positionierung](SLC-192-exit-report-positionierung.md) | FEAT-109 | done | High | 2026-07-09 |
 
 ### V10.5 Parallel-Readiness + Pflicht-Gates
 STRIKT SEQUENZIELL, kumulativer Branch `v10-5-exit-report` (Worktree `<repo>.worktrees/v10-5`, SaaS-Pflicht) — **1 Founder**: Group A = SLC-191 → Group B = SLC-192 (blockiert-von SLC-191; geteilte Datei `src/lib/pdf/exit-report/renderer.tsx` + `index.ts`). **MIG-Reservierung: keine** (V10.5 = 0 Migration, DEC-273 render-time). **0 LLM.** Reuse Fahrplan-Report-V9.75-Plumbing mit Quell-Pfad-Header (DEC-272). SLC-191 **MT-0 = Grounding-Spike** (Q-V10.5-H diagnosis_schema.question_keys live befüllt? + Q-V10.5-J Test-Session mit block_diagnosis+owner_dependency-Antworten; read-only, entscheidet Owner-Dependence-Index-Fallback Block- vs Subtopic-Granularität). TDD-Kern (SaaS-Mode): `owner-dependence.ts` (DEC-273) + `framing.ts` (Käufer-3-Spalten) + `coverage.ts` — Pure-Mock-Vitest (node-env, kein jsdom); Renderer via `renderToBuffer`-Smoke; Route-Auth/Tier/PDF-Response = Browser-/Live-Smoke in /qa. Q-V10.5-I entschieden: Route nutzt `createAdminClient` + manuellen Tenant-Scope (spiegelt Fahrplan-Route, supersedet W.6-RLS-Präferenz). Pre-Merge-Re-Check vor Merge (Rebase + Tests, Single-Flight, 0 MIG).
