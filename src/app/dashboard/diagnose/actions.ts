@@ -171,6 +171,11 @@ export async function startDiagnoseRun(
         // aber von Standard-Templates verwendet; V6.3 partner_diagnostic ist
         // ebenfalls Fragebogen-basiert.
         capture_mode: "questionnaire",
+        // V20 SLC-193 MT-2 (DEC-279): entitled tier explizit, da MIG-133 den DEFAULT auf
+        // 'free' senkt. Der partner_diagnostic-Funnel erzeugt die blueprint-Diagnose
+        // (diagnosis_generation/knowledge_unit_condensation = blueprint). service_role
+        // -> kein Coerce.
+        tier: "blueprint",
         answers: {},
       })
       .select("id")

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const CaptureSessionStatusSchema = z.enum([
   "open",
@@ -76,6 +77,37 @@ export async function createCaptureSession(
 
   if (error) throw error;
   return CaptureSessionRowSchema.parse(data);
+}
+
+/**
+ * V20 SLC-193 MT-2 (DEC-279) — setzt den feature-entitled tier einer frisch via
+ * authenticated User-Client erzeugten capture_session per service_role nach.
+ *
+ * Notwendig, weil MIG-133 den Column-DEFAULT auf 'free' senkt UND non-service_role-
+ * INSERTs auf 'free' coerced: die authenticated Capture-Entry-Flows (STB Blueprint/
+ * Modul) koennen ihren Feature-tier beim INSERT nicht selbst setzen (der INSERT-Guard
+ * zwingt 'free'). Dieser service_role-UPDATE passt am UPDATE-Guard vorbei (der
+ * service_role erlaubt) und setzt den fixen Feature-tier.
+ *
+ * KEIN User-Input: der tier ist pro Feature-Einstieg hartkodiert. 'free' ist ein No-Op
+ * (bereits Default). Wirft bei Fehler (fail-fast — ohne entitled tier waere das Feature
+ * ohnehin gegated).
+ */
+export async function setCaptureSessionEntitledTier(
+  sessionId: string,
+  tier: "free" | "blueprint" | "handbook"
+): Promise<void> {
+  if (tier === "free") return;
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("capture_session")
+    .update({ tier })
+    .eq("id", sessionId);
+  if (error) {
+    throw new Error(
+      `Tier-Elevation (${tier}) fuer capture_session ${sessionId} fehlgeschlagen: ${error.message}`
+    );
+  }
 }
 
 export async function updateCaptureSessionStatus(

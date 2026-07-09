@@ -134,6 +134,11 @@ async function createCaptureSessionHook(
       owner_user_id: uploader.userId,
       status: "in_progress",
       capture_mode: CAPTURE_MODE_EMAIL_BULK,
+      // V20 SLC-193 MT-2 (DEC-279): seit MIG-133 der Column-DEFAULT auf 'free' sinkt,
+      // muss der entitled tier explizit gesetzt werden. Bulk-E-Mail ist ein handbook-
+      // Feature (email_bulk_* = handbook) und wird direkt danach synchron gegated —
+      // ohne 'handbook' wuerde der Run sofort rollen. service_role-INSERT -> kein Coerce.
+      tier: "handbook",
       answers: {},
     })
     .select("id")

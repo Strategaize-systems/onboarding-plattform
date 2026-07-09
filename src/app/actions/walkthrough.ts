@@ -140,6 +140,10 @@ export async function startWalkthroughSession(): Promise<StartWalkthroughSession
       owner_user_id: user.id,
       status: "open",
       capture_mode: "walkthrough",
+      // V20 SLC-193 MT-2 (DEC-279): entitled tier explizit, da MIG-133 den DEFAULT auf
+      // 'free' senkt. Walkthrough ist ein handbook-Feature (walkthrough_* = handbook).
+      // service_role-INSERT -> kein Coerce.
+      tier: "handbook",
     })
     .select("id")
     .single();

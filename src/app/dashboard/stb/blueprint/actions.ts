@@ -7,10 +7,11 @@
 // setStbVerticalStage), nur auf das Blueprint-Template (stb_blueprint_kanzlei).
 // NEU hier: assessAnswerAmpel (adaptive Vertiefung, Choice A / DEC-249).
 //
-// Tier: capture_session.tier defaultet auf 'handbook' (MIG-121, rank 2) >=
-// 'blueprint' (rank 1, min-tier von diagnosis_generation) -> der spaetere
-// Diagnose-Trigger (MT-2) ist by-default freigeschaltet, kein tier-Set noetig
-// (identisch zum Modul-Flow, der module_output_synthesis [blueprint] enqueued).
+// Tier (V20 SLC-193 MT-2, DEC-279): seit MIG-133 der capture_session.tier-DEFAULT auf
+// 'free' sinkt und der authenticated INSERT auf 'free' coerced wird, setzt dieser Flow
+// den entitled tier explizit per service_role auf 'blueprint' (min-tier von
+// diagnosis_generation) — via setCaptureSessionEntitledTier direkt nach der Session-
+// Anlage. Identisch zum Modul-Flow (module_output_synthesis = blueprint, DEC-239).
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -20,6 +21,7 @@ import { getTemplateBySlug, getTemplateById } from "@/lib/db/template-queries";
 import {
   createCaptureSession,
   getCaptureSession,
+  setCaptureSessionEntitledTier,
 } from "@/lib/db/capture-session-queries";
 import { setStbVerticalStage } from "@/lib/stb-vertikale/tenant-marker";
 import {
@@ -95,6 +97,9 @@ export async function startOrResumeBlueprintSession(
       capture_mode: STB_BLUEPRINT_CAPTURE_MODE,
     });
     sessionId = session.id;
+    // V20 SLC-193 MT-2 (DEC-279): entitled tier per service_role (der authenticated
+    // INSERT wurde durch MIG-133 auf 'free' coerced).
+    await setCaptureSessionEntitledTier(sessionId, "blueprint");
   }
 
   // Ownership ist hier garantiert (Session fuer eigenen Tenant erzeugt bzw. per
