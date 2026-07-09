@@ -1,6 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
+import { captureWarning } from "@/lib/logger";
+
 export const TemplateQuestionSchema = z.object({
   id: z.string(),
   frage_id: z.string(),
@@ -92,5 +94,23 @@ export async function listTemplates(
     .order("created_at", { ascending: true });
 
   if (error) throw error;
-  return (data ?? []).map((row) => TemplateRowSchema.parse(row));
+
+  // ISSUE-119: Eine einzelne nicht-schema-konforme Row (z.B. Legacy-Templates
+  // partner_diagnostic / exit-readiness-teaser-v1 mit title als String statt
+  // i18n-Record + fehlenden IDs) darf den gesamten Erhebungs-Picker nicht
+  // crashen. Per-Row safeParse: ungueltige Rows werden uebersprungen + geloggt.
+  const valid: TemplateRow[] = [];
+  for (const row of data ?? []) {
+    const parsed = TemplateRowSchema.safeParse(row);
+    if (parsed.success) {
+      valid.push(parsed.data);
+    } else {
+      const slug = (row as { slug?: unknown })?.slug ?? null;
+      captureWarning("Template row skipped: schema validation failed", {
+        source: "template-queries.listTemplates",
+        metadata: { slug, issues: parsed.error.issues.slice(0, 5) },
+      });
+    }
+  }
+  return valid;
 }
