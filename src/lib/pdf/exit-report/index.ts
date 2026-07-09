@@ -1,0 +1,19 @@
+// V10.5 SLC-191 — Exit-/Devil's-Advocate-Report: Barrel.
+// Exportiert Typen + Loader/Builder + Owner-Dependence-Index + Renderer.
+// (SLC-192 erweitert um positioning/coverage.)
+
+export type {
+  ExitReportInput,
+  OwnerDepQuestion,
+  DiagnosisSubtopic,
+} from "./types";
+export { buildExitReportInput, loadExitReportInput, answerKey } from "./data";
+export {
+  computeOwnerDependenceIndex,
+  type OwnerDependenceIndex,
+  type OwnerDepDimension,
+  type OwnerDepLevel,
+  type Ampel,
+} from "./owner-dependence";
+export { buildBuyerFindings, type BuyerFinding } from "./framing";
+export { renderExitReportPdf } from "./renderer";
