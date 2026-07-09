@@ -102,15 +102,20 @@ export async function listTemplates(
   const valid: TemplateRow[] = [];
   for (const row of data ?? []) {
     const parsed = TemplateRowSchema.safeParse(row);
-    if (parsed.success) {
-      valid.push(parsed.data);
-    } else {
+    if (!parsed.success) {
       const slug = (row as { slug?: unknown })?.slug ?? null;
       captureWarning("Template row skipped: schema validation failed", {
         source: "template-queries.listTemplates",
         metadata: { slug, issues: parsed.error.issues.slice(0, 5) },
       });
+      continue;
     }
+    // StB-Vertikale ist ein eigenes Produkt mit eigenem Flow (`/dashboard/stb/*`,
+    // Env-Flag-gated) — StB-Modul-/Blueprint-Templates (slug `stb_*`) duerfen NIE
+    // im generischen Erhebungs-Picker (/capture/new) eines Direkt-Client-GF
+    // erscheinen (Founder 2026-07-09). Absichtlicher Ausschluss, kein Fehler → kein Log.
+    if (parsed.data.slug.startsWith("stb_")) continue;
+    valid.push(parsed.data);
   }
   return valid;
 }

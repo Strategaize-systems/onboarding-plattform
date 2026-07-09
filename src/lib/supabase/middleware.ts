@@ -145,6 +145,23 @@ export async function updateSession(request: NextRequest) {
       }
     }
 
+    // ISSUE-118 (2026-07-09) — strategaize_berater arbeitet im gescopten Workspace
+    // (/admin/mein-tag), nicht im Mandanten-Dashboard/Capture. Matrix (role-check.ts)
+    // sagt dashboard/capture = false; die Login-Server-Action redirectet generisch
+    // nach /dashboard, ohne diesen Block bleibt der Berater dort haengen (statt auf
+    // seinem „Mein Tag" zu landen). Spiegelt das employee/partner_admin-Muster oben.
+    if (profile?.role === "strategaize_berater") {
+      const beraterBlocked =
+        pathname.startsWith("/dashboard") ||
+        pathname.startsWith("/capture");
+      if (beraterBlocked) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/admin/mein-tag";
+        url.search = "";
+        return NextResponse.redirect(url);
+      }
+    }
+
     // SLC-102 MT-2 — /partner/* ist nur partner_admin (+ strategaize_admin via Read-only Impersonate V7+).
     // V6 sperrt /partner/* fuer tenant_admin, employee.
     // strategaize_admin darf rein, weil Cross-Tenant-Admin-Sicht generell erlaubt ist.

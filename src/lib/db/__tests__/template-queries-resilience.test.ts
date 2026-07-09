@@ -65,6 +65,16 @@ const LEGACY_ROW = {
   updated_at: "2026-05-16T00:00:00Z",
 };
 
+// StB-Vertikale ist ein separates Produkt (eigener /dashboard/stb-Flow) — im
+// generischen Erhebungs-Picker (/capture/new) darf ein GF NIE StB-Templates sehen
+// (Founder 2026-07-09). StB-Templates sind an ihrem slug-Prefix `stb_` erkennbar.
+const STB_ROW = {
+  ...VALID_ROW,
+  id: "33333333-3333-3333-3333-333333333333",
+  slug: "stb_modul_m04",
+  name: "M-04 Grundlegende Finanzsteuerung",
+};
+
 describe("listTemplates — Resilienz gegen Legacy-Rows (ISSUE-119)", () => {
   beforeEach(() => {
     captureWarning.mockClear();
@@ -95,6 +105,34 @@ describe("listTemplates — Resilienz gegen Legacy-Rows (ISSUE-119)", () => {
 
     expect(result).toEqual([]);
     expect(captureWarning).toHaveBeenCalledTimes(2);
+  });
+
+  it("schliesst StB-Templates (slug `stb_*`) aus dem Picker aus — kein Warning (kein Fehler)", async () => {
+    const client = mockClient([VALID_ROW, STB_ROW]);
+    const result = await listTemplates(client);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].slug).toBe("exit_readiness");
+    expect(result.some((t) => t.slug.startsWith("stb_"))).toBe(false);
+    // StB-Ausschluss ist Absicht, kein Schema-Fehler → keine Warnung
+    expect(captureWarning).not.toHaveBeenCalled();
+  });
+
+  it("kombiniert: Legacy-Row (Warnung) + StB-Row (still) + generische Rows bleiben", async () => {
+    const client = mockClient([
+      VALID_ROW,
+      { ...VALID_ROW, id: "44444444-4444-4444-4444-444444444444", slug: "mitarbeiter_wissenserhebung" },
+      STB_ROW,
+      LEGACY_ROW,
+      { ...STB_ROW, id: "55555555-5555-5555-5555-555555555555", slug: "stb_blueprint_kanzlei" },
+    ]);
+    const result = await listTemplates(client);
+
+    expect(result.map((t) => t.slug).sort()).toEqual([
+      "exit_readiness",
+      "mitarbeiter_wissenserhebung",
+    ]);
+    expect(captureWarning).toHaveBeenCalledTimes(1); // nur die Legacy-Row
   });
 
   it("wirft weiterhin bei echten DB-Fehlern", async () => {
