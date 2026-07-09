@@ -8,20 +8,6 @@
       "order": 100
     },
     {
-      "id": "v21",
-      "name": "V21",
-      "status": "deferred",
-      "summary": "[SUPERSEDED → konsolidiert in V20, 2026-07-09. SEC-003 = ISSUE-123, jetzt FEAT-112/BL-539.] **Security Sprint 2 — am Ende des Baus.** Founder-Direktive 2026-05-30: Security ans Ende. Schliesst OP SEC-003 Recording-Webhook Path-Traversal (BL-137). Aufwand ~2-4h. /api/dialogue/recording-ready reicht User-controlled `file_path` an `readFile()` weiter ohne Allowed-Prefix-Check oder Realpath-Resolve. Aktuell durch Middleware-Redirect extern unerreichbar (ISSUE-028) — sobald der Endpoint je re-aktiviert wird (z.B. SLC-110 Network-Refactor), MUSS V21 vorher durch sein als lokaler Gate. Bis dahin: defensiv parken. Fix-Pattern: (a) Allowed-Prefix-Check, (b) fs.realpath() Symlink-Resolve, (c) besser: file_path serverseitig aus room_name ableiten. Audit-Quelle: docs/SECURITY_AUDIT_2026-05-30.md SEC-003. [DEFERRED 2026-06-12 DEC-213: Weiterentwicklung bei Kunden-Akquise/neuen Projekten. Exit-Readiness braucht es nicht.]",
-      "order": 101
-    },
-    {
-      "id": "v22",
-      "name": "V22",
-      "status": "deferred",
-      "summary": "[SUPERSEDED → konsolidiert in V20, 2026-07-09. CSP=ISSUE-127 (FEAT-111), Logger-Redaction=ISSUE-132 (FEAT-112). Passwort-Policy 12+/zxcvbn BL-139 BEREITS DONE (P-088). LLM-Cost-Cap deferred (partial done, kein Audit-Finding).] **Security Sprint 3 — am Ende des Baus.** Founder-Direktive 2026-05-30: Security ans Ende. 4 Cross-Repo-Patterns parallel zu BS + IS Sprint 4: CSP-Headers in next.config.ts (BL-138, ~M-Aufwand), Passwort-Policy 12+ Zeichen + zxcvbn (BL-139, ~S-Aufwand), Logger-Redaction-Lib (BL-140, ~M-Aufwand), LLM-Cost-Cap im Bedrock-Adapter. Pattern-Source identisch fuer alle 3 Repos — siehe BS BL-501..504 + IS BL-115..117. **Ideal als Dev-System-Pattern-Library-Entries** damit naechster Slice das pattern-mass richtig macht. Audit-Quelle: docs/SECURITY_AUDIT_2026-05-30.md + Cross-Repo-Summary Sprint-4-Section. Trigger: V20 + V21 STABLE. [DEFERRED 2026-06-12 DEC-213: Weiterentwicklung bei Kunden-Akquise/neuen Projekten. Exit-Readiness braucht es nicht.]",
-      "order": 102
-    },
-    {
       "id": "v1",
       "name": "V1",
       "status": "released",
@@ -307,13 +293,6 @@
       "status": "released",
       "order": 19.5,
       "summary": "**V9.5 Bulk-Import Deep-Extraction — PRIORITAET 1 (vor V9.4).** Hebt den Bulk-Import auf die Tiefe des 3-Agenten-Systems (Analyst<->Challenger-Mehrpass-Loop + Orchestrator-Qualitaetsgate), das heute nur der Fragebogen-Verdichtung zugutekommt (src/workers/condensation/*). Befund 2026-06-12 Code-Audit: Bulk-Import nutzt eine SEPARATE, flache Single-Pass-Extraktion (Haiku Pre-Filter + genau 1 Sonnet-Pattern-Aufruf pro Thread, KEIN Refine-Loop, KEINE Cross-Thread-Synthese, KEIN Orchestrator). Akzeptierte Patterns gehen ohne Analyst<->Challenger-Durchlauf ins Handbuch; einziges Qualitaetsgate ist die manuelle GF-Curation. Ziel: Mehrpass-/Challenger-Prinzip auf Bulk-Patterns anwenden (Datenform unterscheidet sich von Fragebogen-Bloecken -> eigener /discovery+/architecture, kein 1:1-Reuse). Enthaelt Modell-Default-Bereinigung (4 stale raw-Model-IDs -> eu-Sonnet-4, inkl. V8.1-Augmentation, ISSUE-099/100). Pre-Cond: keine. /discovery DONE 2026-06-12 (RPT-452): Scope-Cut gegen Founder gelockt — (A) Cross-Thread-Synthese + Critic-Gate als NEUE Stage NACH der bestehenden flachen Per-Thread-Extraktion (dedup/merge/frequency-weight der email_pattern-Rows -> konsolidierte Kandidaten-Units), (B) Per-Thread-Multi-Pass-Loop PARKED (zu teuer, faellt gegen SLC-167 Cost-Cap), (C) Corpus-Gap-Detection PARKED. Kosten: bounded/predictable (fixe 1-2 Synthese/Critic-Pässe, Hard-Cost-Cap bleibt). Modell-Cleanup (ISSUE-100, bulk-Pfad Sonnet 3.5 -> eu-Sonnet-4 + 4 stale Files) ride-along IN scope. Datenform (freie Emails != Fragebogen-Bloecke) -> eigener /architecture, KEIN 1:1-condensation-Reuse. Naechster Schritt: /requirements V9.5."
-    },
-    {
-      "id": "v-sec-op-fix-port",
-      "name": "Security: OP BS-Fix-Port",
-      "status": "deferred",
-      "order": 99.5,
-      "summary": "[SUPERSEDED → konsolidiert in V20, 2026-07-09. BS-Port-Liste jetzt: Login-Rate-Limit=ISSUE-126, Markdown-XSS=ISSUE-121, Logger-Redaction=ISSUE-132, Branding-SVG=ISSUE-122, profiles.role-Port=FEAT-110-Defense-in-Depth; Passwort-Policy + fail-closed-Auth BEREITS DONE.] **End-of-Build-Security-Phase (Founder-Entscheidung 2026-06-14): gebuendelt mit V20/21/22, NICHT mehr aktive V9-Linie.** Konkrete bekannte Fixes aus BS V8.12/V8.14 1:1 nach OP portieren (profiles.role-Column-Protection, Login-Rate-Limit, Public-Markdown-XSS-Sanitize, Logger-Redaction, Passwort-Policy zxcvbn, Branding-Upload-Role-Check + SVG-MIME-Block, fail-closed Auth-Helper). Wird im End-Security-Block gegen die fertige/eingefrorene Oberflaeche gemacht, abgeschlossen durch Fable-5-Adversarial-Audit + einmal /code-review ultra. KEINE technische Abhaengigkeit zu V9.7-V9.10. Pre-Cond/Bedingung: OP bleibt bis dahin strikt Single-Founder + keine Kundendaten (sonst sofort vorziehen, weil die BS-Loecher dann scharf werden). **NAECHSTER SCHRITT nach V9.5 DEPLOYED (Founder 2026-06-14).** **V9.6 OP Security-Hardening — PRIORITAET 2 (nach V9.5, vor Customer-Live).** Spiegelt die Security-Patches/Hardening aus dem Business-System (BS V8.12/V8.14) gezielt auf die Onboarding-Plattform, damit OP wirklich live-ready ist. Cross-Repo-Pattern-Reuse per strategaize-pattern-reuse.md: Logger-Redaction/logSafe (Secret/PII-Masking in Logs), Passwort-Policy (12+ Hard-Floor + zxcvbn), profiles.role Column-Protection (Privilege-Escalation-Block via BEFORE-UPDATE-Trigger service_role-aware), Login-Rate-Limit/Lockout (Brute-Force), Public-Markdown/Legal XSS-Sanitize (rehype-sanitize), Branding-Logo-Upload Role-Check + SVG-MIME-Block, Auth-Role-Helper fail-closed. Pre-Cond: V9.5 erledigt (Founder-Direktive). Empfohlener Start: Security-Audit (Subagenten-Lenses analog BS) -> /requirements V9.6. Naechster Schritt: /discovery oder /onboard-Security-Audit."
     },
     {
       "id": "v9-7",
