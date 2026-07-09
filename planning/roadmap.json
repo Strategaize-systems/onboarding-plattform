@@ -395,8 +395,8 @@
     {
       "id": "v10-5",
       "name": "V10.5",
-      "status": "active",
-      "summary": "Exit-Ready Produkt 1 — Devils-Advocate-/Uebertragbarkeits-Report in Kaeufer-Sprache (BL-515) + Positionierung/Spur/Makler-Disclaimer/Ehrlichkeits-Sektion (BL-517). Scorecard-Layout auf deterministischem Fahrplan-Report-Unterbau; Owner-Dependence-Index-Aggregation neu. /discovery DONE RPT-621. BL-516/518 out-of-scope.",
+      "status": "released",
+      "summary": "Exit-Ready Produkt 1 — Devils-Advocate-/Uebertragbarkeits-Report in Kaeufer-Sprache (BL-515) + Positionierung/Spur/Makler-Disclaimer/Ehrlichkeits-Sektion (BL-517). Scorecard-Layout auf deterministischem Fahrplan-Report-Unterbau; Owner-Dependence-Index-Aggregation. RELEASED 2026-07-09 (REL-044, SOURCE_COMMIT 8589b20, 0 MIG/0 LLM). Full-Workflow geschlossen: /qa+Gesamt-QA (RPT-626/628/629) → /final-check (RPT-630) → /go-live (RPT-631) → /deploy (RPT-632). /post-launch T+24h ausstehend. BL-516/518 out-of-scope.",
       "order": 20.095
     }
   ]

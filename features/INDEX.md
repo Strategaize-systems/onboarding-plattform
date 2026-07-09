@@ -325,5 +325,5 @@ V10.5-Scope (Requirements 2026-07-09, RPT-621-Discovery): dünne deterministisch
 
 | ID | Feature | Status | Spec | Created |
 |----|---------|--------|------|---------|
-| FEAT-108 | Exit-/Devil's-Advocate-Report (Käufer-Report): Übergabe-Ampel-Scorecard pro Dimension + Owner-Dependence-Index prominent + pro Finding Käufer-Sicht/Buy-Side-DD/Abmilderung (deterministisch, react-pdf, GET-Route, 0 LLM) | done | PRD §V10.5 | 2026-07-09 |
-| FEAT-109 | Devil's-Advocate-Positionierung im Report: Spur-Definition (operative Substanz, NICHT Finanz-/Recht-DD) + Makler-Disclaimer + Ehrlichkeits-/Coverage-Sektion (aus quality_report) | done | PRD §V10.5 | 2026-07-09 |
+| FEAT-108 | Exit-/Devil's-Advocate-Report (Käufer-Report): Übergabe-Ampel-Scorecard pro Dimension + Owner-Dependence-Index prominent + pro Finding Käufer-Sicht/Buy-Side-DD/Abmilderung (deterministisch, react-pdf, GET-Route, 0 LLM) | deployed | PRD §V10.5 | 2026-07-09 |
+| FEAT-109 | Devil's-Advocate-Positionierung im Report: Spur-Definition (operative Substanz, NICHT Finanz-/Recht-DD) + Makler-Disclaimer + Ehrlichkeits-/Coverage-Sektion (aus quality_report) | deployed | PRD §V10.5 | 2026-07-09 |
