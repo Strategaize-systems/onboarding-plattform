@@ -1231,3 +1231,18 @@ SEQUENZIELL auf kumulativem Branch `v10-3-rollenmodell-p1` (Worktree `<repo>.wor
 
 ### V10.4 Parallel-Readiness + Pflicht-Gates
 STRIKT SEQUENZIELL auf kumulativem Branch `v10-4-rollenmodell-p2` (Worktree `<repo>.worktrees/v10-4`, SaaS-Pflicht) — **1 Founder, kein Parallel-Betrieb**: Group A = SLC-188 → Group B = SLC-189 → Group C = SLC-190. Reihenfolge-Rationale: Foundation (Rolle/RLS/Helper/Gate) zuerst, Admin-Anlage/Zuweisung als Datenpfad, Berater-Sicht zuletzt (konsumiert beide). **MIG-Reservierung: nur SLC-188 = MIG-132** (Datei `132_*.sql`, additiv, ein Rollback-Punkt); SLC-189/190 = 0 Migration. **Grounding-Flag (in SLC-188 verankert): `handle_new_user` aus LIVE-prosrc bauen, NICHT aus stale `sql/functions.sql:39-76`** (Datei hat tenant_member, fehlt partner_admin). SLC-188 MT-1 = DB-Sidecar-Spike Cascade-Quelle (R-ARCH-V-1) + Trigger-Bindung (R-ARCH-V-2) gegen Live, read-only, NIE Bestands-User. Test-Klassen: Pure-Mock-Vitest (Gate/role-check/Actions/Loader) + Coolify-DB-Vitest (RLS-Sidecar `withTestDb`/`withJwtContext`, berater_assigned_tenant_ids/can_see_tenant/handle_new_user + Regression bestehende Rollen). MIG-132-Live-Apply + Pre-Apply-Live-Audit (MIG-131-Muster, Rollback-Dump `/root/mig132_rollback/`) + Berater/Admin-E2E-Browser-Smoke = /deploy-Phase. Pre-Merge-Re-Check vor Merge (Rebase + Tests, single-flight). DEC-270 = Berater-Report-Set (4 tenant-scopebare Reports, System-Status ausgeschlossen) + Loader-Filter-Injektion via `allowedTenantIds`.
+
+## V10.5 — Exit-Ready Produkt 1: Devil's-Advocate-Report Slices
+
+| ID | Slice | Feature | Status | Priority | Created |
+|----|-------|---------|--------|----------|---------|
+| SLC-191 | [Exit-/Devil's-Advocate-Report Kern](SLC-191-exit-report-kern.md) | FEAT-108 | planned | High | 2026-07-09 |
+| SLC-192 | [Exit-Report Devil's-Advocate-Positionierung](SLC-192-exit-report-positionierung.md) | FEAT-109 | planned | High | 2026-07-09 |
+
+### V10.5 Parallel-Readiness + Pflicht-Gates
+STRIKT SEQUENZIELL, kumulativer Branch `v10-5-exit-report` (Worktree `<repo>.worktrees/v10-5`, SaaS-Pflicht) — **1 Founder**: Group A = SLC-191 → Group B = SLC-192 (blockiert-von SLC-191; geteilte Datei `src/lib/pdf/exit-report/renderer.tsx` + `index.ts`). **MIG-Reservierung: keine** (V10.5 = 0 Migration, DEC-273 render-time). **0 LLM.** Reuse Fahrplan-Report-V9.75-Plumbing mit Quell-Pfad-Header (DEC-272). SLC-191 **MT-0 = Grounding-Spike** (Q-V10.5-H diagnosis_schema.question_keys live befüllt? + Q-V10.5-J Test-Session mit block_diagnosis+owner_dependency-Antworten; read-only, entscheidet Owner-Dependence-Index-Fallback Block- vs Subtopic-Granularität). TDD-Kern (SaaS-Mode): `owner-dependence.ts` (DEC-273) + `framing.ts` (Käufer-3-Spalten) + `coverage.ts` — Pure-Mock-Vitest (node-env, kein jsdom); Renderer via `renderToBuffer`-Smoke; Route-Auth/Tier/PDF-Response = Browser-/Live-Smoke in /qa. Q-V10.5-I entschieden: Route nutzt `createAdminClient` + manuellen Tenant-Scope (spiegelt Fahrplan-Route, supersedet W.6-RLS-Präferenz). Pre-Merge-Re-Check vor Merge (Rebase + Tests, Single-Flight, 0 MIG).
+
+| Slice ID | Parallel Group | MIG Reserved | File Touchpoints | Notes |
+|---|---|---|---|---|
+| SLC-191 | A | keine | src/lib/pdf/exit-report/{types,data,owner-dependence,framing,renderer,index}.ts(x) + src/app/admin/debrief/[sessionId]/exit-report/route.ts | Report-Kern; MT-0 read-only Spike |
+| SLC-192 | B | keine | src/lib/pdf/exit-report/{positioning,coverage}.ts + renderer.tsx (MODIFY) + index.ts (MODIFY) | blockiert-von SLC-191 (renderer + Loader) |
