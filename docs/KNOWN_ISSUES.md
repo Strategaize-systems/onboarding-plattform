@@ -899,3 +899,21 @@
 - Impact: Die V9.1-Forward-Bucket-Bulk-Pipeline (FEAT-077) wurde nie automatisch getriggert — 1 Run (angelegt 2026-06-12) hing 3,5 Wochen in `pre_filtered`; der DSGVO-Retention-Sweep lief nie. Kein Mail-Versand betroffen (Capture-/Analyse-Pipeline, kein Outbound).
 - Workaround: keiner noetig — Fix applied.
 - Next Action: DONE 2026-07-07: `UPDATE scheduled_tasks SET container='app' WHERE id IN (5,6);` (Deviation Rule 3, Config-only, kein Redeploy, Burn-In-Container unberuehrt). Verifiziert: Task 5 Ticks 09:00 + 10:00 UTC success; der haengende Run 3ea6e9b3 durchlief die Pipeline end-to-end (thread_redact → pattern_extract → synthesis, alle ai_jobs completed, Status `synthesized`). Rest-Check: Task 6 erster Tick 2026-07-08 02:00 UTC gegenpruefen. Prozess-Lehre → Dev-System IMP-1421 (Post-Launch-Sweep ueber ALLE Tasks).
+
+### ISSUE-118 — strategaize_berater landet nach Login auf /dashboard statt im Berater-Workspace /admin/mein-tag
+- Status: open
+- Severity: Medium
+- Area: Auth-Routing / Middleware / Post-Login-Redirect (V10.4 Berater-Ebene)
+- Summary: Beim Rollen-Flow-E2E-Live-Durchlauf (2026-07-09, RPT-617) verifiziert: nach erfolgreichem Login landet der `strategaize_berater` auf dem generischen, leeren `/dashboard` ("Ihre Erhebungen / Noch keine Erhebungen vorhanden") statt auf seinem Berater-Workspace `/admin/mein-tag`. Die Middleware-Login-GET-Weiterleitung (`src/lib/supabase/middleware.ts:91-97`) sieht fuer den Berater `/admin/mein-tag` vor, aber die tatsaechliche Post-Login-Redirect-Kette endet auf `/dashboard`. Anders als employee/partner_admin (die von der Middleware aktiv aus `/dashboard` in ihren Bereich umgeleitet werden) hat `/dashboard` keinen Berater-Block, deshalb bleibt der Berater dort haengen.
+- Impact: Verwirrender erster Eindruck (leere Fremd-Ansicht), Berater muss manuell auf "Mein Tag" navigieren. Keine Sicherheitslücke — RLS/Scope greifen im Workspace korrekt (nur zugewiesene Mandanten sichtbar). Feature ist Pre-Customer, 0 Berater in Prod.
+- Workaround: Berater ruft `/admin/mein-tag` direkt auf.
+- Next Action: Post-Login-Landing fuer `strategaize_berater` auf `/admin/mein-tag` fixen — entweder in der Login-Server-Action rollenbasiert redirecten oder in der Middleware einen Berater-Redirect aus `/dashboard` ergaenzen (analog employee/partner_admin). Kleiner Slice; vor Berater-Selbsttest zu schliessen.
+
+### ISSUE-119 — /capture/new wirft ZodError (Block-Schema-Mismatch) → GF-Kern-Aktion "Neue Erhebung" bricht fuer frischen direct_client-Mandanten ab
+- Status: open
+- Severity: High
+- Area: Capture / Erhebungs-Template / Zod-Validierung
+- Summary: Beim Rollen-Flow-E2E-Live-Durchlauf (2026-07-09, RPT-617) als frisch angelegter `tenant_admin` (direct_client) fuehrte "Neue Erhebung starten" (`/capture/new`) zu einem Server-Fehler ("This page couldn't load", Next.js-Digest 1883366883). Serverseitig ein **ZodError** beim Validieren der Erhebungs-Bloecke: `blocks[0].title` erwartet ein i18n-Record (`record`), erhielt aber einen String; zusaetzlich `blocks[0].id` und `blocks[0].questions[0].id` `undefined`. D.h. die Template-/Block-Daten, die ein frischer direct_client-Mandant erhaelt, passen nicht zum aktuellen Block-Zod-Schema (Legacy-String-Titel statt i18n-Objekt, fehlende IDs).
+- Impact: Die zentrale GF-Aktion (Erhebung starten) bricht fuer betroffene Mandanten komplett ab. Zu klaeren: ob nur frische direct_client-Mandanten betroffen sind oder auch Bestand (Demo-Tenant hatte bereits Bloecke). Blockiert einen Founder-Selbsttest des Direkt-Strangs.
+- Workaround: keiner bekannt (Seite laedt nicht).
+- Next Action: Ursache eingrenzen — welches Template/welche Block-Quelle ein frischer direct_client bekommt und warum `title` ein String statt i18n-Record ist (Seed-Daten-Drift vs. Schema). Reproduktion mit frischem Tenant + Abgleich gegen einen funktionierenden Bestands-Tenant. Eigener Backend-Slice (nicht im Doku-Task gefixt).
