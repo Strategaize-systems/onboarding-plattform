@@ -10037,3 +10037,63 @@ Zuweisung erfolgt auf Kanzlei-/Direkt-Kunden-Tenant; Mandanten-Sicht per Cascade
 
 ## V.9 Empfohlener nächster Schritt
 `/slice-planning V10.4` — Vorschlag 3 Slices sequenziell auf `v10-4-rollenmodell-p2`: **SLC-188** FEAT-105 Foundation (MIG-132 + Helper + Gate + UserRole/role-check; MT-1 = DB-Sidecar-Spike `berater_assigned_tenant_ids` gegen Live-Cascade) → **SLC-189** FEAT-106 Admin Berater-Anlage+Zuweisung → **SLC-190** FEAT-107 Berater-Sicht (Layout-Gate + BeraterSidebar + gescopter Loader + Mein-Tag-Scope). Foundation zuerst (Rolle/RLS/Helper), UI zuletzt.
+
+---
+
+## V10.5 Architecture — Exit-Ready Devil's-Advocate-Report (Addendum 2026-07-09)
+
+> Addendum-Pattern (ARCHITECTURE.md > 10k Zeilen). Baseline: PRD §V10.5, Requirements RPT-622. DECs DEC-272..276. Alle Code-/Schema-Aussagen diese Session gegen Repo/Migrations gegroundet (Realitaets-Grounding-Gate); nicht ohne Live-DB verifizierbare Punkte als `UNVERIFIED` markiert.
+
+### W.1 Architecture summary
+Der Exit-/Devil's-Advocate-Report (FEAT-108) + seine Positionierung (FEAT-109) sind eine **dünne, deterministische Ausgabeschicht (0 LLM, 0 neue Migration)** auf der bereits deployten Diagnose-Engine. Kein Engine-/Schema-Neubau: gelesen werden ausschliesslich `block_diagnosis.content`, `block_checkpoint.quality_report`, `capture_session.{template_id,answers}` und `template.{blocks,diagnosis_schema}`. Gebaut als Spiegel des Fahrplan-Report-V9.75-Moduls (DEC-272) mit neuem Scorecard-Layout, einem render-time Owner-Dependence-Index (DEC-273) und fester Positionierungs-/Coverage-Copy.
+
+### W.2 Main components (neu unter `src/lib/pdf/exit-report/`, gespiegelt aus `fahrplan-report/`)
+| Komponente | Verantwortung | Reuse/Neu |
+|---|---|---|
+| `types.ts` | Report-Input-/Output-Typen (ExitReportInput, DimensionScore, OwnerDependenceIndex, BuyerFinding) | Neu, Muster aus fahrplan-report/types.ts |
+| `data.ts` (`loadExitReportInput`) | Supabase-Fetch: block_diagnosis + block_checkpoint (**reuse Fahrplan-Loader**) + **zusätzlich** capture_session (template_id, answers) + template (blocks, diagnosis_schema) via `getTemplateById` | Erweitert loadFahrplanInput |
+| `owner-dependence.ts` (`computeOwnerDependenceIndex`) | PURE: per-Dimension + Aggregat-Index aus template.owner_dependency-Flags × answers × Diagnose-Ampel/risiko (DEC-273) | **Neu (TDD-Kern)** |
+| `framing.ts` | PURE: Käufer-3-Spalten-Framing pro Finding (Käufer-Sicht / Buy-Side-DD / Abmilderung), **erweitert `exitCoupling()`**; reuse `prioritize()` | Erweitert fahrplan framing |
+| `positioning.ts` | Feste Copy: Spur-Definition + Makler-Disclaimer (FEAT-109) | Neu (Copy) |
+| `coverage.ts` | Ehrlichkeits-Sektion aus quality_report (missing_subtopics + required gap_questions) | Neu, Muster aus parseQualityReport |
+| `renderer.tsx` | react-pdf Scorecard-Layout (Dimensions-Zeilen + Owner-Dependence-Index-Hero + Findings + Positionierung + Coverage) | Neu, react-pdf-Pattern reuse |
+| `route.ts` (`/admin/debrief/[sessionId]/exit-report`) | GET → Loader → Index → Framing → react-pdf-Stream; Auth-Gate wie Fahrplan (DEC-276) | Neu, Route-Muster reuse |
+
+### W.3 Data model / storage direction
+**0 neue Migration (DEC-273/C bestätigt).** Nur Lesezugriff auf Bestandstabellen:
+- `capture_session` (MIG-021:27-37): `template_id` (FK→template), `template_version`, `answers` jsonb (MIG-030, Key `"${blockKey}.${questionId}"`→String).
+- `template` (MIG-021, MIG-051): `blocks` jsonb (`blocks[].questions[]` mit `frage_id`, `owner_dependency:boolean`), `diagnosis_schema` jsonb (`blocks[].subtopics[].question_keys[]` = Brücke frage_id→Subtopic, für Exit-Readiness geseedet MIG-051).
+- `block_diagnosis` (MIG-050): `content` jsonb = DiagnosisContent {block_key, block_title, subtopics[{key,name,fields}]}; fields = ist_situation/ampel/reifegrad/risiko/hebel/relevanz_90d/empfehlung/belege/owner(**leer im KI-Output**)/aufwand/naechster_schritt/abhaengigkeiten/zielbild.
+- `block_checkpoint.quality_report` = OrchestratorOutput {overall_score, coverage{covered_subtopics,missing_subtopics,coverage_ratio}, gap_questions[{question_text,context,subtopic,priority}], recommendation}.
+
+### W.4 Data / request flow
+1. GET `/admin/debrief/[sessionId]/exit-report` (Auth-Gate admin/berater, DEC-276).
+2. `loadExitReportInput(client, sessionId)`: lädt block_diagnosis + block_checkpoint (Fahrplan-Loader) **+** capture_session(template_id,answers) **+** template(blocks,diagnosis_schema).
+3. `computeOwnerDependenceIndex(...)` (pure): pro Block owner_dependency-Fragen → beantwortet? → via diagnosis_schema.question_keys verlinkte Subtopic-Ampel/risiko → Per-Dimension-Ampel (DEC-273-Regel) + Aggregat.
+4. Scorecard-Aggregation pro Dimension (Block-Ampel aus Subtopic-Ampeln, DEC-275).
+5. `buildBuyerFindings(...)` (pure): priorisierte Findings → 3-Spalten-Framing.
+6. `buildCoverageSection(...)`: nicht-bewertbare Bereiche.
+7. `renderer.tsx` → react-pdf-Stream (Positionierung/Spur/Disclaimer als feste Seiten).
+
+### W.5 External dependencies / integrations
+Keine. 0 LLM-Calls, keine neuen Provider, keine Cron/Jobs, kein Storage. EU-Data-Residency unberührt (kein externer Call). react-pdf ist Bestands-Dependency.
+
+### W.6 Security / privacy
+- Route erbt `/admin/debrief`-Auth-Gate (strategaize_admin + zugewiesener strategaize_berater; can_see_tenant V10.4).
+- Datenzugriff tenant-gescopt über Bestands-RLS (block_diagnosis MIG-050 admin_full/tenant_read; capture_session-Policies). Kein neuer createAdminClient-Pfad nötig, wenn die Route mit User-Client + RLS läuft — bevorzugt (kein RLS-Bypass). `UNVERIFIED`: falls der Report cross-tenant für Berater über service_role geladen wird, gilt die V10.4-Query-Layer-Filter-Pflicht (DEC-269) — in /slice-planning gegen den gewählten Client-Pfad entscheiden.
+- Keine PII-Exposition über das hinaus, was die Diagnose ohnehin enthält; kein Logging der answers.
+
+### W.7 Constraints & tradeoffs
+- **Deterministisch statt LLM:** niedrigere Sprach-Politur als augmentierte Prosa, dafür testbar + gegen Test-Daten kalibrierbar (R-V10.5-1). LLM-Augment (DEC-174-Muster) bewusst deferred.
+- **owner-Feld unbrauchbar:** Index stützt sich auf template-Flags + answers + Diagnose-Ampel, NICHT auf `block_diagnosis.owner` (leer by design).
+- **Reuse vor Eleganz:** exit-report spiegelt fahrplan-report (Duplikation von Loader-/Parse-Mustern) statt gemeinsamer Abstraktion — bewusst, hält den deployten Fahrplan-Report unberührt (Surgical). Falls später eine dritte Report-Variante kommt, gemeinsame Basis extrahieren.
+- **Block- statt Subtopic-Scorecard** (DEC-275): Käufer-Kommunikation vor Granularität.
+
+### W.8 Open technical questions (Rest → /slice-planning)
+- Q-V10.5-G: exakte Aggregat-Index-Gewichtung (0–10 vs 0–100 vs Band) + Block-Ampel-Aggregationsregel (worst-case vs Mehrheit) — deterministisch, TDD in /slice-planning.
+- Q-V10.5-H (`UNVERIFIED`): ist `diagnosis_schema.question_keys` für das/die in Test-Sessions genutzte(n) Template(s) live befüllt? MIG-051 seedt es für Exit-Readiness; bei anderem Template greift der Block-Granularitäts-Fallback (DEC-273). In /slice-planning Grounding-Gate gegen die reale Test-Session prüfen.
+- Q-V10.5-I: Client-Pfad der Route (User-Client+RLS bevorzugt vs service_role+Filter) — s. W.6.
+- Q-V10.5-J: Existiert eine Test-capture_session mit befüllten block_diagnosis-Daten + owner_dependency-Antworten zum Bauen/Verifizieren (A-V10.5-1)? Sonst synthetische Design-Referenz-Session anlegen.
+
+### W.9 Recommended implementation direction / next step
+`/slice-planning V10.5` — Vorschlag **2 Slices sequenziell** (deterministisch, ein Report): **SLC-191** FEAT-108 Report-Kern (data.ts-Loader-Erweiterung + `owner-dependence.ts` TDD + framing.ts Käufer-Erweiterung + Scorecard-Renderer + GET-Route; MT-0 = Grounding-Spike Q-V10.5-H/J gegen reale Test-Session) → **SLC-192** FEAT-109 Positionierung (positioning.ts Spur/Disclaimer + coverage.ts Ehrlichkeits-Sektion + Renderer-Einbettung + Tonality-/Wording-Review). Index-/Framing-Logik ist der TDD-Kern (SaaS-Mode). /qa nach jedem Slice.
