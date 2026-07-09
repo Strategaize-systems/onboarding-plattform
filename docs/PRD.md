@@ -3131,3 +3131,60 @@ Maximal 1 neue Tabelle (Zuweisung) — sonst additive Migration (CHECK/Function/
 - Q-V10.4-B: Zuweisungs-Granularität — nur auf Kanzlei-/Direkt-Kunden-Tenant (Mandanten via Cascade `parent_partner_tenant_id`) ODER auch direkt einzelne Mandanten zuweisbar? Empfehlung: Kanzlei-Ebene + Cascade.
 - Q-V10.4-C: Exaktes /admin-Routen-Set für den Berater in P2 (nur Mein Tag + Tenants-Drilldown, oder auch Reviews/Debrief seiner Kunden?) — Voll-Entmischung ist P5; P2 baut das Minimum.
 - Q-V10.4-D: `can_see_tenant`-Helper als SQL-Function (RLS-nutzbar) vs. reine Query-Layer-Filterung — Helper bevorzugt (in RLS UND Loader nutzbar).
+
+## V10.5 — Exit-Ready Produkt 1: Devil's-Advocate-/Übertragbarkeits-Report in Käufer-Sprache (BL-515 + BL-517)
+
+### V10.5 Problem & Ziel
+Produkt 1 (Exit-Ready) hat eine deployte Diagnose-Engine, aber ihr Output ist **operativ** formuliert („hier stehst du / das ist der nächste Schritt"). Für den Verkaufs-/Nachfolge-Kontext fehlt die **Übersetzung in Käufer-/Deal-Sprache**: der Unternehmer soll VOR dem Verkauf sehen, was ein Käufer + dessen Berater-Armada (Buy-Side-DD) an seiner Firma abziehen oder als Deal-Risiko markieren würde — und wie er es davor abmildert. Ziel V10.5: ein **Exit-/Devil's-Advocate-Report** als dünne, deterministische Ausgabeschicht auf der vorhandenen Engine (höchster Hebel der letzten ~15 % laut `STRATEGAIZE_PRODUKT_STRATEGIE_REIFEGRAD_2026-06-21`, B.1/B.4), mit klar definierter Spur + Makler-Disclaimer + Ehrlichkeits-Sektion, damit das Produkt haftungssicher und glaubwürdig positioniert ist. Scope-Herkunft: /discovery RPT-621 (Founder-Cluster-Wahl Exit-Ready vor OP-Design-System).
+
+### V10.5 Ist-Stand & Reuse-Inventar (Pflicht-Gate 1)
+- **Engine/Daten (bestätigt, file:line):** `block_diagnosis` (`sql/migrations/050_block_diagnosis.sql`; `content` jsonb = DiagnosisContent, Subtopics mit Feldern **ampel** (green|yellow|red), **reifegrad** 0–10, **risiko** 0–10 (DD-Risiko), **hebel** 0–10 (Wert-Hebel), **relevanz_90d** (high|med|low), **empfehlung**, **aufwand** (S|M|L), **owner** (häufig leer), **naechster_schritt**) · Coverage/Lücken aus `block_checkpoint.quality_report` (OrchestratorOutput: `coverage.missing_subtopics` + `gap_questions[]` mit priority required|nice_to_have) · `knowledge_unit` (Findings/Risks/Actions + Provenance).
+- **Report-Reuse-Basis (bestätigt):** **Fahrplan-Report V9.75** (`src/lib/pdf/fahrplan-report/{types.ts,framing.ts,data.ts,renderer.tsx}`) liest exakt diese Daten, **0 LLM / 0 Migration** (DEC-222). Direkt wiederverwendbar: `data.ts`-Loader (block_diagnosis + quality_report → normalisierte Todos, defensiv nullable R-B-1), `framing.ts` (`exitCoupling()` koppelt risiko/hebel/relevanz→Verkaufs-Satz; `prioritize()` required→risiko*hebel→relevanz; `scopeEstimate()`; `SCOPE_SENTENCE`), Trigger-Route-Muster `src/app/admin/debrief/[sessionId]/fahrplan-report/route.ts` (GET per capture_session).
+- **Ampel + Flag-Aggregation (bestätigt):** Ampel-UI `src/components/workspace/reports/Ampel.tsx` (green|yellow|red) + SUI-Ampel `src/lib/diagnose/types.ts`. **Deterministische Ampel-aus-Flags existiert bereits:** `src/lib/stb-vertikale/module-delivery/reife-ampel.ts` aggregiert die fünf Frage-Flags (owner_dependency/deal_blocker/sop_trigger/ko_hart/ko_soft) → green|yellow|red (DEC-253/C) — Muster für den Owner-Dependence-Index nutzbar (anderer Datenpfad, s. Q-V10.5-B).
+- **owner_dependency-Realität (Feasibility-Kern):** existiert NUR als **Frage-Meta-Flag** im Template (`sql/migrations/029_seed_exit_readiness_template.sql` `template.blocks[].questions[].owner_dependency:boolean`; Schema `src/lib/db/template-queries.ts` TemplateQuestionSchema) — **NICHT** als berechneter Score in `block_diagnosis`. Ein prominenter **Owner-Dependence-Index** ist daher der einzige echte Neubau-Baustein (Aggregation, s. Q-V10.5-B).
+- **react-pdf** = Strategaize-Standard-Renderer (Fahrplan + mandanten-report-v2 nutzen es) → Reuse.
+- **Cross-Repo (Pflicht-Gate 1, geprüft):** kein Exit-/Käufer-/Übergabe-Report in `strategaize-business-system` oder `immoscheckheft` (Grep exit-readiness/uebergabe/kaeufer/devils-advocate/owner-depend → 0 Treffer; BS hat kein `src/lib/pdf`). Reuse ist **intra-OP** (Fahrplan-Plumbing + reife-ampel-Muster + react-pdf). Kein Sibling-Port verfügbar.
+- **Delta-Klassifikation:** Re-Skin/Reuse (Loader, framing-Kopplung, prioritize, Ampel-UI, react-pdf, GET-Route) + Neubau (Owner-Dependence-Index-Aggregation, Käufer-3-Spalten-Framing-Templates, Scorecard-Seiten-Layout pro Dimension, Ehrlichkeits-/Coverage-Sektion, Spur-/Disclaimer-Copy).
+
+### V10.5 In Scope (2 Features)
+- **FEAT-108 — Exit-/Devil's-Advocate-Report (Käufer-Report, BL-515):** neuer deterministischer Report auf Fahrplan-Plumbing mit (a) **Übergabe-Ampel-Scorecard** rot/gelb/grün **pro Dimension** (Diagnose-Block), (b) **Owner-Dependence-Index** prominent (aggregierte Kennzahl + Ampel, Berechnung Q-V10.5-B), (c) **pro Finding drei Spalten** „so sieht das ein Käufer" / „hier setzt die Buy-Side-DD an" / „so mildern Sie es vor dem Verkauf ab" — deterministisch aus block_diagnosis-Feldern (Erweiterung des `exitCoupling`-Musters in Käufer-Framing), Priorisierung via `prioritize()`. 0 LLM (DEC-222-Linie), react-pdf, GET-Route per capture_session.
+- **FEAT-109 — Devil's-Advocate-Positionierung im Report (BL-517):** feste Report-Rahmen-Copy + Sektionen: (a) **Spur-Definition** (wir = operative Substanz/strukturelle Übertragbarkeit/Owner-Dependence/dokumentiertes Wissen; ausdrücklich NICHT Finanz-/Steuer-/Rechts-DD = Prüfer/Anwalt-Spur), (b) **Makler-Disclaimer** („basiert auf Angaben des Eigentümers"), (c) **Ehrlichkeits-/Coverage-Sektion** — was mangels Input NICHT bewertbar war, sichtbar aus `quality_report` (`missing_subtopics` + required gap_questions). Positionierung/Copy + Coverage-Renderer, kein Engine-Build. Beide Features liefern EINEN Report.
+
+### V10.5 Out of Scope
+- **BL-516** (KI-/Zukunftsfähigkeit ins Exit-Framing umdeuten) → eigener Slot **V10.6**, nur wenn der Pitch auf KI-Readiness führt.
+- **BL-518** (6-Monats-Re-Assessment-Upsell, Delta-Snapshot) → geparkt, eigener Verkaufsanlass/eigene Version.
+- **LLM-augmentierte Käufer-Prosa** (DEC-174-Muster `augmentEmpfehlungsText`) → deferred, späterer config-gateter Toggle (Default aus, deterministischer Fallback bleibt).
+- **Legal-/AGB-/Disclaimer-/Berufshaftungs-Review** (Anwalt, pro Land) → Folge-Gate VOR Customer-Live, NICHT in diesem Build (BL-517-Legal / BL-104, [[module-lifecycle-discipline]]).
+- Kein Billing, kein Customer-Outreach, kein neuer externer Provider-Call.
+
+### V10.5 Constraints
+- **Deterministisch in V1** (0 LLM-Calls im Report-Pfad; alle Narrative aus vorhandenen Diagnose-Feldern) → keine neuen ai_jobs/Cost-Ledger-Einträge, EU-Data-Residency unberührt (keine externen Calls).
+- **Reuse-first:** Fahrplan-Plumbing + reife-ampel-Muster + react-pdf mit Quell-Pfad-Header-Kommentar (`strategaize-pattern-reuse.md`); nicht neu bauen, was existiert.
+- **Migrations-Minimierung:** Ziel 0 neue Migration (Index render-time aus vorhandenen Tabellen, wie Fahrplan) — falls Index-Persistenz oder ein Template-Owner-Dependency-Zugriffspfad eine additive Migration braucht, als DEC + MIG in /architecture einplanen (Q-V10.5-B/C).
+- **SaaS-Delivery-Mode → TDD Pflicht** für die deterministische Business-Logik (Owner-Dependence-Index-Aggregation, Käufer-Framing-Templates, Sortier-/Band-Logik); PDF-/Layout-Schicht = visuelles Review + Smoke.
+- **RLS/Tenant-Scope:** Report liest nur block_diagnosis/quality_report des eigenen Tenants (bestehende Policies MIG-050); neue Route erbt Auth-Gate der Fahrplan-Route.
+- Internal-Test-Mode; Kalibrierung des Framings gegen **Test-Daten** (kein Warten auf echten Fall — Founder-Entscheid RPT-621).
+
+### V10.5 Risiken / Annahmen
+- **R-V10.5-1 (Kalibrierung):** Käufer-Framing wird gegen synthetische/Test-Diagnose-Daten gebaut; die Strategie-Quelle empfiehlt Eichung am echten Fall (Z. 142/147). Akzeptiert (Founder RPT-621) → deterministische Text-Templates so bauen, dass spätere Nachschärfung am realen Fall billig bleibt; als bekannte Limitierung führen.
+- **R-V10.5-2 (Owner-Dependence-Index-Datenpfad):** `owner_dependency` ist Frage-Meta, `block_diagnosis.owner` ist häufig leer → der Index kann sich nicht allein auf `subtopic.owner` stützen. Datenpfad + Formel sind in /architecture zu fixieren (Q-V10.5-B), sonst wird der prominenteste Report-Wert unzuverlässig.
+- **R-V10.5-3 (Dimensions-Granularität):** Annahme „Dimension = Diagnose-Block" für die Scorecard-Ampel — gegen echte block_diagnosis-Struktur verifizieren (evtl. Subtopic-Rollup nötig).
+- **R-V10.5-4 (Coverage-Vollständigkeit):** die Ehrlichkeits-Sektion ist nur so gut wie `quality_report.coverage` — bei Sessions ohne befüllten quality_report defensiv „nicht bewertbar" ausweisen, nicht leer/irreführend.
+- **A-V10.5-1:** Es existiert mindestens eine Test-capture_session mit befüllten block_diagnosis-Daten zum Bauen/Verifizieren; falls nicht, wird eine synthetische Session als Design-Referenz benötigt (Design-Time, nicht Prod).
+
+### V10.5 Success Criteria
+- **SC-V10.5-1:** Für eine capture_session mit vorhandenen block_diagnosis-Daten rendert der Report deterministisch (gleiche Daten → gleicher Output; 0 LLM-Calls, im Test verifiziert).
+- **SC-V10.5-2:** Übergabe-Ampel-Scorecard zeigt rot/gelb/grün pro Dimension; Ableitung deterministisch + unit-getestet.
+- **SC-V10.5-3:** Owner-Dependence-Index wird berechnet, prominent dargestellt und ist unit-getestet (Formel + Datenpfad aus Q-V10.5-B); definierter Fallback bei fehlenden Flags/leerem owner.
+- **SC-V10.5-4:** Jedes priorisierte Finding zeigt die drei Käufer-Spalten (Käufer-Sicht / Buy-Side-DD / Abmilderung), deterministisch aus den Diagnose-Feldern.
+- **SC-V10.5-5:** Ehrlichkeits-/Coverage-Sektion listet die nicht bewertbaren Bereiche (aus quality_report); bei fehlendem Report defensiv gekennzeichnet.
+- **SC-V10.5-6:** Spur-Definition + Makler-Disclaimer sind als feste Copy im Report enthalten (Wording-Review, Tonality-Audit falls vorhanden).
+- **SC-V10.5-7:** tsc 0 / eslint 0 / next build PASS / Full-Vitest 0 Regression + neue Unit-Tests (Index + Framing) grün; RLS-Tenant-Scope der neuen Route verifiziert.
+
+### V10.5 Offene Fragen (→ /architecture, Reuse-vs-Neu-DEC-Kandidaten)
+- **Q-V10.5-A (DEC-Kandidat, Reuse):** Report auf Fahrplan-Report-Plumbing (Loader/framing/prioritize/react-pdf/GET-Route 1:1 erweitern) — bestätigen als kanonische Basis; neuer Scorecard-Renderer statt To-Do-Listen-Layout. Empfehlung: ja (Reuse-first).
+- **Q-V10.5-B (DEC-Kandidat, Neubau — kritisch):** Owner-Dependence-Index — Datenpfad + Formel. Optionen: (i) Aggregation der `owner_dependency`-Frage-Flags des Templates + deren Antwort-Signale, (ii) Ableitung aus block_diagnosis-Feldern (owner=GF/Inhaber × risiko/reifegrad), (iii) Hybrid; plus reife-ampel-Muster (DEC-253/C) als Ampel-Regel. Braucht ggf. additive Migration/RPC für Template-Flag-Zugriff (MIG-Kandidat). Kern-Architektur-Entscheid.
+- **Q-V10.5-C (DEC-Kandidat):** 0-Migration-Ziel haltbar? (Index render-time vs. Persistenz einer report-/index-Row). Empfehlung: render-time wie Fahrplan, wenn Template-Flag-Zugriff ohne Schema-Änderung möglich.
+- **Q-V10.5-D:** Output-Format V1 — PDF-only (wie Fahrplan-GET-Route) vs. Web-View + PDF (wie mandanten-report-v2). Empfehlung: PDF-first (kleinster Weg, Reuse), Web-View später.
+- **Q-V10.5-E:** Dimensions-Definition für die Scorecard (Diagnose-Block-Ebene vs. Subtopic-Rollup) — gegen echte block_diagnosis-Struktur entscheiden (R-V10.5-3).
+- **Q-V10.5-F:** Zugriffs-/Rollen-Scope der neuen Route (nur strategaize_admin/berater wie Debrief, oder auch tenant_admin für die eigene Firma?) — Fahrplan-Route liegt unter /admin/debrief; Exit-Report-Zielnutzer klären.

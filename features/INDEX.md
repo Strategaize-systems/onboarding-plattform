@@ -318,3 +318,12 @@ V10.4-Scope (Requirements 2026-07-07, RPT-602): Rollenmodell V2 Paket P2 — neu
 | FEAT-105 | strategaize_berater Rolle + Tenant-Zuweisung + can_see_tenant-RLS (Foundation): MIG-132 role-CHECK 4→5, handle_new_user cross-tenant-Zweig, Zuweisungs-Persistenz, can_see_tenant-Helper, additive Berater-RLS-Zweige, UserRole+role-check+assertStrategaizeBerater | deployed | PRD §V10.4 | 2026-07-07 |
 | FEAT-106 | Admin: Berater anlegen + Tenants zuweisen (Invite-Port ohne tenant_id + Zuweisungs-UI/RPC, nur strategaize_admin) | deployed | PRD §V10.4 | 2026-07-07 |
 | FEAT-107 | Berater-Sicht: /admin-Layout-Gate + BeraterSidebar (gefiltert) + Cross-Tenant-Loader auf zugewiesene Tenants gescopt + Mein-Tag can_see_tenant-Scope | deployed | PRD §V10.4 | 2026-07-07 |
+
+## V10.5 — Exit-Ready Produkt 1: Devil's-Advocate-Report in Käufer-Sprache Features
+
+V10.5-Scope (Requirements 2026-07-09, RPT-621-Discovery): dünne deterministische Ausgabeschicht auf der vorhandenen Diagnose-Engine — Exit-/Käufer-Report (BL-515) + Devil's-Advocate-Positionierung (BL-517). Reuse Fahrplan-Report-V9.75-Plumbing (Loader/framing/prioritize/react-pdf/GET-Route) + reife-ampel-Muster; einziger echter Neubau = Owner-Dependence-Index-Aggregation (owner_dependency existiert heute nur als Frage-Meta-Flag). BL-516 (V10.6) + BL-518 + LLM-Augment + Legal-Gate out-of-scope. Spec-Detail PRD §V10.5.
+
+| ID | Feature | Status | Spec | Created |
+|----|---------|--------|------|---------|
+| FEAT-108 | Exit-/Devil's-Advocate-Report (Käufer-Report): Übergabe-Ampel-Scorecard pro Dimension + Owner-Dependence-Index prominent + pro Finding Käufer-Sicht/Buy-Side-DD/Abmilderung (deterministisch, react-pdf, GET-Route, 0 LLM) | planned | PRD §V10.5 | 2026-07-09 |
+| FEAT-109 | Devil's-Advocate-Positionierung im Report: Spur-Definition (operative Substanz, NICHT Finanz-/Recht-DD) + Makler-Disclaimer + Ehrlichkeits-/Coverage-Sektion (aus quality_report) | planned | PRD §V10.5 | 2026-07-09 |
