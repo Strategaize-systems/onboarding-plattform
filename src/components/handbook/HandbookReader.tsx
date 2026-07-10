@@ -15,8 +15,11 @@
 // rehype-raw: Worker-Markdown enthaelt Inline-HTML wie <a id="block-A"></a>
 // als Anchor-Targets (siehe sections.ts:263). Ohne rehype-raw rendert
 // react-markdown das als Text. Reihenfolge: remarkGfm → rehypeRaw →
-// rehypeSlug → rehypeAutolinkHeadings → highlight (zuletzt, weil es Text-Nodes
-// splittet und die anderen Plugins bereits durch sind).
+// rehypeSanitize → rehypeSlug → rehypeAutolinkHeadings → highlight (zuletzt,
+// weil es Text-Nodes splittet und die anderen Plugins bereits durch sind).
+// SLC-194 MT-1: rehypeSanitize (handbookSanitizeSchema) sitzt direkt NACH
+// rehypeRaw — es bereinigt das von rehypeRaw geparste tenant-HTML (script/
+// iframe/srcdoc/on*), bevor slug/autolink/highlight es weiterverarbeiten.
 //
 // Block-Key-Mapping kommt aus loadSnapshotContent (templates.handbook_schema).
 // Sections ohne eindeutigen Block-Key zeigen keinen Cross-Link.
@@ -26,11 +29,13 @@ import type { ComponentPropsWithoutRef, MouseEvent } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
+import rehypeSanitize from "rehype-sanitize";
 import rehypeSlug from "rehype-slug";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import { Pencil } from "lucide-react";
 
 import type { SectionFile } from "@/lib/handbook/load-snapshot-content";
+import { handbookSanitizeSchema } from "@/lib/handbook/sanitize-schema";
 import { highlightRehypePlugin } from "@/lib/handbook/highlight-rehype-plugin";
 import { CopyPermalinkButton } from "./copy-permalink-button";
 
@@ -248,6 +253,7 @@ export function HandbookReader({
               remarkPlugins={[remarkGfm]}
               rehypePlugins={[
                 rehypeRaw,
+                [rehypeSanitize, handbookSanitizeSchema],
                 rehypeSlug,
                 [rehypeAutolinkHeadings, AUTOLINK_OPTIONS],
                 highlightRehypePlugin({
@@ -318,6 +324,7 @@ export function HandbookReader({
                   remarkPlugins={[remarkGfm]}
                   rehypePlugins={[
                     rehypeRaw,
+                    [rehypeSanitize, handbookSanitizeSchema],
                     rehypeSlug,
                     [rehypeAutolinkHeadings, AUTOLINK_OPTIONS],
                     highlightRehypePlugin({
