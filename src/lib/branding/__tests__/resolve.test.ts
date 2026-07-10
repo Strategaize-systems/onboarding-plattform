@@ -203,4 +203,43 @@ describe("resolveBrandingForTenant", () => {
     expect(r1).toEqual(r2);
     expect(r1.displayName).toBe("Kanzlei Mueller");
   });
+
+  // SLC-194 MT-4 (ISSUE-130) — Render-Zeit-Re-Validierung der Farbwerte.
+  // primary/secondary werden im Root-Layout in ein inline <style> gegossen;
+  // ein Nicht-HEX-Wert waere eine CSS-Injection. Bei Invalid → Fallback.
+  it("Case 9: CSS-Injection-Farbwert faellt auf Default-Primary + null-Secondary", async () => {
+    const supabase = mockClient({
+      data: {
+        logo_url: null,
+        primary_color: "red; } body { background: url(javascript:alert(1)) }",
+        secondary_color: "not-a-hex",
+        display_name: null,
+      },
+      error: null,
+    });
+
+    const result = await resolveBrandingForTenant(supabase, "evil-tenant-id");
+
+    expect(result.primaryColor).toBe(STRATEGAIZE_DEFAULT_BRANDING.primaryColor);
+    expect(result.primaryColorRgb).toBe(
+      STRATEGAIZE_DEFAULT_BRANDING.primaryColorRgb,
+    );
+    expect(result.secondaryColor).toBeNull();
+  });
+
+  it("Case 10: fehlendes primary_color faellt auf Default-Primary", async () => {
+    const supabase = mockClient({
+      data: {
+        logo_url: null,
+        primary_color: null,
+        secondary_color: null,
+        display_name: null,
+      },
+      error: null,
+    });
+
+    const result = await resolveBrandingForTenant(supabase, "empty-color-tenant");
+
+    expect(result.primaryColor).toBe(STRATEGAIZE_DEFAULT_BRANDING.primaryColor);
+  });
 });

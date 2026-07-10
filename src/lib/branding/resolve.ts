@@ -27,6 +27,27 @@ export const STRATEGAIZE_DEFAULT_BRANDING: BrandingConfig = {
 
 const HEX_RE = /^#([0-9a-fA-F]{6})$/;
 
+// SLC-194 MT-4 (V20, ISSUE-130) — Render-Zeit-Re-Validierung der Farbwerte.
+// Write-Zeit prueft actions.ts (HEX_REGEX), aber ein direkt in die DB geschriebener
+// oder Alt-Wert koennte ungueltig sein. resolve.ts giesst primaryColor/secondaryColor
+// im Root-Layout in ein inline <style> (:root { --brand-primary: ... }) — ein
+// Nicht-HEX-Wert waere eine CSS-Injection. Defense-in-Depth: bei Invalid → Fallback.
+function sanitizeHexColor(
+  value: string | null | undefined,
+  fallback: string,
+): string;
+function sanitizeHexColor(
+  value: string | null | undefined,
+  fallback: null,
+): string | null;
+function sanitizeHexColor(
+  value: string | null | undefined,
+  fallback: string | null,
+): string | null {
+  if (typeof value === "string" && HEX_RE.test(value)) return value;
+  return fallback;
+}
+
 export function hexToRgbTriplet(hex: string): string {
   const m = HEX_RE.exec(hex);
   if (!m) return STRATEGAIZE_DEFAULT_BRANDING.primaryColorRgb;
@@ -63,7 +84,13 @@ export const resolveBrandingForTenant = cache(async (
     }
 
     const payload = data as BrandingRpcPayload;
-    const primaryColor = payload.primary_color ?? STRATEGAIZE_DEFAULT_BRANDING.primaryColor;
+    // SLC-194 MT-4 (ISSUE-130): Farbwerte render-zeit gegen HEX_RE pruefen,
+    // bevor sie ins inline <style> des Root-Layouts gelangen.
+    const primaryColor = sanitizeHexColor(
+      payload.primary_color,
+      STRATEGAIZE_DEFAULT_BRANDING.primaryColor,
+    );
+    const secondaryColor = sanitizeHexColor(payload.secondary_color, null);
     const logoStoragePath = payload.logo_url ?? null;
 
     return {
@@ -72,7 +99,7 @@ export const resolveBrandingForTenant = cache(async (
         : null,
       primaryColor,
       primaryColorRgb: hexToRgbTriplet(primaryColor),
-      secondaryColor: payload.secondary_color ?? null,
+      secondaryColor,
       displayName: payload.display_name ?? null,
     };
   } catch {
