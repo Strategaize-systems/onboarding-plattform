@@ -36,6 +36,7 @@
 - Summary: GET /api/capture/[sessionId]/evidence/list:18-53 prueft nur `user` existiert, dann evidence_file + capture_events(document_analysis) via createAdminClient (BYPASSRLS) NUR nach URL-sessionId gefiltert — kein profile.tenant_id-Load, kein session-Ownership-Check. Sibling upload/route.ts:40-78 + download/route.ts:29-33 haben den Guard; list ist der Ausreisser.
 - Impact: Jeder authentifizierte Tenant-A-User liest bei Kenntnis einer Tenant-B-sessionId (UUID) fremde original_filename/mime/size/extraction_error + die volle document_analysis-LLM-Payload (extrahierte Dokument-Inhalte). Tenant-Isolation-Bruch → bleibt High auch bei 0 Opfern heute. Nicht-enumerierbare sessionId (UUID) senkt praktischen Blast, fixt aber nicht die Authz-Luecke.
 - Next Action: Upload-Route spiegeln (profile.tenant_id/role + session.tenant_id via admin laden, reject ausser strategaize_admin || match) ODER RLS-scoped createClient statt admin. Quelle: RPT-633.
+- Update 2026-07-10 (SLC-193 → V20 /code-review RPT-646): code-addressed via **RLS-Gate** — beide Routen (list + download) gaten den Zugriff jetzt ueber den user-scoped Client (`supabase.from('capture_session').select('id').eq(id).maybeSingle()`, RLS entscheidet), admin-Client erst NACH dem Gate. Bewusst KEIN starrer tenant_id-Vergleich (der droppte den legitimen partner-admin-via-mapping/berater-Read; Founder-Entscheid 2026-07-10). Bleibt `open` bis Live-Verify @ /deploy: (a) fremder-Tenant → 404, (b) partner-admin/berater eines gemappten Client-Tenants → 200. Tests: list/route.test.ts + download/route.test.ts (RLS-Gate-Faelle).
 
 ### ISSUE-125 — capture_session.tier Self-Promotion via direktem INSERT — DEC-219 Tier-Guard deckt nur UPDATE (bypasses recent fix)
 - Status: open
@@ -106,6 +107,22 @@
 - Summary: src/lib/logger.ts:22 schreibt entry.message/stack/metadata verbatim in error_log + console + sendErrorNotification-Email; keinerlei redactSecrets/Key-Scrub/Regex-Scrub (P-092 nicht portiert). error_log-SELECT ist strategaize_admin-RLS-gated + admin/errors-Route requireAdmin → Sinks trust-boundary-intern. Latent: aktuelle Call-Sites uebergeben IDs, imap-sync setzt logger:false.
 - Impact: Ein zukuenftiger Caller/Third-Party-Exception mit interpoliertem Secret (service-role-URL, eyJ-JWT, bearer) landet unredacted in admin-scoped Sinks. DEC-219 logger-redaction-Klasse. Low.
 - Next Action: redact()-Pass in logToDb/captureException + Email-Pfad (logger.ts:60-69): (a) Key-Redaction metadata-Keys /secret|token|key|password|authorization|cookie/i + (b) Regex-Scrub message/stack fuer eyJ-JWTs, bearer-Tokens, URL-embedded-Creds. Quelle: RPT-633.
+
+### ISSUE-133 — recording-ready Path-Guard folgt Symlinks innerhalb JIBRI_RECORDINGS_DIR (kein realpath-Recheck)
+- Status: open
+- Severity: Low
+- Area: Webhook / Path-Traversal (latent, middleware-unerreichbar)
+- Summary: src/app/api/dialogue/recording-ready/route.ts validiert `body.file_path` lexikalisch (`path.resolve` + `startsWith(base+sep)` + `.mp4` + `..`-Reject). Ein Symlink INNERHALB des Recordings-Verzeichnisses (z.B. `x.mp4` -> `/etc/secret.mp4`) besteht alle Checks, weil `resolve()` Symlink-Ziele nicht kanonisiert; `readFile` folgt ihm. Von V20 /code-review (RPT-646) gefunden; ISSUE-123-Resolution nannte einen `realpath`-Recheck, der im implementierten Guard fehlt → nur teilweise geschlossen.
+- Impact: Nur ausnutzbar, wenn ein Angreifer im Jibri-Volume einen Symlink platzieren kann UND die Route erreichbar ist — heute middleware-unerreichbar (ISSUE-123). Latent, Low.
+- Next Action: Vor jeder Re-Aktivierung der Route: `fs.realpath(resolvedPath)` + erneuter `startsWith(base+sep)`-Check nach der Kanonisierung (oder `O_NOFOLLOW`-Open). Quelle: RPT-646.
+
+### ISSUE-134 — profiles_role_change_guard erlaubt pauschal current_user='postgres' (SECURITY-DEFINER-Umgehung)
+- Status: open
+- Severity: Low
+- Area: RLS / Column-Guard (latent, Defense-in-Depth)
+- Summary: MIG-133 `profiles_role_change_guard` (BEFORE INSERT OR UPDATE) laesst jeden Statement mit `current_user='postgres'` durch (noetig fuer handle_new_user, SECURITY DEFINER owner=postgres). Der Allow ist pauschal: eine kuenftige SECURITY-DEFINER-Function (owner postgres), die `profiles.role`/`tenant_id` schreibt, laeuft als `postgres` und umgeht den Guard vollstaendig — der Guard prueft `current_user`, das unter dem Definer `postgres` ist, nicht den Invoker. Von V20 /code-review (RPT-646) gefunden.
+- Impact: Kein solcher Definer-Pfad existiert heute (grep-verifiziert) → latent. Der „Defense-in-Depth"-Anspruch ueberzeichnet die Deckung: der Guard stoppt nur den (bereits nicht existierenden) direkten authenticated-PostgREST-Write. Low.
+- Next Action: Bei Einfuehrung einer profiles-schreibenden Definer-Fn: Guard auf `session_user`/explizite Rollen-Whitelist umstellen statt `current_user='postgres'`, ODER die Definer-Fn selbst role-Aenderungen verbieten lassen. Quelle: RPT-646.
 
 ### ISSUE-120 — Debrief-Read-Pfad liest Answers per frage_id, Capture-Write schreibt per q.id (pre-existing V9.75-Mismatch)
 - Status: open
