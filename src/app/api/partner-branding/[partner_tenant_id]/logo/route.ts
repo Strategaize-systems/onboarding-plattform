@@ -29,9 +29,11 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+// SLC-194 MT-2 (ISSUE-122): svg entfernt — kein SVG mehr im Upload (actions.ts),
+// und ein evtl. aus der Vergangenheit persistiertes svg wird NICHT mehr als
+// image/svg+xml ausgeliefert (faellt auf application/octet-stream + nosniff).
 const MIME_BY_EXT: Record<string, string> = {
   png: "image/png",
-  svg: "image/svg+xml",
   jpg: "image/jpeg",
   jpeg: "image/jpeg",
 };
@@ -121,6 +123,9 @@ export async function GET(
       "Content-Type": mime,
       "Content-Length": String(arrayBuffer.byteLength),
       "Cache-Control": "public, max-age=3600",
+      // SLC-194 MT-2 (ISSUE-122): Browser darf den Content-Type nicht per
+      // Sniffing ueberschreiben (kein "als HTML/SVG interpretieren").
+      "X-Content-Type-Options": "nosniff",
     },
   });
 }

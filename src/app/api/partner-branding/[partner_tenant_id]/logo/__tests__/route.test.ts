@@ -160,12 +160,17 @@ describe("GET /api/partner-branding/[partner_tenant_id]/logo", () => {
     expect(res.headers.get("Content-Type")).toBe("image/png");
     expect(res.headers.get("Content-Length")).toBe("2048");
     expect(res.headers.get("Cache-Control")).toBe("public, max-age=3600");
+    // SLC-194 MT-2 (ISSUE-122): nosniff auf jeder Logo-Response.
+    expect(res.headers.get("X-Content-Type-Options")).toBe("nosniff");
 
     const buf = await res.arrayBuffer();
     expect(buf.byteLength).toBe(2048);
   });
 
-  it("200 Happy Path SVG: Content-Type=image/svg+xml", async () => {
+  it("200 Legacy-SVG: wird NICHT mehr als image/svg+xml serviert (SLC-194 MT-2, ISSUE-122)", async () => {
+    // svg ist aus MIME_BY_EXT entfernt → ein evtl. aus der Vergangenheit
+    // persistiertes .svg-Logo faellt auf application/octet-stream + nosniff,
+    // damit der Browser es nicht als aktives SVG interpretiert.
     rpcMock.mockResolvedValue({
       data: {
         logo_url: "tenant-abc/logo.svg",
@@ -182,7 +187,9 @@ describe("GET /api/partner-branding/[partner_tenant_id]/logo", () => {
       params: Promise.resolve({ partner_tenant_id: PARTNER_TENANT_ID }),
     });
     expect(res.status).toBe(200);
-    expect(res.headers.get("Content-Type")).toBe("image/svg+xml");
+    expect(res.headers.get("Content-Type")).toBe("application/octet-stream");
+    expect(res.headers.get("Content-Type")).not.toBe("image/svg+xml");
+    expect(res.headers.get("X-Content-Type-Options")).toBe("nosniff");
   });
 
   it("200 Happy Path JPEG (.jpg): Content-Type=image/jpeg", async () => {
