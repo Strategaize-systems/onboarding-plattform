@@ -191,10 +191,11 @@ export async function POST(request: NextRequest) {
 
   // ── Schritt 6 — Slug → partner_tenant_id ───────────────────────────────
   const admin = createAdminClient();
+  // SLC-195 MT-5 (ISSUE-128): .eq(lowercase) statt .ilike (Wildcard-Injection).
   const { data: partnerRow, error: partnerErr } = await admin
     .from("partner_organization")
     .select("tenant_id, display_name, contact_email")
-    .ilike("slug", body.partner_slug)
+    .eq("slug", body.partner_slug.toLowerCase())
     .maybeSingle();
 
   if (partnerErr) {

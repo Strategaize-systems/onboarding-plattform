@@ -2,6 +2,7 @@
 // To switch to Sentry: replace the logToDb() call with Sentry.captureException()
 
 import { createClient } from "@supabase/supabase-js";
+import { redactSecrets } from "@/lib/logger/redact";
 
 const supabaseAdmin = createClient(
   process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -24,7 +25,9 @@ async function logToDb(entry: LogEntry): Promise<void> {
       source: entry.source,
       message: entry.message,
       stack: entry.stack ?? null,
-      metadata: entry.metadata ?? {},
+      // SLC-195 MT-3 (ISSUE-132, P-092): Secrets/PII in metadata key-basiert
+      // maskieren, bevor sie in error_log persistiert werden.
+      metadata: redactSecrets(entry.metadata ?? {}),
       user_id: entry.userId ?? null,
     });
   } catch (dbError) {

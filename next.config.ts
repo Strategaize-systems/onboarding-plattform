@@ -1,7 +1,21 @@
 import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
+import { buildCSP, COOP_VALUE } from "./src/lib/security/csp";
 
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
+
+// SLC-194 MT-3 (V20, ISSUE-127) — CSP + COOP.
+// Phase 1: Content-Security-Policy-Report-Only (kein Block, nur Report). Nach dem
+// /qa-Browser-Smoke (security-headers-live-smoke.md, KEIN curl-only-PASS) wird der
+// Header-Key auf "Content-Security-Policy" umgestellt (enforcing) + re-deployt.
+// Rollback: Key zurueck auf "-Report-Only".
+const JITSI_DOMAIN =
+  process.env.NEXT_PUBLIC_JITSI_DOMAIN ??
+  "meet-onboarding.strategaizetransition.com";
+const CSP_VALUE = buildCSP(
+  process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
+  `https://${JITSI_DOMAIN}`,
+);
 
 const nextConfig: NextConfig = {
   output: "standalone",
@@ -45,6 +59,9 @@ const nextConfig: NextConfig = {
             key: "Permissions-Policy",
             value: `camera=(self "https://${process.env.NEXT_PUBLIC_JITSI_DOMAIN ?? "meet-onboarding.strategaizetransition.com"}"), microphone=(self "https://${process.env.NEXT_PUBLIC_JITSI_DOMAIN ?? "meet-onboarding.strategaizetransition.com"}"), geolocation=()`,
           },
+          // SLC-194 MT-3 (ISSUE-127): Report-Only zuerst (siehe Kommentar oben).
+          { key: "Content-Security-Policy-Report-Only", value: CSP_VALUE },
+          { key: "Cross-Origin-Opener-Policy", value: COOP_VALUE },
         ],
       },
     ];

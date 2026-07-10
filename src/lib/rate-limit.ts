@@ -66,12 +66,51 @@ export function createRateLimiter(config: RateLimiterConfig) {
 
       return { allowed: true, remaining: config.maxAttempts - entry.count };
     },
+
+    // SLC-195 MT-1 (P-081): peek-before-signin — liest den Zaehler OHNE zu
+    // inkrementieren. Fuer Login-Lockout: peek VOR signInWithPassword (gesperrte
+    // Anfrage beruehrt GoTrue nicht), Count nur bei Fehlversuch via check(),
+    // clear() bei Erfolg. `allowed=false` sobald bereits maxAttempts Fehlversuche
+    // im Fenster liegen (der naechste waere der geblockte).
+    peek(identifier: string): RateLimitResult {
+      const now = Date.now();
+      const entry = store.get(identifier);
+      if (!entry || now > entry.resetAt) {
+        return { allowed: true, remaining: config.maxAttempts };
+      }
+      if (entry.count >= config.maxAttempts) {
+        const retryAfterSeconds = Math.ceil((entry.resetAt - now) / 1000);
+        return {
+          allowed: false,
+          remaining: 0,
+          retryAfterSeconds,
+          error: `Zu viele Versuche. Bitte warten Sie ${retryAfterSeconds} Sekunden.`,
+        };
+      }
+      return { allowed: true, remaining: config.maxAttempts - entry.count };
+    },
+
+    // Setzt den Zaehler fuer einen Identifier zurueck (erfolgreicher Login soll
+    // nie gesperrt werden — P-081 clearRateLimit).
+    clear(identifier: string): void {
+      store.delete(identifier);
+    },
   };
 }
 
 // Pre-configured limiters for auth endpoints
+// IP-scoped Flood-Bremse (zaehlt jeden Login-Versuch pro IP).
 export const loginLimiter = createRateLimiter({
   maxAttempts: 20,
+  windowMs: 15 * 60 * 1000, // 15 minutes
+});
+
+// SLC-195 MT-1 (ISSUE-126, P-081): account-scoped Login-Lockout (Key = email
+// lowercase), IP-UNABHAENGIG — schliesst verteilten Brute-Force via IP-Rotation
+// gegen einen einzelnen Account. peek-before-signin, Count nur bei Fehlversuch,
+// clear() bei Erfolg (siehe login/actions.ts). 5 Fehlversuche / 15 min.
+export const loginAccountLimiter = createRateLimiter({
+  maxAttempts: 5,
   windowMs: 15 * 60 * 1000, // 15 minutes
 });
 

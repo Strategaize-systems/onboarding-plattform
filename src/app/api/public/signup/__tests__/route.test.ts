@@ -73,7 +73,8 @@ function buildAdmin(setup: AdminSetup): AdminMock {
       if (table === "partner_organization") {
         return {
           select: vi.fn().mockReturnThis(),
-          ilike: vi.fn().mockReturnThis(),
+          // SLC-195 MT-5: Route nutzt jetzt .eq(slug.toLowerCase()) statt .ilike.
+          eq: vi.fn().mockReturnThis(),
           maybeSingle: vi
             .fn()
             .mockResolvedValue(setup.partner ?? { data: null, error: null }),

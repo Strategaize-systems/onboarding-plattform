@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireCronSecret } from "@/lib/auth/cron-guard";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { captureWarning, captureInfo, captureException } from "@/lib/logger";
 
@@ -38,23 +39,8 @@ interface CleanupResult {
 }
 
 export async function POST(req: Request): Promise<Response> {
-  const secret = req.headers.get("x-cron-secret");
-  const expected = process.env.CRON_SECRET;
-
-  if (!expected) {
-    captureWarning("CRON_SECRET ENV missing — cron endpoint disabled", {
-      source: "cron:walkthrough-cleanup",
-    });
-    return new NextResponse("Cron not configured", { status: 503 });
-  }
-
-  if (secret !== expected) {
-    captureWarning("cron auth fail", {
-      source: "cron:walkthrough-cleanup",
-      metadata: { reason: "x-cron-secret mismatch" },
-    });
-    return new NextResponse("Unauthorized", { status: 403 });
-  }
+  const denied = requireCronSecret(req, "cron:walkthrough-cleanup");
+  if (denied) return denied;
 
   try {
     const supabase = createAdminClient();

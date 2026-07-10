@@ -1905,7 +1905,7 @@
       "title": "V20 FEAT-110 DB/Authz-Hardening (tier-INSERT-Guard, evidence-IDOR, berater-RPC, SEC-001 search_path, profiles.role-Port)",
       "type": "fix",
       "priority": "high",
-      "status": "open",
+      "status": "in_progress",
       "version": "V20",
       "description": "Security-Hardening DB/Authz-Layer aus /security-audit RPT-633. ISSUE-125 capture_session.tier-Guard auf BEFORE INSERT OR UPDATE erweitern (NEW.tier fuer non-service_role coerce/reject, Column-DEFAULT senken; bypasses DEC-219, Prio-1) · ISSUE-124 evidence/list Cross-Tenant-Ownership-Check (RLS-scoped Client oder upload-Route-Guard spiegeln) · ISSUE-129 berater_assigned_tenant_ids uid-Guard/REVOKE authenticated · SEC-001 SECURITY-DEFINER search_path-Sweep (idempotente Patch-Migration, DSGVO, ~30 Funktionen) · profiles.role-Trigger-Port (Defense-in-Depth). 1 Migration. Reuse P-080/IMP-1717/BS V8.14.",
       "createdAt": "2026-07-09"
@@ -1915,7 +1915,7 @@
       "title": "V20 FEAT-111 XSS/Output/Headers-Hardening (Handbook rehype-sanitize, SVG-Block, CSP, branding-render)",
       "type": "fix",
       "priority": "high",
-      "status": "open",
+      "status": "in_progress",
       "version": "V20",
       "description": "Security-Hardening Output-Layer aus /security-audit RPT-633. ISSUE-121 Handbook-Reader rehype-sanitize (letztes Plugin) + sections.ts user/AI-Feld-Escape · ISSUE-122 image/svg+xml aus ALLOWED_MIMES + Logo-Route-Haertung (Content-Disposition/route-CSP/Magic-Byte) · ISSUE-127 globale CSP/COOP Report-Only→enforcing (Nonce, layout.tsx:35-style-src) + funktionaler Browser-Smoke (P-089) · ISSUE-130 branding-Farben Render-Pfad-HEX-Re-Validierung (resolve.ts) · Legal/Datenschutz-Page-XSS-Check (P-082-Funnel). Reuse P-082/083/089/092.",
       "createdAt": "2026-07-09"
@@ -1925,7 +1925,7 @@
       "title": "V20 FEAT-112 Auth/Secrets-Cleanup (Login-Lockout, recording-ready, cron-timing, logger-redaction, slug)",
       "type": "fix",
       "priority": "medium",
-      "status": "open",
+      "status": "in_progress",
       "version": "V20",
       "description": "Security-Hardening Auth/Secrets-Layer aus /security-audit RPT-633. ISSUE-126 account-scoped Login-Lockout (P-081 passwordResetAccountLimiter-Reuse, email-keyed, peek-before-signin) · ISSUE-123 recording-ready Path-Traversal + timingSafeEqual-Haertung (Pre-Condition jeder Re-Aktivierung; heute middleware-gated) · ISSUE-131 verifyCronSecret timingSafeEqual-Sweep 7 Routes (service-key.ts-Reuse) · ISSUE-132 Logger-Redaction P-092-Port (Key-Redaction + Regex-Scrub eyJ/bearer/URL-Creds, inkl. Email-Pfad) · ISSUE-128 partner-slug .eq/Charset-Guard (2 Routes). Reuse P-081/092 + service-key.ts.",
       "createdAt": "2026-07-09"

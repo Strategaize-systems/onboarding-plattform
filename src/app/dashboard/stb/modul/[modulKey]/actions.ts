@@ -13,7 +13,10 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getTemplateBySlug } from "@/lib/db/template-queries";
-import { createCaptureSession } from "@/lib/db/capture-session-queries";
+import {
+  createCaptureSession,
+  setCaptureSessionEntitledTier,
+} from "@/lib/db/capture-session-queries";
 import { setStbVerticalStage } from "@/lib/stb-vertikale/tenant-marker";
 import {
   isValidModulKey,
@@ -92,6 +95,12 @@ export async function startOrResumeModulSession(
     });
     sessionId = session.id;
   }
+  // V20 SLC-193 MT-2 (DEC-279): entitled tier per service_role — idempotent nach
+  // create UND resume. MIG-133 senkt den DEFAULT auf 'free' + coerced den
+  // authenticated INSERT auf 'free'; Modul-Output (module_output_synthesis) ist
+  // blueprint-gated (DEC-239). Idempotenter Set heilt eine beim create transient auf
+  // 'free' gestrandete Session (sonst ruft der resume-Zweig die Elevation nie erneut).
+  await setCaptureSessionEntitledTier(sessionId, "blueprint");
 
   // Ownership ist hier garantiert (Session fuer eigenen Tenant erzeugt bzw.
   // per tenant_id+owner_user_id gefiltert geladen) -> Marker-Set ist sicher (L-2).

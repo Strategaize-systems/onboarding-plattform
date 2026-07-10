@@ -22,13 +22,16 @@ import { uploadLogo, updateBranding } from "./actions";
 
 const HEX_REGEX = /^#[0-9a-fA-F]{6}$/;
 const MAX_LOGO_BYTES = 500 * 1024;
-const ALLOWED_MIMES = ["image/png", "image/svg+xml", "image/jpeg"];
+// SLC-194 MT-2 (ISSUE-122): image/svg+xml entfernt — Client-Vorfilter spiegelt die
+// Server-Allowlist (actions.ts/image-signature.ts); SVG ist Stored-XSS-Risiko.
+const ALLOWED_MIMES = ["image/png", "image/jpeg"];
 
 const ERROR_MESSAGES: Record<string, string> = {
   // uploadLogo
   logo_required: "Bitte eine Bilddatei auswaehlen.",
   logo_too_large: "Datei ist zu gross. Maximal 500 KB erlaubt.",
-  logo_mime_unsupported: "Nur PNG, SVG oder JPG erlaubt.",
+  logo_mime_unsupported: "Nur PNG oder JPG erlaubt.",
+  logo_content_mismatch: "Dateiinhalt passt nicht zum Bildformat (PNG/JPG).",
   logo_upload_failed: "Upload fehlgeschlagen. Bitte erneut versuchen.",
   logo_db_update_failed:
     "Datei wurde gespeichert, aber das Branding konnte nicht verknuepft werden. Bitte erneut versuchen.",
@@ -170,7 +173,7 @@ export function BrandingEditor({
           <div className="space-y-1">
             <h2 className="text-base font-semibold text-slate-900">Logo</h2>
             <p className="text-xs text-slate-500">
-              PNG, SVG oder JPG. Maximal 500 KB.
+              PNG oder JPG. Maximal 500 KB.
             </p>
           </div>
 
@@ -179,7 +182,7 @@ export function BrandingEditor({
             id="logo"
             name="logo"
             type="file"
-            accept=".png,.svg,.jpg,.jpeg,image/png,image/svg+xml,image/jpeg"
+            accept=".png,.jpg,.jpeg,image/png,image/jpeg"
             onChange={handleFileChange}
             disabled={isPendingLogo}
             className="block w-full text-sm text-slate-700 file:mr-3 file:rounded-md file:border file:border-slate-200 file:bg-slate-50 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-100 disabled:opacity-60"

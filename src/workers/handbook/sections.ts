@@ -446,7 +446,10 @@ function renderBySubtopic(
 
   for (const subtopicKey of subtopicOrder) {
     const meta = subtopicMap.get(subtopicKey)!;
-    out.push(`## ${meta.name}`);
+    // SLC-194 MT-1: tenant-Subtopic-Name konsistent escapen (wie ku.title etc.).
+    // Primaere XSS-Abwehr ist rehypeSanitize im Reader; dies haelt die Emission
+    // markdown-konsistent (kein Table-Break durch rohe Pipes).
+    out.push(`## ${escapeMd(meta.name)}`);
     out.push("");
     out.push(`<a id="subtopic-${subtopicKey}"></a>`);
     out.push("");
@@ -513,7 +516,8 @@ function renderByBlockKey(
       const subs = Array.isArray(d.content?.subtopics) ? d.content.subtopics : [];
       for (const sub of subs) {
         if (!sub || typeof sub.key !== "string") continue;
-        out.push(`### ${sub.name ?? sub.key}`);
+        // SLC-194 MT-1: siehe renderBySubtopic — tenant-Name konsistent escapen.
+        out.push(`### ${escapeMd(sub.name ?? sub.key)}`);
         out.push("");
         out.push(`<a id="subtopic-${sub.key}"></a>`);
         out.push("");

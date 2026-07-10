@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { assertSessionTierAllows } from "@/lib/auth/assert-session-tier";
+import { verifyServiceKey } from "@/lib/auth/service-key";
 import { readFile } from "node:fs/promises";
+import { resolve, sep } from "node:path";
 
 /**
  * POST /api/dialogue/recording-ready
@@ -30,7 +32,11 @@ export async function POST(request: Request) {
     );
   }
 
-  if (!authHeader || authHeader !== `Bearer ${expectedSecret}`) {
+  // SLC-195 MT-4 (ISSUE-123): timing-safe Bearer-Vergleich statt `!==`
+  // (Timing-Oracle-Defense-in-Depth). verifyServiceKey macht Length-Check +
+  // crypto.timingSafeEqual; expectedSecret ist hier garantiert gesetzt (500 oben).
+  const bearer = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  if (!verifyServiceKey(bearer, expectedSecret)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -46,6 +52,27 @@ export async function POST(request: Request) {
       { error: "room_name and file_path are required" },
       { status: 400 }
     );
+  }
+
+  // SLC-195 MT-4 (ISSUE-123): Path-Traversal-Guard. body.file_path ist
+  // Webhook-kontrolliert → nur Pfade INNERHALB des konfigurierten Jibri-
+  // Recording-Verzeichnisses, keine `..`-Traversal, nur `.mp4`. Fail-closed:
+  // ohne JIBRI_RECORDINGS_DIR wird jeder Pfad abgewiesen (die Route ist heute
+  // middleware-unerreichbar; die ENV ist Pflicht VOR jeder Re-Aktivierung).
+  const recordingsBase = process.env.JIBRI_RECORDINGS_DIR;
+  const resolvedPath = resolve(body.file_path);
+  const baseResolved = recordingsBase ? resolve(recordingsBase) : null;
+  const withinBase =
+    baseResolved !== null &&
+    (resolvedPath === baseResolved ||
+      resolvedPath.startsWith(baseResolved + sep));
+  if (
+    body.file_path.includes("..") ||
+    !resolvedPath.endsWith(".mp4") ||
+    !withinBase
+  ) {
+    console.error(`[recording-ready] rejected file_path: ${body.file_path}`);
+    return NextResponse.json({ error: "Invalid file_path" }, { status: 400 });
   }
 
   const admin = createAdminClient();
@@ -71,7 +98,7 @@ export async function POST(request: Request) {
   // 2. Read MP4 file from Jibri volume
   let fileBuffer: Buffer;
   try {
-    fileBuffer = await readFile(body.file_path);
+    fileBuffer = await readFile(resolvedPath);
   } catch (err) {
     console.error(
       `[recording-ready] Failed to read file: ${body.file_path}`,

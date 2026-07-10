@@ -23,6 +23,27 @@ export async function GET(
     return NextResponse.json({ error: "Nicht authentifiziert" }, { status: 401 });
   }
 
+  // --- Zugriffs-Gate via RLS (ISSUE-124 Cross-Tenant-IDOR): der user-scoped Client
+  //     sieht die capture_session nur bei erlaubtem Zugriff (eigener Tenant,
+  //     partner-admin-via-mapping, berater, strategaize_admin — RLS auf
+  //     capture_session). Kein Treffer => kein Zugriff (404 statt 403 vermeidet
+  //     Existenz-Enumeration). Der admin-Client (BYPASSRLS) wird erst NACH dem Gate
+  //     fuer die evidence-Reads genutzt. Bewusst KEIN starrer tenant_id-Vergleich —
+  //     RLS deckt auch den legitimen partner-mapping-/berater-Lesezugriff, den ein
+  //     tenant_id-Gleichheitscheck faelschlich sperren wuerde (Review V20). ---
+  const { data: session } = await supabase
+    .from("capture_session")
+    .select("id")
+    .eq("id", sessionId)
+    .maybeSingle();
+
+  if (!session) {
+    return NextResponse.json(
+      { error: "Session nicht gefunden oder kein Zugriff" },
+      { status: 404 }
+    );
+  }
+
   const adminClient = createAdminClient();
 
   // Load evidence files

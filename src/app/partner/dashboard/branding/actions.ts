@@ -6,6 +6,12 @@ import { captureException, captureInfo } from "@/lib/logger";
 import { revalidatePath } from "next/cache";
 
 import type { UserRole } from "@/types/db";
+import {
+  ALLOWED_IMAGE_MIMES,
+  EXT_BY_MIME,
+  sniffImageMime,
+  type AllowedImageMime,
+} from "./image-signature";
 
 /**
  * V6 SLC-104 MT-8 — Server Actions fuer Partner-Branding (uploadLogo + updateBranding).
@@ -35,14 +41,8 @@ type ActionResult =
 
 const HEX_REGEX = /^#[0-9a-fA-F]{6}$/;
 const MAX_LOGO_BYTES = 500 * 1024; // 500 KiB = 512000 Byte, identisch Storage-Bucket-Limit aus Migration 091b
-const ALLOWED_MIMES = ["image/png", "image/svg+xml", "image/jpeg"] as const;
-type AllowedMime = (typeof ALLOWED_MIMES)[number];
-
-const EXT_BY_MIME: Record<AllowedMime, string> = {
-  "image/png": "png",
-  "image/svg+xml": "svg",
-  "image/jpeg": "jpg",
-};
+// SLC-194 MT-2 (ISSUE-122): ALLOWED_IMAGE_MIMES/EXT_BY_MIME + sniffImageMime liegen
+// in ./image-signature (Sibling, 'use server'-Gate). image/svg+xml ist dort entfernt.
 
 function sanitizeText(raw: FormDataEntryValue | null): string {
   if (typeof raw !== "string") return "";
@@ -115,8 +115,8 @@ export async function uploadLogo(formData: FormData): Promise<ActionResult> {
   if (file.size > MAX_LOGO_BYTES) {
     return { ok: false, error: "logo_too_large" };
   }
-  const mime = file.type as AllowedMime;
-  if (!ALLOWED_MIMES.includes(mime)) {
+  const mime = file.type as AllowedImageMime;
+  if (!ALLOWED_IMAGE_MIMES.includes(mime)) {
     return { ok: false, error: "logo_mime_unsupported" };
   }
 
@@ -129,6 +129,15 @@ export async function uploadLogo(formData: FormData): Promise<ActionResult> {
   const admin = createAdminClient();
 
   const arrayBuffer = await file.arrayBuffer();
+
+  // SLC-194 MT-2 (ISSUE-122): Magic-Byte-Pruefung — file.type ist client-gesetzt
+  // und faelschbar (umbenanntes SVG mit Content-Type image/png). Die realen ersten
+  // Bytes muessen zum deklarierten MIME passen, sonst Reject.
+  const sniffed = sniffImageMime(new Uint8Array(arrayBuffer.slice(0, 8)));
+  if (sniffed === null || sniffed !== mime) {
+    return { ok: false, error: "logo_content_mismatch" };
+  }
+
   const { error: upErr } = await admin.storage
     .from("partner-branding-assets")
     .upload(storagePath, arrayBuffer, {
