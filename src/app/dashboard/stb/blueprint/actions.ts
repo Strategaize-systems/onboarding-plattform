@@ -97,10 +97,13 @@ export async function startOrResumeBlueprintSession(
       capture_mode: STB_BLUEPRINT_CAPTURE_MODE,
     });
     sessionId = session.id;
-    // V20 SLC-193 MT-2 (DEC-279): entitled tier per service_role (der authenticated
-    // INSERT wurde durch MIG-133 auf 'free' coerced).
-    await setCaptureSessionEntitledTier(sessionId, "blueprint");
   }
+  // V20 SLC-193 MT-2 (DEC-279): entitled tier per service_role — idempotent nach
+  // create UND resume. MIG-133 coerced den authenticated INSERT auf 'free'; schlaegt
+  // die Elevation beim ersten Mal transient fehl, wuerde die Session sonst dauerhaft
+  // auf 'free' stranden (der resume-Zweig ruft die Elevation dann nie erneut). Der
+  // service_role-UPDATE auf denselben Wert ist ein sicherer No-Op.
+  await setCaptureSessionEntitledTier(sessionId, "blueprint");
 
   // Ownership ist hier garantiert (Session fuer eigenen Tenant erzeugt bzw. per
   // tenant_id+owner_user_id gefiltert geladen) -> Marker-Set ist sicher (L-2).
