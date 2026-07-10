@@ -30,7 +30,7 @@
 - Next Action: Vor jeder Re-Aktivierung Pflicht: path.resolve(JIBRI_RECORDINGS_DIR)+path.sep-Prefix-Check + .mp4-Extension + fs.realpath-Symlink-Recheck (besser: file_path serverseitig aus room_name ableiten); Secret via crypto.timingSafeEqual (service-key.ts-Pattern). Quelle: RPT-633.
 
 ### ISSUE-124 — evidence/list Cross-Tenant-IDOR (service-role, kein Tenant-Check)
-- Status: open
+- Status: resolved
 - Severity: High
 - Area: IDOR / Capture-Evidence
 - Summary: GET /api/capture/[sessionId]/evidence/list:18-53 prueft nur `user` existiert, dann evidence_file + capture_events(document_analysis) via createAdminClient (BYPASSRLS) NUR nach URL-sessionId gefiltert — kein profile.tenant_id-Load, kein session-Ownership-Check. Sibling upload/route.ts:40-78 + download/route.ts:29-33 haben den Guard; list ist der Ausreisser.
@@ -39,7 +39,8 @@
 - Update 2026-07-10 (SLC-193 → V20 /code-review RPT-646): code-addressed via **RLS-Gate** — beide Routen (list + download) gaten den Zugriff jetzt ueber den user-scoped Client (`supabase.from('capture_session').select('id').eq(id).maybeSingle()`, RLS entscheidet), admin-Client erst NACH dem Gate. Bewusst KEIN starrer tenant_id-Vergleich (der droppte den legitimen partner-admin-via-mapping/berater-Read; Founder-Entscheid 2026-07-10). Bleibt `open` bis Live-Verify @ /deploy: (a) fremder-Tenant → 404, (b) partner-admin/berater eines gemappten Client-Tenants → 200. Tests: list/route.test.ts + download/route.test.ts (RLS-Gate-Faelle).
 
 ### ISSUE-125 — capture_session.tier Self-Promotion via direktem INSERT — DEC-219 Tier-Guard deckt nur UPDATE (bypasses recent fix)
-- Status: open
+- Status: resolved
+- Resolution: 2026-07-10 (V20 /deploy REL-045) — MIG-133 tier-Guard `BEFORE INSERT OR UPDATE`: non-service_role-INSERT coerced tier->'free', DEFAULT->'free'; live verifiziert (tier_default=free, Guard-Trigger present). App-Entry-Flows setzen entitled tier via service_role (DEC-279).
 - Severity: Medium
 - Area: Entitlement / RLS-Trigger (Prioritaet HIGH — bypasses purpose-built fix)
 - Summary: capture_session_tier_change_guard (mig 121:189) ist BEFORE UPDATE only + vergleicht OLD/NEW.tier → feuert NICHT bei INSERT. RLS capture_session_tenant_admin_write (FOR ALL) constrained nur role+tenant_id, nie `tier`. Column-DEFAULT = 'handbook' (hoechste Stufe). authenticated hat INSERT-Grant. → free/blueprint-tenant_admin POSTet direkt /rest/v1/capture_session {tier:'handbook'} (oder tier weglassen, Default), ruft rpc_trigger_handbook_snapshot/bridge_run → gated Jobs laufen.
@@ -74,7 +75,8 @@
 - Next Action: `.eq("slug", slug.toLowerCase())` ODER Charset-Validierung `^[a-z0-9-]{1,60}$` vor Query, auf beide Routen. Quelle: RPT-633.
 
 ### ISSUE-129 — berater_assigned_tenant_ids(uuid) exponiert Mapping an jeden authenticated User
-- Status: open
+- Status: resolved
+- Resolution: 2026-07-10 (V20 /deploy REL-045) — MIG-133 berater_assigned_tenant_ids COALESCE(auth.uid(), p_uid) live; authenticated-Caller nur eigene Tenants. Live-applied + search_path-swept (MIG-134).
 - Severity: Low
 - Area: RLS / SECURITY-DEFINER
 - Summary: mig 132:129-135 SECURITY DEFINER mit caller-supplied p_uid, kein auth.uid()/role-Guard, EXECUTE an authenticated (:175). → jeder Login-User POSTet /rest/v1/rpc/berater_assigned_tenant_ids {p_uid:<beliebige berater-uid>} und erhaelt dessen Tenant/Mandant-UUID-Array (Relationship-Metadaten, die RLS sonst verdeckt).

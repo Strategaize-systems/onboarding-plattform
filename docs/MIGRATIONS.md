@@ -1369,7 +1369,7 @@ Der uebernommene Blueprint-Stand ist noch nicht auf einer Onboarding-Plattform-I
 - Risk: role-CHECK-Neufassung + handle_new_user gegen Live-prosrc (Hotfix-Drift-Falle wie MIG-131) — Pre-Apply-Live-Audit + Rollback-Dump Pflicht. Cascade-Vollständigkeit (partner_client_mapping vs. parent_partner_tenant_id) = R-ARCH-V-1, Slice-MT-1-Spike.
 - Rollback Notes: additiv → DROP FUNCTION can_see_tenant, berater_assigned_tenant_ids; DROP TABLE berater_tenant_assignments; ALTER profiles CHECK zurück auf 4 Werte; handle_new_user auf Pre-Apply-prosrc. Pre-Apply-Dump wie MIG-131 (/root/mig132_rollback/).
 
-### MIG-133 — V20 SLC-193 Authz-Hardening: tier-Guard INSERT+UPDATE + DEFAULT-Senken + berater-RPC + profiles.role-Port (RESERVIERT, /architecture V20 DEC-285)
+### MIG-133 — V20 SLC-193 Authz-Hardening: tier-Guard INSERT+UPDATE + DEFAULT-Senken + berater-RPC + profiles.role-Port (APPLIED 2026-07-10 REL-045)
 - Date: 2026-07-09 (RESERVIERT bei /architecture V20; Datei `sql/migrations/133_v20_authz_hardening.sql` wird in /backend SLC-193 geschrieben, Live-Apply erst /deploy)
 - Scope: (1) CREATE OR REPLACE FUNCTION capture_session_tier_change_guard() → INSERT-Zweig (current_user<>'service_role' → NEW.tier:='free' coerce) + UPDATE-Zweig unverändert (deny tier-Change); DROP+CREATE TRIGGER `capture_session_tier_change_guard` BEFORE INSERT OR UPDATE (DEC-279). (2) ALTER TABLE capture_session ALTER COLUMN tier SET DEFAULT 'free' (DEC-279). (3) CREATE OR REPLACE FUNCTION berater_assigned_tenant_ids(uuid) → `v_uid := COALESCE(auth.uid(), p_uid)` (DEC-286). (4) profiles.role-Guard-Trigger-Port BEFORE INSERT OR UPDATE (current_user-aware, Defense-in-Depth, P-080/IMP-1717).
 - Reason: /security-audit RPT-633 ISSUE-125 (tier-INSERT-Bypass, defeatet DEC-219-Guard) + ISSUE-129 (berater-RPC Caller-Param-Trust) + profiles.role-Port. Konsolidiert im V20-Security-Block.
@@ -1377,7 +1377,7 @@ Der uebernommene Blueprint-Stand ist noch nicht auf einer Onboarding-Plattform-I
 - Risk: DEFAULT-Senken kann legit Sessions auf 'free' stranden, wenn App-Inserts den tier nicht explizit setzen (R-2). In-Tx-Probe Pflicht (tenant_admin-INSERT tier='handbook' → coerced 'free'; service_role-Path grün). CREATE OR REPLACE gegen Live-prosrc (Hotfix-Drift-Falle wie MIG-131/132) — Pre-Apply-Live-Audit + Rollback-Dump.
 - Rollback Notes: Trigger zurück auf BEFORE UPDATE only; Column-DEFAULT zurück auf 'handbook'; berater-RPC-Body auf Pre-Apply-prosrc; profiles-Guard-Trigger DROP. Pre-Apply-Dump `/root/mig133_rollback/`.
 
-### MIG-134 — V20 SLC-193 SEC-001 search_path-Sweep: ALTER FUNCTION über ~31 DEFINER-Funcs (RESERVIERT, /architecture V20 DEC-283)
+### MIG-134 — V20 SLC-193 SEC-001 search_path-Sweep: ALTER FUNCTION über 48 DEFINER-Funcs (APPLIED 2026-07-10 REL-045)
 - Date: 2026-07-09 (RESERVIERT bei /architecture V20; Datei `sql/migrations/134_v20_search_path_sweep.sql`, Statement-Liste live-generiert in /backend SLC-193, Apply /deploy)
 - Scope: `ALTER FUNCTION public.<name>(<args>) SET search_path = public, pg_catalog;` über alle SECURITY-DEFINER-Funktionen ohne gesetzten search_path (~31, Heuristik; Beispiele 047/054/062-RPCs). Body unberührt, keine Signatur-/Grant-Änderung. Statement-Liste generiert aus `pg_proc WHERE prosecdef AND kein search_path in proconfig` (node:20-Sidecar).
 - Reason: /requirements V20 SEC-001 — DEFINER-Funktion ohne SET search_path = Schema-Shadowing-Risiko (DSGVO-flagged). Audit-Gap (vom Fable-5-Audit nicht geprüft), eigener Sweep.
