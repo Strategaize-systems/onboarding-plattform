@@ -1925,7 +1925,7 @@
       "title": "V20 FEAT-112 Auth/Secrets-Cleanup (Login-Lockout, recording-ready, cron-timing, logger-redaction, slug)",
       "type": "fix",
       "priority": "medium",
-      "status": "open",
+      "status": "in_progress",
       "version": "V20",
       "description": "Security-Hardening Auth/Secrets-Layer aus /security-audit RPT-633. ISSUE-126 account-scoped Login-Lockout (P-081 passwordResetAccountLimiter-Reuse, email-keyed, peek-before-signin) · ISSUE-123 recording-ready Path-Traversal + timingSafeEqual-Haertung (Pre-Condition jeder Re-Aktivierung; heute middleware-gated) · ISSUE-131 verifyCronSecret timingSafeEqual-Sweep 7 Routes (service-key.ts-Reuse) · ISSUE-132 Logger-Redaction P-092-Port (Key-Redaction + Regex-Scrub eyJ/bearer/URL-Creds, inkl. Email-Pfad) · ISSUE-128 partner-slug .eq/Charset-Guard (2 Routes). Reuse P-081/092 + service-key.ts.",
       "createdAt": "2026-07-09"

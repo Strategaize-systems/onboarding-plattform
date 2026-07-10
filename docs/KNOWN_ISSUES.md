@@ -21,9 +21,10 @@
 - Next Action: image/svg+xml aus ALLOWED_MIMES entfernen (rasterize zu PNG) ODER server-side DOMPurify-SVG-Sanitize + route-scoped `Content-Security-Policy: default-src 'none'; sandbox` + Content-Disposition: attachment + Magic-Byte-Content-Type-Check. Quelle: RPT-633.
 
 ### ISSUE-123 — recording-ready Webhook: Path-Traversal readFile(file_path) + non-timing-safe Secret (re-confirm SEC-003/V21) — heute middleware-gated
-- Status: open
+- Status: resolved
 - Severity: Medium
 - Area: LFI/SSRF / Dialogue-Webhook
+- Resolution: SLC-195 MT-4 (2026-07-10) — Secret-Vergleich jetzt timing-safe (verifyServiceKey: Length-Check + crypto.timingSafeEqual, Bearer-Token extrahiert) statt `!==`; Path-Traversal-Guard: body.file_path via path.resolve gegen `JIBRI_RECORDINGS_DIR`-Prefix + `.mp4`-Extension + `..`-Reject, **fail-closed** (ohne die ENV wird jeder Pfad abgewiesen — Pflicht-ENV vor jeder Re-Aktivierung). Route bleibt zusaetzlich middleware-unerreichbar. Test: route.test.ts 7 Faelle (401 wrong-secret, 400 traversal/non-mp4/outside-base/env-unset, 404 passed-guard). readFile nutzt den resolveden Pfad.
 - Summary: /api/dialogue/recording-ready:74 readFile(body.file_path) ohne Base-Dir-Allowlist/realpath → arbitrary file read (/proc/self/environ, ../../.env), Upload upsert ueberschreibt Recording + poisoned Pipeline. Zusaetzlich Secret-Compare `!==` non-timing-safe (:33), kein Replay-/Nonce-Schutz. Reachability-Caveat (Audit-Ergaenzung, Finder uebersah es): der Endpoint ist NICHT in der proxy.ts-Public-Allowlist → unauth (auch Bearer-only ohne Session) wird von updateSession nach /login 307-redirected → aktuell extern unerreichbar (deckt sich mit ISSUE-028/V21 "defensiv geparkt").
 - Impact: Code-Defekt real (High-when-reachable: arbitrary file read → service-role-Key → Tenant-Collapse), aber heute durch Middleware gegated → Medium. Wird High, sobald die Route allowlisted/re-aktiviert wird (z.B. SLC-110 Network-Refactor). Re-confirm SEC-003/BL-137/roadmap V21.
 - Next Action: Vor jeder Re-Aktivierung Pflicht: path.resolve(JIBRI_RECORDINGS_DIR)+path.sep-Prefix-Check + .mp4-Extension + fs.realpath-Symlink-Recheck (besser: file_path serverseitig aus room_name ableiten); Secret via crypto.timingSafeEqual (service-key.ts-Pattern). Quelle: RPT-633.
@@ -45,9 +46,10 @@
 - Next Action: Trigger auf BEFORE INSERT OR UPDATE erweitern + NEW.tier fuer non-service_role-Writer erzwingen (auf INSERT auf entitled tier coercen/rejecten) ODER Session-Creation ueber service_role/SECURITY-DEFINER-RPC routen; Column-DEFAULT unter 'handbook' senken sobald Internal-Test-Mode endet. Quelle: RPT-633.
 
 ### ISSUE-126 — Login ohne account-scoped Lockout (nur IP-Bucket; XFF-Spoof refuted)
-- Status: open
+- Status: resolved
 - Severity: Medium
 - Area: Auth / Rate-Limit
+- Resolution: SLC-195 MT-1 (2026-07-10, P-081) — `loginAccountLimiter` (5/15min, Key = email lowercase) IP-UNABHAENGIG zusaetzlich zum IP-Bucket; peek-before-signin (gesperrte Anfrage beruehrt GoTrue nicht), Count nur bei Fehlversuch, `clear()` bei Erfolg; generische Fehlermeldung ("E-Mail oder Passwort ungültig") statt verbatim GoTrue-error.message (schliesst zugleich das Enumeration-Leak). rate-limit.ts um peek/clear erweitert. Tests: rate-limit.test.ts (peek/clear/IP-unabhaengig) + login/actions.test.ts (Lockout ueber rotierende IPs, generische Message). Tradeoff DoS-by-lockout (5 Fails sperren einen Account 15min) akzeptiert — Standard bei account-scoped Lockout.
 - Summary: login/actions.ts:18 nutzt NUR loginLimiter (IP, 20/15min); kein account-scoped Bucket, waehrend passwort-vergessen den P-081-passwordResetAccountLimiter (key=email) korrekt hat. XFF-Spoof-Vektor REFUTED (P-086 live-verifiziert: Traefik ohne trustedIPs REPLACED die client-XFF → split[0] = echte non-spoofbare Peer-IP, per-IP-Cap greift). Residual = kein IP-unabhaengiger account-scoped Login-Lockout → distributed/botnet-Brute-Force gegen ein Konto ungebremst.
 - Impact: Verteilter Brute-Force gegen ein Zielkonto; per-Single-IP durch 20/15min + P-088-Passwort-Policy gebremst. 0 Blast heute, scharf pre-multi-user. Re-confirm P-081/v-sec-op-fix-port.
 - Next Action: email-keyed loginLimiter (5-10/15min) analog passwordResetAccountLimiter, zusaetzlich zum IP-Bucket, bei Fehlversuch inkrementiert (peek-before-signin, generische Error-Message). Quelle: RPT-633.
@@ -62,9 +64,10 @@
 - Next Action: enforcing CSP (default-src 'self'; script-src 'self' + per-request nonce, kein 'unsafe-inline'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; connect-src self+Supabase/Jitsi) + COOP same-origin; inline `<style>` in layout.tsx:35 braucht style-src nonce/hash; erst Report-Only ausrollen, dann enforcing vor Customer-Live. Quelle: RPT-633.
 
 ### ISSUE-128 — ILIKE-Wildcard-Injection auf public partner-slug (Enumeration, re-confirm SEC-005)
-- Status: open
+- Status: resolved
 - Severity: Low
 - Area: Injection / Public-Partner
+- Resolution: SLC-195 MT-5 (2026-07-10) — beide Routen (`api/public/partner/[slug]` + `api/public/signup`) nutzen `.eq("slug", x.toLowerCase())` statt `.ilike` → `%`/`_` sind exakte Literale, kein LIKE-Wildcard-/Multi-Match-Oracle mehr (Slugs sind write-seitig lowercase-normalisiert). Test: partner route.test.ts erfasst `.eq`-Arg ("Acme%" → exakt "acme%"); signup/partner Mock-Builder auf `.eq` umgestellt.
 - Summary: public/partner/[slug]/route.ts:83 `.ilike("slug", slug)` mit rohem Path-Param → `%`/`_` als LIKE-Wildcards; isReservedSlug(%)=false umgeht Reserved-Short-Circuit; `a%` matched jeden Partner mit Prefix a, Multi-Match = 500-Oracle. Gleiches Muster im signup-Lookup (route.ts:197) — dort aber service-key-gated (kein Browser-Angreifer, kein Hijack-Gewinn).
 - Impact: Anonyme Partner-Enumeration + Branding-Harvest (display_name/logo_url/accent_color — semi-oeffentlich, auf public Landing ohnehin sichtbar). Rate-limited 60/h/IP. Low. Re-confirm SEC-005.
 - Next Action: `.eq("slug", slug.toLowerCase())` ODER Charset-Validierung `^[a-z0-9-]{1,60}$` vor Query, auf beide Routen. Quelle: RPT-633.
@@ -87,17 +90,19 @@
 - Next Action: In resolve.ts primary_color/secondary_color durch HEX_RE + Default-Fallback (wie hexToRgbTriplet), sodass nur ein #rrggbb-Literal ins <style> gelangen kann. Quelle: RPT-633.
 
 ### ISSUE-131 — 7 Cron-Routes + recording-webhook: non-timing-safe Secret-Compare (re-confirm SEC-002/V20)
-- Status: open
+- Status: resolved
 - Severity: Low
 - Area: Secret-Compare
+- Resolution: SLC-195 MT-2+MT-4 (2026-07-10) — neuer `verifyCronSecret`-Helper (src/lib/auth/cron-secret.ts, Struktur aus service-key.ts: Length-Check + crypto.timingSafeEqual) ersetzt `secret !== expected` in allen 7 Cron-Routes (Done-Gate: 0 Treffer `secret !== expected` in src/app/api/cron/); recording-ready nutzt verifyServiceKey (MT-4). Test: cron-secret.test.ts (korrekt/falsch/Length/null/misconfig). Die 503-("ENV missing")- und 403-Pfade bleiben unterscheidbar.
 - Summary: alle 7 Cron-Routes gaten mit `if (secret !== expected)` (erste Statement, gut) — aber non-constant-time; service-key.ts:36 timingSafeEqual existiert ungenutzt. Timing-Oracle praktisch nicht ausnutzbar (High-Entropy-Secret ueber HTTP, Netz-Jitter 4-6 Groessenordnungen, jeder Fehlversuch loggt captureWarning). Reine Defense-in-Depth/Konsistenz. Re-confirm SEC-002/roadmap V20.
 - Impact: Kein realistischer Abuse (beide Lenses overstated→Low), aber billiger Konsistenz-Fix. Low.
 - Next Action: shared verifyCronSecret(req)-Helper (length-Check + crypto.timingSafeEqual), erste Statement in allen 7 Cron-Routes + recording-ready. Quelle: RPT-633.
 
 ### ISSUE-132 — Logger ohne Secret-Redaction-Layer (re-confirm V22/BL-140, P-092 nicht portiert)
-- Status: open
+- Status: resolved
 - Severity: Low
 - Area: Logging / Secret-Leak
+- Resolution: SLC-195 MT-3 (2026-07-10, P-092-Port) — `redactSecrets` (src/lib/logger/redact.ts, key-basierte rekursive Redaction, DEFAULT_REDACT_KEYS 17: Security-Core+PII+Domain+x-cron-secret) 1:1 aus BS portiert + in `logToDb` auf `metadata` angewandt (vor error_log-INSERT). Test: redact.test.ts (Keys maskiert case-insensitive/rekursiv/Circular/extraKeys, Nicht-Secrets intakt). **Deferred (Teil b des Next Action, nicht P-092-Kern, Low-Residual da Call-Sites IDs uebergeben):** Regex-Scrub interpolierter Secrets in `message`/`stack`-Strings (eyJ-JWT/bearer/URL-Creds) — key-basierte Redaction deckt String-Interpolation nicht.
 - Summary: src/lib/logger.ts:22 schreibt entry.message/stack/metadata verbatim in error_log + console + sendErrorNotification-Email; keinerlei redactSecrets/Key-Scrub/Regex-Scrub (P-092 nicht portiert). error_log-SELECT ist strategaize_admin-RLS-gated + admin/errors-Route requireAdmin → Sinks trust-boundary-intern. Latent: aktuelle Call-Sites uebergeben IDs, imap-sync setzt logger:false.
 - Impact: Ein zukuenftiger Caller/Third-Party-Exception mit interpoliertem Secret (service-role-URL, eyJ-JWT, bearer) landet unredacted in admin-scoped Sinks. DEC-219 logger-redaction-Klasse. Low.
 - Next Action: redact()-Pass in logToDb/captureException + Email-Pfad (logger.ts:60-69): (a) Key-Redaction metadata-Keys /secret|token|key|password|authorization|cookie/i + (b) Regex-Scrub message/stack fuer eyJ-JWTs, bearer-Tokens, URL-embedded-Creds. Quelle: RPT-633.
