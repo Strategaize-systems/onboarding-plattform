@@ -14,33 +14,18 @@
 // selbst ist upsert-idempotent via Unique-Constraint (source_type, source_id, chunk_index).
 
 import { NextResponse } from "next/server";
-import { verifyCronSecret } from "@/lib/auth/cron-secret";
+import { requireCronSecret } from "@/lib/auth/cron-guard";
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import { captureException, captureWarning } from "@/lib/logger";
+import { captureException } from "@/lib/logger";
 import { reconcileEmbeddings } from "@/lib/workspace/reconcile-embeddings";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request): Promise<Response> {
-  const secret = req.headers.get("x-cron-secret");
-  const expected = process.env.CRON_SECRET;
-
-  if (!expected) {
-    captureWarning("CRON_SECRET ENV missing — cron endpoint disabled", {
-      source: "cron:knowledge-embed-reconcile",
-    });
-    return new NextResponse("Cron not configured", { status: 503 });
-  }
-
-  if (!verifyCronSecret(secret, expected)) {
-    captureWarning("cron auth fail", {
-      source: "cron:knowledge-embed-reconcile",
-      metadata: { reason: "x-cron-secret mismatch" },
-    });
-    return new NextResponse("Unauthorized", { status: 403 });
-  }
+  const denied = requireCronSecret(req, "cron:knowledge-embed-reconcile");
+  if (denied) return denied;
 
   try {
     const supabase = createAdminClient();

@@ -18,10 +18,10 @@
 // auf status/timestamp greift wiederholt korrekt, Counts → 0).
 
 import { NextResponse } from "next/server";
-import { verifyCronSecret } from "@/lib/auth/cron-secret";
+import { requireCronSecret } from "@/lib/auth/cron-guard";
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import { captureException, captureInfo, captureWarning } from "@/lib/logger";
+import { captureException, captureInfo } from "@/lib/logger";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,23 +29,8 @@ export const dynamic = "force-dynamic";
 const DELETE_AGE_DAYS = 7;
 
 export async function GET(req: Request): Promise<Response> {
-  const secret = req.headers.get("x-cron-secret");
-  const expected = process.env.CRON_SECRET;
-
-  if (!expected) {
-    captureWarning("CRON_SECRET ENV missing — cron endpoint disabled", {
-      source: "cron:pending-signup-cleanup",
-    });
-    return new NextResponse("Cron not configured", { status: 503 });
-  }
-
-  if (!verifyCronSecret(secret, expected)) {
-    captureWarning("cron auth fail", {
-      source: "cron:pending-signup-cleanup",
-      metadata: { reason: "x-cron-secret mismatch" },
-    });
-    return new NextResponse("Unauthorized", { status: 403 });
-  }
+  const denied = requireCronSecret(req, "cron:pending-signup-cleanup");
+  if (denied) return denied;
 
   try {
     const supabase = createAdminClient();

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { verifyCronSecret } from "@/lib/auth/cron-secret";
+import { requireCronSecret } from "@/lib/auth/cron-guard";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { captureWarning, captureInfo, captureException } from "@/lib/logger";
+import { captureInfo, captureException } from "@/lib/logger";
 import {
   processReminders,
   type ReminderStore,
@@ -176,23 +176,8 @@ function buildStore(supabase: SupabaseLike): ReminderStore {
 }
 
 export async function POST(req: Request): Promise<Response> {
-  const secret = req.headers.get("x-cron-secret");
-  const expected = process.env.CRON_SECRET;
-
-  if (!expected) {
-    captureWarning("CRON_SECRET ENV missing — cron endpoint disabled", {
-      source: "cron:capture-reminders",
-    });
-    return new NextResponse("Cron not configured", { status: 503 });
-  }
-
-  if (!verifyCronSecret(secret, expected)) {
-    captureWarning("cron auth fail", {
-      source: "cron:capture-reminders",
-      metadata: { reason: "x-cron-secret mismatch" },
-    });
-    return new NextResponse("Unauthorized", { status: 403 });
-  }
+  const denied = requireCronSecret(req, "cron:capture-reminders");
+  if (denied) return denied;
 
   const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "").replace(/\/$/, "");
   const captureUrl = `${appUrl}/dashboard`;
