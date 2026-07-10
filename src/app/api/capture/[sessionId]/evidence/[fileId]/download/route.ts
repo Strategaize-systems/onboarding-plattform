@@ -25,46 +25,29 @@ export async function GET(
     );
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("tenant_id, role")
-    .eq("id", user.id)
-    .single();
-
-  if (!profile) {
-    return NextResponse.json(
-      { error: { code: "UNAUTHORIZED", message: "Profil nicht gefunden" } },
-      { status: 401 }
-    );
-  }
-
-  const adminClient = createAdminClient();
-
-  // --- Session ownership check (gespiegelt aus upload/route.ts; DEC-280) — expliziter
-  //     tenant-Match statt implizitem RLS-Load, konsistent mit list + upload. ---
-  const { data: session } = await adminClient
+  // --- Zugriffs-Gate via RLS (ISSUE-124 Cross-Tenant-IDOR): der user-scoped Client
+  //     sieht die capture_session nur bei erlaubtem Zugriff (eigener Tenant,
+  //     partner-admin-via-mapping, berater, strategaize_admin — RLS auf
+  //     capture_session). Kein Treffer => kein Zugriff (404 vermeidet
+  //     Existenz-Enumeration). Der admin-Client (BYPASSRLS) wird erst NACH dem Gate
+  //     fuer den evidence-Read + Signed-URL genutzt. Bewusst KEIN starrer
+  //     tenant_id-Vergleich — RLS deckt auch den legitimen partner-mapping-/berater-
+  //     Lesezugriff, den ein tenant_id-Gleichheitscheck faelschlich sperren wuerde
+  //     (Review V20). ---
+  const { data: session } = await supabase
     .from("capture_session")
-    .select("id, tenant_id")
+    .select("id")
     .eq("id", sessionId)
-    .single();
+    .maybeSingle();
 
   if (!session) {
     return NextResponse.json(
-      { error: { code: "NOT_FOUND", message: "Session nicht gefunden" } },
+      { error: { code: "NOT_FOUND", message: "Session nicht gefunden oder kein Zugriff" } },
       { status: 404 }
     );
   }
 
-  // strategaize_admin hat Cross-Tenant-Zugriff; andere muessen den Tenant matchen.
-  if (
-    profile.role !== "strategaize_admin" &&
-    session.tenant_id !== profile.tenant_id
-  ) {
-    return NextResponse.json(
-      { error: { code: "FORBIDDEN", message: "Kein Zugriff auf diese Session" } },
-      { status: 403 }
-    );
-  }
+  const adminClient = createAdminClient();
 
   // Load evidence file
   const { data: file } = await adminClient
