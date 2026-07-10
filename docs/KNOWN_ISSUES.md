@@ -3,17 +3,19 @@
 <!-- ISSUE-121..132: /security-audit V10.5 Fable-5 Adversarial-Audit (RPT-633, 2026-07-09) gegen deployten Stand 8589b20. 14 confirmed / 2 refuted. -->
 
 ### ISSUE-121 — Handbook-Reader rehype-raw Stored-XSS (kein rehype-sanitize)
-- Status: open
+- Status: resolved
 - Severity: High
 - Area: XSS / Handbook-Reader
+- Resolution: SLC-194 MT-1 (2026-07-10) — rehype-sanitize (handbookSanitizeSchema) als Plugin direkt NACH rehypeRaw in beiden Reader-Plugin-Stacks; Schema blockt script/iframe/srcdoc/on*/style, erhaelt `<a id>`+`<video>`. sections.ts:449/516 Subtopic-Namen zusaetzlich escapeMd. Pure-Mock-Test sanitize-schema.test.ts (8 Faelle, inkl. `<iframe srcdoc>`). Live-Verify (Handbook-Render) im /qa.
 - Summary: HandbookReader.tsx:250/320 mountet react-markdown mit rehypeRaw OHNE rehype-sanitize; escapeMd (sections.ts:658) escaped nur `|`; email_bulk-KU-Bodies (sections.ts:542-549 ← handbook-import.ts:257) + Subtopic-Namen (`### ${sub.name}`, :449/:516) fliessen roh ein. Verify-Korrektur: img/onerror + svg/onload werden von react-markdown/property-information neutralisiert, ABER `<iframe srcdoc="<script>…">` passiert intakt → same-origin Script-Exec.
 - Impact: Ein Tenant kann via importierte E-Mail/Antwort-Feld ein Payload speichern, das im authentifizierten Handbuch-Reader eines strategaize_berater/strategaize_admin (cross-tenant) ausfuehrt → Session-Hijack/Exfil. 0 Blast-Radius heute (Single-Founder), scharf pre-multi-user.
 - Next Action: rehype-sanitize als LETZTES rehype-Plugin (tight schema) ODER rehypeRaw droppen (Anchors/Video via kontrolliertes Plugin); zusaetzlich user/AI-Felder in sections.ts HTML-escapen. Quelle: /security-audit RPT-633.
 
 ### ISSUE-122 — Partner-SVG-Logo Stored-XSS via public logo-route ohne CSP (re-confirm SEC-004)
-- Status: open
+- Status: resolved
 - Severity: High
 - Area: XSS / Branding-Upload
+- Resolution: SLC-194 MT-2 (2026-07-10) — image/svg+xml aus ALLOWED_IMAGE_MIMES (server actions.ts + sibling image-signature.ts), Magic-Byte-Pruefung (sniffImageMime, sniffed===mime), Client-Vorfilter BrandingEditor.tsx (ALLOWED_MIMES + accept). Logo-Route: svg raus aus MIME_BY_EXT (Legacy-svg → application/octet-stream) + X-Content-Type-Options: nosniff auf jeder Response. Tests: image-signature.test.ts (8) + route.test.ts Legacy-SVG-Case. Live-Verify (SVG-Reject) im /qa.
 - Summary: uploadLogo (partner/dashboard/branding/actions.ts:38,118-121) erlaubt image/svg+xml, prueft nur client-file.type (keine Sanitization, kein Magic-Byte), schreibt via service-role nach {tenant}/logo.svg. Public no-auth GET /api/partner-branding/[tenant]/logo (route.ts:116-125) streamt inline als image/svg+xml, kein Content-Disposition, KEINE CSP (next.config.ts). nosniff schuetzt nicht bei explizitem svg-Typ; XFO blockt nur Framing, nicht Top-Level-Navigation.
 - Impact: partner_admin (externe Rolle, pre-customer-live real) planted scripted SVG; Opfer (auch strategaize_admin) oeffnet Logo-URL top-level → same-origin Script-Exec mit Opfer-Session. Re-confirm SEC-004 (SECURITY_AUDIT_2026-05-30) / roadmap V20. Kein Auto-Fire in-app (als img/background konsumiert), braucht Direkt-Navigation/Phishing.
 - Next Action: image/svg+xml aus ALLOWED_MIMES entfernen (rasterize zu PNG) ODER server-side DOMPurify-SVG-Sanitize + route-scoped `Content-Security-Policy: default-src 'none'; sandbox` + Content-Disposition: attachment + Magic-Byte-Content-Type-Check. Quelle: RPT-633.
@@ -54,6 +56,7 @@
 - Status: open
 - Severity: Medium
 - Area: Security-Headers
+- Progress: SLC-194 MT-3 (2026-07-10) — globale CSP (`src/lib/security/csp.ts`, BS-Port DEC-288) als `Content-Security-Policy-Report-Only` + `Cross-Origin-Opener-Policy: same-origin-allow-popups` in next.config.ts live-code. Bleibt OFFEN: (1) Enforce-Flip (Header-Key → `Content-Security-Policy`) erst nach /qa-Browser-Smoke (security-headers-live-smoke.md, P-089); (2) COEP deferred (separater Slot). Kein Nonce (DEC-288, Exfil-Bremse via connect-src/frame-ancestors/object-src).
 - Summary: next.config.ts:32-51 setzt nur XFO/nosniff/Referrer-Policy/HSTS/Permissions-Policy; keine Content-Security-Policy (enforcing oder Report-Only), kein COOP/COEP; middleware/proxy.ts setzt keine Header. → jeder Injection-Defekt (ISSUE-121/122) exfiltriert ungebremst.
 - Impact: Kein eigener Abuse-Pfad (Amplifier), aber entfernt die Exfil-Bremse fuer die XSS-Findings. Medium (nicht High — kein Isolation/Auth-Bruch; beide Lenses = overstated→Medium). Re-confirm roadmap V22/BL-138.
 - Next Action: enforcing CSP (default-src 'self'; script-src 'self' + per-request nonce, kein 'unsafe-inline'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; connect-src self+Supabase/Jitsi) + COOP same-origin; inline `<style>` in layout.tsx:35 braucht style-src nonce/hash; erst Report-Only ausrollen, dann enforcing vor Customer-Live. Quelle: RPT-633.
@@ -75,9 +78,10 @@
 - Next Action: EXECUTE von authenticated REVOKEn (nur service_role fuer den Query-Layer-Loader) + Wrapper der auth.uid() hardcodet, ODER interner Guard `IF p_uid <> auth.uid() AND auth.user_role() <> 'strategaize_admin' THEN RETURN '{}'::uuid[]`. Quelle: RPT-633.
 
 ### ISSUE-130 — Branding-Farben via dangerouslySetInnerHTML <style> ohne Re-Validierung auf dem Render-Pfad
-- Status: open
+- Status: resolved
 - Severity: Low
 - Area: XSS / Trust-on-Render
+- Resolution: SLC-194 MT-4 (2026-07-10) — resolve.ts revalidiert primary_color/secondary_color render-zeit gegen HEX_RE (sanitizeHexColor), Invalid → Default bzw. null; nur ein #rrggbb-Literal gelangt ins layout.tsx-`<style>`. Test: __tests__/resolve.test.ts Case 9/10 (CSS-Injection → Default).
 - Summary: layout.tsx:35 injiziert branding.primaryColor/secondaryColor in ein :root{}-`<style>` via dangerouslySetInnerHTML; resolve.ts:73-75 reicht die Werte ungeprueft durch (nur primaryColorRgb hex-guarded). Heute KEIN erreichbarer Writer (updateBranding erzwingt HEX_REGEX; admin/partners nutzt nur Default) → validate-on-write/trust-on-render-Mismatch, latent.
 - Impact: Kein Live-Vektor heute; ein zukuenftiger/alternativer Writer, DB-Seed oder Direct-DB mit `#000;}</style><script>…` bricht aus dem style-Element auf jeder Seite (inkl. pre-auth cross-tenant). Low.
 - Next Action: In resolve.ts primary_color/secondary_color durch HEX_RE + Default-Fallback (wie hexToRgbTriplet), sodass nur ein #rrggbb-Literal ins <style> gelangen kann. Quelle: RPT-633.

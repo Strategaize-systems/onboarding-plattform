@@ -1239,7 +1239,7 @@ STRIKT SEQUENZIELL auf kumulativem Branch `v10-4-rollenmodell-p2` (Worktree `<re
 | SLC-191 | [Exit-/Devil's-Advocate-Report Kern](SLC-191-exit-report-kern.md) | FEAT-108 | done | High | 2026-07-09 |
 | SLC-192 | [Exit-Report Devil's-Advocate-Positionierung](SLC-192-exit-report-positionierung.md) | FEAT-109 | done | High | 2026-07-09 |
 | SLC-193 | [V20 DB/Authz-Hardening](SLC-193-v20-db-authz-hardening.md) | FEAT-110 | in_progress | Blocker | 2026-07-09 |
-| SLC-194 | [V20 XSS/Output/Headers-Hardening](SLC-194-v20-xss-output-headers.md) | FEAT-111 | planned | Blocker | 2026-07-09 |
+| SLC-194 | [V20 XSS/Output/Headers-Hardening](SLC-194-v20-xss-output-headers.md) | FEAT-111 | in_progress | Blocker | 2026-07-09 |
 | SLC-195 | [V20 Auth/Secrets-Cleanup](SLC-195-v20-auth-secrets-cleanup.md) | FEAT-112 | planned | High | 2026-07-09 |
 
 ### V20 Parallel-Readiness + Pflicht-Gates

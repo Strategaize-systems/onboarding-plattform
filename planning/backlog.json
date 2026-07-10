@@ -1915,7 +1915,7 @@
       "title": "V20 FEAT-111 XSS/Output/Headers-Hardening (Handbook rehype-sanitize, SVG-Block, CSP, branding-render)",
       "type": "fix",
       "priority": "high",
-      "status": "open",
+      "status": "in_progress",
       "version": "V20",
       "description": "Security-Hardening Output-Layer aus /security-audit RPT-633. ISSUE-121 Handbook-Reader rehype-sanitize (letztes Plugin) + sections.ts user/AI-Feld-Escape · ISSUE-122 image/svg+xml aus ALLOWED_MIMES + Logo-Route-Haertung (Content-Disposition/route-CSP/Magic-Byte) · ISSUE-127 globale CSP/COOP Report-Only→enforcing (Nonce, layout.tsx:35-style-src) + funktionaler Browser-Smoke (P-089) · ISSUE-130 branding-Farben Render-Pfad-HEX-Re-Validierung (resolve.ts) · Legal/Datenschutz-Page-XSS-Check (P-082-Funnel). Reuse P-082/083/089/092.",
       "createdAt": "2026-07-09"
