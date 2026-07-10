@@ -77,10 +77,13 @@ export async function GET(
   // pbc.display_name, faellt sonst auf po.display_name zurueck. Slice spricht
   // von partner_organization.{logo_url, accent_color} — Schema-Drift, in MT-6
   // korrigiert auf den realen Speicherort (siehe DECISIONS).
+  // SLC-195 MT-5 (ISSUE-128): .eq(lowercase) statt .ilike — `.ilike` interpretiert
+  // `%`/`_` als Wildcards (Enumeration/Multi-Match-Oracle). Slugs sind write-seitig
+  // lowercase-normalisiert, daher exakter .eq-Match auf slug.toLowerCase().
   const { data: partnerRow, error: partnerErr } = await admin
     .from("partner_organization")
     .select("tenant_id, display_name")
-    .ilike("slug", slug)
+    .eq("slug", slug.toLowerCase())
     .maybeSingle();
 
   if (partnerErr) {

@@ -28,7 +28,8 @@ const makeAdmin = (handlers: {
     if (table === "partner_organization") {
       return {
         select: vi.fn().mockReturnThis(),
-        ilike: vi.fn().mockReturnThis(),
+        // SLC-195 MT-5: Route nutzt jetzt .eq(slug.toLowerCase()) statt .ilike.
+        eq: vi.fn().mockReturnThis(),
         maybeSingle: vi
           .fn()
           .mockResolvedValue(handlers.partner ?? { data: null, error: null }),
@@ -126,6 +127,34 @@ describe("GET /api/public/partner/[slug]", () => {
     expect(response.status).toBe(404);
     const body = (await response.json()) as Record<string, unknown>;
     expect(body.error).toBe("unknown_partner");
+  });
+
+  it("SLC-195 MT-5: resolves via .eq on the lowercased slug (wildcard % neutralised, no ILIKE)", async () => {
+    const eqSpy = vi.fn().mockReturnThis();
+    const admin = {
+      from: vi.fn((table: string) => {
+        if (table === "partner_organization") {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: eqSpy,
+            maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+          };
+        }
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          limit: vi.fn().mockReturnThis(),
+          maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+        };
+      }),
+    };
+    vi.mocked(createAdminClient).mockReturnValue(admin as never);
+
+    // Grossbuchstaben + `%`-Wildcard: muss lowercased + als EXAKTER .eq-Wert gehen
+    // (`%` ist dort ein Literal, kein LIKE-Wildcard mehr).
+    await GET(buildRequest("Acme%", "10.0.0.77"), buildParams("Acme%"));
+
+    expect(eqSpy).toHaveBeenCalledWith("slug", "acme%");
   });
 
   it("returns 404 for reserved slug `admin` WITHOUT touching DB", async () => {
