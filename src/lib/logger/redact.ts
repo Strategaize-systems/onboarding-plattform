@@ -38,6 +38,11 @@ export const DEFAULT_REDACT_KEYS = [
   "x-cron-secret",
 ] as const;
 
+/** Vorab-lowercased Default-Key-Set (Modul-Level — kein Rebuild pro Aufruf). */
+const DEFAULT_REDACT_KEY_SET: ReadonlySet<string> = new Set(
+  DEFAULT_REDACT_KEYS.map((k) => k.toLowerCase()),
+);
+
 export interface RedactOptions {
   /** Zusaetzliche Keys, die ueber DEFAULT_REDACT_KEYS hinaus redactet werden. */
   extraKeys?: string[];
@@ -59,12 +64,18 @@ const MAX_DEPTH = 10;
  * Primitive werden unveraendert durchgereicht — Redaction ist key-basiert.
  */
 export function redactSecrets<T>(obj: T, opts?: RedactOptions): T {
-  const redactKeys = new Set(
-    [...DEFAULT_REDACT_KEYS, ...(opts?.extraKeys ?? [])].map((k) =>
-      k.toLowerCase(),
-    ),
-  );
+  // Default-Fall (kein extraKeys) nutzt das Modul-Level-Set ohne Rebuild.
+  const redactKeys: ReadonlySet<string> = opts?.extraKeys?.length
+    ? new Set([
+        ...DEFAULT_REDACT_KEY_SET,
+        ...opts.extraKeys.map((k) => k.toLowerCase()),
+      ])
+    : DEFAULT_REDACT_KEY_SET;
   const replacement = opts?.replacementValue ?? "[REDACTED]";
+  // `seen` verfolgt nur den AKTUELLEN Ahnen-Pfad (add beim Betreten, delete beim
+  // Verlassen) — so werden echte Zyklen erkannt, aber mehrfach referenzierte
+  // NICHT-zyklische Objekte (DAG, z.B. dasselbe ctx unter zwei Keys) nicht
+  // faelschlich zu "[Circular]".
   const seen = new WeakSet<object>();
 
   function walk(value: unknown, depth: number): unknown {
@@ -79,19 +90,25 @@ export function redactSecrets<T>(obj: T, opts?: RedactOptions): T {
     }
     seen.add(value as object);
 
+    let result: unknown;
     if (Array.isArray(value)) {
-      return value.map((item) => walk(item, depth + 1));
+      result = value.map((item) => walk(item, depth + 1));
+    } else {
+      const out: Record<string, unknown> = {};
+      for (const [key, val] of Object.entries(
+        value as Record<string, unknown>,
+      )) {
+        if (redactKeys.has(key.toLowerCase())) {
+          out[key] = replacement;
+        } else {
+          out[key] = walk(val, depth + 1);
+        }
+      }
+      result = out;
     }
 
-    const out: Record<string, unknown> = {};
-    for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
-      if (redactKeys.has(key.toLowerCase())) {
-        out[key] = replacement;
-      } else {
-        out[key] = walk(val, depth + 1);
-      }
-    }
-    return out;
+    seen.delete(value as object);
+    return result;
   }
 
   return walk(obj, 0) as T;

@@ -56,4 +56,28 @@ describe("redactSecrets (SLC-195 MT-3, P-092)", () => {
     const out = redactSecrets({ ssn: "123-45-6789" }, { extraKeys: ["ssn"] });
     expect(out.ssn).toBe("[REDACTED]");
   });
+
+  it("does NOT flag a shared (non-cyclic) reference as [Circular]", () => {
+    // DAG: dasselbe Objekt unter zwei Sibling-Keys — kein Zyklus. Beide
+    // Vorkommen muessen erhalten bleiben (kein faelschliches [Circular]).
+    const ctx = { keep: "yes", ok: 1 };
+    const out = redactSecrets({ req: ctx, res: ctx }) as {
+      req: { keep: string; ok: number };
+      res: { keep: string; ok: number } | string;
+    };
+    expect(out.req.keep).toBe("yes");
+    expect(out.res).not.toBe("[Circular]");
+    expect((out.res as { keep: string }).keep).toBe("yes");
+  });
+
+  it("keeps redacting inside a shared reference reached twice", () => {
+    const shared = { token: "abc", ok: true };
+    const out = redactSecrets([shared, shared]) as Array<{
+      token: string;
+      ok: boolean;
+    }>;
+    expect(out[0].token).toBe("[REDACTED]");
+    expect(out[1].token).toBe("[REDACTED]");
+    expect(out[1].ok).toBe(true);
+  });
 });
