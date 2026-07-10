@@ -158,3 +158,46 @@ describe("extractClientIp (SLC-131 reuse anchor)", () => {
     expect(extractClientIp(req)).toBe("1.2.3.4");
   });
 });
+
+describe("createRateLimiter peek/clear (SLC-195 MT-1, P-081)", () => {
+  it("peek() does NOT increment — repeated peeks stay allowed below the limit", () => {
+    const rl = createRateLimiter({ maxAttempts: 3, windowMs: 60_000 });
+    for (let i = 0; i < 10; i++) {
+      expect(rl.peek("acct").allowed).toBe(true);
+    }
+    // Kein check() lief → Zaehler unberuehrt, weiterhin voll erlaubt.
+    expect(rl.check("acct").allowed).toBe(true);
+  });
+
+  it("peek() blocks once maxAttempts failures were recorded via check()", () => {
+    const rl = createRateLimiter({ maxAttempts: 3, windowMs: 60_000 });
+    rl.check("acct");
+    rl.check("acct");
+    rl.check("acct");
+    // Der 4. waere geblockt → peek meldet bereits false.
+    const p = rl.peek("acct");
+    expect(p.allowed).toBe(false);
+    expect(p.retryAfterSeconds).toBeGreaterThan(0);
+  });
+
+  it("clear() resets the counter (successful login is never locked)", () => {
+    const rl = createRateLimiter({ maxAttempts: 3, windowMs: 60_000 });
+    rl.check("acct");
+    rl.check("acct");
+    rl.check("acct");
+    expect(rl.peek("acct").allowed).toBe(false);
+    rl.clear("acct");
+    expect(rl.peek("acct").allowed).toBe(true);
+  });
+
+  it("account bucket is IP-independent (keyed by identifier only)", () => {
+    // Simuliert IP-Rotation: derselbe Account-Key wird unabhaengig von der IP
+    // gezaehlt — genau der Sinn des account-scoped Lockouts.
+    const rl = createRateLimiter({ maxAttempts: 3, windowMs: 60_000 });
+    rl.check("user@example.com"); // "von IP A"
+    rl.check("user@example.com"); // "von IP B"
+    rl.check("user@example.com"); // "von IP C"
+    expect(rl.peek("user@example.com").allowed).toBe(false);
+    expect(rl.peek("other@example.com").allowed).toBe(true);
+  });
+});
