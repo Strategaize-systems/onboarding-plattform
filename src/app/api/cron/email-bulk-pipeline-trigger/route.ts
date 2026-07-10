@@ -7,6 +7,7 @@
 // Auth: 503 (kein CRON_SECRET) / 403 (Mismatch) / 200 (Pass) / 500 (Throw).
 
 import { NextResponse } from "next/server";
+import { verifyCronSecret } from "@/lib/auth/cron-secret";
 
 import { captureException, captureInfo, captureWarning } from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -29,7 +30,7 @@ export async function POST(req: Request): Promise<Response> {
     return new NextResponse("Cron not configured", { status: 503 });
   }
 
-  if (secret !== expected) {
+  if (!verifyCronSecret(secret, expected)) {
     captureWarning("cron auth fail", {
       source: LOG_SOURCE,
       metadata: { reason: "x-cron-secret mismatch" },

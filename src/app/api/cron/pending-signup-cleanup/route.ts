@@ -18,6 +18,7 @@
 // auf status/timestamp greift wiederholt korrekt, Counts → 0).
 
 import { NextResponse } from "next/server";
+import { verifyCronSecret } from "@/lib/auth/cron-secret";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { captureException, captureInfo, captureWarning } from "@/lib/logger";
@@ -38,7 +39,7 @@ export async function GET(req: Request): Promise<Response> {
     return new NextResponse("Cron not configured", { status: 503 });
   }
 
-  if (secret !== expected) {
+  if (!verifyCronSecret(secret, expected)) {
     captureWarning("cron auth fail", {
       source: "cron:pending-signup-cleanup",
       metadata: { reason: "x-cron-secret mismatch" },

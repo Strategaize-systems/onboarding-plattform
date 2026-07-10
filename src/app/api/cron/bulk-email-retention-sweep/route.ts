@@ -12,6 +12,7 @@
 // minimal); Migration auf asynchronen Worker (ai_jobs) ist V9.2+.
 
 import { NextResponse } from "next/server";
+import { verifyCronSecret } from "@/lib/auth/cron-secret";
 
 import { captureException, captureWarning } from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -37,7 +38,7 @@ export async function POST(req: Request): Promise<Response> {
     return new NextResponse("Cron not configured", { status: 503 });
   }
 
-  if (secret !== expected) {
+  if (!verifyCronSecret(secret, expected)) {
     captureWarning("cron auth fail", {
       source: LOG_SOURCE,
       metadata: { reason: "x-cron-secret mismatch" },

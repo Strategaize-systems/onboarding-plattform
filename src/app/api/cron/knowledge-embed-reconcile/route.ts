@@ -14,6 +14,7 @@
 // selbst ist upsert-idempotent via Unique-Constraint (source_type, source_id, chunk_index).
 
 import { NextResponse } from "next/server";
+import { verifyCronSecret } from "@/lib/auth/cron-secret";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { captureException, captureWarning } from "@/lib/logger";
@@ -33,7 +34,7 @@ export async function GET(req: Request): Promise<Response> {
     return new NextResponse("Cron not configured", { status: 503 });
   }
 
-  if (secret !== expected) {
+  if (!verifyCronSecret(secret, expected)) {
     captureWarning("cron auth fail", {
       source: "cron:knowledge-embed-reconcile",
       metadata: { reason: "x-cron-secret mismatch" },
